@@ -279,35 +279,11 @@ class SvnRaTransport(Transport):
 
     @convert_svn_error
     def get_log(self, path, from_revnum, to_revnum, limit, discover_changed_paths, 
-                strict_node_history, revprops, rcvr, pool=None):
+                strict_node_history, revprops, rcvr):
         self.mutter('svn log %r:%r %r' % (from_revnum, to_revnum, path))
-        if hasattr(svn.ra, 'get_log2'):
-            return svn.ra.get_log2(self._ra, [self._request_path(path)], 
-                           from_revnum, to_revnum, limit, discover_changed_paths,
-                           strict_node_history, False, 
-                           revprops, rcvr, pool)
-
-        class LogEntry:
-            def __init__(self, changed_paths, rev, author, date, message):
-                self.changed_paths = changed_paths
-                self.revprops = {}
-                if svn.core.SVN_PROP_REVISION_AUTHOR in revprops:
-                    self.revprops[svn.core.SVN_PROP_REVISION_AUTHOR] = author
-                if svn.core.SVN_PROP_REVISION_LOG in revprops:
-                    self.revprops[svn.core.SVN_PROP_REVISION_LOG] = message
-                if svn.core.SVN_PROP_REVISION_DATE in revprops:
-                    self.revprops[svn.core.SVN_PROP_REVISION_DATE] = date
-                # FIXME: Check other revprops
-                # FIXME: Handle revprops is None
-                self.revision = rev
-                self.has_children = None
-
-        def rcvr_convert(orig_paths, rev, author, date, message, pool):
-            rcvr(LogEntry(orig_paths, rev, author, date, message), pool)
-
-        return svn.ra.get_log(self._ra, [self._request_path(path)], 
+        return self._ra.get_log([self._request_path(path)], 
                               from_revnum, to_revnum, limit, discover_changed_paths, 
-                              strict_node_history, rcvr_convert, pool)
+                              strict_node_history, revprops, rcvr_convert)
 
     def _open_real_transport(self):
         if self._backing_url != self.svn_url:
@@ -333,9 +309,9 @@ class SvnRaTransport(Transport):
         self.svn_url = bzr_to_svn_url(url)
         if self.svn_url == self._backing_url:
             return
-        if hasattr(svn.ra, 'reparent'):
+        if hasattr(self._ra, 'reparent'):
             self.mutter('svn reparent %r' % url)
-            self.ra.reparent(self.svn_url, self.pool)
+            self._ra.reparent(self.svn_url, self.pool)
         else:
             self.mutter('svn reparent (reconnect) %r' % url)
             self._ra = svn.client.open_ra_session(self.svn_url.encode('utf8'), 
@@ -349,13 +325,10 @@ class SvnRaTransport(Transport):
         path = self._request_path(path)
         # ra_dav backends fail with strange errors if the path starts with a 
         # slash while other backends don't.
-        if hasattr(svn.ra, 'get_dir2'):
-            fields = 0
-            if kind:
-                fields += svn.core.SVN_DIRENT_KIND
-            return self._ra.get_dir(path, revnum, fields)
-        else:
-            return svn.ra.get_dir(self._ra, path, revnum)
+        fields = 0
+        if kind:
+            fields += svn.core.SVN_DIRENT_KIND
+        return self._ra.get_dir(path, revnum, fields)
 
     def _request_path(self, relpath):
         if self._backing_url == self.svn_url:
@@ -396,7 +369,7 @@ class SvnRaTransport(Transport):
     def unlock(self, locks, break_lock=False):
         def lock_cb(baton, path, do_lock, lock, ra_err, pool):
             pass
-        return svn.ra.unlock(self._ra, locks, break_lock, lock_cb)
+        return self._ra.unlock(locks, break_lock, lock_cb)
 
     @convert_svn_error
     def lock_write(self, path_revs, comment=None, steal_lock=False):
@@ -404,7 +377,7 @@ class SvnRaTransport(Transport):
         tokens = {}
         def lock_cb(baton, path, do_lock, lock, ra_err, pool):
             tokens[path] = lock
-        svn.ra.lock(self._ra, path_revs, comment, steal_lock, lock_cb)
+        self._ra.lock(path_revs, comment, steal_lock, lock_cb)
         return SvnLock(self, tokens)
 
     @convert_svn_error
@@ -441,7 +414,7 @@ class SvnRaTransport(Transport):
 
     @convert_svn_error
     def has_capability(self, cap):
-        return svn.ra.has_capability(self._ra, cap)
+        return self._ra.has_capability(cap)
 
     @convert_svn_error
     def revprop_list(self, revnum):

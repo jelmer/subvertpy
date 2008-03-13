@@ -320,6 +320,37 @@ cdef extern from "svn_ra.h":
                                    svn_node_kind_t *kind,
                                    apr_pool_t *pool)
 
+    svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
+                          int *has, char *capability, apr_pool_t *pool)
+
+    ctypedef svn_error_t *(*svn_ra_lock_callback_t)(baton, char *path,
+                                               int do_lock,
+                                               svn_lock_t *lock,
+                                               svn_error_t *ra_err,
+                                               apr_pool_t *pool)
+
+    svn_error_t * svn_ra_unlock(svn_ra_session_t *session,
+                  apr_hash_t *path_tokens,
+                  int break_lock,
+                  svn_ra_lock_callback_t lock_func,
+                  lock_baton,
+                  apr_pool_t *pool)
+
+    svn_error_t *svn_ra_lock(svn_ra_session_t *session,
+                apr_hash_t *path_revs,
+                char *comment,
+                int steal_lock,
+                svn_ra_lock_callback_t lock_func,
+                lock_baton,
+                apr_pool_t *pool)
+
+
+cdef svn_error_t *py_lock_func (baton, char *path, int do_lock, 
+                                svn_lock_t *lock, svn_error_t *ra_err, 
+                                apr_pool_t *pool):
+    # FIXME: pass lock and ra_err, too
+    baton(path, do_lock)
+
 
 cdef class Reporter:
     """Change reporter."""
@@ -489,8 +520,8 @@ cdef class RemoteAccess:
         cdef apr_hash_t *hash_lock_tokens
         temp_pool = Pool(self.pool)
         _check_error(svn_ra_get_commit_editor2(self.ra, &editor, 
-			&edit_baton, revprops[SVN_PROP_REVISION_LOG], py_commit_callback, 
-			commit_callback, hash_lock_tokens, keep_locks, temp_pool))
+            &edit_baton, revprops[SVN_PROP_REVISION_LOG], py_commit_callback, 
+            commit_callback, hash_lock_tokens, keep_locks, temp_pool))
         apr_pool_destroy(temp_pool)
         return None # FIXME: convert editor
 
@@ -534,6 +565,33 @@ cdef class RemoteAccess:
                      temp_pool))
         apr_pool_destroy(temp_pool)
         return kind
+
+    def has_capability(self, capability):
+        cdef apr_pool_t *temp_pool
+        cdef int has
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_has_capability(self.ra, &has, capability, 
+                     temp_pool))
+        apr_pool_destroy(temp_pool)
+        return has
+
+    def unlock(self, path_tokens, break_lock, lock_func):
+        cdef apr_pool_t *temp_pool
+        cdef apr_hash_t *hash_path_tokens
+        temp_pool = Pool(self.pool)
+        # FIXME: Convert path_tokens to a apr_hash
+        _check_error(svn_ra_unlock(self.ra, hash_path_tokens, break_lock,
+                     py_lock_func, lock_func, temp_pool))
+        apr_pool_destroy(temp_pool)
+
+    def lock(self, path_revs, comment, steal_lock, lock_func):
+        cdef apr_pool_t *temp_pool
+        cdef apr_hash_t *hash_path_revs
+        # FIXME: Create hash_path_revs
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_lock(self.ra, hash_path_revs, comment, steal_lock,
+                     py_lock_func, lock_func, temp_pool))
+        apr_pool_destroy(temp_pool)
 
     def __dealloc__(self):
         if self.pool != NULL:

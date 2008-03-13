@@ -577,7 +577,7 @@ class InterFromSvnRepository(InterRepository):
         self.fetch(revision_id, pb, find_ghosts=False)
 
     def _fetch_replay(self, revids, pb=None):
-        """Copy a set of related revisions using svn.ra.replay.
+        """Copy a set of related revisions using ra_replay.
 
         :param revids: Revision ids to copy.
         :param pb: Optional progress bar
@@ -585,7 +585,7 @@ class InterFromSvnRepository(InterRepository):
         raise NotImplementedError(self._copy_revisions_replay)
 
     def _fetch_switch(self, revids, pb=None, lhs_parent=None):
-        """Copy a set of related revisions using svn.ra.switch.
+        """Copy a set of related revisions using ra_switch.
 
         :param revids: List of revision ids of revisions to copy, 
                        newest first.
