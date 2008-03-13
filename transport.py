@@ -265,12 +265,6 @@ class SvnRaTransport(Transport):
         self.mutter("svn get-latest-revnum")
         return self._ra.get_latest_revnum()
 
-    def _make_editor(self, editor, pool=None):
-        edit, edit_baton = svn.delta.make_editor(editor, pool)
-        self._edit = edit
-        self._edit_baton = edit_baton
-        return self._edit, self._edit_baton
-
     @convert_svn_error
     def do_switch(self, switch_rev, recurse, switch_url, editor, pool=None):
         self._open_real_transport()
@@ -281,9 +275,9 @@ class SvnRaTransport(Transport):
     def get_log(self, path, from_revnum, to_revnum, limit, discover_changed_paths, 
                 strict_node_history, revprops, rcvr):
         self.mutter('svn log %r:%r %r' % (from_revnum, to_revnum, path))
-        return self._ra.get_log([self._request_path(path)], 
+        return self._ra.get_log(rcvr, [self._request_path(path)], 
                               from_revnum, to_revnum, limit, discover_changed_paths, 
-                              strict_node_history, revprops, rcvr_convert)
+                              strict_node_history, revprops)
 
     def _open_real_transport(self):
         if self._backing_url != self.svn_url:

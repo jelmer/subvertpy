@@ -72,6 +72,50 @@ cdef extern from "svn_error.h":
 
 cdef extern from "svn_auth.h":
     ctypedef struct svn_auth_baton_t
+    void svn_auth_open(svn_auth_baton_t **auth_baton,
+                       apr_array_header_t *providers,
+                       apr_pool_t *pool)
+    void svn_auth_set_parameter(svn_auth_baton_t *auth_baton, 
+                                char *name, void *value)
+    void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
+                                  char *name)
+
+    ctypedef struct svn_auth_provider_t:
+        char *cred_kind
+        svn_error_t * (*first_credentials)(void **credentials,
+                                            void **iter_baton,
+                                             void *provider_baton,
+                                             apr_hash_t *parameters,
+                                             char *realmstring,
+                                             apr_pool_t *pool)
+        svn_error_t * (*next_credentials)(void **credentials,
+                                            void *iter_baton,
+                                            void *provider_baton,
+                                            apr_hash_t *parameters,
+                                            char *realmstring,
+                                            apr_pool_t *pool)
+         
+        svn_error_t * (*save_credentials)(int *saved,
+                                    void *credentials,
+                                    void *provider_baton,
+                                    apr_hash_t *parameters,
+                                    char *realmstring,
+                                    apr_pool_t *pool)
+
+    ctypedef struct svn_auth_provider_object_t:
+        svn_auth_provider_t *vtable
+        void *provider_baton
+
+    ctypedef struct svn_auth_cred_simple_t:
+        char *username
+        char *password
+        int may_save
+
+    ctypedef svn_error_t *(*svn_auth_simple_prompt_func_t) (svn_auth_cred_simple_t **cred, void *baton, char *realm, char *username, int may_save, apr_pool_t *pool)
+
+    void svn_auth_get_simple_prompt_provider(
+            svn_auth_provider_object_t **provider, svn_auth_simple_prompt_func_t prompt_func, void *prompt_baton, int retry_limit, apr_pool_t *pool)
+
 
 cdef extern from "svn_string.h":
     ctypedef struct svn_string_t:
@@ -178,7 +222,10 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
         while idx:
             # FIXME: apr_hash_this(idx, key, val
             idx = apr_hash_next(idx)
-    baton(py_changed_paths, revision, author, date, message)
+    baton(py_changed_paths, revision, {
+        SVN_PROP_REVISION_LOG: message, 
+        SVN_PROP_REVISION_AUTHOR: author, 
+        SVN_PROP_REVISION_DATE: date})
 
 cdef extern from "svn_ra.h":
     ctypedef struct svn_lock_t
@@ -442,8 +489,9 @@ cdef class RemoteAccess:
         apr_pool_destroy(temp_pool)
         return latest_revnum
 
-    def get_log(self, paths, start, end, callback, limit=0, 
-                discover_changed_paths=True, strict_node_history=True):
+    def get_log(self, callback, paths, start, end, limit=0, 
+                discover_changed_paths=True, strict_node_history=True,
+                revprops=[SVN_PROP_REVISION_LOG,SVN_PROP_REVISION_AUTHOR,SVN_PROP_REVISION_DATE]):
         cdef apr_array_header_t *paths_array
         cdef apr_pool_t *temp_pool
         _check_error(svn_ra_get_log(self.ra, paths_array, start, end, limit,
@@ -601,3 +649,5 @@ cdef class RemoteAccess:
         return "%s(%r)" % (self.__class__.__name__, self.url)
 
 SVN_PROP_REVISION_LOG = "svn:log"
+SVN_PROP_REVISION_AUTHOR = "svn:author"
+SVN_PROP_REVISION_DATE = "svn:date"

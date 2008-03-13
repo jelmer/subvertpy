@@ -52,7 +52,7 @@ import os
 import urllib
 
 import svn.core, svn.wc
-from svn.core import SubversionException, Pool
+from svn.core import SubversionException, Pool, svn_time_to_cstring
 
 from errors import NoCheckoutSupport
 from format import get_rich_root_format
@@ -381,7 +381,7 @@ class SvnWorkingTree(WorkingTree):
 
             svn.wc.process_committed2(self.abspath(path).rstrip("/"), wc, 
                           False, revnum, 
-                          svn.core.svn_time_to_cstring(newrev.timestamp), 
+                          svn_time_to_cstring(newrev.timestamp), 
                           newrev.committer, None, False)
 
             if newrevtree.inventory[id].kind != 'directory':
