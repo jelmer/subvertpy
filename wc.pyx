@@ -21,11 +21,13 @@ cdef extern from "svn_version.h":
 		int patch
 		char *tag
 
-cdef extern from "svn_ra.h":
-	svn_version_t *svn_ra_version()
+
+cdef extern from "svn_wc.h":
+	svn_version_t *svn_wc_version()
+
 
 def version():
-	"""Get libsvn_ra version information.
+	"""Get libsvn_wc version information.
 
 	:return: tuple with major, minor, patch version number and tag.
 	"""
