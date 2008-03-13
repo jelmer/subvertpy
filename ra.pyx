@@ -53,10 +53,36 @@ cdef apr_pool_t *Pool(apr_pool_t *parent):
         raise Exception("APR Error")
     return ret
 
+cdef extern from "apr_tables.h":
+    ctypedef struct apr_array_header_t
+    apr_array_header_t *apr_array_make(apr_pool_t *p, int nelts, int elt_size)
+    void *apr_array_push(apr_array_header_t *arr)
+    void *apr_array_pop(apr_array_header_t *arr)
+
 cdef extern from "apr_hash.h":
     ctypedef struct apr_hash_t
+    ctypedef struct apr_hash_index_t
     apr_hash_t *apr_hash_make(apr_pool_t *pool)
     void apr_hash_set(apr_hash_t *ht, char *key, long klen, char *val)
+    apr_hash_index_t *apr_hash_first(apr_pool_t *p, apr_hash_t *ht)
+    apr_hash_index_t * apr_hash_next(apr_hash_index_t *hi)
+    void apr_hash_this(apr_hash_index_t *hi, void **key, 
+                                long *klen, void **val)
+
+cdef extern from "svn_types.h":
+    ctypedef svn_error_t *(*svn_log_message_receiver_t) (baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool)
+
+cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool):
+    cdef apr_hash_index_t *idx
+    if changed_paths == NULL:
+        py_changed_paths = None
+    else:
+        py_changed_paths = {}
+        idx = apr_hash_first(pool, changed_paths)
+        while idx:
+            # FIXME: apr_hash_this(idx, key, val
+            idx = apr_hash_next(idx)
+    baton(py_changed_paths, revision, author, date, message)
 
 cdef extern from "svn_ra.h":
     svn_version_t *svn_ra_version()
@@ -116,7 +142,16 @@ cdef extern from "svn_ra.h":
                              char **root,
                              apr_pool_t *pool)
 
-
+    svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
+                                apr_array_header_t *paths,
+                                long start,
+                                long end,
+                                int limit,
+                                int discover_changed_paths,
+                                int strict_node_history,
+                                svn_log_message_receiver_t receiver,
+                                receiver_baton,
+                                apr_pool_t *pool)
 
 def version():
     """Get libsvn_ra version information.
@@ -182,6 +217,15 @@ cdef class RemoteAccess:
                      temp_pool))
         apr_pool_destroy(temp_pool)
         return latest_revnum
+
+    def get_log(self, paths, start, end, callback, limit=0, 
+                discover_changed_paths=True, strict_node_history=True):
+        cdef apr_array_header_t *paths_array
+        cdef apr_pool_t *temp_pool
+        _check_error(svn_ra_get_log(self.ra, paths_array, start, end, limit,
+            discover_changed_paths, strict_node_history, py_svn_log_wrapper, 
+            callback, temp_pool))
+        apr_pool_destroy(temp_pool)
 
     def get_repos_root(self):
         """Obtain the URL of the root of this repository."""
