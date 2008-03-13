@@ -34,6 +34,8 @@ setup(name='bzr-svn',
       packages=['bzrlib.plugins.svn', 
                 'bzrlib.plugins.svn.tests'],
       ext_modules=[
+          Extension("core", ["core.pyx"], libraries=["svn_subr-1"], 
+                    include_dirs=[apr_include_dir(), svn_include_dir()]), 
           Extension("ra", ["ra.pyx"], libraries=["svn_ra-1"], 
                     include_dirs=[apr_include_dir(), svn_include_dir()]), 
           Extension("wc", ["wc.pyx"], libraries=["svn_wc-1"],

@@ -28,8 +28,8 @@ from bzrlib.revision import Revision, NULL_REVISION
 from bzrlib.transport import Transport, get_transport
 from bzrlib.trace import info, mutter
 
-from svn.core import SubversionException, Pool
-import svn.core
+from core import SubversionException, Pool
+import core
 
 import os
 
@@ -240,7 +240,7 @@ class SvnRepository(Repository):
         def done(revmetadata, pool):
             pass
         editor = self.transport.get_commit_editor(
-                {svn.core.SVN_PROP_REVISION_LOG: "Updating branching scheme for Bazaar."},
+                {core.SVN_PROP_REVISION_LOG: "Updating branching scheme for Bazaar."},
                 done, None, False)
         root = editor.open_root(-1)
         editor.change_dir_prop(root, SVN_PROP_BZR_BRANCHING_SCHEME, 
@@ -352,9 +352,9 @@ class SvnRepository(Repository):
             return False
 
         try:
-            return (svn.core.svn_node_dir == self.transport.check_path(path, revnum))
+            return (core.svn_node_dir == self.transport.check_path(path, revnum))
         except SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == core.SVN_ERR_FS_NO_SUCH_REVISION:
                 return False
             raise
 
@@ -529,7 +529,7 @@ class SvnRepository(Repository):
             (bzr_revno, revid) = mapping.get_revision_id(path, revprops, 
                                                          fileprops)
         except SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == core.SVN_ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(path, revnum)
             raise
 
@@ -939,7 +939,7 @@ class SvnRepository(Repository):
                                         elif (scheme.is_branch_parent(n) or 
                                               scheme.is_tag_parent(n)):
                                             parents.append(n)
-                                except SubversionException, (_, svn.core.SVN_ERR_FS_NOT_DIRECTORY):
+                                except SubversionException, (_, core.SVN_ERR_FS_NOT_DIRECTORY):
                                     pass
         finally:
             pb.finished()

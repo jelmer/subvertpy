@@ -47,4 +47,7 @@ cdef extern from "apr_hash.h":
     void apr_hash_this(apr_hash_index_t *hi, void **key, 
                                 long *klen, void **val)
 
+cdef extern from "apr_time.h":
+    ctypedef unsigned long long apr_time_t
+
 

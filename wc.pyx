@@ -17,6 +17,12 @@
 include "apr.pxi"
 include "types.pxi"
 
+from core import check_error, Pool
+
+cdef svn_error_t *py_cancel_func(cancel_baton):
+    cancel_baton()
+    return NULL
+
 apr_initialize()
 
 cdef extern from "svn_wc.h":
@@ -25,15 +31,15 @@ cdef extern from "svn_wc.h":
     svn_error_t *svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                                   svn_wc_adm_access_t *associated,
                                   char *path,
-                                  types.svn_boolean_t write_lock,
+                                  svn_boolean_t write_lock,
                                   int depth,
-                                  types.svn_cancel_func_t cancel_func,
+                                  svn_cancel_func_t cancel_func,
                                   cancel_baton,
-                                  apr.apr_pool_t *pool)
+                                  apr_pool_t *pool)
     svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
     char *svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access)
     svn_boolean_t svn_wc_adm_locked(svn_wc_adm_access_t *adm_access)
-    svn_error_t *svn_wc_locked(svn_boolean_t *locked, char *path, apr.apr_pool_t *pool)
+    svn_error_t *svn_wc_locked(svn_boolean_t *locked, char *path, apr_pool_t *pool)
     ctypedef struct svn_wc_revision_status_t:
         long min_rev
         long max_rev
@@ -42,19 +48,19 @@ cdef extern from "svn_wc.h":
     svn_error_t *svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                        char *wc_path,
                        char *trail_url,
-                       types.svn_boolean_t committed,
-                       types.svn_cancel_func_t cancel_func,
+                       svn_boolean_t committed,
+                       svn_cancel_func_t cancel_func,
                        void *cancel_baton,
-                       apr.apr_pool_t *pool)
+                       apr_pool_t *pool)
     svn_error_t *svn_wc_prop_get(svn_string_t **value,
                              char *name,
                              char *path,
                              svn_wc_adm_access_t *adm_access,
-                             apr.apr_pool_t *pool)
+                             apr_pool_t *pool)
     svn_error_t *svn_wc_entries_read(apr_hash_t **entries,
                                  svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t show_hidden,
-                                 apr.apr_pool_t *pool)
+                                 apr_pool_t *pool)
 
 def version():
     """Get libsvn_wc version information.
@@ -66,10 +72,11 @@ def version():
 
 cdef class WorkingCopy:
     cdef svn_wc_adm_access_t *adm
+    cdef apr_pool_t *pool
     def __init__(self, path, associated=None, write_lock=False, depth=0, 
                  cancel_func=None):
         self.pool = Pool(NULL)
-        _check_error(svn_wc_adm_open3(&self.adm, associated, path, 
+        check_error(svn_wc_adm_open3(&self.adm, associated, path, 
                      write_lock, depth, py_cancel_func, cancel_func, 
                      self.pool))
 
@@ -81,12 +88,12 @@ cdef class WorkingCopy:
 
     def prop_get(self, name, path):
         cdef svn_string_t *value
-        _check_error(svn_wc_prop_get(&value, name, path, self.adm, temp_pool))
-        return PyString_FromStringAndSize(value.data, value.length)
+        check_error(svn_wc_prop_get(&value, name, path, self.adm, temp_pool))
+        return PyString_FromStringAndSize(value.data, value.len)
 
     def entries_read(self, show_hidden):
         cdef apr_hash_t *entries
-        _check_error(svn_wc_entries_read(&entries, self.adm, 
+        check_error(svn_wc_entries_read(&entries, self.adm, 
                      show_hidden, temp_pool))
         # FIXME: Create py_entries
         py_entries = {}
@@ -98,7 +105,7 @@ cdef class WorkingCopy:
 
 def revision_status(wc_path, trail_url, committed, cancel_func=None):
     cdef svn_wc_revision_status_t *revstatus
-    _check_error(svn_wc_revision_status(&revstatus, wc_path, trail_url,
+    check_error(svn_wc_revision_status(&revstatus, wc_path, trail_url,
                  committed, py_cancel_func, cancel_func, temp_pool))
     return (revstatus.min_rev, revstatus.max_rev, 
             revstatus.switched, revstatus.modified)

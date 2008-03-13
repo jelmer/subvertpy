@@ -24,8 +24,8 @@ from bzrlib.inventory import (Inventory)
 from bzrlib.revision import ensure_null
 from bzrlib.workingtree import WorkingTree
 
-import svn.client, svn.core
-from svn.core import SubversionException, Pool
+import svn.client, core
+from core import SubversionException, Pool
 
 from commit import push
 from errors import NotSvnBranchPath
@@ -75,10 +75,10 @@ class SvnBranch(Branch):
         self._branch_path = branch_path.strip("/")
         try:
             if self.repository.transport.check_path(branch_path.strip("/"), 
-                self.get_revnum()) != svn.core.svn_node_dir:
+                self.get_revnum()) != core.svn_node_dir:
                 raise NotBranchError(self.base)
         except SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == core.SVN_ERR_FS_NO_SUCH_REVISION:
                 raise NotBranchError(self.base)
             raise
         if not self.mapping.is_branch(branch_path):

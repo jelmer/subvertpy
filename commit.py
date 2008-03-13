@@ -16,7 +16,9 @@
 """Committing and pushing to Subversion repositories."""
 
 import svn.delta
-from svn.core import Pool, SubversionException, svn_time_to_cstring
+from svn.core import Pool, SubversionException
+
+from core import time_to_cstring
 
 from bzrlib import debug, osutils, urlutils
 from bzrlib.branch import Branch
@@ -61,7 +63,7 @@ def _check_dirs_exist(transport, bp_parts, base_rev):
     for i in range(len(bp_parts), 0, -1):
         current = bp_parts[:i]
         path = "/".join(current).strip("/")
-        if transport.check_path(path, base_rev) == svn.core.svn_node_dir:
+        if transport.check_path(path, base_rev) == core.svn_node_dir:
             return current
     return []
 
@@ -77,7 +79,7 @@ def set_svn_revprops(transport, revnum, revprops):
     for (name, value) in revprops.items():
         try:
             transport.change_rev_prop(revnum, name, value)
-        except SubversionException, (_, svn.core.SVN_ERR_REPOS_DISABLED_FEATURE):
+        except SubversionException, (_, core.SVN_ERR_REPOS_DISABLED_FEATURE):
             raise RevpropChangeFailed(name)
 
 
@@ -276,20 +278,20 @@ class SvnCommitBuilder(RootCommitBuilder):
             if child_baton is not None:
                 if old_executable != child_ie.executable:
                     if child_ie.executable:
-                        value = svn.core.SVN_PROP_EXECUTABLE_VALUE
+                        value = core.SVN_PROP_EXECUTABLE_VALUE
                     else:
                         value = None
                     self.editor.change_file_prop(child_baton, 
-                            svn.core.SVN_PROP_EXECUTABLE, value, self.pool)
+                            core.SVN_PROP_EXECUTABLE, value, self.pool)
 
                 if old_special != (child_ie.kind == 'symlink'):
                     if child_ie.kind == 'symlink':
-                        value = svn.core.SVN_PROP_SPECIAL_VALUE
+                        value = core.SVN_PROP_SPECIAL_VALUE
                     else:
                         value = None
 
                     self.editor.change_file_prop(child_baton, 
-                            svn.core.SVN_PROP_SPECIAL, value, self.pool)
+                            core.SVN_PROP_SPECIAL, value, self.pool)
 
             # handle the file
             if child_ie.file_id in self.modified_files:
@@ -439,7 +441,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             fileids[path] = id
 
         self.base_mapping.export_fileid_map(fileids, self._svn_revprops, self._svnprops)
-        self._svn_revprops[svn.core.SVN_PROP_REVISION_LOG] = message.encode("utf-8")
+        self._svn_revprops[core.SVN_PROP_REVISION_LOG] = message.encode("utf-8")
 
         try:
             existing_bp_parts = _check_dirs_exist(self.repository.transport, 
@@ -454,9 +456,9 @@ class SvnCommitBuilder(RootCommitBuilder):
                     raise
                 # Try without bzr: revprops
                 self.editor = self.repository.transport.get_commit_editor({
-                    svn.core.SVN_PROP_REVISION_LOG: self._svn_revprops[svn.core.SVN_PROP_REVISION_LOG]},
+                    core.SVN_PROP_REVISION_LOG: self._svn_revprops[svn.core.SVN_PROP_REVISION_LOG]},
                     done, None, False)
-                del self._svn_revprops[svn.core.SVN_PROP_REVISION_LOG]
+                del self._svn_revprops[core.SVN_PROP_REVISION_LOG]
 
             root = self.editor.open_root(self.base_revnum)
 
@@ -508,8 +510,8 @@ class SvnCommitBuilder(RootCommitBuilder):
         if self.repository.get_config().get_override_svn_revprops():
             set_svn_revprops(self.repository.transport, 
                  self.revision_metadata.revision, {
-                svn.core.SVN_PROP_REVISION_AUTHOR: self._committer,
-                svn.core.SVN_PROP_REVISION_DATE: svn_time_to_cstring(1000000*self._timestamp)})
+                core.SVN_PROP_REVISION_AUTHOR: self._committer,
+                core.SVN_PROP_REVISION_DATE: svn_time_to_cstring(1000000*self._timestamp)})
 
         try:
             set_svn_revprops(self.repository.transport, self.revision_metadata.revision, 
@@ -693,7 +695,7 @@ def push(target, source, revision_id):
     try:
         builder.commit(rev.message)
     except SubversionException, (_, num):
-        if num == svn.core.SVN_ERR_FS_TXN_OUT_OF_DATE:
+        if num == core.SVN_ERR_FS_TXN_OUT_OF_DATE:
             raise DivergedBranches(source, target)
         raise
     except ChangesRootLHSHistory:

@@ -26,12 +26,17 @@ cdef extern from "svn_version.h":
 
 
 cdef extern from "svn_error.h":
-    ctypedef struct svn_error_t
+    ctypedef struct svn_error_t:
+        apr_status_t apr_err
+        char *message
+        char *file
+        char *line
 
 
 cdef extern from "svn_types.h":
     ctypedef int svn_boolean_t
     ctypedef svn_error_t *(*svn_cancel_func_t)(cancel_baton)
+    ctypedef long svn_revnum_t
 
 cdef extern from "svn_string.h":
     ctypedef struct svn_string_t:

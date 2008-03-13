@@ -51,8 +51,8 @@ from tree import SvnBasisTree
 import os
 import urllib
 
-import svn.core, svn.wc
-from svn.core import SubversionException, Pool, svn_time_to_cstring
+import core. svn.wc
+from core.import SubversionException, Pool, svn_time_to_cstring
 
 from errors import NoCheckoutSupport
 from format import get_rich_root_format
@@ -82,8 +82,8 @@ class SvnWorkingTree(WorkingTree):
         status = wc.revision_status(self.basedir, None, True)
         if status.min_rev != status.max_rev:
             #raise WorkingTreeInconsistent(status.min_rev, status.max_rev)
-            rev = svn.core.svn_opt_revision_t()
-            rev.kind = svn.core.svn_opt_revision_number
+            rev = core.svn_opt_revision_t()
+            rev.kind = core.svn_opt_revision_number
             rev.value.number = status.max_rev
             assert status.max_rev == svn.client.update(self.basedir, rev,
                                      True, self.client_ctx, Pool())
@@ -110,7 +110,7 @@ class SvnWorkingTree(WorkingTree):
         ignores.update(wc.get_default_ignores(svn_config))
 
         def dir_add(wc, prefix, patprefix):
-            ignorestr = wc.prop_get(svn.core.SVN_PROP_IGNORE, 
+            ignorestr = wc.prop_get(core.SVN_PROP_IGNORE, 
                                     self.abspath(prefix).rstrip("/"))
             if ignorestr is not None:
                 for pat in ignorestr.splitlines():
@@ -121,7 +121,7 @@ class SvnWorkingTree(WorkingTree):
                 if entry == "":
                     continue
 
-                if entries[entry].kind != svn.core.svn_node_dir:
+                if entries[entry].kind != core.svn_node_dir:
                     continue
 
                 subprefix = os.path.join(prefix, entry)
@@ -148,8 +148,8 @@ class SvnWorkingTree(WorkingTree):
         raise NotImplementedError(self.apply_inventory_delta)
 
     def update(self, change_reporter=None):
-        rev = svn.core.svn_opt_revision_t()
-        rev.kind = svn.core.svn_opt_revision_head
+        rev = core.svn_opt_revision_t()
+        rev.kind = core.svn_opt_revision_head
         svn.client.update(self.basedir, rev, True, self.client_ctx)
 
     def remove(self, files, verbose=False, to_file=None):
@@ -179,8 +179,8 @@ class SvnWorkingTree(WorkingTree):
     def move(self, from_paths, to_dir=None, after=False, **kwargs):
         # FIXME: Use after argument
         assert after != True
-        revt = svn.core.svn_opt_revision_t()
-        revt.kind = svn.core.svn_opt_revision_working
+        revt = core.svn_opt_revision_t()
+        revt.kind = core.svn_opt_revision_working
         for entry in from_paths:
             try:
                 to_wc = self._get_wc(to_dir, write_lock=True)
@@ -202,8 +202,8 @@ class SvnWorkingTree(WorkingTree):
     def rename_one(self, from_rel, to_rel, after=False):
         # FIXME: Use after
         assert after != True
-        revt = svn.core.svn_opt_revision_t()
-        revt.kind = svn.core.svn_opt_revision_unspecified
+        revt = core.svn_opt_revision_t()
+        revt.kind = core.svn_opt_revision_unspecified
         (to_wc, to_file) = self._get_rel_wc(to_rel, write_lock=True)
         if os.path.dirname(from_rel) == os.path.dirname(to_rel):
             # Prevent lock contention
@@ -333,7 +333,7 @@ class SvnWorkingTree(WorkingTree):
                 entry = entries[name]
                 assert entry
                 
-                if entry.kind == svn.core.svn_node_dir:
+                if entry.kind == core.svn_node_dir:
                     subwc = svn.wc.adm_open3(wc, self.abspath(subrelpath), 
                                              False, 0, None)
                     try:
@@ -458,7 +458,7 @@ class SvnWorkingTree(WorkingTree):
                 commit_info = svn.client.commit3(specific_files, True, False, 
                                                  self.client_ctx)
             except SubversionException, (_, num):
-                if num == svn.core.SVN_ERR_FS_TXN_OUT_OF_DATE:
+                if num == core.SVN_ERR_FS_TXN_OUT_OF_DATE:
                     raise OutOfDateTree(self)
                 raise
         except:
@@ -544,9 +544,9 @@ class SvnWorkingTree(WorkingTree):
                     if ids is not None:
                         self._change_fileid_mapping(ids.next(), f, wc)
                 except SubversionException, (_, num):
-                    if num == svn.core.SVN_ERR_ENTRY_EXISTS:
+                    if num == core.SVN_ERR_ENTRY_EXISTS:
                         continue
-                    elif num == svn.core.SVN_ERR_WC_PATH_NOT_FOUND:
+                    elif num == core.SVN_ERR_WC_PATH_NOT_FOUND:
                         raise NoSuchFile(path=f)
                     raise
             finally:
@@ -570,8 +570,8 @@ class SvnWorkingTree(WorkingTree):
         (result.old_revno, result.old_revid) = self.branch.last_revision_info()
         if stop_revision is None:
             stop_revision = self.branch.last_revision()
-        rev = svn.core.svn_opt_revision_t()
-        rev.kind = svn.core.svn_opt_revision_number
+        rev = core.svn_opt_revision_t()
+        rev.kind = core.svn_opt_revision_number
         rev.value.number = self.branch.lookup_revision_id(stop_revision)
         fetched = svn.client.update(self.basedir, rev, True, self.client_ctx)
         self.base_revid = self.branch.generate_revision_id(fetched)
@@ -798,7 +798,7 @@ class SvnCheckout(BzrDir):
             branch = SvnBranch(self.svn_root_transport.base, repos, 
                                self.remote_bzrdir.branch_path)
         except SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_WC_NOT_DIRECTORY:
+            if num == core.SVN_ERR_WC_NOT_DIRECTORY:
                 raise NotBranchError(path=self.base)
             raise
 

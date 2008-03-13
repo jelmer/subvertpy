@@ -19,16 +19,6 @@ include "types.pxi"
 
 apr_initialize()
 
-cdef apr_pool_t *Pool(apr_pool_t *parent):
-    cdef apr_status_t status
-    cdef apr_pool_t *ret
-    ret = NULL
-    status = apr_pool_create(&ret, parent)
-    if status != 0:
-        # FIXME: Clearer error
-        raise Exception("APR Error")
-    return ret
-
 cdef extern from "svn_auth.h":
     ctypedef struct svn_auth_baton_t
     void svn_auth_open(svn_auth_baton_t **auth_baton,
@@ -36,7 +26,7 @@ cdef extern from "svn_auth.h":
                        apr_pool_t *pool)
     void svn_auth_set_parameter(svn_auth_baton_t *auth_baton, 
                                 char *name, void *value)
-    void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
+    void *svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
                                   char *name)
 
     ctypedef struct svn_auth_provider_t:
@@ -81,7 +71,8 @@ cdef extern from "svn_delta.h":
     ctypedef svn_error_t *(*svn_txdelta_window_handler_t) (svn_txdelta_window_t *window, void *baton)
 
     ctypedef struct svn_delta_editor_t:
-        svn_error_t *(*set_target_revision)(void *edit_baton, long target_revision, apr_pool_t *pool)
+        svn_error_t *(*set_target_revision)(void *edit_baton, 
+				                svn_revnum_t target_revision, apr_pool_t *pool)
         svn_error_t *(*open_root)(void *edit_baton, long base_revision, 
                                   apr_pool_t *dir_pool, void **root_baton)
 
@@ -359,22 +350,22 @@ cdef class Reporter:
     cdef apr_pool_t *pool
 
     def set_path(self, path, revision, start_empty, lock_token):
-        _check_error(self.reporter.set_path(self.report_baton, path, revision, 
+        check_error(self.reporter.set_path(self.report_baton, path, revision, 
                      start_empty, lock_token, self.pool))
 
     def delete_path(self, path):
-        _check_error(self.reporter.delete_path(self.report_baton, path, 
+        check_error(self.reporter.delete_path(self.report_baton, path, 
                      self.pool))
 
     def link_path(self, path, url, revision, start_empty, lock_token):
-        _check_error(self.reporter.link_path(self.report_baton, path, url, 
+        check_error(self.reporter.link_path(self.report_baton, path, url, 
                      revision, start_empty, lock_token, self.pool))
 
     def finish_report(self):
-        _check_error(self.reporter.finish_report(self.report_baton, self.pool))
+        check_error(self.reporter.finish_report(self.report_baton, self.pool))
 
     def abort_report(self):
-        _check_error(self.reporter.abort_report(self.report_baton, self.pool))
+        check_error(self.reporter.abort_report(self.report_baton, self.pool))
 
 
 def version():
@@ -385,12 +376,9 @@ def version():
     return (svn_ra_version().major, svn_ra_version().minor, 
             svn_ra_version().minor, svn_ra_version().tag)
 
-cdef void _check_error(svn_error_t *error):
-    if error:
-        # FIXME
-        raise Exception("SVN error")
 
 cdef class RemoteAccess:
+    """Connection to a remote Subversion repository."""
     cdef svn_ra_session_t *ra
     cdef apr_pool_t *pool
     cdef char *url
@@ -407,11 +395,11 @@ cdef class RemoteAccess:
         self.url = url
         self.pool = Pool(NULL)
         assert self.pool != NULL
-        _check_error(svn_ra_create_callbacks(&callbacks2, self.pool))
+        check_error(svn_ra_create_callbacks(&callbacks2, self.pool))
         config_hash = apr_hash_make(self.pool)
         for (key, val) in config.items():
             apr_hash_set(config_hash, key, len(key), val)
-        _check_error(svn_ra_open2(&self.ra, url, callbacks2, None, config_hash, 
+        check_error(svn_ra_open2(&self.ra, url, callbacks2, None, config_hash, 
                      self.pool))
 
     def get_uuid(self):
@@ -419,7 +407,7 @@ cdef class RemoteAccess:
         cdef char *uuid
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_get_uuid(self.ra, &uuid, temp_pool))
+        check_error(svn_ra_get_uuid(self.ra, &uuid, temp_pool))
         apr_pool_destroy(temp_pool)
         return uuid
 
@@ -427,7 +415,7 @@ cdef class RemoteAccess:
         """Switch to a different url."""
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_reparent(self.ra, url, temp_pool))
+        check_error(svn_ra_reparent(self.ra, url, temp_pool))
         apr_pool_destroy(temp_pool)
 
     def get_latest_revnum(self):
@@ -437,7 +425,7 @@ cdef class RemoteAccess:
         cdef long latest_revnum
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_get_latest_revnum(self.ra, &latest_revnum, 
+        check_error(svn_ra_get_latest_revnum(self.ra, &latest_revnum, 
                      temp_pool))
         apr_pool_destroy(temp_pool)
         return latest_revnum
@@ -447,7 +435,7 @@ cdef class RemoteAccess:
                 revprops=[SVN_PROP_REVISION_LOG,SVN_PROP_REVISION_AUTHOR,SVN_PROP_REVISION_DATE]):
         cdef apr_array_header_t *paths_array
         cdef apr_pool_t *temp_pool
-        _check_error(svn_ra_get_log(self.ra, paths_array, start, end, limit,
+        check_error(svn_ra_get_log(self.ra, paths_array, start, end, limit,
             discover_changed_paths, strict_node_history, py_svn_log_wrapper, 
             callback, temp_pool))
         apr_pool_destroy(temp_pool)
@@ -457,7 +445,7 @@ cdef class RemoteAccess:
         cdef char *root
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_get_repos_root(self.ra, &root, 
+        check_error(svn_ra_get_repos_root(self.ra, &root, 
                      temp_pool))
         apr_pool_destroy(temp_pool)
         return root
@@ -469,7 +457,7 @@ cdef class RemoteAccess:
         cdef apr_pool_t *temp_pool
         cdef svn_delta_editor_t *editor
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
+        check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
                      revision_to_update_to, update_target, recurse, 
                      editor, update_editor, temp_pool))
         apr_pool_destroy(temp_pool)
@@ -486,7 +474,7 @@ cdef class RemoteAccess:
         cdef apr_pool_t *temp_pool
         cdef svn_delta_editor_t *editor
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
+        check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
                      revision_to_update_to, update_target, recurse, 
                      editor, update_editor, temp_pool))
         apr_pool_destroy(temp_pool)
@@ -498,7 +486,7 @@ cdef class RemoteAccess:
         cdef apr_pool_t *temp_pool
         cdef svn_delta_editor_t *editor
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_replay(self.ra, revision, low_water_mark,
+        check_error(svn_ra_replay(self.ra, revision, low_water_mark,
                      send_deltas, editor, update_editor, temp_pool))
         apr_pool_destroy(temp_pool)
         return Reporter(reporter, report_baton, temp_pool)
@@ -507,7 +495,7 @@ cdef class RemoteAccess:
         cdef apr_pool_t *temp_pool
         cdef apr_hash_t *props
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_rev_proplist(self.ra, rev, &props, temp_pool))
+        check_error(svn_ra_rev_proplist(self.ra, rev, &props, temp_pool))
         py_props = {}
         # FIXME: Convert props to py_props
         apr_pool_destroy(temp_pool)
@@ -520,7 +508,7 @@ cdef class RemoteAccess:
         cdef void *edit_baton
         cdef apr_hash_t *hash_lock_tokens
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_get_commit_editor2(self.ra, &editor, 
+        check_error(svn_ra_get_commit_editor2(self.ra, &editor, 
             &edit_baton, revprops[SVN_PROP_REVISION_LOG], py_commit_callback, 
             commit_callback, hash_lock_tokens, keep_locks, temp_pool))
         apr_pool_destroy(temp_pool)
@@ -531,7 +519,7 @@ cdef class RemoteAccess:
         cdef svn_string_t *val_string
         temp_pool = Pool(self.pool)
         val_string = svn_string_ncreate(value, len(value), temp_pool)
-        _check_error(svn_ra_change_rev_prop(self.ra, rev, name, 
+        check_error(svn_ra_change_rev_prop(self.ra, rev, name, 
                      val_string, temp_pool))
         apr_pool_destroy(temp_pool)
     
@@ -541,7 +529,7 @@ cdef class RemoteAccess:
         cdef apr_hash_t *props
         cdef long fetch_rev
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_get_dir2(self.ra, &dirents, &fetch_rev, &props,
+        check_error(svn_ra_get_dir2(self.ra, &dirents, &fetch_rev, &props,
                      path, revision, dirent_fields, temp_pool))
         # FIXME: Convert dirents to python hash
         # FIXME: Convert props to python hash
@@ -554,7 +542,7 @@ cdef class RemoteAccess:
         cdef svn_lock_t *lock
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_get_lock(self.ra, &lock, path, temp_pool))
+        check_error(svn_ra_get_lock(self.ra, &lock, path, temp_pool))
         apr_pool_destroy(temp_pool)
         return lock
 
@@ -562,7 +550,7 @@ cdef class RemoteAccess:
         cdef svn_node_kind_t kind
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_check_path(self.ra, path, revision, &kind, 
+        check_error(svn_ra_check_path(self.ra, path, revision, &kind, 
                      temp_pool))
         apr_pool_destroy(temp_pool)
         return kind
@@ -571,7 +559,7 @@ cdef class RemoteAccess:
         cdef apr_pool_t *temp_pool
         cdef int has
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_has_capability(self.ra, &has, capability, 
+        check_error(svn_ra_has_capability(self.ra, &has, capability, 
                      temp_pool))
         apr_pool_destroy(temp_pool)
         return has
@@ -581,7 +569,7 @@ cdef class RemoteAccess:
         cdef apr_hash_t *hash_path_tokens
         temp_pool = Pool(self.pool)
         # FIXME: Convert path_tokens to a apr_hash
-        _check_error(svn_ra_unlock(self.ra, hash_path_tokens, break_lock,
+        check_error(svn_ra_unlock(self.ra, hash_path_tokens, break_lock,
                      py_lock_func, lock_func, temp_pool))
         apr_pool_destroy(temp_pool)
 
@@ -590,7 +578,7 @@ cdef class RemoteAccess:
         cdef apr_hash_t *hash_path_revs
         # FIXME: Create hash_path_revs
         temp_pool = Pool(self.pool)
-        _check_error(svn_ra_lock(self.ra, hash_path_revs, comment, steal_lock,
+        check_error(svn_ra_lock(self.ra, hash_path_revs, comment, steal_lock,
                      py_lock_func, lock_func, temp_pool))
         apr_pool_destroy(temp_pool)
 

@@ -83,11 +83,11 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
             credentials.has_key("verify_certificates") and 
             credentials["verify_certificates"] == False):
             ssl_server_trust.accepted_failures = (
-                    svn.core.SVN_AUTH_SSL_NOTYETVALID + 
-                    svn.core.SVN_AUTH_SSL_EXPIRED +
-                    svn.core.SVN_AUTH_SSL_CNMISMATCH +
-                    svn.core.SVN_AUTH_SSL_UNKNOWNCA +
-                    svn.core.SVN_AUTH_SSL_OTHER)
+                    core.SVN_AUTH_SSL_NOTYETVALID + 
+                    core.SVN_AUTH_SSL_EXPIRED +
+                    core.SVN_AUTH_SSL_CNMISMATCH +
+                    core.SVN_AUTH_SSL_UNKNOWNCA +
+                    core.SVN_AUTH_SSL_OTHER)
         else:
             ssl_server_trust.accepted_failures = 0
         ssl_server_trust.may_save = False

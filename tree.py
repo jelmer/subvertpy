@@ -26,8 +26,8 @@ import md5
 from cStringIO import StringIO
 import urllib
 
-import svn.core, svn.wc, svn.delta
-from svn.core import Pool
+import core, svn.wc, svn.delta
+from core import Pool
 
 # Deal with Subversion 1.5 and the patched Subversion 1.4 (which are 
 # slightly different).
@@ -112,9 +112,9 @@ class TreeBuildEditor(svn.delta.Editor):
                         SVN_PROP_BZR_FILEIDS, SVN_PROP_BZR_REVISION_ID,
                         SVN_PROP_BZR_BRANCHING_SCHEME, SVN_PROP_BZR_MERGE)
 
-        if name == svn.core.SVN_PROP_ENTRY_COMMITTED_REV:
+        if name == core.SVN_PROP_ENTRY_COMMITTED_REV:
             self.dir_revnum[id] = int(value)
-        elif name == svn.core.SVN_PROP_IGNORE:
+        elif name == core.SVN_PROP_IGNORE:
             self.dir_ignores[id] = value
         elif name.startswith(SVN_PROP_BZR_ANCESTRY):
             if id != self.tree._inventory.root.file_id:
@@ -124,41 +124,41 @@ class TreeBuildEditor(svn.delta.Editor):
             if id != self.tree._inventory.root.file_id:
                 mutter('%r set on non-root dir!' % name)
                 return
-        elif name in (svn.core.SVN_PROP_ENTRY_COMMITTED_DATE,
-                      svn.core.SVN_PROP_ENTRY_LAST_AUTHOR,
-                      svn.core.SVN_PROP_ENTRY_LOCK_TOKEN,
-                      svn.core.SVN_PROP_ENTRY_UUID,
-                      svn.core.SVN_PROP_EXECUTABLE):
+        elif name in (SVN_PROP_ENTRY_COMMITTED_DATE,
+                      SVN_PROP_ENTRY_LAST_AUTHOR,
+                      SVN_PROP_ENTRY_LOCK_TOKEN,
+                      SVN_PROP_ENTRY_UUID,
+                      SVN_PROP_EXECUTABLE):
             pass
-        elif name.startswith(svn.core.SVN_PROP_WC_PREFIX):
+        elif name.startswith(core.SVN_PROP_WC_PREFIX):
             pass
         elif (name == SVN_PROP_BZR_REVISION_INFO or 
               name.startswith(SVN_PROP_BZR_REVISION_ID)):
             pass
         elif name == SVN_PROP_BZR_MERGE:
             pass
-        elif (name.startswith(svn.core.SVN_PROP_PREFIX) or
+        elif (name.startswith(core.SVN_PROP_PREFIX) or
               name.startswith(SVN_PROP_BZR_PREFIX)):
             mutter('unsupported dir property %r' % name)
 
     def change_file_prop(self, id, name, value, pool):
         from mapping import SVN_PROP_BZR_PREFIX
 
-        if name == svn.core.SVN_PROP_EXECUTABLE:
+        if name == core.SVN_PROP_EXECUTABLE:
             self.is_executable = (value != None)
-        elif name == svn.core.SVN_PROP_SPECIAL:
+        elif name == core.SVN_PROP_SPECIAL:
             self.is_symlink = (value != None)
-        elif name == svn.core.SVN_PROP_ENTRY_COMMITTED_REV:
+        elif name == core.SVN_PROP_ENTRY_COMMITTED_REV:
             self.last_file_rev = int(value)
-        elif name in (svn.core.SVN_PROP_ENTRY_COMMITTED_DATE,
-                      svn.core.SVN_PROP_ENTRY_LAST_AUTHOR,
-                      svn.core.SVN_PROP_ENTRY_LOCK_TOKEN,
-                      svn.core.SVN_PROP_ENTRY_UUID,
-                      svn.core.SVN_PROP_MIME_TYPE):
+        elif name in (core.SVN_PROP_ENTRY_COMMITTED_DATE,
+                      core.SVN_PROP_ENTRY_LAST_AUTHOR,
+                      core.SVN_PROP_ENTRY_LOCK_TOKEN,
+                      core.SVN_PROP_ENTRY_UUID,
+                      core.SVN_PROP_MIME_TYPE):
             pass
-        elif name.startswith(svn.core.SVN_PROP_WC_PREFIX):
+        elif name.startswith(core.SVN_PROP_WC_PREFIX):
             pass
-        elif (name.startswith(svn.core.SVN_PROP_PREFIX) or
+        elif (name.startswith(core.SVN_PROP_PREFIX) or
               name.startswith(SVN_PROP_BZR_PREFIX)):
             mutter('unsupported file property %r' % name)
 
@@ -232,7 +232,7 @@ class SvnBasisTree(RevisionTree):
             props = svn.wc.get_prop_diffs(self.workingtree.abspath(relpath), wc)
             if isinstance(props, list): # Subversion 1.5
                 props = props[1]
-            if props.has_key(svn.core.SVN_PROP_SPECIAL):
+            if props.has_key(core.SVN_PROP_SPECIAL):
                 ie = self._inventory.add_path(relpath, 'symlink', id)
                 ie.symlink_target = open(self._abspath(relpath)).read()[len("link "):]
                 ie.text_sha1 = None
@@ -244,7 +244,7 @@ class SvnBasisTree(RevisionTree):
                 data = osutils.fingerprint_file(open(self._abspath(relpath)))
                 ie.text_sha1 = data['sha1']
                 ie.text_size = data['size']
-                ie.executable = props.has_key(svn.core.SVN_PROP_EXECUTABLE)
+                ie.executable = props.has_key(core.SVN_PROP_EXECUTABLE)
             ie.revision = revid
             return ie
 
@@ -278,7 +278,7 @@ class SvnBasisTree(RevisionTree):
                 entry = entries[name]
                 assert entry
                 
-                if entry.kind == svn.core.svn_node_dir:
+                if entry.kind == core.svn_node_dir:
                     subwc = svn.wc.adm_open3(wc, 
                             self.workingtree.abspath(subrelpath), 
                                              False, 0, None)

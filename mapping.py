@@ -140,12 +140,12 @@ def parse_merge_property(line):
     return filter(lambda x: x != "", line.split("\t"))
 
 def parse_svn_revprops(svn_revprops, rev):
-    if svn_revprops.has_key(svn.core.SVN_PROP_REVISION_AUTHOR):
-        rev.committer = svn_revprops[svn.core.SVN_PROP_REVISION_AUTHOR]
+    if svn_revprops.has_key(core.SVN_PROP_REVISION_AUTHOR):
+        rev.committer = svn_revprops[core.SVN_PROP_REVISION_AUTHOR]
     else:
         rev.committer = ""
 
-    rev.message = svn_revprops.get(svn.core.SVN_PROP_REVISION_LOG)
+    rev.message = svn_revprops.get(core.SVN_PROP_REVISION_LOG)
 
     if rev.message:
         try:
@@ -153,8 +153,8 @@ def parse_svn_revprops(svn_revprops, rev):
         except UnicodeDecodeError:
             pass
 
-    if svn_revprops.has_key(svn.core.SVN_PROP_REVISION_DATE):
-        rev.timestamp = 1.0 * svn.core.secs_from_timestr(svn_revprops[svn.core.SVN_PROP_REVISION_DATE], None)
+    if svn_revprops.has_key(core.SVN_PROP_REVISION_DATE):
+        rev.timestamp = 1.0 * core.secs_from_timestr(svn_revprops[core.SVN_PROP_REVISION_DATE], None)
     else:
         rev.timestamp = 0.0 # FIXME: Obtain repository creation time
     rev.timezone = None

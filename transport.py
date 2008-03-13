@@ -21,14 +21,14 @@ from bzrlib.errors import (NoSuchFile, NotBranchError, TransportNotPossible,
 from bzrlib.trace import mutter
 from bzrlib.transport import Transport
 
-from svn.core import SubversionException, Pool
+from core import SubversionException, Pool
 import ra
-import svn.core
+import core
 import svn.client
 
 from errors import convert_svn_error, NoSvnRepositoryPresent
 
-svn_config = svn.core.svn_config_get_config(None)
+svn_config = core.svn_config_get_config(None)
 
 def get_client_string():
     """Return a string that can be send as part of the User Agent string."""
@@ -41,7 +41,7 @@ def _create_auth_baton(pool):
     # providers.h
     providers = []
 
-    if svn.core.SVN_VER_MAJOR == 1 and svn.core.SVN_VER_MINOR >= 5:
+    if core.SVN_VER_MAJOR == 1 and svn.core.SVN_VER_MINOR >= 5:
         import auth
         providers += auth.SubversionAuthenticationConfig().get_svn_auth_providers()
         providers += [auth.get_ssl_client_cert_pw_provider(1)]
@@ -63,7 +63,7 @@ def _create_auth_baton(pool):
     if hasattr(svn.client, 'get_windows_ssl_server_trust_provider'):
         providers.append(svn.client.get_windows_ssl_server_trust_provider(pool))
 
-    return svn.core.svn_auth_open(providers, pool)
+    return core.svn_auth_open(providers, pool)
 
 
 def create_svn_client(pool):
@@ -212,9 +212,9 @@ class SvnRaTransport(Transport):
             self._ra = svn.client.open_ra_session(self._backing_url.encode('utf8'), 
                     self._client, self.pool)
         except SubversionException, (_, num):
-            if num in (svn.core.SVN_ERR_RA_SVN_REPOS_NOT_FOUND,):
+            if num in (core.SVN_ERR_RA_SVN_REPOS_NOT_FOUND,):
                 raise NoSvnRepositoryPresent(url=url)
-            if num == svn.core.SVN_ERR_BAD_URL:
+            if num == core.SVN_ERR_BAD_URL:
                 raise InvalidURL(url)
             raise
 
@@ -321,7 +321,7 @@ class SvnRaTransport(Transport):
         # slash while other backends don't.
         fields = 0
         if kind:
-            fields += svn.core.SVN_DIRENT_KIND
+            fields += core.SVN_DIRENT_KIND
         return self._ra.get_dir(path, revnum, fields)
 
     def _request_path(self, relpath):
@@ -342,7 +342,7 @@ class SvnRaTransport(Transport):
             (dirents, _, _) = self.get_dir(self._request_path(relpath),
                                            self.get_latest_revnum())
         except SubversionException, (msg, num):
-            if num == svn.core.SVN_ERR_FS_NOT_DIRECTORY:
+            if num == core.SVN_ERR_FS_NOT_DIRECTORY:
                 raise NoSuchFile(relpath)
             raise
         return dirents.keys()
@@ -388,9 +388,9 @@ class SvnRaTransport(Transport):
         try:
             svn.client.mkdir([path.encode("utf-8")], self._client)
         except SubversionException, (msg, num):
-            if num == svn.core.SVN_ERR_FS_NOT_FOUND:
+            if num == core.SVN_ERR_FS_NOT_FOUND:
                 raise NoSuchFile(path)
-            if num == svn.core.SVN_ERR_FS_ALREADY_EXISTS:
+            if num == core.SVN_ERR_FS_ALREADY_EXISTS:
                 raise FileExists(path)
             raise
 

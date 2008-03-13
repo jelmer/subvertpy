@@ -20,9 +20,9 @@ from bzrlib.errors import NoSuchRevision
 import bzrlib.ui as ui
 from copy import copy
 
-from svn.core import SubversionException, Pool
+from core import SubversionException, Pool
 from transport import SvnRaTransport
-import svn.core
+import core
 
 from cache import sqlite3
 
@@ -113,7 +113,7 @@ class LogWalker(object):
             finally:
                 pb.finished()
         except SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == core.SVN_ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % to_revnum)
             raise
@@ -248,9 +248,9 @@ class LogWalker(object):
         path = path.strip("/")
         transport = self._get_transport()
         ft = transport.check_path(path, revnum)
-        if ft == svn.core.svn_node_file:
+        if ft == core.svn_node_file:
             return []
-        assert ft == svn.core.svn_node_dir
+        assert ft == core.svn_node_dir
 
         class TreeLister(svn.delta.Editor):
             def __init__(self, base):

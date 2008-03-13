@@ -25,7 +25,7 @@ from bzrlib.transport import get_transport
 
 from format import get_rich_root_format
 
-import svn.core, svn.repos
+import core, svn.repos
 
 def transport_makedirs(transport, location_url):
     """Create missing directories.
@@ -73,8 +73,8 @@ def load_dumpfile(dumpfile, outputdir):
     try:
         svn.repos.load_fs2(repos, file, StringIO(), 
                 svn.repos.load_uuid_default, '', 0, 0, None)
-    except svn.core.SubversionException, (_, num):
-        if num == svn.core.SVN_ERR_STREAM_MALFORMED_DATA:
+    except core.SubversionException, (_, num):
+        if num == core.SVN_ERR_STREAM_MALFORMED_DATA:
             raise NotDumpFile(dumpfile)
         raise
     return repos
@@ -132,7 +132,7 @@ def convert_repository(source_repos, output_url, scheme=None,
                    source_repos.find_branchpaths(source_repos.get_scheme()))]
 
     def is_dir((branch, revnum)):
-        return source_repos.transport.check_path(branch, revnum) == svn.core.svn_node_dir
+        return source_repos.transport.check_path(branch, revnum) == core.svn_node_dir
 
     existing_branches = filter(is_dir, existing_branches)
 

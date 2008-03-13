@@ -25,8 +25,8 @@ from bzrlib.trace import mutter
 from cStringIO import StringIO
 import md5
 
-from svn.core import Pool
-import svn.core
+from core import Pool
+import core
 
 from bzrlib.plugins.svn.errors import InvalidFileName
 from mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_MERGE, 
@@ -269,41 +269,41 @@ class RevisionBuildEditor(svn.delta.Editor):
                 mutter('rogue %r on non-root directory' % SVN_PROP_BZR_REVISION_INFO)
                 return
  
-        elif name in (svn.core.SVN_PROP_ENTRY_COMMITTED_DATE,
-                      svn.core.SVN_PROP_ENTRY_COMMITTED_REV,
-                      svn.core.SVN_PROP_ENTRY_LAST_AUTHOR,
-                      svn.core.SVN_PROP_ENTRY_LOCK_TOKEN,
-                      svn.core.SVN_PROP_ENTRY_UUID,
-                      svn.core.SVN_PROP_EXECUTABLE):
+        elif name in (core.SVN_PROP_ENTRY_COMMITTED_DATE,
+                      core.SVN_PROP_ENTRY_COMMITTED_REV,
+                      core.SVN_PROP_ENTRY_LAST_AUTHOR,
+                      core.SVN_PROP_ENTRY_LOCK_TOKEN,
+                      core.SVN_PROP_ENTRY_UUID,
+                      core.SVN_PROP_EXECUTABLE):
             pass
-        elif name.startswith(svn.core.SVN_PROP_WC_PREFIX):
+        elif name.startswith(core.SVN_PROP_WC_PREFIX):
             pass
         elif name in (SVN_PROP_BZR_MERGE, SVN_PROP_BZR_FILEIDS):
             pass
-        elif (name.startswith(svn.core.SVN_PROP_PREFIX) or
+        elif (name.startswith(core.SVN_PROP_PREFIX) or
               name.startswith(SVN_PROP_BZR_PREFIX)):
             mutter('unsupported dir property %r' % name)
 
     def change_file_prop(self, id, name, value, pool):
-        if name == svn.core.SVN_PROP_EXECUTABLE: 
+        if name == core.SVN_PROP_EXECUTABLE: 
             # You'd expect executable to match 
-            # svn.core.SVN_PROP_EXECUTABLE_VALUE, but that's not 
+            # core.SVN_PROP_EXECUTABLE_VALUE, but that's not 
             # how SVN behaves. It appears to consider the presence 
             # of the property sufficient to mark it executable.
             self.is_executable = (value != None)
-        elif (name == svn.core.SVN_PROP_SPECIAL):
+        elif (name == core.SVN_PROP_SPECIAL):
             self.is_symlink = (value != None)
-        elif name == svn.core.SVN_PROP_ENTRY_COMMITTED_REV:
+        elif name == core.SVN_PROP_ENTRY_COMMITTED_REV:
             self.last_file_rev = int(value)
-        elif name in (svn.core.SVN_PROP_ENTRY_COMMITTED_DATE,
-                      svn.core.SVN_PROP_ENTRY_LAST_AUTHOR,
-                      svn.core.SVN_PROP_ENTRY_LOCK_TOKEN,
-                      svn.core.SVN_PROP_ENTRY_UUID,
-                      svn.core.SVN_PROP_MIME_TYPE):
+        elif name in (core.SVN_PROP_ENTRY_COMMITTED_DATE,
+                      core.SVN_PROP_ENTRY_LAST_AUTHOR,
+                      core.SVN_PROP_ENTRY_LOCK_TOKEN,
+                      core.SVN_PROP_ENTRY_UUID,
+                      core.SVN_PROP_MIME_TYPE):
             pass
-        elif name.startswith(svn.core.SVN_PROP_WC_PREFIX):
+        elif name.startswith(core.SVN_PROP_WC_PREFIX):
             pass
-        elif (name.startswith(svn.core.SVN_PROP_PREFIX) or
+        elif (name.startswith(core.SVN_PROP_PREFIX) or
               name.startswith(SVN_PROP_BZR_PREFIX)):
             mutter('unsupported file property %r' % name)
 

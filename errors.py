@@ -21,10 +21,8 @@ from bzrlib.errors import (BzrError, ConnectionError, ConnectionReset,
                            TransportError, UnexpectedEndOfContainerError)
 
 import urllib
-import svn.core
-
-# APR define, not in svn.core
-SVN_ERR_UNKNOWN_HOSTNAME = 670002
+import core
+from bzrlib.plugins.svn import constants
 
 class NotSvnBranchPath(NotBranchError):
     """Error raised when a path was specified that did not exist."""
@@ -83,19 +81,19 @@ def convert_error(err):
     """
     (msg, num) = err.args
 
-    if num == svn.core.SVN_ERR_RA_SVN_CONNECTION_CLOSED:
+    if num == core.SVN_ERR_RA_SVN_CONNECTION_CLOSED:
         return ConnectionReset(msg=msg)
-    elif num == svn.core.SVN_ERR_WC_LOCKED:
+    elif num == core.SVN_ERR_WC_LOCKED:
         return LockError(message=msg)
-    elif num == svn.core.SVN_ERR_RA_NOT_AUTHORIZED:
+    elif num == core.SVN_ERR_RA_NOT_AUTHORIZED:
         return PermissionDenied('.', msg)
-    elif num == svn.core.SVN_ERR_INCOMPLETE_DATA:
+    elif num == core.SVN_ERR_INCOMPLETE_DATA:
         return UnexpectedEndOfContainerError()
-    elif num == svn.core.SVN_ERR_RA_SVN_MALFORMED_DATA:
+    elif num == core.SVN_ERR_RA_SVN_MALFORMED_DATA:
         return TransportError("Malformed data", msg)
-    elif num == svn.core.SVN_ERR_RA_NOT_IMPLEMENTED:
+    elif num == core.SVN_ERR_RA_NOT_IMPLEMENTED:
         return NotImplementedError("Function not implemented in remote server")
-    elif num == SVN_ERR_UNKNOWN_HOSTNAME:
+    elif num == constants.ERR_UNKNOWN_HOSTNAME:
         return ConnectionError(msg=msg)
     elif num > 0 and num < 1000:
         return OSError(num, msg)
@@ -110,7 +108,7 @@ def convert_svn_error(unbound):
     def convert(*args, **kwargs):
         try:
             return unbound(*args, **kwargs)
-        except svn.core.SubversionException, e:
+        except core.SubversionException, e:
             raise convert_error(e)
 
     convert.__doc__ = unbound.__doc__

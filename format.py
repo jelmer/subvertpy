@@ -52,25 +52,25 @@ class SvnRemoteFormat(BzrDirFormat):
     @classmethod
     def probe_transport(klass, transport):
         from transport import get_svn_ra_transport
-        import svn.core
+        import core
         format = klass()
 
         try:
             transport = get_svn_ra_transport(transport)
-        except svn.core.SubversionException, (_, num):
-            if num in (svn.core.SVN_ERR_RA_ILLEGAL_URL, \
-                       svn.core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, \
-                       svn.core.SVN_ERR_BAD_URL):
+        except core.SubversionException, (_, num):
+            if num in (core.SVN_ERR_RA_ILLEGAL_URL, \
+                       core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, \
+                       core.SVN_ERR_BAD_URL):
                 raise bzr_errors.NotBranchError(path=transport.base)
 
         return format
 
     def _open(self, transport):
-        import svn.core
+        import core
         try: 
             return remote.SvnRemoteAccess(transport, self)
-        except svn.core.SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_RA_DAV_REQUEST_FAILED:
+        except core.SubversionException, (_, num):
+            if num == core.SVN_ERR_RA_DAV_REQUEST_FAILED:
                 raise bzr_errors.NotBranchError(transport.base)
             raise
 
@@ -126,15 +126,15 @@ class SvnWorkingTreeDirFormat(BzrDirFormat):
         raise bzr_errors.NotBranchError(path=transport.base)
 
     def _open(self, transport):
-        import svn.core
+        import core
         from workingtree import SvnCheckout
-        subr_version = svn.core.svn_subr_version()
+        subr_version = core.svn_subr_version()
         if subr_version.major == 1 and subr_version.minor < 4:
             raise errors.NoCheckoutSupport()
         try:
             return SvnCheckout(transport, self)
-        except svn.core.SubversionException, (_, num):
-            if num in (svn.core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,):
+        except core.SubversionException, (_, num):
+            if num in (core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,):
                 raise errors.NoSvnRepositoryPresent(transport.base)
             raise
 
