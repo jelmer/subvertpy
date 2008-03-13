@@ -9,6 +9,9 @@ all:: build
 build::
 	$(SETUP) build
 
+build-inplace::
+	$(SETUP) build_ext --inplace
+
 install::
 	$(SETUP) install
 
@@ -20,7 +23,7 @@ TMP_PLUGINS_DIR = $(shell pwd)/.plugins
 $(TMP_PLUGINS_DIR):
 	mkdir -p $@
 
-$(TMP_PLUGINS_DIR)/svn: $(TMP_PLUGINS_DIR)
+$(TMP_PLUGINS_DIR)/svn: build-inplace $(TMP_PLUGINS_DIR)
 	ln -sf `pwd` $(TMP_PLUGINS_DIR)/svn
 
 check:: $(TMP_PLUGINS_DIR)/svn
