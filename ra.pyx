@@ -14,18 +14,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-cdef extern from "svn_version.h":
-    ctypedef struct svn_version_t:
-        int major
-        int minor
-        int patch
-        char *tag
-
-cdef extern from "svn_error.h":
-    ctypedef struct svn_error_t
-
-cdef extern from "svn_auth.h":
-    ctypedef struct svn_auth_baton_t
+# APR stuff
 
 cdef extern from "apr_errno.h":
     ctypedef int apr_status_t
@@ -69,10 +58,111 @@ cdef extern from "apr_hash.h":
     void apr_hash_this(apr_hash_index_t *hi, void **key, 
                                 long *klen, void **val)
 
-cdef extern from "svn_types.h":
-    ctypedef svn_error_t *(*svn_log_message_receiver_t) (baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool)
 
-cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool):
+
+cdef extern from "svn_version.h":
+    ctypedef struct svn_version_t:
+        int major
+        int minor
+        int patch
+        char *tag
+
+cdef extern from "svn_error.h":
+    ctypedef struct svn_error_t
+
+cdef extern from "svn_auth.h":
+    ctypedef struct svn_auth_baton_t
+
+cdef extern from "svn_string.h":
+    ctypedef struct svn_string_t:
+        char *data
+        long len
+
+cdef extern from "svn_delta.h":
+    ctypedef struct svn_txdelta_window_t
+    ctypedef svn_error_t *(*svn_txdelta_window_handler_t) (svn_txdelta_window_t *window, void *baton)
+
+    ctypedef struct svn_delta_editor_t:
+        svn_error_t *(*set_target_revision)(void *edit_baton, long target_revision, apr_pool_t *pool)
+        svn_error_t *(*open_root)(void *edit_baton, long base_revision, 
+                                  apr_pool_t *dir_pool, void **root_baton)
+
+        svn_error_t *(*delete_entry)(char *path, long revision, 
+                                     void *parent_baton, apr_pool_t *pool)
+
+        svn_error_t *(*add_directory)(char *path,
+                                void *parent_baton,
+                                char *copyfrom_path,
+                                long copyfrom_revision,
+                                apr_pool_t *dir_pool,
+                                void **child_baton)
+
+        svn_error_t *(*open_directory)(char *path, void *parent_baton,
+                                 long base_revision,
+                                 apr_pool_t *dir_pool,
+                                 void **child_baton)
+
+        svn_error_t *(*change_dir_prop)(void *dir_baton,
+                                  char *name,
+                                  svn_string_t *value,
+                                  apr_pool_t *pool)
+
+        svn_error_t *(*close_directory)(void *dir_baton,
+                                  apr_pool_t *pool)
+
+        svn_error_t *(*absent_directory)(char *path, void *parent_baton, 
+                                     apr_pool_t *pool)
+
+        svn_error_t *(*add_file)(char *path,
+                           void *parent_baton,
+                           char *copy_path,
+                           long copy_revision,
+                           apr_pool_t *file_pool,
+                           void **file_baton)
+
+        svn_error_t *(*open_file)(char *path,
+                            void *parent_baton,
+                            long base_revision,
+                            apr_pool_t *file_pool,
+                            void **file_baton)
+
+        svn_error_t *(*apply_textdelta)(void *file_baton,
+                                  char *base_checksum,
+                                  apr_pool_t *pool,
+                                  svn_txdelta_window_handler_t *handler,
+                                  void **handler_baton)
+        svn_error_t *(*change_file_prop)(void *file_baton,
+                                   char *name,
+                                   svn_string_t *value,
+                                   apr_pool_t *pool)
+
+        svn_error_t *(*close_file)(void *file_baton,
+                             char *text_checksum,
+                             apr_pool_t *pool)
+
+        svn_error_t *(*absent_file)(char *path,
+                              void *parent_baton,
+                              apr_pool_t *pool)
+
+        svn_error_t *(*close_edit)(void *edit_baton, apr_pool_t *pool)
+
+        svn_error_t *(*abort_edit)(void *edit_baton, apr_pool_t *pool)
+
+
+cdef extern from "svn_types.h":
+    ctypedef svn_error_t *(*svn_log_message_receiver_t) (baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *
+    ctypedef struct svn_commit_info_t:
+        long revision
+        char *date
+        char *author
+        char *post_commit_err
+    ctypedef svn_error_t *(*svn_commit_callback2_t) (svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *
+
+
+cdef svn_error_t *py_commit_callback(svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *:
+    baton(commit_info.revision, commit_info.date, commit_info.author, commit_info.post_commit_err)
+
+cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *:
     cdef apr_hash_index_t *idx
     if changed_paths == NULL:
         py_changed_paths = None
@@ -152,6 +242,76 @@ cdef extern from "svn_ra.h":
                                 svn_log_message_receiver_t receiver,
                                 receiver_baton,
                                 apr_pool_t *pool)
+
+    svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
+                              svn_ra_reporter2_t **reporter,
+                              void **report_baton,
+                              long revision_to_update_to,
+                              char *update_target,
+                              int recurse,
+                              svn_delta_editor_t *update_editor,
+                              update_baton,
+                              apr_pool_t *pool)
+
+    svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
+                                      svn_ra_reporter2_t **reporter,
+                                      void **report_baton,
+                                      long revision_to_switch_to,
+                                      char *switch_target,
+                                      int recurse,
+                                      char *switch_url,
+                                      svn_delta_editor_t *switch_editor,
+                                      switch_baton,
+                                      apr_pool_t *pool)
+
+    svn_error_t *svn_ra_replay(svn_ra_session_t *session,
+                                   long revision,
+                                   long low_water_mark,
+                                   int send_deltas,
+                                   svn_delta_editor_t *editor,
+                                   edit_baton,
+                                   apr_pool_t *pool)
+
+    svn_error_t *svn_ra_rev_proplist(svn_ra_session_t *session,
+                                     long rev,
+                                     apr_hash_t **props,
+                                     apr_pool_t *pool)
+
+    svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
+                                           svn_delta_editor_t **editor,
+                                           void **edit_baton,
+                                           char *log_msg,
+                                           svn_commit_callback2_t callback,
+                                           callback_baton,
+                                           apr_hash_t *lock_tokens,
+                                           int keep_locks,
+                                           apr_pool_t *pool)
+
+
+cdef class Reporter:
+    """Change reporter."""
+    cdef svn_ra_reporter2_t *reporter
+    cdef void *report_baton
+    cdef apr_pool_t *pool
+
+    def set_path(self, path, revision, start_empty, lock_token):
+        _check_error(self.reporter.set_path(self.report_baton, path, revision, 
+                     start_empty, lock_token, self.pool))
+
+    def delete_path(self, path):
+        _check_error(self.reporter.delete_path(self.report_baton, path, 
+                     self.pool))
+
+    def link_path(self, path, url, revision, start_empty, lock_token):
+        _check_error(self.reporter.link_path(self.report_baton, path, url, 
+                     revision, start_empty, lock_token, self.pool))
+
+    def finish_report(self):
+        _check_error(self.reporter.finish_report(self.report_baton, self.pool))
+
+    def abort_report(self):
+        _check_error(self.reporter.abort_report(self.report_baton, self.pool))
+
 
 def version():
     """Get libsvn_ra version information.
@@ -236,6 +396,71 @@ cdef class RemoteAccess:
                      temp_pool))
         apr_pool_destroy(temp_pool)
         return root
+
+    def do_update(self, revision_to_update_to, update_target, recurse, 
+                  update_editor):
+        cdef svn_ra_reporter2_t *reporter
+        cdef void *report_baton
+        cdef apr_pool_t *temp_pool
+        cdef svn_delta_editor_t *editor
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
+                     revision_to_update_to, update_target, recurse, 
+                     editor, update_editor, temp_pool))
+        apr_pool_destroy(temp_pool)
+        ret = Reporter()
+        ret.reporter = reporter
+        ret.report_baton = report_baton
+        ret.pool = temp_pool
+        return ret
+
+    def do_switch(self, revision_to_update_to, update_target, recurse, 
+                  update_editor):
+        cdef svn_ra_reporter2_t *reporter
+        cdef void *report_baton
+        cdef apr_pool_t *temp_pool
+        cdef svn_delta_editor_t *editor
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
+                     revision_to_update_to, update_target, recurse, 
+                     editor, update_editor, temp_pool))
+        apr_pool_destroy(temp_pool)
+        return Reporter(reporter, report_baton, temp_pool)
+
+    def replay(self, revision, low_water_mark, send_deltas, update_editor):
+        cdef svn_ra_reporter2_t *reporter
+        cdef void *report_baton
+        cdef apr_pool_t *temp_pool
+        cdef svn_delta_editor_t *editor
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_replay(self.ra, revision, low_water_mark,
+                     send_deltas, editor, update_editor, temp_pool))
+        apr_pool_destroy(temp_pool)
+        return Reporter(reporter, report_baton, temp_pool)
+
+    def rev_proplist(self, rev):
+        cdef apr_pool_t *temp_pool
+        cdef apr_hash_t *props
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_rev_proplist(self.ra, rev, &props, temp_pool))
+        py_props = {}
+        # FIXME: Convert props to py_props
+        apr_pool_destroy(temp_pool)
+        return py_props
+
+    def get_commit_editor(self, log_msg, commit_callback, lock_tokens, 
+                          keep_locks):
+        cdef apr_pool_t *temp_pool
+        cdef svn_delta_editor_t *editor
+        cdef void *edit_baton
+        cdef apr_hash_t *hash_lock_tokens
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_get_commit_editor2(self.ra, &editor, 
+                     &edit_baton, log_msg, py_commit_callback, commit_callback, 
+                     hash_lock_tokens, keep_locks, temp_pool))
+        apr_pool_destroy(temp_pool)
+        return None # FIXME: convert editor
+
 
     def __dealloc__(self):
         if self.pool != NULL:

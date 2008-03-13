@@ -251,41 +251,6 @@ class SvnRaTransport(Transport):
         if 'transport' in debug.debug_flags:
             mutter(text)
 
-    class Reporter:
-        def __init__(self, transport, (reporter, report_baton)):
-            self._reporter = reporter
-            self._baton = report_baton
-            self._transport = transport
-
-        @convert_svn_error
-        def set_path(self, path, revnum, start_empty, lock_token, pool=None):
-            svn.ra.reporter2_invoke_set_path(self._reporter, self._baton, 
-                        path, revnum, start_empty, lock_token, pool)
-
-        @convert_svn_error
-        def delete_path(self, path, pool=None):
-            svn.ra.reporter2_invoke_delete_path(self._reporter, self._baton,
-                    path, pool)
-
-        @convert_svn_error
-        def link_path(self, path, url, revision, start_empty, lock_token, 
-                      pool=None):
-            svn.ra.reporter2_invoke_link_path(self._reporter, self._baton,
-                    path, url, revision, start_empty, lock_token,
-                    pool)
-
-        @convert_svn_error
-        def finish_report(self, pool=None):
-            svn.ra.reporter2_invoke_finish_report(self._reporter, 
-                    self._baton, pool)
-            self._transport._unmark_busy()
-
-        @convert_svn_error
-        def abort_report(self, pool=None):
-            svn.ra.reporter2_invoke_abort_report(self._reporter, 
-                    self._baton, pool)
-            self._transport._unmark_busy()
-
     def has(self, relpath):
         """See Transport.has()."""
         # TODO: Raise TransportNotPossible here instead and 
@@ -340,9 +305,7 @@ class SvnRaTransport(Transport):
         self._open_real_transport()
         self.mutter('svn switch -r %d -> %r' % (switch_rev, switch_url))
         self._mark_busy()
-        edit, edit_baton = self._make_editor(editor, pool)
-        return self.Reporter(self, svn.ra.do_switch(self._ra, switch_rev, "", 
-                             recurse, switch_url, edit, edit_baton, pool))
+        return self._ra.do_switch(switch_rev, "", recurse, switch_url, editor)
 
     @convert_svn_error
     @needs_busy
@@ -503,31 +466,27 @@ class SvnRaTransport(Transport):
             raise
 
     @convert_svn_error
-    def replay(self, revision, low_water_mark, send_deltas, editor, pool=None):
+    def replay(self, revision, low_water_mark, send_deltas, editor):
         self._open_real_transport()
         self.mutter('svn replay -r%r:%r' % (low_water_mark, revision))
         self._mark_busy()
-        edit, edit_baton = self._make_editor(editor, pool)
-        svn.ra.replay(self._ra, revision, low_water_mark, send_deltas,
-                      edit, edit_baton, pool)
+        self._ra.replay(revision, low_water_mark, send_deltas, editor)
 
     @convert_svn_error
-    def do_update(self, revnum, recurse, editor, pool=None):
+    def do_update(self, revnum, recurse, editor):
         self._open_real_transport()
         self.mutter('svn update -r %r' % revnum)
         self._mark_busy()
-        edit, edit_baton = self._make_editor(editor, pool)
-        return self.Reporter(self, svn.ra.do_update(self._ra, revnum, "", 
-                             recurse, edit, edit_baton, pool))
+        return self._ra.do_update(revnum, "", recurse, editor))
 
     @convert_svn_error
     def has_capability(self, cap):
         return svn.ra.has_capability(self._ra, cap)
 
     @convert_svn_error
-    def revprop_list(self, revnum, pool=None):
+    def revprop_list(self, revnum):
         self.mutter('svn revprop-list -r %r' % revnum)
-        return svn.ra.rev_proplist(self._ra, revnum, pool)
+        return self._ra.rev_proplist(revnum)
 
     @convert_svn_error
     def get_commit_editor(self, revprops, done_cb, lock_token, keep_locks):
