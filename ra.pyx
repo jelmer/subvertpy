@@ -27,6 +27,11 @@ cdef extern from "svn_error.h":
 cdef extern from "apr_errno.h":
     ctypedef int apr_status_t
 
+cdef extern from "apr_general.h":
+    apr_status_t apr_initialize()
+
+apr_initialize()
+
 cdef extern from "apr_pools.h":
     ctypedef struct apr_pool_t
     void apr_pool_destroy(apr_pool_t *)
@@ -94,8 +99,6 @@ cdef extern from "svn_ra.h":
                                       long *latest_revnum,
                                       apr_pool_t *pool)
 
-
-
 def version():
     """Get libsvn_ra version information.
 
@@ -112,7 +115,8 @@ cdef void _check_error(svn_error_t *error):
 cdef class RemoteAccess:
     cdef svn_ra_session_t *ra
     cdef apr_pool_t *pool
-    def __init__(self, url, callbacks, config={}):
+    cdef char *url
+    def __init__(self, url, callbacks=object(), config={}):
         """Connect to a remote Subversion repository. 
 
         :param url: URL of the repository
@@ -122,6 +126,7 @@ cdef class RemoteAccess:
         cdef svn_error_t *error
         cdef svn_ra_callbacks2_t *callbacks2
         cdef apr_hash_t *config_hash
+        self.url = url
         self.pool = Pool(NULL)
         assert self.pool != NULL
         _check_error(svn_ra_create_callbacks(&callbacks2, self.pool))
@@ -146,3 +151,6 @@ cdef class RemoteAccess:
     def __dealloc__(self):
         if self.pool != NULL:
             apr_pool_destroy(self.pool)
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__.__name__, self.url)

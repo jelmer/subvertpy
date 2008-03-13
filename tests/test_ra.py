@@ -17,8 +17,17 @@
 
 from bzrlib.tests import TestCase
 import ra
+from tests import TestCaseWithSubversionRepository
 
 class VersionTest(TestCase):
     def test_version_length(self):
         self.assertEquals(4, len(ra.version()))
 
+class TestRemoteAccess(TestCaseWithSubversionRepository):
+    def setUp(self):
+        super(TestRemoteAccess, self).setUp()
+        repos_url = self.make_client("d", "dc")
+        self.ra = ra.RemoteAccess(repos_url)
+
+    def test_latest_revnum(self):
+        self.assertEquals(0, self.ra.get_latest_revnum())
