@@ -101,21 +101,6 @@ def bzr_to_svn_url(url):
     return url.rstrip('/')
 
 
-def needs_busy(unbound):
-    """Decorator that marks a transport as busy before running a methd on it.
-    """
-    def convert(self, *args, **kwargs):
-        self._mark_busy()
-        try:
-            return unbound(self, *args, **kwargs)
-        finally:
-            self._unmark_busy()
-
-    convert.__doc__ = unbound.__doc__
-    convert.__name__ = unbound.__name__
-    return convert
-
-
 class Editor:
     """Simple object wrapper around the Subversion delta editor interface."""
     def __init__(self, transport, (editor, editor_baton)):
@@ -142,7 +127,6 @@ class Editor:
     def close(self):
         assert self.recent_baton == []
         svn.delta.editor_invoke_close_edit(self.editor, self.editor_baton)
-        self._transport._unmark_busy()
 
     @convert_svn_error
     def apply_textdelta(self, baton, *args, **kwargs):
@@ -237,16 +221,6 @@ class SvnRaTransport(Transport):
         from bzrlib.plugins.svn import lazy_check_versions
         lazy_check_versions()
 
-        self._busy = False
-
-    def _mark_busy(self):
-        assert not self._busy
-        self._busy = True
-
-    def _unmark_busy(self):
-        assert self._busy
-        self._busy = False
-
     def mutter(self, text):
         if 'transport' in debug.debug_flags:
             mutter(text)
@@ -268,7 +242,6 @@ class SvnRaTransport(Transport):
         raise TransportNotPossible('stat not supported on Subversion')
 
     @convert_svn_error
-    @needs_busy
     def get_uuid(self):
         self.mutter('svn get-uuid')
         return self._ra.get_uuid()
@@ -281,7 +254,6 @@ class SvnRaTransport(Transport):
         return root
 
     @convert_svn_error
-    @needs_busy
     def get_svn_repos_root(self):
         if self._root is None:
             self.mutter("svn get-repos-root")
@@ -289,7 +261,6 @@ class SvnRaTransport(Transport):
         return self._root
 
     @convert_svn_error
-    @needs_busy
     def get_latest_revnum(self):
         self.mutter("svn get-latest-revnum")
         return self._ra.get_latest_revnum()
@@ -304,11 +275,9 @@ class SvnRaTransport(Transport):
     def do_switch(self, switch_rev, recurse, switch_url, editor, pool=None):
         self._open_real_transport()
         self.mutter('svn switch -r %d -> %r' % (switch_rev, switch_url))
-        self._mark_busy()
         return self._ra.do_switch(switch_rev, "", recurse, switch_url, editor)
 
     @convert_svn_error
-    @needs_busy
     def get_log(self, path, from_revnum, to_revnum, limit, discover_changed_paths, 
                 strict_node_history, revprops, rcvr, pool=None):
         self.mutter('svn log %r:%r %r' % (from_revnum, to_revnum, path))
@@ -353,12 +322,11 @@ class SvnRaTransport(Transport):
             self.reparent(self.get_repos_root())
 
     @convert_svn_error
-    def change_rev_prop(self, revnum, name, value, pool=None):
+    def change_rev_prop(self, revnum, name, value):
         self.mutter('svn revprop -r%d --set %s=%s' % (revnum, name, value))
-        svn.ra.change_rev_prop(self._ra, revnum, name, value)
+        self._ra.change_rev_prop(revnum, name, value)
 
     @convert_svn_error
-    @needs_busy
     def reparent(self, url):
         url = url.rstrip("/")
         self.base = url
@@ -375,7 +343,6 @@ class SvnRaTransport(Transport):
         self._backing_url = self.svn_url
 
     @convert_svn_error
-    @needs_busy
     def get_dir(self, path, revnum, pool=None, kind=False):
         self.mutter("svn ls -r %d '%r'" % (revnum, path))
         assert len(path) == 0 or path[0] != "/"
@@ -386,7 +353,7 @@ class SvnRaTransport(Transport):
             fields = 0
             if kind:
                 fields += svn.core.SVN_DIRENT_KIND
-            return svn.ra.get_dir2(self._ra, path, revnum, fields)
+            return self._ra.get_dir(path, revnum, fields)
         else:
             return svn.ra.get_dir(self._ra, path, revnum)
 
@@ -414,9 +381,8 @@ class SvnRaTransport(Transport):
         return dirents.keys()
 
     @convert_svn_error
-    @needs_busy
     def get_lock(self, path):
-        return svn.ra.get_lock(self._ra, path)
+        return self._ra.get_lock(path)
 
     class SvnLock:
         def __init__(self, transport, tokens):
@@ -427,14 +393,12 @@ class SvnRaTransport(Transport):
             self.transport.unlock(self.locks)
 
     @convert_svn_error
-    @needs_busy
     def unlock(self, locks, break_lock=False):
         def lock_cb(baton, path, do_lock, lock, ra_err, pool):
             pass
         return svn.ra.unlock(self._ra, locks, break_lock, lock_cb)
 
     @convert_svn_error
-    @needs_busy
     def lock_write(self, path_revs, comment=None, steal_lock=False):
         return self.PhonyLock() # FIXME
         tokens = {}
@@ -444,15 +408,13 @@ class SvnRaTransport(Transport):
         return SvnLock(self, tokens)
 
     @convert_svn_error
-    @needs_busy
-    def check_path(self, path, revnum, *args, **kwargs):
+    def check_path(self, path, revnum):
         assert len(path) == 0 or path[0] != "/"
         path = self._request_path(path)
         self.mutter("svn check_path -r%d %s" % (revnum, path))
-        return svn.ra.check_path(self._ra, path.encode('utf-8'), revnum, *args, **kwargs)
+        return self._ra.check_path(path.encode('utf-8'), revnum)
 
     @convert_svn_error
-    @needs_busy
     def mkdir(self, relpath, mode=None):
         assert len(relpath) == 0 or relpath[0] != "/"
         path = urlutils.join(self.svn_url, relpath)
@@ -469,14 +431,12 @@ class SvnRaTransport(Transport):
     def replay(self, revision, low_water_mark, send_deltas, editor):
         self._open_real_transport()
         self.mutter('svn replay -r%r:%r' % (low_water_mark, revision))
-        self._mark_busy()
         self._ra.replay(revision, low_water_mark, send_deltas, editor)
 
     @convert_svn_error
     def do_update(self, revnum, recurse, editor):
         self._open_real_transport()
         self.mutter('svn update -r %r' % revnum)
-        self._mark_busy()
         return self._ra.do_update(revnum, "", recurse, editor))
 
     @convert_svn_error
@@ -491,22 +451,7 @@ class SvnRaTransport(Transport):
     @convert_svn_error
     def get_commit_editor(self, revprops, done_cb, lock_token, keep_locks):
         self._open_real_transport()
-        self._mark_busy()
-        try:
-            if hasattr(svn.ra, 'get_commit_editor3'):
-                editor = svn.ra.get_commit_editor3(self._ra, revprops, done_cb, 
-                                                  lock_token, keep_locks)
-            elif revprops.keys() != [svn.core.SVN_PROP_REVISION_LOG]:
-                raise NotImplementedError()
-            else:
-                editor = svn.ra.get_commit_editor2(self._ra, 
-                            revprops[svn.core.SVN_PROP_REVISION_LOG],
-                            done_cb, lock_token, keep_locks)
-
-            return Editor(self, editor)
-        except:
-            self._unmark_busy()
-            raise
+        self._ra.get_commit_editor(revprops, done_cb, lock_token, keep_locks)
 
     def listable(self):
         """See Transport.listable().

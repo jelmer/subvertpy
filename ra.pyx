@@ -77,6 +77,7 @@ cdef extern from "svn_string.h":
     ctypedef struct svn_string_t:
         char *data
         long len
+    svn_string_t *svn_string_ncreate(char *bytes, long size, apr_pool_t *pool)
 
 cdef extern from "svn_delta.h":
     ctypedef struct svn_txdelta_window_t
@@ -151,6 +152,11 @@ cdef extern from "svn_delta.h":
 
 cdef extern from "svn_types.h":
     ctypedef svn_error_t *(*svn_log_message_receiver_t) (baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *
+    ctypedef enum svn_node_kind_t:
+        svn_node_node
+        svn_node_file
+        svn_node_dir
+        svn_node_unknown
     ctypedef struct svn_commit_info_t:
         long revision
         char *date
@@ -175,6 +181,7 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
     baton(py_changed_paths, revision, author, date, message)
 
 cdef extern from "svn_ra.h":
+    ctypedef struct svn_lock_t
     svn_version_t *svn_ra_version()
 
     ctypedef struct svn_ra_reporter2_t:
@@ -286,6 +293,32 @@ cdef extern from "svn_ra.h":
                                            apr_hash_t *lock_tokens,
                                            int keep_locks,
                                            apr_pool_t *pool)
+
+    svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
+                                    long rev,
+                                    char *name,
+                                    svn_string_t *value,
+                                    apr_pool_t *pool)
+
+    svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
+                                 apr_hash_t **dirents,
+                                 long *fetched_rev,
+                                 apr_hash_t **props,
+                                 char *path,
+                                 long revision,
+                                 long dirent_fields,
+                                 apr_pool_t *pool)
+
+    svn_error_t *svn_ra_get_lock(svn_ra_session_t *session,
+                                 svn_lock_t **lock,
+                                 char *path,
+                                 apr_pool_t *pool)
+
+    svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
+                                   char *path,
+                                   long revision,
+                                   svn_node_kind_t *kind,
+                                   apr_pool_t *pool)
 
 
 cdef class Reporter:
@@ -448,7 +481,7 @@ cdef class RemoteAccess:
         apr_pool_destroy(temp_pool)
         return py_props
 
-    def get_commit_editor(self, log_msg, commit_callback, lock_tokens, 
+    def get_commit_editor(self, revprops, commit_callback, lock_tokens, 
                           keep_locks):
         cdef apr_pool_t *temp_pool
         cdef svn_delta_editor_t *editor
@@ -456,11 +489,51 @@ cdef class RemoteAccess:
         cdef apr_hash_t *hash_lock_tokens
         temp_pool = Pool(self.pool)
         _check_error(svn_ra_get_commit_editor2(self.ra, &editor, 
-                     &edit_baton, log_msg, py_commit_callback, commit_callback, 
-                     hash_lock_tokens, keep_locks, temp_pool))
+			&edit_baton, revprops[SVN_PROP_REVISION_LOG], py_commit_callback, 
+			commit_callback, hash_lock_tokens, keep_locks, temp_pool))
         apr_pool_destroy(temp_pool)
         return None # FIXME: convert editor
 
+    def change_rev_prop(self, rev, name, value):
+        cdef apr_pool_t *temp_pool
+        cdef svn_string_t *val_string
+        temp_pool = Pool(self.pool)
+        val_string = svn_string_ncreate(value, len(value), temp_pool)
+        _check_error(svn_ra_change_rev_prop(self.ra, rev, name, 
+                     val_string, temp_pool))
+        apr_pool_destroy(temp_pool)
+    
+    def get_dir(self, path, revision, dirent_fields):
+        cdef apr_pool_t *temp_pool
+        cdef apr_hash_t *dirents
+        cdef apr_hash_t *props
+        cdef long fetch_rev
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_get_dir2(self.ra, &dirents, &fetch_rev, &props,
+                     path, revision, dirent_fields, temp_pool))
+        # FIXME: Convert dirents to python hash
+        # FIXME: Convert props to python hash
+        py_dirents = {}
+        py_props = {}
+        apr_pool_destroy(temp_pool)
+        return (py_dirents, fetch_rev, py_props)
+
+    def get_lock(self, path):
+        cdef svn_lock_t *lock
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_get_lock(self.ra, &lock, path, temp_pool))
+        apr_pool_destroy(temp_pool)
+        return lock
+
+    def check_path(self, path, revision):
+        cdef svn_node_kind_t kind
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_check_path(self.ra, path, revision, &kind, 
+                     temp_pool))
+        apr_pool_destroy(temp_pool)
+        return kind
 
     def __dealloc__(self):
         if self.pool != NULL:
@@ -468,3 +541,5 @@ cdef class RemoteAccess:
 
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self.url)
+
+SVN_PROP_REVISION_LOG = "svn:log"
