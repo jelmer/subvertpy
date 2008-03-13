@@ -1,6 +1,19 @@
 #!/usr/bin/env python2.4
 
 from distutils.core import setup
+from distutils.extension import Extension
+from Pyrex.Distutils import build_ext
+import os
+
+def apr_include_dir():
+    f = os.popen("apr-config --includedir")
+    dir = f.read().rstrip("\n")
+    assert os.path.isdir(dir)
+    return dir
+
+def svn_include_dir():
+    # FIXME
+    return "/usr/include/subversion-1"
 
 setup(name='bzr-svn',
       description='Support for Subversion branches in Bazaar',
@@ -19,5 +32,8 @@ setup(name='bzr-svn',
       package_dir={'bzrlib.plugins.svn':'.', 
                    'bzrlib.plugins.svn.tests':'tests'},
       packages=['bzrlib.plugins.svn', 
-                'bzrlib.plugins.svn.tests']
+                'bzrlib.plugins.svn.tests'],
+      ext_modules=[Extension("ra", ["ra.pyx"], libraries=["svn_ra-1"],
+                     include_dirs=[apr_include_dir(), svn_include_dir()])],
+      cmdclass = {'build_ext': build_ext},
       )

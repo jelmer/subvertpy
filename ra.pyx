@@ -1,0 +1,9 @@
+cdef extern from "svn_version.h":
+	ctypedef struct svn_version_t:
+		int major
+		int minor
+		int patch
+		char *tag
+
+cdef extern from "svn_ra.h":
+	svn_version_t *svn_ra_version()
