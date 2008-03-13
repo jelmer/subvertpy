@@ -24,11 +24,17 @@ cdef extern from "svn_version.h":
 cdef extern from "svn_error.h":
     ctypedef struct svn_error_t
 
+cdef extern from "svn_auth.h":
+    ctypedef struct svn_auth_baton_t
+
 cdef extern from "apr_errno.h":
     ctypedef int apr_status_t
 
 cdef extern from "apr_general.h":
     apr_status_t apr_initialize()
+
+cdef extern from "apr_file_io.h":
+    ctypedef struct apr_file_t 
 
 apr_initialize()
 
@@ -78,7 +84,10 @@ cdef extern from "svn_ra.h":
 
         svn_error_t *(*abort_report)(void *report_baton, apr_pool_t *pool)
 
-    ctypedef struct svn_ra_callbacks2_t
+    ctypedef struct svn_ra_callbacks2_t:
+        svn_error_t *(*open_tmp_file)(apr_file_t **fp, 
+                                      void *callback_baton, apr_pool_t *pool)
+        svn_auth_baton_t *auth_baton
 
     svn_error_t *svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
                             apr_pool_t *pool)
@@ -155,11 +164,11 @@ cdef class RemoteAccess:
         apr_pool_destroy(temp_pool)
         return uuid
 
-	def reparent(self, url):
-		"""Switch to a different url."""
+    def reparent(self, url):
+        """Switch to a different url."""
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
-		_check_error(svn_ra_reparent(self.ra, url, temp_pool))
+        _check_error(svn_ra_reparent(self.ra, url, temp_pool))
         apr_pool_destroy(temp_pool)
 
     def get_latest_revnum(self):

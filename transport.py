@@ -404,7 +404,7 @@ class SvnRaTransport(Transport):
             return
         if hasattr(svn.ra, 'reparent'):
             self.mutter('svn reparent %r' % url)
-            svn.ra.reparent(self._ra, self.svn_url, self.pool)
+            self.ra.reparent(self.svn_url, self.pool)
         else:
             self.mutter('svn reparent (reconnect) %r' % url)
             self._ra = svn.client.open_ra_session(self.svn_url.encode('utf8'), 
