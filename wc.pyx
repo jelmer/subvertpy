@@ -14,17 +14,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-cdef extern from "svn_version.h":
-    ctypedef struct svn_version_t:
-        int major
-        int minor
-        int patch
-        char *tag
+include "apr.pxi"
+include "types.pxi"
 
-
-cdef extern from "svn_types.h":
-    ctypedef int svn_boolean_t
-    ctypedef svn_error_t *(*svn_cancel_func_t)(cancel_baton)
+apr_initialize()
 
 cdef extern from "svn_wc.h":
     ctypedef struct svn_wc_adm_access_t
@@ -32,15 +25,36 @@ cdef extern from "svn_wc.h":
     svn_error_t *svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                                   svn_wc_adm_access_t *associated,
                                   char *path,
-                                  svn_boolean_t write_lock,
+                                  types.svn_boolean_t write_lock,
                                   int depth,
-                                  svn_cancel_func_t cancel_func,
+                                  types.svn_cancel_func_t cancel_func,
                                   cancel_baton,
-                                  apr_pool_t *pool)
+                                  apr.apr_pool_t *pool)
     svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
     char *svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access)
     svn_boolean_t svn_wc_adm_locked(svn_wc_adm_access_t *adm_access)
-
+    svn_error_t *svn_wc_locked(svn_boolean_t *locked, char *path, apr.apr_pool_t *pool)
+    ctypedef struct svn_wc_revision_status_t:
+        long min_rev
+        long max_rev
+        int switched
+        int modified
+    svn_error_t *svn_wc_revision_status(svn_wc_revision_status_t **result_p,
+                       char *wc_path,
+                       char *trail_url,
+                       types.svn_boolean_t committed,
+                       types.svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr.apr_pool_t *pool)
+    svn_error_t *svn_wc_prop_get(svn_string_t **value,
+                             char *name,
+                             char *path,
+                             svn_wc_adm_access_t *adm_access,
+                             apr.apr_pool_t *pool)
+    svn_error_t *svn_wc_entries_read(apr_hash_t **entries,
+                                 svn_wc_adm_access_t *adm_access,
+                                 svn_boolean_t show_hidden,
+                                 apr.apr_pool_t *pool)
 
 def version():
     """Get libsvn_wc version information.
@@ -65,5 +79,28 @@ cdef class WorkingCopy:
     def locked(self):
         return svn_wc_adm_locked(self.adm)
 
+    def prop_get(self, name, path):
+        cdef svn_string_t *value
+        _check_error(svn_wc_prop_get(&value, name, path, self.adm, temp_pool))
+        return PyString_FromStringAndSize(value.data, value.length)
+
+    def entries_read(self, show_hidden):
+        cdef apr_hash_t *entries
+        _check_error(svn_wc_entries_read(&entries, self.adm, 
+                     show_hidden, temp_pool))
+        # FIXME: Create py_entries
+        py_entries = {}
+        return py_entries
+
     def __dealloc__(self):
         svn_wc_adm_close(self.adm)
+
+
+def revision_status(wc_path, trail_url, committed, cancel_func=None):
+    cdef svn_wc_revision_status_t *revstatus
+    _check_error(svn_wc_revision_status(&revstatus, wc_path, trail_url,
+                 committed, py_cancel_func, cancel_func, temp_pool))
+    return (revstatus.min_rev, revstatus.max_rev, 
+            revstatus.switched, revstatus.modified)
+
+
