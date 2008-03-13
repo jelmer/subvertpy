@@ -99,6 +99,16 @@ cdef extern from "svn_ra.h":
                                       long *latest_revnum,
                                       apr_pool_t *pool)
 
+    svn_error_t *svn_ra_get_uuid(svn_ra_session_t *session,
+                             char **uuid,
+                             apr_pool_t *pool)
+
+    svn_error_t *svn_ra_get_repos_root(svn_ra_session_t *session,
+                             char **root,
+                             apr_pool_t *pool)
+
+
+
 def version():
     """Get libsvn_ra version information.
 
@@ -136,6 +146,22 @@ cdef class RemoteAccess:
         _check_error(svn_ra_open2(&self.ra, url, callbacks2, None, config_hash, 
                      self.pool))
 
+    def get_uuid(self):
+        """Obtain the globally unique identifier for this repository."""
+        cdef char *uuid
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_get_uuid(self.ra, &uuid, temp_pool))
+        apr_pool_destroy(temp_pool)
+        return uuid
+
+	def reparent(self, url):
+		"""Switch to a different url."""
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
+		_check_error(svn_ra_reparent(self.ra, url, temp_pool))
+        apr_pool_destroy(temp_pool)
+
     def get_latest_revnum(self):
         """Obtain the number of the latest committed revision in the 
         connected repository.
@@ -147,6 +173,16 @@ cdef class RemoteAccess:
                      temp_pool))
         apr_pool_destroy(temp_pool)
         return latest_revnum
+
+    def get_repos_root(self):
+        """Obtain the URL of the root of this repository."""
+        cdef char *root
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
+        _check_error(svn_ra_get_repos_root(self.ra, &root, 
+                     temp_pool))
+        apr_pool_destroy(temp_pool)
+        return root
 
     def __dealloc__(self):
         if self.pool != NULL:

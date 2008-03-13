@@ -306,7 +306,7 @@ class SvnRaTransport(Transport):
     @needs_busy
     def get_uuid(self):
         self.mutter('svn get-uuid')
-        return svn.ra.get_uuid(self._ra)
+        return self._ra.get_uuid()
 
     def get_repos_root(self):
         root = self.get_svn_repos_root()
@@ -320,14 +320,14 @@ class SvnRaTransport(Transport):
     def get_svn_repos_root(self):
         if self._root is None:
             self.mutter("svn get-repos-root")
-            self._root = svn.ra.get_repos_root(self._ra)
+            self._root = self._ra.get_repos_root()
         return self._root
 
     @convert_svn_error
     @needs_busy
     def get_latest_revnum(self):
         self.mutter("svn get-latest-revnum")
-        return svn.ra.get_latest_revnum(self._ra)
+        return self._ra.get_latest_revnum()
 
     def _make_editor(self, editor, pool=None):
         edit, edit_baton = svn.delta.make_editor(editor, pool)

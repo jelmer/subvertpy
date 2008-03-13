@@ -26,8 +26,17 @@ class VersionTest(TestCase):
 class TestRemoteAccess(TestCaseWithSubversionRepository):
     def setUp(self):
         super(TestRemoteAccess, self).setUp()
-        repos_url = self.make_client("d", "dc")
-        self.ra = ra.RemoteAccess(repos_url)
+        self.repos_url = self.make_client("d", "dc")
+        self.ra = ra.RemoteAccess(self.repos_url)
 
     def test_latest_revnum(self):
         self.assertEquals(0, self.ra.get_latest_revnum())
+
+    def test_get_uuid(self):
+        self.assertIsInstance(self.ra.get_uuid(), str)
+
+    def test_get_repos_root(self):
+        self.assertEqual(self.repos_root, self.ra.get_repos_root())
+
+    def test_reparent(self):
+        self.ra.reparent(self.repos_url)
