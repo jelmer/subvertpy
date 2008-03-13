@@ -22,7 +22,7 @@ from bzrlib.trace import mutter
 from bzrlib.transport import Transport
 
 from svn.core import SubversionException, Pool
-import svn.ra
+import ra
 import svn.core
 import svn.client
 
