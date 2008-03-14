@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy
-from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t
+from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate
 
 from core cimport check_error, Pool, py_cancel_func
 
@@ -57,6 +57,16 @@ cdef extern from "svn_wc.h":
                                  svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t show_hidden,
                                  apr_pool_t *pool)
+    svn_error_t *svn_wc_prop_set2(char *name,
+                              svn_string_t *value,
+                              char *path,
+                              svn_wc_adm_access_t *adm_access,
+                              svn_boolean_t skip_checks,
+                              apr_pool_t *pool)
+
+    svn_boolean_t svn_wc_is_normal_prop(char *name)
+    svn_boolean_t svn_wc_is_wc_prop(char *name)
+    svn_boolean_t svn_wc_is_entry_prop(char *name)
 
 def version():
     """Get libsvn_wc version information.
@@ -92,6 +102,15 @@ cdef class WorkingCopy:
         apr_pool_destroy(temp_pool)
         return ret
 
+    def prop_set(self, name, value, path, skip_checks=False):
+        cdef apr_pool_t *temp_pool
+        cdef svn_string_t *cvalue
+        temp_pool = Pool(self.pool)
+        cvalue = svn_string_ncreate(value, len(value), temp_pool)
+        check_error(svn_wc_prop_set2(name, cvalue, path, self.adm, 
+                    skip_checks, temp_pool))
+        apr_pool_destroy(temp_pool)
+
     def entries_read(self, show_hidden):
         cdef apr_hash_t *entries
         cdef apr_pool_t *temp_pool
@@ -118,4 +137,11 @@ def revision_status(wc_path, trail_url, committed, cancel_func=None):
     apr_pool_destroy(temp_pool)
     return ret
 
+cdef is_normal_prop(name):
+    return svn_wc_is_normal_prop(name)
 
+cdef is_wc_prop(name):
+    return svn_wc_is_wc_prop(name)
+
+cdef is_entry_prop(name):
+    return svn_wc_is_entry_prop(name)
