@@ -24,7 +24,7 @@ from bzrlib.transport import Transport
 from core import SubversionException, Pool
 import ra
 import core
-import svn.client
+import client
 
 from errors import convert_svn_error, NoSvnRepositoryPresent
 
@@ -47,27 +47,27 @@ def _create_auth_baton(pool):
         providers += [auth.get_ssl_client_cert_pw_provider(1)]
 
     providers += [
-        svn.client.get_simple_provider(pool),
-        svn.client.get_username_provider(pool),
-        svn.client.get_ssl_client_cert_file_provider(pool),
-        svn.client.get_ssl_client_cert_pw_file_provider(pool),
-        svn.client.get_ssl_server_trust_file_provider(pool),
+        client.get_simple_provider(pool),
+        client.get_username_provider(pool),
+        client.get_ssl_client_cert_file_provider(pool),
+        client.get_ssl_client_cert_pw_file_provider(pool),
+        client.get_ssl_server_trust_file_provider(pool),
         ]
 
-    if hasattr(svn.client, 'get_windows_simple_provider'):
-        providers.append(svn.client.get_windows_simple_provider(pool))
+    if hasattr(client, 'get_windows_simple_provider'):
+        providers.append(client.get_windows_simple_provider(pool))
 
-    if hasattr(svn.client, 'get_keychain_simple_provider'):
-        providers.append(svn.client.get_keychain_simple_provider(pool))
+    if hasattr(client, 'get_keychain_simple_provider'):
+        providers.append(client.get_keychain_simple_provider(pool))
 
-    if hasattr(svn.client, 'get_windows_ssl_server_trust_provider'):
-        providers.append(svn.client.get_windows_ssl_server_trust_provider(pool))
+    if hasattr(client, 'get_windows_ssl_server_trust_provider'):
+        providers.append(client.get_windows_ssl_server_trust_provider(pool))
 
     return core.svn_auth_open(providers, pool)
 
 
 def create_svn_client(pool):
-    client = svn.client.create_context(pool)
+    client = client.create_context(pool)
     client.auth_baton = _create_auth_baton(pool)
     client.config = svn_config
     return client
@@ -209,8 +209,7 @@ class SvnRaTransport(Transport):
         self._client = create_svn_client(self.pool)
         try:
             self.mutter('opening SVN RA connection to %r' % self._backing_url)
-            self._ra = svn.client.open_ra_session(self._backing_url.encode('utf8'), 
-                    self._client, self.pool)
+            self._ra = self._client.open_ra_session(self._backing_url.encode('utf8'))
         except SubversionException, (_, num):
             if num in (core.SVN_ERR_RA_SVN_REPOS_NOT_FOUND,):
                 raise NoSvnRepositoryPresent(url=url)
@@ -308,8 +307,7 @@ class SvnRaTransport(Transport):
             self._ra.reparent(self.svn_url, self.pool)
         else:
             self.mutter('svn reparent (reconnect) %r' % url)
-            self._ra = svn.client.open_ra_session(self.svn_url.encode('utf8'), 
-                    self._client, self.pool)
+            self._ra = self._client.open_ra_session(self.svn_url.encode('utf8'))
         self._backing_url = self.svn_url
 
     @convert_svn_error
@@ -386,7 +384,7 @@ class SvnRaTransport(Transport):
         assert len(relpath) == 0 or relpath[0] != "/"
         path = urlutils.join(self.svn_url, relpath)
         try:
-            svn.client.mkdir([path.encode("utf-8")], self._client)
+            self._client.mkdir([path.encode("utf-8")])
         except SubversionException, (msg, num):
             if num == core.SVN_ERR_FS_NOT_FOUND:
                 raise NoSuchFile(path)

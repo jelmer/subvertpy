@@ -6,3 +6,7 @@ apidocs
 .plugins
 ra.c
 wc.c
+core.c
+ra.h
+core.h
+client.c

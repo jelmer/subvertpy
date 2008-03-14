@@ -26,7 +26,7 @@ import md5
 from cStringIO import StringIO
 import urllib
 
-import core, svn.wc, svn.delta
+import core, wc, svn.delta
 from core import Pool
 
 # Deal with Subversion 1.5 and the patched Subversion 1.4 (which are 
@@ -229,7 +229,7 @@ class SvnBasisTree(RevisionTree):
         self._repository = workingtree.branch.repository
 
         def add_file_to_inv(relpath, id, revid, wc):
-            props = svn.wc.get_prop_diffs(self.workingtree.abspath(relpath), wc)
+            props = wc.get_prop_diffs(self.workingtree.abspath(relpath))
             if isinstance(props, list): # Subversion 1.5
                 props = props[1]
             if props.has_key(core.SVN_PROP_SPECIAL):
@@ -250,14 +250,14 @@ class SvnBasisTree(RevisionTree):
 
         def find_ids(entry):
             relpath = urllib.unquote(entry.url[len(entry.repos):].strip("/"))
-            if entry.schedule in (svn.wc.schedule_normal, 
-                                  svn.wc.schedule_delete, 
-                                  svn.wc.schedule_replace):
+            if entry.schedule in (wc.schedule_normal, 
+                                  wc.schedule_delete, 
+                                  wc.schedule_replace):
                 return self.id_map[workingtree.branch.unprefix(relpath)]
             return (None, None)
 
         def add_dir_to_inv(relpath, wc, parent_id):
-            entries = svn.wc.entries_read(wc, False)
+            entries = wc.entries_read(False)
             entry = entries[""]
             (id, revid) = find_ids(entry)
             if id == None:
@@ -279,13 +279,13 @@ class SvnBasisTree(RevisionTree):
                 assert entry
                 
                 if entry.kind == core.svn_node_dir:
-                    subwc = svn.wc.adm_open3(wc, 
+                    subwc = wc.WorkingCopy(
                             self.workingtree.abspath(subrelpath), 
                                              False, 0, None)
                     try:
                         add_dir_to_inv(subrelpath, subwc, id)
                     finally:
-                        svn.wc.adm_close(subwc)
+                        subwc.close()
                 else:
                     (subid, subrevid) = find_ids(entry)
                     if subid is not None:
@@ -295,10 +295,10 @@ class SvnBasisTree(RevisionTree):
         try:
             add_dir_to_inv("", wc, None)
         finally:
-            svn.wc.adm_close(wc)
+            wc.adm_close()
 
     def _abspath(self, relpath):
-        return svn.wc.get_pristine_copy_path(self.workingtree.abspath(relpath))
+        return wc.get_pristine_copy_path(self.workingtree.abspath(relpath))
 
     def get_file_lines(self, file_id):
         base_copy = self._abspath(self.id2path(file_id))

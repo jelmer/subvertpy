@@ -14,14 +14,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-include "apr.pxi"
-include "types.pxi"
+from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy
+from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t
 
-from core import check_error, Pool
-
-cdef svn_error_t *py_cancel_func(cancel_baton):
-    cancel_baton()
-    return NULL
+from core cimport check_error, Pool, py_cancel_func
 
 apr_initialize()
 
@@ -34,7 +30,7 @@ cdef extern from "svn_wc.h":
                                   svn_boolean_t write_lock,
                                   int depth,
                                   svn_cancel_func_t cancel_func,
-                                  cancel_baton,
+                                  object cancel_baton,
                                   apr_pool_t *pool)
     svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
     char *svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access)
@@ -50,7 +46,7 @@ cdef extern from "svn_wc.h":
                        char *trail_url,
                        svn_boolean_t committed,
                        svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
+                       object cancel_baton,
                        apr_pool_t *pool)
     svn_error_t *svn_wc_prop_get(svn_string_t **value,
                              char *name,
@@ -73,10 +69,11 @@ def version():
 cdef class WorkingCopy:
     cdef svn_wc_adm_access_t *adm
     cdef apr_pool_t *pool
-    def __init__(self, path, associated=None, write_lock=False, depth=0, 
+    def __init__(self, associated, path, write_lock=False, depth=0, 
                  cancel_func=None):
         self.pool = Pool(NULL)
-        check_error(svn_wc_adm_open3(&self.adm, associated, path, 
+        # FIXME: Use associated
+        check_error(svn_wc_adm_open3(&self.adm, NULL, path, 
                      write_lock, depth, py_cancel_func, cancel_func, 
                      self.pool))
 
@@ -88,15 +85,22 @@ cdef class WorkingCopy:
 
     def prop_get(self, name, path):
         cdef svn_string_t *value
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
         check_error(svn_wc_prop_get(&value, name, path, self.adm, temp_pool))
-        return PyString_FromStringAndSize(value.data, value.len)
+        ret = PyString_FromStringAndSize(value.data, value.len)
+        apr_pool_destroy(temp_pool)
+        return ret
 
     def entries_read(self, show_hidden):
         cdef apr_hash_t *entries
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
         check_error(svn_wc_entries_read(&entries, self.adm, 
                      show_hidden, temp_pool))
         # FIXME: Create py_entries
         py_entries = {}
+        apr_pool_destroy(temp_pool)
         return py_entries
 
     def __dealloc__(self):
@@ -105,9 +109,13 @@ cdef class WorkingCopy:
 
 def revision_status(wc_path, trail_url, committed, cancel_func=None):
     cdef svn_wc_revision_status_t *revstatus
+    cdef apr_pool_t *temp_pool
+    temp_pool = Pool(NULL)
     check_error(svn_wc_revision_status(&revstatus, wc_path, trail_url,
                  committed, py_cancel_func, cancel_func, temp_pool))
-    return (revstatus.min_rev, revstatus.max_rev, 
+    ret = (revstatus.min_rev, revstatus.max_rev, 
             revstatus.switched, revstatus.modified)
+    apr_pool_destroy(temp_pool)
+    return ret
 
 

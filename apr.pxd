@@ -25,6 +25,7 @@ cdef extern from "apr_general.h":
 
 cdef extern from "apr_file_io.h":
     ctypedef struct apr_file_t 
+    ctypedef long long apr_off_t
 
 cdef extern from "apr_pools.h":
     ctypedef struct apr_pool_t

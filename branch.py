@@ -24,7 +24,7 @@ from bzrlib.inventory import (Inventory)
 from bzrlib.revision import ensure_null
 from bzrlib.workingtree import WorkingTree
 
-import svn.client, core
+import core
 from core import SubversionException, Pool
 
 from commit import push

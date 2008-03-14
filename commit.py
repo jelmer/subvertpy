@@ -16,9 +16,7 @@
 """Committing and pushing to Subversion repositories."""
 
 import svn.delta
-from svn.core import Pool, SubversionException
-
-from core import time_to_cstring
+from core import Pool, SubversionException, time_to_cstring
 
 from bzrlib import debug, osutils, urlutils
 from bzrlib.branch import Branch
@@ -456,7 +454,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                     raise
                 # Try without bzr: revprops
                 self.editor = self.repository.transport.get_commit_editor({
-                    core.SVN_PROP_REVISION_LOG: self._svn_revprops[svn.core.SVN_PROP_REVISION_LOG]},
+                    core.SVN_PROP_REVISION_LOG: self._svn_revprops[core.SVN_PROP_REVISION_LOG]},
                     done, None, False)
                 del self._svn_revprops[core.SVN_PROP_REVISION_LOG]
 

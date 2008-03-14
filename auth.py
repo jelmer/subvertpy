@@ -17,7 +17,7 @@
 
 from bzrlib.config import AuthenticationConfig
 from bzrlib.ui import ui_factory
-from svn.core import (svn_auth_cred_username_t, 
+from core import (svn_auth_cred_username_t, 
                       svn_auth_cred_simple_t,
                       svn_auth_cred_ssl_client_cert_t,
                       svn_auth_cred_ssl_client_cert_pw_t,

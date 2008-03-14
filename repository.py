@@ -601,7 +601,7 @@ class SvnRepository(Repository):
                             revids.append(parse_revid_property(line))
                         except errors.InvalidPropertyValue, ie:
                             mutter(str(ie))
-                except SubversionException, (_, svn.core.SVN_ERR_FS_NOT_DIRECTORY):
+                except SubversionException, (_, core.SVN_ERR_FS_NOT_DIRECTORY):
                     continue
 
                 # If there are any new entries that are not yet in the cache, 

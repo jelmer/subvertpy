@@ -14,8 +14,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-include "apr.pxi"
-include "types.pxi"
+from apr cimport apr_pool_t, apr_pool_destroy
+from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_set
+from apr cimport apr_array_header_t
+from apr cimport apr_file_t, apr_off_t
+from core cimport check_error, Pool
+from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
+from types cimport svn_string_ncreate
 
 apr_initialize()
 
@@ -72,8 +77,8 @@ cdef extern from "svn_delta.h":
 
     ctypedef struct svn_delta_editor_t:
         svn_error_t *(*set_target_revision)(void *edit_baton, 
-				                svn_revnum_t target_revision, apr_pool_t *pool)
-        svn_error_t *(*open_root)(void *edit_baton, long base_revision, 
+                                svn_revnum_t target_revision, apr_pool_t *pool)
+        svn_error_t *(*open_root)(void *edit_baton, svn_revnum_t base_revision, 
                                   apr_pool_t *dir_pool, void **root_baton)
 
         svn_error_t *(*delete_entry)(char *path, long revision, 
@@ -198,10 +203,41 @@ cdef extern from "svn_ra.h":
 
         svn_error_t *(*abort_report)(void *report_baton, apr_pool_t *pool)
 
+    ctypedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress, apr_off_t total, void *baton, apr_pool_t *pool)
+
+    ctypedef svn_error_t *(*svn_ra_get_wc_prop_func_t)(void *baton,
+                                                  char *relpath,
+                                                  char *name,
+                                                  svn_string_t **value,
+                                                  apr_pool_t *pool)
+
+    ctypedef svn_error_t *(*svn_ra_set_wc_prop_func_t)(void *baton,
+                                                  char *path,
+                                                  char *name,
+                                                  svn_string_t *value,
+                                                  apr_pool_t *pool)
+
+    ctypedef svn_error_t *(*svn_ra_push_wc_prop_func_t)(void *baton,
+                                                   char *path,
+                                                   char *name,
+                                                   svn_string_t *value,
+                                                   apr_pool_t *pool)
+
+    ctypedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
+                                                          char *path,
+                                                          char *name,
+                                                          apr_pool_t *pool)
+
     ctypedef struct svn_ra_callbacks2_t:
         svn_error_t *(*open_tmp_file)(apr_file_t **fp, 
                                       void *callback_baton, apr_pool_t *pool)
         svn_auth_baton_t *auth_baton
+        svn_ra_get_wc_prop_func_t get_wc_prop
+        svn_ra_set_wc_prop_func_t set_wc_prop
+        svn_ra_push_wc_prop_func_t push_wc_prop
+        svn_ra_invalidate_wc_props_func_t invalidate_wc_props
+        svn_ra_progress_notify_func_t progress_func
+        void *progress_baton
 
     svn_error_t *svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
                             apr_pool_t *pool)
@@ -349,6 +385,10 @@ cdef class Reporter:
     cdef void *report_baton
     cdef apr_pool_t *pool
 
+    cdef void set_reporter(self, svn_ra_reporter2_t *reporter, void *baton):
+        self.reporter = reporter
+        self.report_baton = baton
+
     def set_path(self, path, revision, start_empty, lock_token):
         check_error(self.reporter.set_path(self.report_baton, path, revision, 
                      start_empty, lock_token, self.pool))
@@ -366,6 +406,9 @@ cdef class Reporter:
 
     def abort_report(self):
         check_error(self.reporter.abort_report(self.report_baton, self.pool))
+
+    def __dealloc__(self):
+        apr_pool_destroy(self.pool)
 
 
 def version():
@@ -460,11 +503,9 @@ cdef class RemoteAccess:
         check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
                      revision_to_update_to, update_target, recurse, 
                      editor, update_editor, temp_pool))
-        apr_pool_destroy(temp_pool)
         ret = Reporter()
-        ret.reporter = reporter
-        ret.report_baton = report_baton
-        ret.pool = temp_pool
+        ret.set_reporter(reporter, report_baton)
+        ret.set_pool(temp_pool)
         return ret
 
     def do_switch(self, revision_to_update_to, update_target, recurse, 
@@ -477,19 +518,18 @@ cdef class RemoteAccess:
         check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
                      revision_to_update_to, update_target, recurse, 
                      editor, update_editor, temp_pool))
-        apr_pool_destroy(temp_pool)
-        return Reporter(reporter, report_baton, temp_pool)
+        ret = Reporter()
+        ret.set_reporter(reporter, report_baton)
+        ret.set_pool(temp_pool)
+        return ret
 
     def replay(self, revision, low_water_mark, send_deltas, update_editor):
-        cdef svn_ra_reporter2_t *reporter
-        cdef void *report_baton
         cdef apr_pool_t *temp_pool
         cdef svn_delta_editor_t *editor
         temp_pool = Pool(self.pool)
         check_error(svn_ra_replay(self.ra, revision, low_water_mark,
                      send_deltas, editor, update_editor, temp_pool))
         apr_pool_destroy(temp_pool)
-        return Reporter(reporter, report_baton, temp_pool)
 
     def rev_proplist(self, rev):
         cdef apr_pool_t *temp_pool
