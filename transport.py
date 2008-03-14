@@ -28,7 +28,7 @@ import client
 
 from errors import convert_svn_error, NoSvnRepositoryPresent
 
-svn_config = core.svn_config_get_config(None)
+svn_config = core.get_config(None)
 
 def get_client_string():
     """Return a string that can be send as part of the User Agent string."""
@@ -210,9 +210,9 @@ class SvnRaTransport(Transport):
             self.mutter('opening SVN RA connection to %r' % self._backing_url)
             self._ra = self._client.open_ra_session(self._backing_url.encode('utf8'))
         except SubversionException, (_, num):
-            if num in (core.SVN_ERR_RA_SVN_REPOS_NOT_FOUND,):
+            if num in (constants.ERR_RA_SVN_REPOS_NOT_FOUND,):
                 raise NoSvnRepositoryPresent(url=url)
-            if num == core.SVN_ERR_BAD_URL:
+            if num == constants.ERR_BAD_URL:
                 raise InvalidURL(url)
             raise
 
@@ -339,7 +339,7 @@ class SvnRaTransport(Transport):
             (dirents, _, _) = self.get_dir(self._request_path(relpath),
                                            self.get_latest_revnum())
         except SubversionException, (msg, num):
-            if num == core.SVN_ERR_FS_NOT_DIRECTORY:
+            if num == constants.ERR_FS_NOT_DIRECTORY:
                 raise NoSuchFile(relpath)
             raise
         return dirents.keys()
@@ -385,9 +385,9 @@ class SvnRaTransport(Transport):
         try:
             self._client.mkdir([path.encode("utf-8")])
         except SubversionException, (msg, num):
-            if num == core.SVN_ERR_FS_NOT_FOUND:
+            if num == constants.ERR_FS_NOT_FOUND:
                 raise NoSuchFile(path)
-            if num == core.SVN_ERR_FS_ALREADY_EXISTS:
+            if num == constants.ERR_FS_ALREADY_EXISTS:
                 raise FileExists(path)
             raise
 

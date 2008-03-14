@@ -21,6 +21,9 @@ from core cimport check_error, Pool, py_cancel_func
 
 apr_initialize()
 
+cdef extern from "Python.h":
+    object PyString_FromStringAndSize(char *, long len)
+
 cdef extern from "svn_wc.h":
     ctypedef struct svn_wc_adm_access_t
     svn_version_t *svn_wc_version()
@@ -73,8 +76,8 @@ def version():
 
     :return: tuple with major, minor, patch version number and tag.
     """
-    return (svn_ra_version().major, svn_ra_version().minor, 
-            svn_ra_version().minor, svn_ra_version().tag)
+    return (svn_wc_version().major, svn_wc_version().minor, 
+            svn_wc_version().minor, svn_wc_version().tag)
 
 cdef class WorkingCopy:
     cdef svn_wc_adm_access_t *adm

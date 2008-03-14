@@ -16,7 +16,7 @@
 """Committing and pushing to Subversion repositories."""
 
 import svn.delta
-from core import Pool, SubversionException, time_to_cstring
+from core import SubversionException, time_to_cstring
 
 from bzrlib import debug, osutils, urlutils
 from bzrlib.branch import Branch
@@ -77,7 +77,7 @@ def set_svn_revprops(transport, revnum, revprops):
     for (name, value) in revprops.items():
         try:
             transport.change_rev_prop(revnum, name, value)
-        except SubversionException, (_, core.SVN_ERR_REPOS_DISABLED_FEATURE):
+        except SubversionException, (_, constants.ERR_REPOS_DISABLED_FEATURE):
             raise RevpropChangeFailed(name)
 
 
@@ -693,7 +693,7 @@ def push(target, source, revision_id):
     try:
         builder.commit(rev.message)
     except SubversionException, (_, num):
-        if num == core.SVN_ERR_FS_TXN_OUT_OF_DATE:
+        if num == constants.ERR_FS_TXN_OUT_OF_DATE:
             raise DivergedBranches(source, target)
         raise
     except ChangesRootLHSHistory:

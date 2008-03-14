@@ -28,7 +28,7 @@ from bzrlib.revision import Revision, NULL_REVISION
 from bzrlib.transport import Transport, get_transport
 from bzrlib.trace import info, mutter
 
-from core import SubversionException, Pool
+from core import SubversionException
 import core
 
 import os
@@ -354,7 +354,7 @@ class SvnRepository(Repository):
         try:
             return (core.svn_node_dir == self.transport.check_path(path, revnum))
         except SubversionException, (_, num):
-            if num == core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 return False
             raise
 
@@ -529,7 +529,7 @@ class SvnRepository(Repository):
             (bzr_revno, revid) = mapping.get_revision_id(path, revprops, 
                                                          fileprops)
         except SubversionException, (_, num):
-            if num == core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(path, revnum)
             raise
 
@@ -601,7 +601,7 @@ class SvnRepository(Repository):
                             revids.append(parse_revid_property(line))
                         except errors.InvalidPropertyValue, ie:
                             mutter(str(ie))
-                except SubversionException, (_, core.SVN_ERR_FS_NOT_DIRECTORY):
+                except SubversionException, (_, constants.ERR_FS_NOT_DIRECTORY):
                     continue
 
                 # If there are any new entries that are not yet in the cache, 
@@ -939,7 +939,7 @@ class SvnRepository(Repository):
                                         elif (scheme.is_branch_parent(n) or 
                                               scheme.is_tag_parent(n)):
                                             parents.append(n)
-                                except SubversionException, (_, core.SVN_ERR_FS_NOT_DIRECTORY):
+                                except SubversionException, (_, constants.ERR_FS_NOT_DIRECTORY):
                                     pass
         finally:
             pb.finished()

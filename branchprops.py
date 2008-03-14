@@ -21,7 +21,8 @@ from bzrlib.trace import mutter
 
 from cache import CacheTable
 
-from core import SubversionException, Pool
+import constants
+from core import SubversionException
 
 class BranchPropertyList(CacheTable):
     """Simple class that retrieves file properties set on branches."""
@@ -50,7 +51,7 @@ class BranchPropertyList(CacheTable):
             (_, _, props) = self.log._get_transport().get_dir(path, 
                 revnum)
         except SubversionException, (_, num):
-            if num == core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(self, revnum)
             raise
 

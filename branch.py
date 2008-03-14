@@ -25,7 +25,7 @@ from bzrlib.revision import ensure_null
 from bzrlib.workingtree import WorkingTree
 
 import core
-from core import SubversionException, Pool
+from core import SubversionException
 
 from commit import push
 from errors import NotSvnBranchPath
@@ -78,7 +78,7 @@ class SvnBranch(Branch):
                 self.get_revnum()) != core.svn_node_dir:
                 raise NotBranchError(self.base)
         except SubversionException, (_, num):
-            if num == core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 raise NotBranchError(self.base)
             raise
         if not self.mapping.is_branch(branch_path):
@@ -176,7 +176,7 @@ class SvnBranch(Branch):
             rev.kind = svn.core.svn_opt_revision_number
             rev.value.number = revnum
 
-        client_ctx = create_svn_client(Pool())
+        client_ctx = create_svn_client()
         svn.client.checkout(bzr_to_svn_url(self.base), to_location, rev, 
                             True, client_ctx)
 

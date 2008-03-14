@@ -26,7 +26,7 @@ from bzrlib.trace import mutter
 from bzrlib.urlutils import local_path_to_url
 from bzrlib.workingtree import WorkingTree
 
-import svn.repos, svn.wc
+import repos, wc, client
 from bzrlib.plugins.svn.errors import NoCheckoutSupport
 
 class TestCaseWithSubversionRepository(TestCaseInTempDir):
@@ -35,7 +35,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
 
     def setUp(self):
         super(TestCaseWithSubversionRepository, self).setUp()
-        self.client_ctx = svn.client.create_context()
+        self.client_ctx = client.Client()
         self.client_ctx.log_msg_func2 = svn.client.svn_swig_py_get_commit_log_func
         self.client_ctx.log_msg_baton2 = self.log_message_func
 
@@ -49,7 +49,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         """
         abspath = os.path.join(self.test_dir, relpath)
 
-        svn.repos.create(abspath, '', '', None, None)
+        repos.create(abspath)
 
         if allow_revprop_changes:
             if sys.platform == 'win32':

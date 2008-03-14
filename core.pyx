@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from types cimport svn_error_t
-from apr cimport apr_initialize, apr_status_t, apr_time_t
+from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
 
 apr_initialize()
@@ -54,7 +54,7 @@ cdef extern from "svn_time.h":
     svn_error_t *svn_time_from_cstring(apr_time_t *when, char *data, 
                                        apr_pool_t *pool)
 
-cdef object time_to_cstring(when):
+def time_to_cstring(when):
     """Convert a UNIX timestamp to a Subversion CString."""
     cdef apr_pool_t *pool
     pool = Pool(NULL)
@@ -62,11 +62,37 @@ cdef object time_to_cstring(when):
     apr_pool_destroy(pool)
     return ret
 
-cdef apr_time_t time_from_cstring(data):
+def time_from_cstring(data):
     """Parse a Subversion time string and return a UNIX timestamp."""
     cdef apr_time_t when
     cdef apr_pool_t *pool
     check_error(svn_time_from_cstring(&when, data, pool))
     apr_pool_destroy(pool)
     return when
+
+
+SVN_PROP_REVISION_LOG = "svn:log"
+SVN_PROP_REVISION_AUTHOR = "svn:author"
+SVN_PROP_REVISION_DATE = "svn:date"
+
+
+cdef extern from "svn_config.h":
+    svn_error_t *svn_config_get_config(apr_hash_t **cfg_hash,
+                                       char *config_dir,
+                                       apr_pool_t *pool)
+
+def get_config(config_dir=None):
+    cdef apr_pool_t *pool
+    cdef apr_hash_t *cfg_hash
+    cdef char *c_config_dir
+    pool = Pool(NULL)
+    if config_dir is None:
+        c_config_dir = NULL
+    else:
+        c_config_dir = config_dir
+    check_error(svn_config_get_config(&cfg_hash, c_config_dir, pool))
+    ret = {}
+    # FIXME: Convert cfghash to ret
+    apr_pool_destroy(pool)
+    return ret
 

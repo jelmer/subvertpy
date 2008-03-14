@@ -51,8 +51,8 @@ from tree import SvnBasisTree
 import os
 import urllib
 
-import core. svn.wc
-from core.import SubversionException, Pool, svn_time_to_cstring
+import core, svn.wc
+from core import SubversionException, time_to_cstring
 
 from errors import NoCheckoutSupport
 from format import get_rich_root_format
@@ -458,7 +458,7 @@ class SvnWorkingTree(WorkingTree):
                 commit_info = svn.client.commit3(specific_files, True, False, 
                                                  self.client_ctx)
             except SubversionException, (_, num):
-                if num == core.SVN_ERR_FS_TXN_OUT_OF_DATE:
+                if num == constants.ERR_FS_TXN_OUT_OF_DATE:
                     raise OutOfDateTree(self)
                 raise
         except:
@@ -544,9 +544,9 @@ class SvnWorkingTree(WorkingTree):
                     if ids is not None:
                         self._change_fileid_mapping(ids.next(), f, wc)
                 except SubversionException, (_, num):
-                    if num == core.SVN_ERR_ENTRY_EXISTS:
+                    if num == constants.ERR_ENTRY_EXISTS:
                         continue
-                    elif num == core.SVN_ERR_WC_PATH_NOT_FOUND:
+                    elif num == constants.ERR_WC_PATH_NOT_FOUND:
                         raise NoSuchFile(path=f)
                     raise
             finally:
@@ -798,7 +798,7 @@ class SvnCheckout(BzrDir):
             branch = SvnBranch(self.svn_root_transport.base, repos, 
                                self.remote_bzrdir.branch_path)
         except SubversionException, (_, num):
-            if num == core.SVN_ERR_WC_NOT_DIRECTORY:
+            if num == constants.ERR_WC_NOT_DIRECTORY:
                 raise NotBranchError(path=self.base)
             raise
 

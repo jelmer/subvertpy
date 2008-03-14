@@ -81,17 +81,17 @@ def convert_error(err):
     """
     (msg, num) = err.args
 
-    if num == core.SVN_ERR_RA_SVN_CONNECTION_CLOSED:
+    if num == constants.ERR_RA_SVN_CONNECTION_CLOSED:
         return ConnectionReset(msg=msg)
-    elif num == core.SVN_ERR_WC_LOCKED:
+    elif num == constants.ERR_WC_LOCKED:
         return LockError(message=msg)
-    elif num == core.SVN_ERR_RA_NOT_AUTHORIZED:
+    elif num == constants.ERR_RA_NOT_AUTHORIZED:
         return PermissionDenied('.', msg)
-    elif num == core.SVN_ERR_INCOMPLETE_DATA:
+    elif num == constants.ERR_INCOMPLETE_DATA:
         return UnexpectedEndOfContainerError()
-    elif num == core.SVN_ERR_RA_SVN_MALFORMED_DATA:
+    elif num == constants.ERR_RA_SVN_MALFORMED_DATA:
         return TransportError("Malformed data", msg)
-    elif num == core.SVN_ERR_RA_NOT_IMPLEMENTED:
+    elif num == constants.ERR_RA_NOT_IMPLEMENTED:
         return NotImplementedError("Function not implemented in remote server")
     elif num == constants.ERR_UNKNOWN_HOSTNAME:
         return ConnectionError(msg=msg)

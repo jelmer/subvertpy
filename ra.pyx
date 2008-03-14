@@ -18,8 +18,10 @@ from apr cimport apr_pool_t, apr_pool_destroy
 from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_set
 from apr cimport apr_array_header_t
 from apr cimport apr_file_t, apr_off_t
+from apr cimport apr_initialize
 from core cimport check_error, Pool, wrap_lock
 from core import SubversionException
+from core import SVN_PROP_REVISION_LOG, SVN_PROP_REVISION_AUTHOR, SVN_PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
 from types cimport svn_string_ncreate, svn_lock_t
 
@@ -607,8 +609,9 @@ cdef class RemoteAccess:
         cdef apr_pool_t *temp_pool
         cdef int has
         temp_pool = Pool(self.pool)
-        check_error(svn_ra_has_capability(self.ra, &has, capability, 
-                     temp_pool))
+		# FIXME: Svn 1.5 only
+        # check_error(svn_ra_has_capability(self.ra, &has, capability, 
+        #             temp_pool))
         apr_pool_destroy(temp_pool)
         return has
 
@@ -637,6 +640,3 @@ cdef class RemoteAccess:
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self.url)
 
-SVN_PROP_REVISION_LOG = "svn:log"
-SVN_PROP_REVISION_AUTHOR = "svn:author"
-SVN_PROP_REVISION_DATE = "svn:date"

@@ -20,7 +20,7 @@ from bzrlib.errors import NoSuchRevision
 import bzrlib.ui as ui
 from copy import copy
 
-from core import SubversionException, Pool
+from core import SubversionException
 from transport import SvnRaTransport
 import core
 
@@ -82,7 +82,7 @@ class LogWalker(object):
 
         pb = ui.ui_factory.nested_progress_bar()
 
-        def rcvr(log_entry, pool):
+        def rcvr(log_entry):
             pb.update('fetching svn revision info', log_entry.revision, to_revnum)
             orig_paths = log_entry.changed_paths
             if orig_paths is None:
@@ -95,8 +95,6 @@ class LogWalker(object):
                 self.db.execute(
                      "replace into changed_path (rev, path, action, copyfrom_path, copyfrom_rev) values (?, ?, ?, ?, ?)", 
                      (log_entry.revision, p.strip("/"), orig_paths[p].action, copyfrom_path, orig_paths[p].copyfrom_rev))
-                # Work around nasty memory leak in Subversion
-                orig_paths[p]._parent_pool.destroy()
 
             self.saved_revnum = log_entry.revision
             if self.saved_revnum % 1000 == 0:
@@ -105,15 +103,13 @@ class LogWalker(object):
         try:
             try:
                 while self.saved_revnum < to_revnum:
-                    pool = Pool()
                     self._get_transport().get_log("", self.saved_revnum, 
                                              to_revnum, self._limit, True, 
-                                             True, [], rcvr, pool)
-                    pool.destroy()
+                                             True, [], rcvr)
             finally:
                 pb.finished()
         except SubversionException, (_, num):
-            if num == core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % to_revnum)
             raise
@@ -265,15 +261,15 @@ class LogWalker(object):
                 """See Editor.open_root()."""
                 return path
 
-            def add_directory(self, path, parent_baton, copyfrom_path, copyfrom_revnum, pool):
+            def add_directory(self, path, parent_baton, copyfrom_path, copyfrom_revnum):
                 """See Editor.add_directory()."""
                 self.files.append(urlutils.join(self.base, path))
                 return path
 
-            def change_dir_prop(self, id, name, value, pool):
+            def change_dir_prop(self, id, name, value):
                 pass
 
-            def change_file_prop(self, id, name, value, pool):
+            def change_file_prop(self, id, name, value):
                 pass
 
             def add_file(self, path, parent_id, copyfrom_path, copyfrom_revnum, baton):
@@ -294,15 +290,14 @@ class LogWalker(object):
 
             def apply_textdelta(self, file_id, base_checksum):
                 pass
-        pool = Pool()
         editor = TreeLister(path)
         old_base = transport.base
         try:
             root_repos = transport.get_svn_repos_root()
             transport.reparent(urlutils.join(root_repos, path))
-            reporter = transport.do_update(revnum, True, editor, pool)
-            reporter.set_path("", revnum, True, None, pool)
-            reporter.finish_report(pool)
+            reporter = transport.do_update(revnum, True, editor)
+            reporter.set_path("", revnum, True, None)
+            reporter.finish_report()
         finally:
             transport.reparent(old_base)
         return editor.files
