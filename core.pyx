@@ -30,6 +30,9 @@ class SubversionException(Exception):
         self.msg = msg
 
 
+cdef wrap_lock(svn_lock_t *lock):
+    return (lock.path, lock.token, lock.owner, lock.comment, lock.is_dav_comment, lock.creation_date, lock.expiration_date)
+
 cdef check_error(svn_error_t *error):
     if error:
         raise SubversionException(error.apr_err, errormessage)

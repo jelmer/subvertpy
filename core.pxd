@@ -16,7 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from apr cimport apr_pool_t
-from types cimport svn_error_t
+from types cimport svn_error_t, svn_lock_t
 cdef apr_pool_t *Pool(apr_pool_t *parent)
 cdef check_error(svn_error_t *error)
 cdef svn_error_t *py_cancel_func(cancel_baton)
+cdef wrap_lock(svn_lock_t *)

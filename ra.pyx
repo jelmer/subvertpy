@@ -18,9 +18,10 @@ from apr cimport apr_pool_t, apr_pool_destroy
 from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_set
 from apr cimport apr_array_header_t
 from apr cimport apr_file_t, apr_off_t
-from core cimport check_error, Pool
+from core cimport check_error, Pool, wrap_lock
+from core import SubversionException
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
-from types cimport svn_string_ncreate
+from types cimport svn_string_ncreate, svn_lock_t
 
 apr_initialize()
 
@@ -177,7 +178,6 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
         SVN_PROP_REVISION_DATE: date})
 
 cdef extern from "svn_ra.h":
-    ctypedef struct svn_lock_t
     svn_version_t *svn_ra_version()
 
     ctypedef struct svn_ra_reporter2_t:
@@ -203,7 +203,8 @@ cdef extern from "svn_ra.h":
 
         svn_error_t *(*abort_report)(void *report_baton, apr_pool_t *pool)
 
-    ctypedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress, apr_off_t total, void *baton, apr_pool_t *pool)
+    ctypedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress, 
+                           apr_off_t total, void *baton, apr_pool_t *pool)
 
     ctypedef svn_error_t *(*svn_ra_get_wc_prop_func_t)(void *baton,
                                                   char *relpath,
@@ -375,8 +376,11 @@ cdef extern from "svn_ra.h":
 cdef svn_error_t *py_lock_func (baton, char *path, int do_lock, 
                                 svn_lock_t *lock, svn_error_t *ra_err, 
                                 apr_pool_t *pool):
-    # FIXME: pass lock and ra_err, too
-    baton(path, do_lock)
+    py_ra_err = None
+    if ra_err != NULL:
+        py_ra_err = SubversionException(ra_err.apr_err, ra_err.message)
+    # FIXME: Pass lock
+    baton(path, do_lock, py_ra_err)
 
 
 cdef class Reporter:
@@ -499,13 +503,15 @@ cdef class RemoteAccess:
         cdef void *report_baton
         cdef apr_pool_t *temp_pool
         cdef svn_delta_editor_t *editor
+        cdef Reporter ret
         temp_pool = Pool(self.pool)
         check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
                      revision_to_update_to, update_target, recurse, 
                      editor, update_editor, temp_pool))
         ret = Reporter()
-        ret.set_reporter(reporter, report_baton)
-        ret.set_pool(temp_pool)
+        ret.reporter 
+        ret.report_baton = report_baton
+        ret.pool = temp_pool
         return ret
 
     def do_switch(self, revision_to_update_to, update_target, recurse, 
@@ -514,13 +520,15 @@ cdef class RemoteAccess:
         cdef void *report_baton
         cdef apr_pool_t *temp_pool
         cdef svn_delta_editor_t *editor
+        cdef Reporter ret
         temp_pool = Pool(self.pool)
         check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
                      revision_to_update_to, update_target, recurse, 
                      editor, update_editor, temp_pool))
         ret = Reporter()
-        ret.set_reporter(reporter, report_baton)
-        ret.set_pool(temp_pool)
+        ret.reporter = reporter
+        ret.report_baton = report_baton
+        ret.pool = temp_pool
         return ret
 
     def replay(self, revision, low_water_mark, send_deltas, update_editor):
@@ -584,7 +592,7 @@ cdef class RemoteAccess:
         temp_pool = Pool(self.pool)
         check_error(svn_ra_get_lock(self.ra, &lock, path, temp_pool))
         apr_pool_destroy(temp_pool)
-        return lock
+        return wrap_lock(lock)
 
     def check_path(self, path, revision):
         cdef svn_node_kind_t kind

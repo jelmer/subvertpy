@@ -21,7 +21,7 @@ from bzrlib.errors import (NoSuchFile, NotBranchError, TransportNotPossible,
 from bzrlib.trace import mutter
 from bzrlib.transport import Transport
 
-from core import SubversionException, Pool
+from core import SubversionException
 import ra
 import core
 import client
@@ -195,7 +195,6 @@ class SvnRaTransport(Transport):
     to fool Bazaar. """
     @convert_svn_error
     def __init__(self, url="", _backing_url=None):
-        self.pool = Pool()
         bzr_url = url
         self.svn_url = bzr_to_svn_url(url)
         self._root = None
@@ -206,7 +205,7 @@ class SvnRaTransport(Transport):
         self._backing_url = _backing_url.rstrip("/")
         Transport.__init__(self, bzr_url)
 
-        self._client = create_svn_client(self.pool)
+        self._client = create_svn_client()
         try:
             self.mutter('opening SVN RA connection to %r' % self._backing_url)
             self._ra = self._client.open_ra_session(self._backing_url.encode('utf8'))
@@ -304,7 +303,7 @@ class SvnRaTransport(Transport):
             return
         if hasattr(self._ra, 'reparent'):
             self.mutter('svn reparent %r' % url)
-            self._ra.reparent(self.svn_url, self.pool)
+            self._ra.reparent(self.svn_url)
         else:
             self.mutter('svn reparent (reconnect) %r' % url)
             self._ra = self._client.open_ra_session(self.svn_url.encode('utf8'))
@@ -402,7 +401,7 @@ class SvnRaTransport(Transport):
     def do_update(self, revnum, recurse, editor):
         self._open_real_transport()
         self.mutter('svn update -r %r' % revnum)
-        return self._ra.do_update(revnum, "", recurse, editor))
+        return self._ra.do_update(revnum, "", recurse, editor)
 
     @convert_svn_error
     def has_capability(self, cap):

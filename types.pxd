@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from apr cimport apr_status_t, apr_pool_t
+from apr cimport apr_status_t, apr_pool_t, apr_time_t
 
 cdef extern from "svn_version.h":
     ctypedef struct svn_version_t:
@@ -37,6 +37,15 @@ cdef extern from "svn_types.h":
     ctypedef int svn_boolean_t
     ctypedef svn_error_t *(*svn_cancel_func_t)(cancel_baton)
     ctypedef long svn_revnum_t
+    ctypedef struct svn_lock_t:
+        char *path
+        char *token
+        char *owner
+        char *comment
+        svn_boolean_t is_dav_comment
+        apr_time_t creation_date
+        apr_time_t expiration_date
+
 
 cdef extern from "svn_string.h":
     ctypedef struct svn_string_t:
