@@ -17,13 +17,25 @@
 from apr cimport apr_initialize, apr_hash_t
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 from apr cimport apr_pool_t
-from types cimport svn_error_t
+from types cimport svn_error_t, svn_cancel_func_t
 from core cimport Pool, check_error
 
 apr_initialize()
 
 cdef extern from "svn_client.h":
-    ctypedef struct svn_client_ctx_t
+	ctypedef struct svn_client_ctx_t:
+		svn_auth_baton_t *auth_baton
+		svn_client_get_commit_log_t log_msg_func
+		void *log_msg_baton
+		apr_hash_t *config
+		svn_cancel_func_t cancel_func
+		void *cancel_baton
+		svn_wc_notify_func2_t notify_func2
+		void *notify_baton2
+		svn_client_get_commit_log2_t log_msg_func2
+		void *log_msg_baton2
+		svn_ra_progress_notify_func_t progress_func
+		void *progress_baton
     ctypedef struct svn_client_commit_info_t
     svn_error_t *svn_client_create_context(svn_client_ctx_t **ctx, 
                                            apr_pool_t *pool)
