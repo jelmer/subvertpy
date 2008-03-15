@@ -26,6 +26,7 @@ cdef extern from "svn_version.h":
 
 cdef extern from "svn_io.h":
     ctypedef struct svn_stream_t
+    ctypedef unsigned long long svn_filesize_t
 
 cdef extern from "svn_error.h":
     ctypedef struct svn_error_t:

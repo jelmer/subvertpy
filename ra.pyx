@@ -14,25 +14,45 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from apr cimport apr_pool_t, apr_pool_destroy
+from apr cimport apr_pool_t, apr_pool_destroy, apr_palloc
 from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_set
 from apr cimport apr_array_header_t, apr_array_make
-from apr cimport apr_file_t, apr_off_t
+from apr cimport apr_file_t, apr_off_t, apr_size_t
 from apr cimport apr_initialize
 from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array
 from core import SubversionException
 from core import SVN_PROP_REVISION_LOG, SVN_PROP_REVISION_AUTHOR, SVN_PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
-from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_stream_t
+from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_stream_t, svn_filesize_t
 
 apr_initialize()
 
 cdef extern from "Python.h":
     object PyString_FromStringAndSize(char *, unsigned long)
+    void Py_INCREF(object)
+    void Py_DECREF(object)
 
 cdef extern from "svn_delta.h":
-    ctypedef struct svn_txdelta_window_t
-    ctypedef svn_error_t *(*svn_txdelta_window_handler_t) (svn_txdelta_window_t *window, baton)
+    ctypedef enum svn_delta_action:
+        svn_txdelta_source
+        svn_txdelta_target
+        svn_txdelta_new
+
+    ctypedef struct svn_txdelta_op_t:
+        svn_delta_action action_code
+        apr_size_t offset
+        apr_size_t length
+
+    ctypedef struct svn_txdelta_window_t:
+        svn_filesize_t sview_offset
+        apr_size_t sview_len
+        apr_size_t tview_len
+        int num_ops
+        int src_ops
+        svn_txdelta_op_t *ops
+        svn_string_t *new_data
+
+    ctypedef svn_error_t *(*svn_txdelta_window_handler_t) (svn_txdelta_window_t *window, void *baton)
 
     ctypedef struct svn_delta_editor_t:
         svn_error_t *(*set_target_revision)(void *edit_baton, 
@@ -132,10 +152,10 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
         while idx:
             apr_hash_this(idx, <void **>&key, &klen, <void **>&val)
             if val.copyfrom_path != NULL:
-                py_changed_paths[key] = (val.action, val.copyfrom_path, 
+                py_changed_paths[key] = (chr(val.action), val.copyfrom_path, 
                                          val.copyfrom_rev)
             else:
-                py_changed_paths[key] = (val.action, None, None)
+                py_changed_paths[key] = (chr(val.action), None, None)
             idx = apr_hash_next(idx)
     revprops = {}    
     if message != NULL:
@@ -352,6 +372,13 @@ cdef svn_error_t *py_lock_func (baton, char *path, int do_lock,
     baton(path, do_lock, py_ra_err)
 
 
+cdef char *c_lock_token(object py_lock_token):
+    if lock_token is None:
+        return NULL
+    else:
+        return py_lock_token
+
+
 cdef class Reporter:
     """Change reporter."""
     cdef svn_ra_reporter2_t *reporter
@@ -364,7 +391,7 @@ cdef class Reporter:
 
     def set_path(self, path, revision, start_empty, lock_token):
         check_error(self.reporter.set_path(self.report_baton, path, revision, 
-                     start_empty, lock_token, self.pool))
+                     start_empty, c_lock_token(lock_token), self.pool))
 
     def delete_path(self, path):
         check_error(self.reporter.delete_path(self.report_baton, path, 
@@ -372,7 +399,7 @@ cdef class Reporter:
 
     def link_path(self, path, url, revision, start_empty, lock_token):
         check_error(self.reporter.link_path(self.report_baton, path, url, 
-                     revision, start_empty, lock_token, self.pool))
+                    revision, start_empty, c_lock_token(lock_token), self.pool))
 
     def finish_report(self):
         check_error(self.reporter.finish_report(self.report_baton, self.pool))
@@ -381,7 +408,144 @@ cdef class Reporter:
         check_error(self.reporter.abort_report(self.report_baton, self.pool))
 
     def __dealloc__(self):
+        # FIXME: Warn the user if abort_report/finish_report wasn't called?
         apr_pool_destroy(self.pool)
+
+cdef class TxDeltaWindowHandler:
+    cdef svn_txdelta_window_handler_t txdelta
+    cdef void *txbaton
+
+cdef class FileEditor:
+    cdef void *file_baton
+    cdef svn_delta_editor_t *editor
+    cdef apr_pool_t *pool
+
+    def apply_textdelta(self, base_checksum=None):
+        cdef char *c_base_checksum
+        cdef svn_txdelta_window_handler_t txdelta_handler
+        cdef void *txdelta_baton
+        cdef TxDeltaWindowHandler py_txdelta
+        if base_checksum is None:
+            c_base_checksum = NULL
+        else:
+            c_base_checksum = base_checksum
+        check_error(self.editor.apply_textdelta(self.file_baton,
+                    c_base_checksum, self.pool, 
+                    &txdelta_handler, &txdelta_baton))
+        py_txdelta = TxDeltaWindowHandler()
+        py_txdelta.txdelta = txdelta_handler
+        py_txdelta.txbaton = txdelta_baton
+        return py_txdelta
+
+    def change_prop(self, name, value):
+        cdef svn_string_t c_value
+        c_value.data = value
+        c_value.len = len(value)
+        check_error(self.editor.change_file_prop(self.file_baton, name, 
+                    &c_value, self.pool))
+
+    def close(self, checksum=None):
+        cdef char *c_checksum
+        if checksum is None:
+            c_checksum = NULL
+        else:
+            c_checksum = checksum
+        check_error(self.editor.close_file(self.file_baton, c_checksum, 
+                    self.pool))
+
+cdef class DirectoryEditor:
+    cdef svn_delta_editor_t *editor
+    cdef void *dir_baton
+    cdef apr_pool_t *pool
+
+    def delete_entry(self, path, revision):
+        check_error(self.editor.delete_entry(path, revision, self.dir_baton,
+                                             self.pool))
+
+    def add_directory(self, path, copyfrom_path=None, copyfrom_rev=-1):
+        cdef void *child_baton
+        check_error(self.editor.add_directory(path, self.dir_baton,
+                    copyfrom_path, copyfrom_rev, self.pool, &child_baton))
+        return new_dir_editor(self.editor, child_baton, self.pool)
+
+    def open_directory(self, path, base_revision=None):
+        cdef void *child_baton
+        if base_revision is None:
+            base_revision = -1
+        check_error(self.editor.open_directory(path, self.dir_baton,
+                    base_revision, self.pool, &child_baton))
+        return new_dir_editor(self.editor, child_baton, self.pool)
+
+    def change_prop(self, name, value):
+        cdef svn_string_t c_value
+        c_value.data = value
+        c_value.len = len(value)
+        check_error(self.editor.change_dir_prop(self.dir_baton, name, 
+                    &c_value, self.pool))
+
+    def close(self):
+        check_error(self.editor.close_directory(self.dir_baton, self.pool))
+
+    def absent_directory(self, path):
+        check_error(self.editor.absent_directory(path, self.dir_baton, 
+                    self.pool))
+
+    def add_file(self, path, copy_path, copy_rev):
+        cdef void *file_baton
+        cdef FileEditor py_file_editor
+        check_error(self.editor.add_file(path, self.dir_baton, copy_path,
+                    copy_rev, self.pool, &file_baton))
+        py_file_editor = FileEditor()
+        py_file_editor.editor = self.editor
+        py_file_editor.file_baton = file_baton
+        py_file_editor.pool = self.pool
+        return py_file_editor
+
+    def open_file(self, path, base_revision=None):
+        cdef void *file_baton
+        cdef FileEditor py_file_editor
+        if base_revision is None:
+            base_revision = -1
+        check_error(self.editor.open_file(path, self.dir_baton, 
+                    base_revision, self.pool, &file_baton))
+        py_file_editor = FileEditor()
+        py_file_editor.editor = self.editor
+        py_file_editor.file_baton = file_baton
+        py_file_editor.pool = self.pool
+        return py_file_editor
+
+    def absent_file(self, path):
+        check_error(self.editor.absent_file(path, self.dir_baton, self.pool))
+
+cdef new_dir_editor(svn_delta_editor_t *editor, void *child_baton, apr_pool_t *pool):
+    cdef DirectoryEditor py_dir_editor
+    py_dir_editor = DirectoryEditor()
+    py_dir_editor.editor = editor
+    py_dir_editor.dir_baton = child_baton
+    py_dir_editor.pool = pool
+    return py_dir_editor
+
+
+cdef class Editor:
+    cdef svn_delta_editor_t *editor
+    cdef void *edit_baton
+    cdef apr_pool_t *pool
+
+    def set_target_revision(self, target_revision):
+        check_error(self.editor.set_target_revision(self.edit_baton,
+                    target_revision, self.pool))
+    
+    def open_root(self, base_revision):
+        cdef void *root_baton
+        check_error(self.editor.open_root(self.edit_baton, base_revision,
+                    self.pool, &root_baton))
+        return new_dir_editor(self.editor, root_baton, self.pool)
+
+    def close(self):
+        check_error(self.editor.close_edit(self.edit_baton, self.pool))
+
+    def abort(self):
+        check_error(self.editor.abort_edit(self.edit_baton, self.pool))
 
 
 def version():
@@ -392,6 +556,131 @@ def version():
     return (svn_ra_version().major, svn_ra_version().minor, 
             svn_ra_version().minor, svn_ra_version().tag)
 
+cdef svn_error_t *py_editor_set_target_revision(void *edit_baton, svn_revnum_t target_revision, apr_pool_t *pool):
+    self = <object>edit_baton
+    self.set_target_revision(target_revision)
+    return NULL
+
+cdef svn_error_t *py_editor_open_root(void *edit_baton, svn_revnum_t base_revision, apr_pool_t *dir_pool, void **root_baton):
+    self = <object>edit_baton
+    ret = self.open_root(base_revision)
+    Py_INCREF(ret)
+    root_baton[0] = <void *>ret
+    return NULL
+
+cdef svn_error_t *py_editor_delete_entry(char *path, long revision, void *parent_baton, apr_pool_t *pool):
+    self = <object>parent_baton
+    self.delete_entry(revision)
+    return NULL
+
+cdef svn_error_t *py_editor_add_directory(char *path, void *parent_baton, char *copyfrom_path, long copyfrom_revision, apr_pool_t *dir_pool, void **child_baton):
+    self = <object>parent_baton
+    ret = self.add_directory(path, copyfrom_path, copy_revision)
+    Py_INCREF(ret)
+    child_baton[0] = <void *>ret
+    return NULL
+
+cdef svn_error_t *py_editor_open_directory(char *path, void *parent_baton, long base_revision, apr_pool_t *dir_pool, void **child_baton):
+    self = <object>parent_baton
+    ret = self.open_directory(path, base_revision)
+    Py_INCREF(ret)
+    child_baton[0] = <void *>ret 
+    return NULL
+
+cdef svn_error_t *py_editor_change_dir_prop(void *dir_baton, char *name, svn_string_t *value, apr_pool_t *pool):
+    self = <object>dir_baton
+    self.change_prop(name, PyString_FromStringAndSize(value.data, value.len))
+    return NULL
+
+cdef svn_error_t *py_editor_close_directory(void *dir_baton, apr_pool_t *pool):
+    self = <object>dir_baton
+    self.close()
+    Py_DECREF(self)
+    return NULL
+
+cdef svn_error_t *py_editor_absent_directory(char *path, void *parent_baton, apr_pool_t *pool):
+    self = <object>parent_baton
+    self.absent_directory(path)
+    return NULL
+
+cdef svn_error_t *py_editor_add_file(char *path, void *parent_baton, char *copy_path, long copy_revision, apr_pool_t *file_pool, void **file_baton):
+    self = <object>parent_baton
+    ret = self.add_file(path, copyfrom_path, copyfrom_revision)
+    Py_INCREF(ret)
+    file_baton[0] = <void *>ret
+    return NULL
+
+cdef svn_error_t *py_editor_open_file(char *path, void *parent_baton, long base_revision, apr_pool_t *file_pool, void **file_baton):
+    self = <object>parent_baton
+    ret = self.open_file(path, base_revision)
+    Py_INCREF(ret)
+    file_baton[0] = <void *>ret
+    return NULL
+
+cdef svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton):
+    fn = <object>baton
+    if window == NULL:
+        # Signals all delta windows have been received
+        Py_DECREF(fn)
+        return NULL
+    ops = []
+    for i in range(window.num_ops):
+        ops.append((window.ops[i].action_code, window.ops[i].offset, window.ops[i].length))
+    fn(window.sview_offset, window.sview_len, window.tview_len, window.src_ops, ops, PyString_FromStringAndSize(window.new_data.data, window.new_data.len))
+    return NULL
+    
+
+cdef svn_error_t *py_editor_apply_textdelta(void *file_baton, char *base_checksum, apr_pool_t *pool, svn_txdelta_window_handler_t *handler, void **handler_baton):
+    self = <object>file_baton
+    ret = self.apply_textdelta(base_checksum)
+    Py_INCREF(ret)
+    handler_baton[0] = <void *>ret
+    handler[0] = py_txdelta_window_handler
+    return NULL
+
+cdef svn_error_t *py_editor_change_file_prop(void *file_baton, char *name, svn_string_t *value, apr_pool_t *pool):
+    self = <object>file_baton
+    self.change_file_prop(name, PyString_FromStringAndSize(value.data, value.len))
+    return NULL
+
+cdef svn_error_t *py_editor_close_file(void *file_baton, char *text_checksum, apr_pool_t *pool):
+    self = <object>file_baton
+    self.close(text_checksum)
+    Py_DECREF(self)
+    return NULL
+
+cdef svn_error_t *py_editor_absent_file(char *path, void *parent_baton, apr_pool_t *pool):
+    self = <object>parent_baton
+    self.absent_file(path)
+    return NULL
+
+cdef svn_error_t *py_editor_close_edit(void *edit_baton, apr_pool_t *pool):
+    self = <object>edit_baton
+    self.close()
+    return NULL
+
+cdef svn_error_t *py_editor_abort_edit(void *edit_baton, apr_pool_t *pool):
+    self = <object>edit_baton
+    self.abort()
+    return NULL
+
+cdef svn_delta_editor_t py_editor
+py_editor.set_target_revision = py_editor_set_target_revision
+py_editor.open_root = py_editor_open_root
+py_editor.delete_entry = py_editor_delete_entry
+py_editor.add_directory = py_editor_add_directory
+py_editor.open_directory = py_editor_open_directory
+py_editor.change_dir_prop = py_editor_change_dir_prop
+py_editor.close_directory = py_editor_close_directory
+py_editor.absent_directory = py_editor_absent_directory
+py_editor.add_file = py_editor_add_file
+py_editor.open_file = py_editor_open_file
+py_editor.apply_textdelta = py_editor_apply_textdelta
+py_editor.change_file_prop = py_editor_change_file_prop
+py_editor.close_file = py_editor_close_file
+py_editor.absent_file = py_editor_absent_file
+py_editor.close_edit = py_editor_close_edit
+py_editor.abort_edit = py_editor_abort_edit
 
 cdef class RemoteAccess:
     """Connection to a remote Subversion repository."""
@@ -472,12 +761,11 @@ cdef class RemoteAccess:
         cdef svn_ra_reporter2_t *reporter
         cdef void *report_baton
         cdef apr_pool_t *temp_pool
-        cdef svn_delta_editor_t *editor
         cdef Reporter ret
         temp_pool = Pool(self.pool)
         check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
                      revision_to_update_to, update_target, recurse, 
-                     editor, update_editor, temp_pool))
+                     &py_editor, update_editor, temp_pool))
         ret = Reporter()
         ret.reporter 
         ret.report_baton = report_baton
@@ -525,12 +813,22 @@ cdef class RemoteAccess:
         cdef svn_delta_editor_t *editor
         cdef void *edit_baton
         cdef apr_hash_t *hash_lock_tokens
+        cdef Editor py_editor
         temp_pool = Pool(self.pool)
+        if lock_tokens is None:
+            hash_lock_tokens = NULL
+        else:
+            hash_lock_tokens = apr_hash_make(temp_pool)
+            for k, v in lock_tokens.items():
+                apr_hash_set(hash_lock_tokens, k, len(k), <char *>v)
         check_error(svn_ra_get_commit_editor2(self.ra, &editor, 
             &edit_baton, revprops[SVN_PROP_REVISION_LOG], py_commit_callback, 
             commit_callback, hash_lock_tokens, keep_locks, temp_pool))
         apr_pool_destroy(temp_pool)
-        return None # FIXME: convert editor
+        py_editor = Editor()
+        py_editor.editor = editor
+        py_editor.edit_baton = edit_baton
+        return py_editor
 
     def change_rev_prop(self, rev, name, value):
         cdef apr_pool_t *temp_pool
@@ -595,8 +893,16 @@ cdef class RemoteAccess:
     def lock(self, path_revs, comment, steal_lock, lock_func):
         cdef apr_pool_t *temp_pool
         cdef apr_hash_t *hash_path_revs
-        # FIXME: Create hash_path_revs
+        cdef svn_revnum_t *rev
         temp_pool = Pool(self.pool)
+        if path_revs is None:
+            hash_path_revs = NULL
+        else:
+            hash_path_revs = apr_hash_make(temp_pool)
+            for k, v in path_revs.items():
+                rev = <svn_revnum_t *>apr_palloc(temp_pool, sizeof(svn_revnum_t))
+                rev[0] = v
+                apr_hash_set(hash_path_revs, k, len(k), v)
         check_error(svn_ra_lock(self.ra, hash_path_revs, comment, steal_lock,
                      py_lock_func, lock_func, temp_pool))
         apr_pool_destroy(temp_pool)
@@ -657,11 +963,7 @@ def get_ssl_client_cert_pw_file_provider():
 cdef svn_stream_t *new_read_stream(object py):
     return NULL #FIXME
 
-cdef class TxdeltaWindowHandler:
-    cdef svn_txdelta_window_handler_t txdelta
-    cdef void *txbaton
-
-def txdelta_send_stream(stream, TxdeltaWindowHandler handler):
+def txdelta_send_stream(stream, TxDeltaWindowHandler handler):
     cdef unsigned char digest[16] 
     cdef apr_pool_t *pool
     pool = Pool(NULL)

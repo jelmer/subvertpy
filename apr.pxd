@@ -29,8 +29,10 @@ cdef extern from "apr_file_io.h":
 
 cdef extern from "apr_pools.h":
     ctypedef struct apr_pool_t
+    ctypedef unsigned long apr_size_t
     void apr_pool_destroy(apr_pool_t *)
     apr_status_t apr_pool_create(apr_pool_t **newpool, apr_pool_t *parent)
+    void *apr_palloc(apr_pool_t *, apr_size_t)
 
 cdef extern from "apr_tables.h":
     ctypedef struct apr_array_header_t
