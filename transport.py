@@ -26,6 +26,7 @@ from auth import create_auth_baton
 import ra
 import core
 import client
+import constants
 
 from errors import convert_svn_error, NoSvnRepositoryPresent
 

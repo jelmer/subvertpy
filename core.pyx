@@ -17,6 +17,7 @@
 from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, svn_node_unknown, svn_node_none
 from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
+from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 
 apr_initialize()
 
@@ -26,6 +27,7 @@ cdef svn_error_t *py_cancel_func(cancel_baton):
 
 class SubversionException(Exception):
     def __init__(self, num, msg):
+        Exception.__init__(self, msg, num)
         self.num = num
         self.msg = msg
 
@@ -101,3 +103,14 @@ NODE_DIR = svn_node_dir
 NODE_FILE = svn_node_file
 NODE_UNKNOWN = svn_node_unknown
 NODE_NONE = svn_node_none
+
+cdef apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, object l):
+    cdef apr_array_header_t *ret
+    cdef char **el
+    if l is None:
+        return NULL
+    ret = apr_array_make(pool, len(l), 4)
+    for i in l:
+        el = <char **>apr_array_push(ret)
+        el[0] = i
+    return ret

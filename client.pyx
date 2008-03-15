@@ -16,12 +16,16 @@
 
 from apr cimport apr_initialize, apr_hash_t, apr_time_t
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
-from apr cimport apr_pool_t
+from apr cimport apr_pool_t, apr_pool_destroy
 from types cimport svn_error_t, svn_cancel_func_t, svn_auth_baton_t, svn_revnum_t, svn_boolean_t, svn_commit_info_t
-from core cimport Pool, check_error
+from core cimport Pool, check_error, string_list_to_apr_array
 
 # Make sure APR is initialized
 apr_initialize()
+
+cdef extern from "Python.h":
+    void Py_INCREF(object)
+    void Py_DECREF(object)
 
 cdef extern from "svn_opt.h":
     ctypedef enum svn_opt_revision_kind:
@@ -73,11 +77,10 @@ cdef extern from "svn_client.h":
         void *log_msg_baton2
         #svn_ra_progress_notify_func_t progress_func
         #void *progress_baton
-    ctypedef struct svn_client_commit_info_t
     svn_error_t *svn_client_create_context(svn_client_ctx_t **ctx, 
                                            apr_pool_t *pool)
 
-    svn_error_t *svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
+    svn_error_t *svn_client_mkdir2(svn_commit_info_t **commit_info_p,
                      apr_array_header_t *paths,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
@@ -101,6 +104,19 @@ cdef extern from "svn_client.h":
                    svn_boolean_t keep_locks,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
+
+    svn_error_t *svn_client_delete2(svn_commit_info_t **commit_info_p,
+                   apr_array_header_t *paths,
+                   svn_boolean_t force,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+
+    svn_error_t *svn_client_copy3(svn_commit_info_t **commit_info_p,
+                 char *src_path,
+                 svn_opt_revision_t *src_revision,
+                 char *dst_path,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
      
 cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool):
     py_commit_items = []
@@ -109,6 +125,10 @@ cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_he
     #FIXME: *tmp_file = py_tmp_file
     return NULL
 
+cdef object py_commit_info_tuple(svn_commit_info_t *ci):
+    if ci == NULL:
+        return None
+    return (ci.revision, ci.date, ci.author)
 
 cdef class Client:
     cdef svn_client_ctx_t *client
@@ -117,9 +137,14 @@ cdef class Client:
         self.pool = Pool(NULL)
         check_error(svn_client_create_context(&self.client, self.pool))
 
+    def __dealloc__(self):
+        apr_pool_destroy(self.pool)
+        Py_DECREF(<object>self.client.log_msg_baton2)
+
     def set_log_msg_func(self, func):
         self.client.log_msg_func2 = py_log_msg_func2
         self.client.log_msg_baton2 = <void *>func
+        Py_INCREF(func)
 
     def add(self, path, recursive=True, force=False, no_ignore=False):
         check_error(svn_client_add3(path, recursive, force, no_ignore, 
@@ -138,20 +163,29 @@ cdef class Client:
 
     def commit(self, targets, recurse=True, keep_locks=True):
         cdef svn_commit_info_t *commit_info
-        cdef apr_array_header_t *c_targets
-        # FIXME: Fill c_targets
-        check_error(svn_client_commit3(&commit_info, c_targets,
+        check_error(svn_client_commit3(&commit_info, 
+                   string_list_to_apr_array(self.pool, targets),
                    recurse, keep_locks, self.client, self.pool))
+        return py_commit_info_tuple(commit_info)
 
     def mkdir(self, paths):
-        cdef apr_array_header_t *apr_paths
-        cdef char **el
-        cdef svn_client_commit_info_t *commit_info
-        apr_paths = apr_array_make(self.pool, len(paths), 4)
-        for p in paths:
-            el = <char **>apr_array_push(apr_paths)
-            # FIXME: *el = p
-        check_error(svn_client_mkdir(&commit_info, apr_paths, self.client, 
-            self.pool))
+        cdef svn_commit_info_t *commit_info
+        check_error(svn_client_mkdir2(&commit_info, 
+                    string_list_to_apr_array(self.pool, paths), 
+                    self.client, self.pool))
+        return py_commit_info_tuple(commit_info)
 
+    def delete(self, paths, force=False):
+        cdef svn_commit_info_t *commit_info
+        check_error(svn_client_delete2(&commit_info, 
+                    string_list_to_apr_array(self.pool, paths),
+                    force, self.client, self.pool))
+        return py_commit_info_tuple(commit_info)
 
+    def copy(self, src_path, dst_path, src_rev=None):
+        cdef svn_commit_info_t *commit_info
+        cdef svn_opt_revision_t c_srv_rev
+        to_opt_revision(srv_rev, &c_srv_rev)
+        check_error(svn_client_copy3(&commit_info, src_path, 
+                    &c_srv_rev, dst_path, self.client, self.pool))
+        return py_commit_info_tuple(commit_info)

@@ -25,6 +25,7 @@ import os
 lazy_import(globals(), """
 import errors
 import remote
+import constants
 
 from bzrlib import errors as bzr_errors
 """)

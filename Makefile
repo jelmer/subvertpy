@@ -1,4 +1,6 @@
-BZR ?= bzr
+DEBUGGER ?= 
+BZR ?= $(shell which bzr)
+PYTHON ?= $(shell which python)
 SETUP ?= ./setup.py
 PYDOCTOR ?= pydoctor
 CTAGS ?= ctags
@@ -28,7 +30,7 @@ $(TMP_PLUGINS_DIR)/svn: build-inplace $(TMP_PLUGINS_DIR)
 	ln -sf `pwd` $(TMP_PLUGINS_DIR)/svn
 
 check:: $(TMP_PLUGINS_DIR)/svn
-	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(BZR) selftest $(TEST_OPTIONS) $(TESTS)
+	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(DEBUGGER) $(PYTHON) $(BZR) selftest $(TEST_OPTIONS) $(TESTS)
 
 check-verbose::
 	$(MAKE) check TEST_OPTIONS=-v

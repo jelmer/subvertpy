@@ -39,7 +39,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         self.client_ctx.set_log_msg_func(self.log_message_func)
 
     def log_message_func(self, items):
-        return self.next_message
+        return (self.next_message, None)
 
     def make_repository(self, relpath, allow_revprop_changes=True):
         """Create a repository.
@@ -147,7 +147,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         info = self.client_ctx.commit(["."], recursive, False)
         os.chdir(olddir)
         assert info is not None
-        return (info.revision, info.date, info.author)
+        return info
 
     def client_add(self, relpath, recursive=True):
         """Add specified files to working copy.

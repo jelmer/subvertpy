@@ -82,9 +82,9 @@ class LogWalker(object):
 
         pb = ui.ui_factory.nested_progress_bar()
 
-        def rcvr(log_entry):
-            pb.update('fetching svn revision info', log_entry.revision, to_revnum)
-            orig_paths = log_entry.changed_paths
+        def rcvr(changed_paths, revision, revprops):
+            pb.update('fetching svn revision info', revision, to_revnum)
+            orig_paths = changed_paths
             if orig_paths is None:
                 orig_paths = {}
             for p in orig_paths:
@@ -94,9 +94,9 @@ class LogWalker(object):
 
                 self.db.execute(
                      "replace into changed_path (rev, path, action, copyfrom_path, copyfrom_rev) values (?, ?, ?, ?, ?)", 
-                     (log_entry.revision, p.strip("/"), orig_paths[p].action, copyfrom_path, orig_paths[p].copyfrom_rev))
+                     (revision, p.strip("/"), orig_paths[p].action, copyfrom_path, orig_paths[p].copyfrom_rev))
 
-            self.saved_revnum = log_entry.revision
+            self.saved_revnum = revision
             if self.saved_revnum % 1000 == 0:
                 self.db.commit()
 

@@ -19,7 +19,7 @@ from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, ap
 from apr cimport apr_array_header_t, apr_array_make
 from apr cimport apr_file_t, apr_off_t
 from apr cimport apr_initialize
-from core cimport check_error, Pool, wrap_lock
+from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array
 from core import SubversionException
 from core import SVN_PROP_REVISION_LOG, SVN_PROP_REVISION_AUTHOR, SVN_PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
@@ -118,10 +118,14 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
         while idx:
             # FIXME: apr_hash_this(idx, key, val
             idx = apr_hash_next(idx)
-    baton(py_changed_paths, revision, {
-        SVN_PROP_REVISION_LOG: message, 
-        SVN_PROP_REVISION_AUTHOR: author, 
-        SVN_PROP_REVISION_DATE: date})
+    revprops = {}    
+    if message != NULL:
+        revprops[SVN_PROP_REVISION_LOG] = message
+    if author != NULL:
+        revprops[SVN_PROP_REVISION_AUTHOR] = author
+    if date != NULL:
+        revprops[SVN_PROP_REVISION_DATE] = date
+    baton(py_changed_paths, revision, revprops)
 
 cdef extern from "svn_ra.h":
     svn_version_t *svn_ra_version()
@@ -426,9 +430,10 @@ cdef class RemoteAccess:
     def get_log(self, callback, paths, start, end, limit=0, 
                 discover_changed_paths=True, strict_node_history=True,
                 revprops=[SVN_PROP_REVISION_LOG,SVN_PROP_REVISION_AUTHOR,SVN_PROP_REVISION_DATE]):
-        cdef apr_array_header_t *paths_array
         cdef apr_pool_t *temp_pool
-        check_error(svn_ra_get_log(self.ra, paths_array, start, end, limit,
+        temp_pool = Pool(NULL)
+        check_error(svn_ra_get_log(self.ra, 
+            string_list_to_apr_array(temp_pool, paths), start, end, limit,
             discover_changed_paths, strict_node_history, py_svn_log_wrapper, 
             callback, temp_pool))
         apr_pool_destroy(temp_pool)
