@@ -165,20 +165,14 @@ class SvnBranch(Branch):
         :param revision_id: Tip of the checkout.
         :return: WorkingTree object of the checkout.
         """
-        peg_rev = svn.core.svn_opt_revision_t()
-        peg_rev.kind = svn.core.svn_opt_revision_head
-
-        rev = svn.core.svn_opt_revision_t()
         if revision_id is None:
-            rev.kind = svn.core.svn_opt_revision_head
-        else:
             revnum = self.lookup_revision_id(revision_id)
-            rev.kind = svn.core.svn_opt_revision_number
-            rev.value.number = revnum
+        else:
+            revnum = None
 
         client_ctx = create_svn_client()
-        svn.client.checkout(bzr_to_svn_url(self.base), to_location, rev, 
-                            True, client_ctx)
+        client_ctx.checkout(bzr_to_svn_url(self.base), to_location, revnum, 
+                            True)
 
         return WorkingTree.open(to_location)
 

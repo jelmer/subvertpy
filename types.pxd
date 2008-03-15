@@ -24,6 +24,8 @@ cdef extern from "svn_version.h":
         int patch
         char *tag
 
+cdef extern from "svn_io.h":
+    ctypedef struct svn_stream_t
 
 cdef extern from "svn_error.h":
     ctypedef struct svn_error_t:

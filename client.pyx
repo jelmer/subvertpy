@@ -17,7 +17,7 @@
 from apr cimport apr_initialize, apr_hash_t, apr_time_t
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 from apr cimport apr_pool_t, apr_pool_destroy
-from types cimport svn_error_t, svn_cancel_func_t, svn_auth_baton_t, svn_revnum_t, svn_boolean_t, svn_commit_info_t
+from types cimport svn_error_t, svn_cancel_func_t, svn_auth_baton_t, svn_revnum_t, svn_boolean_t, svn_commit_info_t, svn_string_t
 from core cimport Pool, check_error, string_list_to_apr_array
 
 # Make sure APR is initialized
@@ -117,6 +117,23 @@ cdef extern from "svn_client.h":
                  char *dst_path,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
+
+    svn_error_t *svn_client_propset2(char *propname,
+                    svn_string_t *propval,
+                    char *target,
+                    svn_boolean_t recurse,
+                    svn_boolean_t skip_checks,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+
+    svn_error_t *svn_client_update2(apr_array_header_t **result_revs,
+                   apr_array_header_t *paths,
+                   svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_boolean_t ignore_externals,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+
      
 cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool):
     py_commit_items = []
@@ -184,8 +201,25 @@ cdef class Client:
 
     def copy(self, src_path, dst_path, src_rev=None):
         cdef svn_commit_info_t *commit_info
-        cdef svn_opt_revision_t c_srv_rev
-        to_opt_revision(srv_rev, &c_srv_rev)
+        cdef svn_opt_revision_t c_src_rev
+        to_opt_revision(src_rev, &c_src_rev)
         check_error(svn_client_copy3(&commit_info, src_path, 
-                    &c_srv_rev, dst_path, self.client, self.pool))
+                    &c_src_rev, dst_path, self.client, self.pool))
         return py_commit_info_tuple(commit_info)
+
+    def propset(self, propname, propval, target, recurse=True, 
+            skip_checks=False):
+        cdef svn_string_t c_propval
+        c_propval.data = propval
+        c_propval.len = len(propval)
+        check_error(svn_client_propset2(propname, &c_propval,
+                    target, recurse, skip_checks, self.client, self.pool))
+    
+    def update(self, paths, rev=None, recurse=True, ignore_externals=False):
+        cdef apr_array_header_t *result_revs
+        cdef svn_opt_revision_t c_rev
+        to_opt_revision(rev, &c_rev)
+        check_error(svn_client_update2(&result_revs, 
+                string_list_to_apr_array(self.pool, paths), &c_rev, 
+                recurse, ignore_externals, self.client, self.pool))
+        # FIXME: Convert and return result_revs

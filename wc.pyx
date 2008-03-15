@@ -125,8 +125,13 @@ cdef class WorkingCopy:
         apr_pool_destroy(temp_pool)
         return py_entries
 
-    def __dealloc__(self):
+    def close(self):
         svn_wc_adm_close(self.adm)
+        self.adm = NULL
+
+    def __dealloc__(self):
+        if self.adm != NULL:
+            self.close()
 
 
 def revision_status(wc_path, trail_url, committed, cancel_func=None):

@@ -23,14 +23,16 @@ from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array
 from core import SubversionException
 from core import SVN_PROP_REVISION_LOG, SVN_PROP_REVISION_AUTHOR, SVN_PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
-from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t
+from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_stream_t
 
 apr_initialize()
 
+cdef extern from "Python.h":
+    object PyString_FromStringAndSize(char *, unsigned long)
 
 cdef extern from "svn_delta.h":
     ctypedef struct svn_txdelta_window_t
-    ctypedef svn_error_t *(*svn_txdelta_window_handler_t) (svn_txdelta_window_t *window, void *baton)
+    ctypedef svn_error_t *(*svn_txdelta_window_handler_t) (svn_txdelta_window_t *window, baton)
 
     ctypedef struct svn_delta_editor_t:
         svn_error_t *(*set_target_revision)(void *edit_baton, 
@@ -99,24 +101,41 @@ cdef extern from "svn_delta.h":
 
         svn_error_t *(*abort_edit)(void *edit_baton, apr_pool_t *pool)
 
+    svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
+                                     svn_txdelta_window_handler_t handler,
+                                     void *handler_baton,
+                                     unsigned char *digest,
+                                     apr_pool_t *pool)
+
 
 cdef extern from "svn_types.h":
     ctypedef svn_error_t *(*svn_log_message_receiver_t) (baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *
     ctypedef svn_error_t *(*svn_commit_callback2_t) (svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *
-
+    ctypedef struct svn_log_changed_path_t:
+        char action
+        char *copyfrom_path
+        svn_revnum_t copyfrom_rev
 
 cdef svn_error_t *py_commit_callback(svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *:
     baton(commit_info.revision, commit_info.date, commit_info.author, commit_info.post_commit_err)
 
 cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *:
     cdef apr_hash_index_t *idx
+    cdef char *key
+    cdef long klen
+    cdef svn_log_changed_path_t *val
     if changed_paths == NULL:
         py_changed_paths = None
     else:
         py_changed_paths = {}
         idx = apr_hash_first(pool, changed_paths)
         while idx:
-            # FIXME: apr_hash_this(idx, key, val
+            apr_hash_this(idx, <void **>&key, &klen, <void **>&val)
+            if val.copyfrom_path != NULL:
+                py_changed_paths[key] = (val.action, val.copyfrom_path, 
+                                         val.copyfrom_rev)
+            else:
+                py_changed_paths[key] = (val.action, None, None)
             idx = apr_hash_next(idx)
     revprops = {}    
     if message != NULL:
@@ -634,3 +653,18 @@ def get_ssl_client_cert_file_provider():
 
 def get_ssl_client_cert_pw_file_provider():
     pass # FIXME
+
+cdef svn_stream_t *new_read_stream(object py):
+    return NULL #FIXME
+
+cdef class TxdeltaWindowHandler:
+    cdef svn_txdelta_window_handler_t txdelta
+    cdef void *txbaton
+
+def txdelta_send_stream(stream, TxdeltaWindowHandler handler):
+    cdef unsigned char digest[16] 
+    cdef apr_pool_t *pool
+    pool = Pool(NULL)
+    check_error(svn_txdelta_send_stream(new_read_stream(stream), handler.txdelta, handler.txbaton, <unsigned char *>digest, pool))
+    apr_pool_destroy(pool)
+    return PyString_FromStringAndSize(<char *>digest, 16)

@@ -129,9 +129,6 @@ class SvnWorkingTreeDirFormat(BzrDirFormat):
     def _open(self, transport):
         import core
         from workingtree import SvnCheckout
-        subr_version = core.svn_subr_version()
-        if subr_version.major == 1 and subr_version.minor < 4:
-            raise errors.NoCheckoutSupport()
         try:
             return SvnCheckout(transport, self)
         except core.SubversionException, (_, num):

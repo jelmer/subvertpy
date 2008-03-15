@@ -27,7 +27,6 @@ from bzrlib.urlutils import local_path_to_url
 from bzrlib.workingtree import WorkingTree
 
 import repos, wc, client
-from bzrlib.plugins.svn.errors import NoCheckoutSupport
 
 class TestCaseWithSubversionRepository(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion 
@@ -80,10 +79,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
 
         repos_url = self.make_repository(repos_path)
 
-        try:
-            return self.open_local_bzrdir(repos_url, relpath)
-        except NoCheckoutSupport:
-            raise TestSkipped('No Checkout Support')
+        return self.open_local_bzrdir(repos_url, relpath)
 
 
     def make_checkout(self, repos_url, relpath):
@@ -92,32 +88,20 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
 
     @staticmethod
     def create_checkout(branch, path, revision_id=None, lightweight=False):
-        try:
-            return branch.create_checkout(path, revision_id=revision_id,
+        return branch.create_checkout(path, revision_id=revision_id,
                                           lightweight=lightweight)
-        except NoCheckoutSupport:
-            raise TestSkipped('No Checkout Support')
 
     @staticmethod
     def open_checkout(url):
-        try:
-            return WorkingTree.open(url)
-        except NoCheckoutSupport:
-           raise TestSkipped('No Checkout Support')
+        return WorkingTree.open(url)
 
     @staticmethod
     def open_checkout_bzrdir(url):
-        try:
-            return BzrDir.open(url)
-        except NoCheckoutSupport:
-           raise TestSkipped('No Checkout Support')
+        return BzrDir.open(url)
 
     @staticmethod
     def create_branch_convenience(url):
-        try:
-            return BzrDir.create_branch_convenience(url)
-        except NoCheckoutSupport:
-           raise TestSkipped('No Checkout Support')
+        return BzrDir.create_branch_convenience(url)
 
     def client_set_prop(self, path, name, value):
         if value is None:
@@ -177,18 +161,10 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         :param oldpath: Relative path to original file.
         :param newpath: Relative path to new file.
         """
-        rev = svn.core.svn_opt_revision_t()
-        if revnum is None:
-            rev.kind = svn.core.svn_opt_revision_head
-        else:
-            rev.kind = svn.core.svn_opt_revision_number
-            rev.value.number = revnum
-        self.client_ctx.copy(oldpath, rev, newpath)
+        self.client_ctx.copy(oldpath, revnum, newpath)
 
     def client_update(self, path):
-        rev = svn.core.svn_opt_revision_t()
-        rev.kind = svn.core.svn_opt_revision_head
-        self.client_ctx.update(path, rev, True)
+        self.client_ctx.update(path, None, True)
 
     def build_tree(self, files):
         """Create a directory tree.

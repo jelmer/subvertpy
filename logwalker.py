@@ -87,14 +87,13 @@ class LogWalker(object):
             orig_paths = changed_paths
             if orig_paths is None:
                 orig_paths = {}
-            for p in orig_paths:
-                copyfrom_path = orig_paths[p].copyfrom_path
+            for (p, (action, copyfrom_path, copyfrom_rev)) in orig_paths.items():
                 if copyfrom_path is not None:
                     copyfrom_path = copyfrom_path.strip("/")
 
                 self.db.execute(
                      "replace into changed_path (rev, path, action, copyfrom_path, copyfrom_rev) values (?, ?, ?, ?, ?)", 
-                     (revision, p.strip("/"), orig_paths[p].action, copyfrom_path, orig_paths[p].copyfrom_rev))
+                     (revision, p.strip("/"), action, copyfrom_path, copyfrom_rev))
 
             self.saved_revnum = revision
             if self.saved_revnum % 1000 == 0:

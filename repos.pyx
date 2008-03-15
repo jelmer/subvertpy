@@ -15,13 +15,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from apr cimport apr_pool_t, apr_hash_t, apr_pool_destroy
-from types cimport svn_error_t, svn_boolean_t, svn_cancel_func_t
+from types cimport svn_error_t, svn_boolean_t, svn_cancel_func_t, svn_stream_t
 
 from core cimport Pool, check_error
 
 cdef extern from "svn_repos.h":
     ctypedef struct svn_repos_t
-    ctypedef struct svn_stream_t
     enum svn_repos_load_uuid:
         svn_repos_load_uuid_default,
         svn_repos_load_uuid_ignore,
