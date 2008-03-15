@@ -33,7 +33,6 @@ cdef extern from "svn_repos.h":
                               apr_hash_t *config,
                               apr_hash_t *fs_config,
                               apr_pool_t *pool)
-
     svn_error_t *svn_repos_load_fs2(svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
                                 svn_stream_t *feedback_stream,
@@ -55,4 +54,4 @@ def create(path, config=None, fs_config=None):
     check_error(svn_repos_create(&repos, path, "", "", 
                 hash_config, hash_fs_config, pool))
     apr_pool_destroy(pool)
-    return None # FIXM: repos
+    return None # FIXME: repos

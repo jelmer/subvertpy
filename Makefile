@@ -1,7 +1,7 @@
 BZR ?= bzr
 SETUP ?= ./setup.py
 PYDOCTOR ?= pydoctor
-CTAGS = ?= ctags
+CTAGS ?= ctags
 PYLINT ?= pylint
 TESTS ?= svn
 
@@ -35,6 +35,9 @@ check-verbose::
 
 check-one::
 	$(MAKE) check TEST_OPTIONS=--one
+
+show-plugins::
+	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(BZR) plugins
 
 lint::
 	$(PYLINT) -f parseable *.py */*.py

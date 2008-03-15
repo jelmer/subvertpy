@@ -132,7 +132,7 @@ def convert_repository(source_repos, output_url, scheme=None,
                    source_repos.find_branchpaths(source_repos.get_scheme()))]
 
     def is_dir((branch, revnum)):
-        return source_repos.transport.check_path(branch, revnum) == core.svn_node_dir
+        return source_repos.transport.check_path(branch, revnum) == core.NODE_DIR
 
     existing_branches = filter(is_dir, existing_branches)
 

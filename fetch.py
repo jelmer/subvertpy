@@ -25,7 +25,6 @@ from bzrlib.trace import mutter
 from cStringIO import StringIO
 import md5
 
-from core import Pool
 import core
 
 from bzrlib.plugins.svn.errors import InvalidFileName
@@ -81,7 +80,7 @@ def check_filename(path):
         raise InvalidFileName(path)
 
 
-class RevisionBuildEditor(svn.delta.Editor):
+class RevisionBuildEditor:
     """Implementation of the Subversion commit editor interface that builds a 
     Bazaar revision.
     """
@@ -100,7 +99,6 @@ class RevisionBuildEditor(svn.delta.Editor):
                               self.mapping)
         self.dir_baserev = {}
         self._premature_deletes = set()
-        self.pool = Pool()
         self.old_inventory = prev_inventory
         self.inventory = prev_inventory.copy()
         self._branch_fileprops = {}
@@ -175,7 +173,7 @@ class RevisionBuildEditor(svn.delta.Editor):
             return
         self.inventory.rename(file_id, parent_id, urlutils.basename(path))
 
-    def delete_entry(self, path, revnum, (old_parent_id, new_parent_id), pool):
+    def delete_entry(self, path, revnum, (old_parent_id, new_parent_id)):
         assert isinstance(path, str)
         path = path.decode("utf-8")
         if path in self._premature_deletes:
@@ -193,8 +191,7 @@ class RevisionBuildEditor(svn.delta.Editor):
         # Only record root if the target repository supports it
         self._store_directory(new_id, self.dir_baserev[new_id])
 
-    def add_directory(self, path, (old_parent_id, new_parent_id), copyfrom_path, copyfrom_revnum, 
-                      pool):
+    def add_directory(self, path, (old_parent_id, new_parent_id), copyfrom_path, copyfrom_revnum):
         assert isinstance(path, str)
         path = path.decode("utf-8")
         check_filename(path)
@@ -221,7 +218,7 @@ class RevisionBuildEditor(svn.delta.Editor):
 
         return (old_file_id, file_id)
 
-    def open_directory(self, path, (old_parent_id, new_parent_id), base_revnum, pool):
+    def open_directory(self, path, (old_parent_id, new_parent_id), base_revnum):
         assert isinstance(path, str)
         path = path.decode("utf-8")
         assert base_revnum >= 0
@@ -245,7 +242,7 @@ class RevisionBuildEditor(svn.delta.Editor):
         ie.revision = self.revid
         return (base_file_id, file_id)
 
-    def change_dir_prop(self, (old_id, new_id), name, value, pool):
+    def change_dir_prop(self, (old_id, new_id), name, value):
         if new_id == self.inventory.root.file_id:
             self._branch_fileprops[name] = value
 
@@ -284,7 +281,7 @@ class RevisionBuildEditor(svn.delta.Editor):
               name.startswith(SVN_PROP_BZR_PREFIX)):
             mutter('unsupported dir property %r' % name)
 
-    def change_file_prop(self, id, name, value, pool):
+    def change_file_prop(self, id, name, value):
         if name == core.SVN_PROP_EXECUTABLE: 
             # You'd expect executable to match 
             # core.SVN_PROP_EXECUTABLE_VALUE, but that's not 
@@ -331,7 +328,7 @@ class RevisionBuildEditor(svn.delta.Editor):
             self._rename(self.file_id, new_parent_id, path)
         return path
 
-    def open_file(self, path, (old_parent_id, new_parent_id), base_revnum, pool):
+    def open_file(self, path, (old_parent_id, new_parent_id), base_revnum):
         assert isinstance(path, str)
         path = path.decode("utf-8")
         base_file_id = self._get_old_id(old_parent_id, path)
@@ -389,7 +386,6 @@ class RevisionBuildEditor(svn.delta.Editor):
     def close_edit(self):
         assert len(self._premature_deletes) == 0
         self._finish_commit()
-        self.pool.destroy()
 
     def apply_textdelta(self, file_id, base_checksum):
         actual_checksum = md5.new(self.file_data).hexdigest(),
@@ -398,7 +394,7 @@ class RevisionBuildEditor(svn.delta.Editor):
                                                   actual_checksum))
         self.file_stream = StringIO()
         return apply_txdelta_handler(StringIO(self.file_data), 
-                                     self.file_stream, self.pool)
+                                     self.file_stream)
 
     def _store_file(self, file_id, lines, parents):
         raise NotImplementedError(self._store_file)
@@ -623,8 +619,6 @@ class InterFromSvnRepository(InterRepository):
                 editor.start_revision(revid, parent_inv)
 
                 try:
-                    pool = Pool()
-
                     if parent_revid is None:
                         branch_url = urlutils.join(repos_root, 
                                                    editor.branch_path)
@@ -632,10 +626,10 @@ class InterFromSvnRepository(InterRepository):
                         assert transport.svn_url == branch_url.rstrip("/"), \
                             "Expected %r, got %r" % (transport.svn_url, branch_url)
                         reporter = transport.do_update(editor.revnum, True, 
-                                                       editor, pool)
+                                                       editor)
 
                         # Report status of existing paths
-                        reporter.set_path("", editor.revnum, True, None, pool)
+                        reporter.set_path("", editor.revnum, True, None)
                     else:
                         (parent_branch, parent_revnum, mapping) = \
                                 self.source.lookup_revision_id(parent_revid)
@@ -644,15 +638,15 @@ class InterFromSvnRepository(InterRepository):
                         if parent_branch != editor.branch_path:
                             reporter = transport.do_switch(editor.revnum, True, 
                                 urlutils.join(repos_root, editor.branch_path), 
-                                editor, pool)
+                                editor)
                         else:
                             reporter = transport.do_update(editor.revnum, True, editor)
 
                         # Report status of existing paths
-                        reporter.set_path("", parent_revnum, False, None, pool)
+                        reporter.set_path("", parent_revnum, False, None)
 
                     lock = transport.lock_read(".")
-                    reporter.finish_report(pool)
+                    reporter.finish_report()
                     lock.unlock()
                 except:
                     editor.abort_edit()
@@ -660,7 +654,6 @@ class InterFromSvnRepository(InterRepository):
 
                 prev_inv = editor.inventory
                 prev_revid = revid
-                pool.destroy()
                 num += 1
         finally:
             self.target.unlock()

@@ -244,9 +244,9 @@ class LogWalker(object):
         path = path.strip("/")
         transport = self._get_transport()
         ft = transport.check_path(path, revnum)
-        if ft == core.svn_node_file:
+        if ft == core.NODE_FILE:
             return []
-        assert ft == core.svn_node_dir
+        assert ft == core.NODE_DIR
 
         class TreeLister(svn.delta.Editor):
             def __init__(self, base):

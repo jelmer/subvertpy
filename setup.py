@@ -17,10 +17,11 @@ def apr_include_dir():
 
 def svn_include_dir():
     """Determine the Subversion header file location."""
-    dir = "/usr/include/subversion-1"
-    if not os.path.isdir(dir):
-        raise Exception("Subversion development headers not found")
-    return dir
+    dirs = ["/usr/include/subversion-1", "/usr/local/include/subversion-1"]
+    for dir in dirs:
+        if os.path.isdir(dir):
+            return dir
+    raise Exception("Subversion development headers not found")
 
 setup(name='bzr-svn',
       description='Support for Subversion branches in Bazaar',

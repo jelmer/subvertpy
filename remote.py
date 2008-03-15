@@ -143,7 +143,7 @@ class SvnRemoteAccess(BzrDir):
         full_branch_url = urlutils.join(repos.transport.base, 
                                         target_branch_path)
         if repos.transport.check_path(target_branch_path,
-            repos.transport.get_latest_revnum()) != core.svn_node_none:
+            repos.transport.get_latest_revnum()) != core.NODE_NONE:
             raise AlreadyBranchError(full_branch_url)
         push_new(repos, target_branch_path, source, stop_revision)
         branch = self.open_branch()

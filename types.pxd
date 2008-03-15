@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from apr cimport apr_status_t, apr_pool_t, apr_time_t
+from apr cimport apr_status_t, apr_pool_t, apr_time_t, apr_array_header_t, apr_hash_t
 
 cdef extern from "svn_version.h":
     ctypedef struct svn_version_t:
@@ -45,6 +45,16 @@ cdef extern from "svn_types.h":
         svn_boolean_t is_dav_comment
         apr_time_t creation_date
         apr_time_t expiration_date
+    ctypedef enum svn_node_kind_t:
+        svn_node_none
+        svn_node_file
+        svn_node_dir
+        svn_node_unknown
+    ctypedef struct svn_commit_info_t:
+        long revision
+        char *date
+        char *author
+        char *post_commit_err
 
 
 cdef extern from "svn_string.h":
@@ -53,4 +63,61 @@ cdef extern from "svn_string.h":
         long len
     svn_string_t *svn_string_ncreate(char *bytes, long size, apr_pool_t *pool)
 
+cdef extern from "svn_auth.h":
+    ctypedef struct svn_auth_baton_t
+    void svn_auth_open(svn_auth_baton_t **auth_baton,
+                       apr_array_header_t *providers,
+                       apr_pool_t *pool)
+    void svn_auth_set_parameter(svn_auth_baton_t *auth_baton, 
+                                char *name, void *value)
+    void *svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
+                                  char *name)
+    ctypedef struct svn_auth_provider_t:
+        char *cred_kind
+        svn_error_t * (*first_credentials)(void **credentials,
+                                            void **iter_baton,
+                                             void *provider_baton,
+                                             apr_hash_t *parameters,
+                                             char *realmstring,
+                                             apr_pool_t *pool)
+        svn_error_t * (*next_credentials)(void **credentials,
+                                            void *iter_baton,
+                                            void *provider_baton,
+                                            apr_hash_t *parameters,
+                                            char *realmstring,
+                                            apr_pool_t *pool)
+         
+        svn_error_t * (*save_credentials)(int *saved,
+                                    void *credentials,
+                                    void *provider_baton,
+                                    apr_hash_t *parameters,
+                                    char *realmstring,
+                                    apr_pool_t *pool)
 
+    ctypedef struct svn_auth_provider_object_t:
+        svn_auth_provider_t *vtable
+        void *provider_baton
+
+    ctypedef struct svn_auth_cred_simple_t:
+        char *username
+        char *password
+        int may_save
+
+    ctypedef struct svn_auth_cred_username_t:
+        char *username
+        svn_boolean_t may_save
+
+    ctypedef svn_error_t *(*svn_auth_simple_prompt_func_t) (svn_auth_cred_simple_t **cred, void *baton, char *realm, char *username, int may_save, apr_pool_t *pool)
+
+    void svn_auth_get_simple_prompt_provider(
+            svn_auth_provider_object_t **provider, svn_auth_simple_prompt_func_t prompt_func, void *prompt_baton, int retry_limit, apr_pool_t *pool)
+
+    ctypedef svn_error_t *(*svn_auth_username_prompt_func_t) (svn_auth_cred_username_t **cred, void *baton, char *realm, svn_boolean_t may_save, apr_pool_t *pool)
+
+    void svn_auth_get_username_prompt_provider (svn_auth_provider_object_t **provider, svn_auth_username_prompt_func_t prompt_func, void *prompt_baton, int retry_limit, apr_pool_t *pool)
+
+    void svn_auth_get_simple_provider(svn_auth_provider_object_t **provider, apr_pool_t *pool)
+    void svn_auth_get_username_provider(svn_auth_provider_object_t **provider, apr_pool_t *pool)
+    void svn_auth_get_ssl_server_trust_file_provider(svn_auth_provider_object_t **provider, apr_pool_t *pool)
+    void svn_auth_get_ssl_client_cert_file_provider(svn_auth_provider_object_t **provider, apr_pool_t *pool)
+    void svn_auth_get_ssl_client_cert_pw_file_provider (svn_auth_provider_object_t **provider, apr_pool_t *pool)

@@ -121,7 +121,7 @@ class SvnWorkingTree(WorkingTree):
                 if entry == "":
                     continue
 
-                if entries[entry].kind != core.svn_node_dir:
+                if entries[entry].kind != core.NODE_DIR:
                     continue
 
                 subprefix = os.path.join(prefix, entry)
@@ -333,7 +333,7 @@ class SvnWorkingTree(WorkingTree):
                 entry = entries[name]
                 assert entry
                 
-                if entry.kind == core.svn_node_dir:
+                if entry.kind == core.NODE_DIR:
                     subwc = svn.wc.adm_open3(wc, self.abspath(subrelpath), 
                                              False, 0, None)
                     try:

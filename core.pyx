@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from types cimport svn_error_t
+from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, svn_node_unknown, svn_node_none
 from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
 
@@ -35,7 +35,7 @@ cdef wrap_lock(svn_lock_t *lock):
 
 cdef check_error(svn_error_t *error):
     if error:
-        raise SubversionException(error.apr_err, errormessage)
+        raise SubversionException(error.apr_err, error.message)
 
 
 cdef apr_pool_t *Pool(apr_pool_t *parent):
@@ -96,3 +96,8 @@ def get_config(config_dir=None):
     apr_pool_destroy(pool)
     return ret
 
+
+NODE_DIR = svn_node_dir
+NODE_FILE = svn_node_file
+NODE_UNKNOWN = svn_node_unknown
+NODE_NONE = svn_node_none

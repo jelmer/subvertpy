@@ -148,7 +148,6 @@ class SvnRepository(Repository):
         assert self.base is not None
         self._serializer = None
         self.dir_cache = {}
-        self.pool = Pool()
         self.get_config().add_location(self.base)
         cache_dir = self.create_cache_dir()
         cachedir_transport = get_transport(cache_dir)
@@ -237,7 +236,7 @@ class SvnRepository(Repository):
         return ListBranchingScheme(parse_list_scheme_text(text))
 
     def set_property_scheme(self, scheme):
-        def done(revmetadata, pool):
+        def done(revmetadata):
             pass
         editor = self.transport.get_commit_editor(
                 {core.SVN_PROP_REVISION_LOG: "Updating branching scheme for Bazaar."},
@@ -352,7 +351,7 @@ class SvnRepository(Repository):
             return False
 
         try:
-            return (core.svn_node_dir == self.transport.check_path(path, revnum))
+            return (core.NODE_DIR == self.transport.check_path(path, revnum))
         except SubversionException, (_, num):
             if num == constants.ERR_FS_NO_SUCH_REVISION:
                 return False

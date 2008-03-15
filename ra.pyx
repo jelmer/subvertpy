@@ -16,62 +16,16 @@
 
 from apr cimport apr_pool_t, apr_pool_destroy
 from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_set
-from apr cimport apr_array_header_t
+from apr cimport apr_array_header_t, apr_array_make
 from apr cimport apr_file_t, apr_off_t
 from apr cimport apr_initialize
 from core cimport check_error, Pool, wrap_lock
 from core import SubversionException
 from core import SVN_PROP_REVISION_LOG, SVN_PROP_REVISION_AUTHOR, SVN_PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
-from types cimport svn_string_ncreate, svn_lock_t
+from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t
 
 apr_initialize()
-
-cdef extern from "svn_auth.h":
-    ctypedef struct svn_auth_baton_t
-    void svn_auth_open(svn_auth_baton_t **auth_baton,
-                       apr_array_header_t *providers,
-                       apr_pool_t *pool)
-    void svn_auth_set_parameter(svn_auth_baton_t *auth_baton, 
-                                char *name, void *value)
-    void *svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
-                                  char *name)
-
-    ctypedef struct svn_auth_provider_t:
-        char *cred_kind
-        svn_error_t * (*first_credentials)(void **credentials,
-                                            void **iter_baton,
-                                             void *provider_baton,
-                                             apr_hash_t *parameters,
-                                             char *realmstring,
-                                             apr_pool_t *pool)
-        svn_error_t * (*next_credentials)(void **credentials,
-                                            void *iter_baton,
-                                            void *provider_baton,
-                                            apr_hash_t *parameters,
-                                            char *realmstring,
-                                            apr_pool_t *pool)
-         
-        svn_error_t * (*save_credentials)(int *saved,
-                                    void *credentials,
-                                    void *provider_baton,
-                                    apr_hash_t *parameters,
-                                    char *realmstring,
-                                    apr_pool_t *pool)
-
-    ctypedef struct svn_auth_provider_object_t:
-        svn_auth_provider_t *vtable
-        void *provider_baton
-
-    ctypedef struct svn_auth_cred_simple_t:
-        char *username
-        char *password
-        int may_save
-
-    ctypedef svn_error_t *(*svn_auth_simple_prompt_func_t) (svn_auth_cred_simple_t **cred, void *baton, char *realm, char *username, int may_save, apr_pool_t *pool)
-
-    void svn_auth_get_simple_prompt_provider(
-            svn_auth_provider_object_t **provider, svn_auth_simple_prompt_func_t prompt_func, void *prompt_baton, int retry_limit, apr_pool_t *pool)
 
 
 cdef extern from "svn_delta.h":
@@ -148,16 +102,6 @@ cdef extern from "svn_delta.h":
 
 cdef extern from "svn_types.h":
     ctypedef svn_error_t *(*svn_log_message_receiver_t) (baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *
-    ctypedef enum svn_node_kind_t:
-        svn_node_node
-        svn_node_file
-        svn_node_dir
-        svn_node_unknown
-    ctypedef struct svn_commit_info_t:
-        long revision
-        char *date
-        char *author
-        char *post_commit_err
     ctypedef svn_error_t *(*svn_commit_callback2_t) (svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *
 
 
@@ -609,7 +553,7 @@ cdef class RemoteAccess:
         cdef apr_pool_t *temp_pool
         cdef int has
         temp_pool = Pool(self.pool)
-		# FIXME: Svn 1.5 only
+        # FIXME: Svn 1.5 only
         # check_error(svn_ra_has_capability(self.ra, &has, capability, 
         #             temp_pool))
         apr_pool_destroy(temp_pool)
@@ -640,3 +584,48 @@ cdef class RemoteAccess:
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self.url)
 
+
+cdef class Auth:
+    cdef svn_auth_baton_t *auth_baton
+    cdef apr_pool_t *pool
+    def __init__(self, providers):
+        cdef apr_array_header_t *c_providers    
+        self.pool = Pool(NULL)
+        c_providers = apr_array_make(self.pool, len(providers), 4)
+        svn_auth_open(&self.auth_baton, c_providers, self.pool)
+
+    def set_parameter(self, name, value):
+        svn_auth_set_parameter(self.auth_baton, name, <char *>value)
+
+    def get_parameter(self, name):
+        return <char *>svn_auth_get_parameter(self.auth_baton, name)
+
+    def __dealloc__(self):
+        apr_pool_destroy(self.pool)
+
+def get_username_prompt_provider(prompt_func, retry_limit):
+    pass # FIXME
+
+def get_simple_prompt_provider(prompt_func, retry_limit):
+    pass # FIXME
+
+def get_ssl_server_trust_prompt_provider(prompt_func):
+    pass # FIXME
+
+def get_ssl_client_cert_pw_prompt_provider(prompt_func, retry_limit):
+    pass # FIXME
+
+def get_username_provider():
+    pass # FIXME
+
+def get_simple_provider():
+    pass # FIXME
+
+def get_ssl_server_trust_file_provider():
+    pass # FIXME
+
+def get_ssl_client_cert_file_provider():
+    pass # FIXME
+
+def get_ssl_client_cert_pw_file_provider():
+    pass # FIXME

@@ -36,10 +36,9 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
     def setUp(self):
         super(TestCaseWithSubversionRepository, self).setUp()
         self.client_ctx = client.Client()
-        self.client_ctx.log_msg_func2 = svn.client.svn_swig_py_get_commit_log_func
-        self.client_ctx.log_msg_baton2 = self.log_message_func
+        self.client_ctx.set_log_msg_func(self.log_message_func)
 
-    def log_message_func(self, items, pool):
+    def log_message_func(self, items):
         return self.next_message
 
     def make_repository(self, relpath, allow_revprop_changes=True):
@@ -88,11 +87,8 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
 
 
     def make_checkout(self, repos_url, relpath):
-        rev = svn.core.svn_opt_revision_t()
-        rev.kind = svn.core.svn_opt_revision_head
-
-        svn.client.checkout2(repos_url, relpath, 
-                rev, rev, True, False, self.client_ctx)
+        self.client_ctx.checkout(repos_url, relpath, "HEAD", "HEAD", 
+                                 True, False)
 
     @staticmethod
     def create_checkout(branch, path, revision_id=None, lightweight=False):
@@ -126,28 +122,19 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
     def client_set_prop(self, path, name, value):
         if value is None:
             value = ""
-        svn.client.propset2(name, value, path, False, True, self.client_ctx)
+        self.client_ctx.propset(name, value, path, False, True)
 
     def client_get_prop(self, path, name, revnum=None, recursive=False):
-        rev = svn.core.svn_opt_revision_t()
-
         if revnum is None:
-            rev.kind = svn.core.svn_opt_revision_working
-        else:
-            rev.kind = svn.core.svn_opt_revision_number
-            rev.value.number = revnum
-        ret = svn.client.propget2(name, path, rev, rev, recursive, 
-                                  self.client_ctx)
+            revnum = "WORKING"
+        ret = self.client_ctx.propget(name, path, revnum, revnum, recursive)
         if recursive:
             return ret
         else:
             return ret.values()[0]
 
     def client_get_revprop(self, url, revnum, name):
-        rev = svn.core.svn_opt_revision_t()
-        rev.kind = svn.core.svn_opt_revision_number
-        rev.value.number = revnum
-        return svn.client.revprop_get(name, url, rev, self.client_ctx)[0]
+        return self.client_ctx.revprop_get(name, url, revnum)[0]
         
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.
@@ -157,7 +144,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         olddir = os.path.abspath('.')
         self.next_message = message
         os.chdir(dir)
-        info = svn.client.commit2(["."], recursive, False, self.client_ctx)
+        info = self.client_ctx.commit(["."], recursive, False)
         os.chdir(olddir)
         assert info is not None
         return (info.revision, info.date, info.author)
@@ -167,29 +154,14 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         
         :param relpath: Path to the files to add.
         """
-        svn.client.add3(relpath, recursive, False, False, self.client_ctx)
-
-    def revnum_to_opt_rev(self, revnum):
-        rev = svn.core.svn_opt_revision_t()
-        if revnum is None:
-            rev.kind = svn.core.svn_opt_revision_head
-        else:
-            assert isinstance(revnum, int)
-            rev.kind = svn.core.svn_opt_revision_number
-            rev.value.number = revnum
-        return rev
+        self.client_ctx.add(relpath, recursive, False, False)
 
     def client_log(self, path, start_revnum=None, stop_revnum=None):
         assert isinstance(path, str)
         ret = {}
         def rcvr(orig_paths, rev, author, date, message, pool):
             ret[rev] = (orig_paths, author, date, message)
-        svn.client.log([path], self.revnum_to_opt_rev(start_revnum),
-                       self.revnum_to_opt_rev(stop_revnum),
-                       True,
-                       True,
-                       rcvr,
-                       self.client_ctx)
+        self.client_ctx.log([path], start_revnum, stop_revnum, True, True, rcvr)
         return ret
 
     def client_delete(self, relpath):
@@ -197,7 +169,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
 
         :param relpath: Path to the files to remove.
         """
-        svn.client.delete2([relpath], True, self.client_ctx)
+        self.client_ctx.delete([relpath], True)
 
     def client_copy(self, oldpath, newpath, revnum=None):
         """Copy file in working copy.
@@ -211,12 +183,12 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         else:
             rev.kind = svn.core.svn_opt_revision_number
             rev.value.number = revnum
-        svn.client.copy2(oldpath, rev, newpath, self.client_ctx)
+        self.client_ctx.copy(oldpath, rev, newpath)
 
     def client_update(self, path):
         rev = svn.core.svn_opt_revision_t()
         rev.kind = svn.core.svn_opt_revision_head
-        svn.client.update(path, rev, True, self.client_ctx)
+        self.client_ctx.update(path, rev, True)
 
     def build_tree(self, files):
         """Create a directory tree.

@@ -274,7 +274,7 @@ class SvnBasisTree(RevisionTree):
                 entry = entries[name]
                 assert entry
                 
-                if entry.kind == core.svn_node_dir:
+                if entry.kind == core.NODE_DIR:
                     subwc = wc.WorkingCopy(
                             self.workingtree.abspath(subrelpath), 
                                              False, 0, None)

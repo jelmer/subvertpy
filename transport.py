@@ -22,6 +22,7 @@ from bzrlib.trace import mutter
 from bzrlib.transport import Transport
 
 from core import SubversionException
+from auth import create_auth_baton
 import ra
 import core
 import client
@@ -35,42 +36,10 @@ def get_client_string():
     return "bzr%s+bzr-svn%s" % (bzrlib.__version__, bzrlib.plugins.svn.__version__)
 
 
-def _create_auth_baton(pool):
-    """Create a Subversion authentication baton. """
-    # Give the client context baton a suite of authentication
-    # providers.h
-    providers = []
-
-    if core.SVN_VER_MAJOR == 1 and svn.core.SVN_VER_MINOR >= 5:
-        import auth
-        providers += auth.SubversionAuthenticationConfig().get_svn_auth_providers()
-        providers += [auth.get_ssl_client_cert_pw_provider(1)]
-
-    providers += [
-        client.get_simple_provider(pool),
-        client.get_username_provider(pool),
-        client.get_ssl_client_cert_file_provider(pool),
-        client.get_ssl_client_cert_pw_file_provider(pool),
-        client.get_ssl_server_trust_file_provider(pool),
-        ]
-
-    if hasattr(client, 'get_windows_simple_provider'):
-        providers.append(client.get_windows_simple_provider(pool))
-
-    if hasattr(client, 'get_keychain_simple_provider'):
-        providers.append(client.get_keychain_simple_provider(pool))
-
-    if hasattr(client, 'get_windows_ssl_server_trust_provider'):
-        providers.append(client.get_windows_ssl_server_trust_provider(pool))
-
-    return core.svn_auth_open(providers, pool)
-
-
-def create_svn_client(pool):
-    client = client.create_context(pool)
-    client.auth_baton = _create_auth_baton(pool)
-    client.config = svn_config
-    return client
+def create_svn_client():
+    ret = client.Client()
+    # FIXME ret.
+    return ret
 
 
 # Don't run any tests on SvnTransport as it is not intended to be 
@@ -205,10 +174,11 @@ class SvnRaTransport(Transport):
         self._backing_url = _backing_url.rstrip("/")
         Transport.__init__(self, bzr_url)
 
-        self._client = create_svn_client()
         try:
             self.mutter('opening SVN RA connection to %r' % self._backing_url)
-            self._ra = self._client.open_ra_session(self._backing_url.encode('utf8'))
+            self._ra = ra.RemoteAccess(self._backing_url.encode('utf8'))
+            # FIXME: Callbacks
+            # FIXME: self._ra = create_auth_baton()
         except SubversionException, (_, num):
             if num in (constants.ERR_RA_SVN_REPOS_NOT_FOUND,):
                 raise NoSvnRepositoryPresent(url=url)

@@ -75,7 +75,7 @@ class SvnBranch(Branch):
         self._branch_path = branch_path.strip("/")
         try:
             if self.repository.transport.check_path(branch_path.strip("/"), 
-                self.get_revnum()) != core.svn_node_dir:
+                self.get_revnum()) != core.NODE_DIR:
                 raise NotBranchError(self.base)
         except SubversionException, (_, num):
             if num == constants.ERR_FS_NO_SUCH_REVISION:

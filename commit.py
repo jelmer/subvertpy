@@ -61,7 +61,7 @@ def _check_dirs_exist(transport, bp_parts, base_rev):
     for i in range(len(bp_parts), 0, -1):
         current = bp_parts[:i]
         path = "/".join(current).strip("/")
-        if transport.check_path(path, base_rev) == core.svn_node_dir:
+        if transport.check_path(path, base_rev) == core.NODE_DIR:
             return current
     return []
 
