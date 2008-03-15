@@ -1,4 +1,6 @@
 #!/usr/bin/env python2.4
+# Setup file for bzr-svn
+# Copyright (C) 2005-2008 Jelmer Vernooij <jelmer@samba.org>
 
 from distutils.core import setup
 from distutils.extension import Extension
@@ -6,14 +8,19 @@ from Pyrex.Distutils import build_ext
 import os
 
 def apr_include_dir():
+    """Determine the APR header file location."""
     f = os.popen("apr-config --includedir")
     dir = f.read().rstrip("\n")
-    assert os.path.isdir(dir)
+    if not os.path.isdir(dir):
+        raise Exception("APR development headers not found")
     return dir
 
 def svn_include_dir():
-    # FIXME
-    return "/usr/include/subversion-1"
+    """Determine the Subversion header file location."""
+    dir = "/usr/include/subversion-1"
+    if not os.path.isdir(dir):
+        raise Exception("Subversion development headers not found")
+    return dir
 
 setup(name='bzr-svn',
       description='Support for Subversion branches in Bazaar',
