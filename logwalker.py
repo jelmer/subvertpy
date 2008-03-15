@@ -83,8 +83,6 @@ class LogWalker(object):
         pb = ui.ui_factory.nested_progress_bar()
 
         def rcvr(changed_paths, revision, revprops):
-            import pdb
-            pdb.set_trace()
             pb.update('fetching svn revision info', revision, to_revnum)
             orig_paths = changed_paths
             if orig_paths is None:

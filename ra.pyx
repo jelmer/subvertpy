@@ -373,7 +373,7 @@ cdef svn_error_t *py_lock_func (baton, char *path, int do_lock,
 
 
 cdef char *c_lock_token(object py_lock_token):
-    if lock_token is None:
+    if py_lock_token is None:
         return NULL
     else:
         return py_lock_token
@@ -384,10 +384,6 @@ cdef class Reporter:
     cdef svn_ra_reporter2_t *reporter
     cdef void *report_baton
     cdef apr_pool_t *pool
-
-    cdef void set_reporter(self, svn_ra_reporter2_t *reporter, void *baton):
-        self.reporter = reporter
-        self.report_baton = baton
 
     def set_path(self, path, revision, start_empty, lock_token):
         check_error(self.reporter.set_path(self.report_baton, path, revision, 
@@ -575,7 +571,10 @@ cdef svn_error_t *py_editor_delete_entry(char *path, long revision, void *parent
 
 cdef svn_error_t *py_editor_add_directory(char *path, void *parent_baton, char *copyfrom_path, long copyfrom_revision, apr_pool_t *dir_pool, void **child_baton):
     self = <object>parent_baton
-    ret = self.add_directory(path, copyfrom_path, copy_revision)
+    if copyfrom_path == NULL:
+        ret = self.add_directory(path)
+    else:
+        ret = self.add_directory(path, copyfrom_path, copy_revision)
     Py_INCREF(ret)
     child_baton[0] = <void *>ret
     return NULL
@@ -605,7 +604,10 @@ cdef svn_error_t *py_editor_absent_directory(char *path, void *parent_baton, apr
 
 cdef svn_error_t *py_editor_add_file(char *path, void *parent_baton, char *copy_path, long copy_revision, apr_pool_t *file_pool, void **file_baton):
     self = <object>parent_baton
-    ret = self.add_file(path, copyfrom_path, copyfrom_revision)
+    if copy_path == NULL:
+        ret = self.add_file(path)
+    else:
+        ret = self.add_file(path, copy_path, copy_revision)
     Py_INCREF(ret)
     file_baton[0] = <void *>ret
     return NULL
@@ -632,7 +634,10 @@ cdef svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *
 
 cdef svn_error_t *py_editor_apply_textdelta(void *file_baton, char *base_checksum, apr_pool_t *pool, svn_txdelta_window_handler_t *handler, void **handler_baton):
     self = <object>file_baton
-    ret = self.apply_textdelta(base_checksum)
+    if base_checksum == NULL:
+        ret = self.apply_textdelta()
+    else:
+        ret = self.apply_textdelta(base_checksum)
     Py_INCREF(ret)
     handler_baton[0] = <void *>ret
     handler[0] = py_txdelta_window_handler
@@ -640,12 +645,15 @@ cdef svn_error_t *py_editor_apply_textdelta(void *file_baton, char *base_checksu
 
 cdef svn_error_t *py_editor_change_file_prop(void *file_baton, char *name, svn_string_t *value, apr_pool_t *pool):
     self = <object>file_baton
-    self.change_file_prop(name, PyString_FromStringAndSize(value.data, value.len))
+    self.change_prop(name, PyString_FromStringAndSize(value.data, value.len))
     return NULL
 
 cdef svn_error_t *py_editor_close_file(void *file_baton, char *text_checksum, apr_pool_t *pool):
     self = <object>file_baton
-    self.close(text_checksum)
+    if text_checksum != NULL:
+        self.close()
+    else:
+        self.close(text_checksum)
     Py_DECREF(self)
     return NULL
 
@@ -767,7 +775,7 @@ cdef class RemoteAccess:
                      revision_to_update_to, update_target, recurse, 
                      &py_editor, update_editor, temp_pool))
         ret = Reporter()
-        ret.reporter 
+        ret.reporter = reporter
         ret.report_baton = report_baton
         ret.pool = temp_pool
         return ret
@@ -777,12 +785,11 @@ cdef class RemoteAccess:
         cdef svn_ra_reporter2_t *reporter
         cdef void *report_baton
         cdef apr_pool_t *temp_pool
-        cdef svn_delta_editor_t *editor
         cdef Reporter ret
         temp_pool = Pool(self.pool)
         check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
                      revision_to_update_to, update_target, recurse, 
-                     editor, update_editor, temp_pool))
+                     &py_editor, update_editor, temp_pool))
         ret = Reporter()
         ret.reporter = reporter
         ret.report_baton = report_baton
@@ -791,10 +798,9 @@ cdef class RemoteAccess:
 
     def replay(self, revision, low_water_mark, send_deltas, update_editor):
         cdef apr_pool_t *temp_pool
-        cdef svn_delta_editor_t *editor
         temp_pool = Pool(self.pool)
         check_error(svn_ra_replay(self.ra, revision, low_water_mark,
-                     send_deltas, editor, update_editor, temp_pool))
+                     send_deltas, &py_editor, update_editor, temp_pool))
         apr_pool_destroy(temp_pool)
 
     def rev_proplist(self, rev):
