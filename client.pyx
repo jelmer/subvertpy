@@ -17,8 +17,8 @@
 from apr cimport apr_initialize, apr_hash_t, apr_time_t
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 from apr cimport apr_pool_t, apr_pool_destroy
-from types cimport svn_error_t, svn_cancel_func_t, svn_auth_baton_t, svn_revnum_t, svn_boolean_t, svn_commit_info_t, svn_string_t
-from core cimport Pool, check_error, string_list_to_apr_array
+from types cimport svn_error_t, svn_cancel_func_t, svn_auth_baton_t, svn_revnum_t, svn_boolean_t, svn_commit_info_t, svn_string_t, svn_log_message_receiver_t
+from core cimport Pool, check_error, string_list_to_apr_array, py_svn_log_wrapper
 
 # Make sure APR is initialized
 apr_initialize()
@@ -158,6 +158,18 @@ cdef extern from "svn_client.h":
                         svn_revnum_t *set_rev,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
+
+    svn_error_t *svn_client_log3(apr_array_header_t *targets,
+                svn_opt_revision_t *peg_revision,
+                svn_opt_revision_t *start,
+                svn_opt_revision_t *end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_log_message_receiver_t receiver,
+                receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
      
 cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool) except *:
     py_commit_items = []
@@ -280,3 +292,12 @@ cdef class Client:
         check_error(svn_client_revprop_set(propname, &c_val, url, 
                     &c_rev, &set_rev, force, self.client, self.pool))
         return set_rev
+
+    def log(self, targets, callback, peg_revision=None, start=None, end=None,
+            limit=0, discover_changed_paths=True, strict_node_history=True):
+        cdef svn_opt_revision_t c_peg_rev, c_start_rev, c_end_rev
+        to_opt_revision(peg_revision, &c_peg_rev)
+        to_opt_revision(start, &c_start_rev)
+        to_opt_revision(end, &c_end_rev)
+        check_error(svn_client_log3(string_list_to_apr_array(self.pool, targets),
+                    &c_peg_rev, &c_start_rev, &c_end_rev, limit, discover_changed_paths, strict_node_history, py_svn_log_wrapper, callback, self.client, self.pool))

@@ -66,6 +66,11 @@ cdef extern from "svn_types.h":
         svn_revnum_t created_rev
         apr_time_t time
         char *last_author
+    ctypedef struct svn_log_changed_path_t:
+        char action
+        char *copyfrom_path
+        svn_revnum_t copyfrom_rev
+    ctypedef svn_error_t *(*svn_log_message_receiver_t) (baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *
 
 cdef extern from "svn_string.h":
     ctypedef struct svn_string_t:

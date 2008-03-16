@@ -19,11 +19,11 @@ from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, ap
 from apr cimport apr_array_header_t, apr_array_make
 from apr cimport apr_file_t, apr_off_t, apr_size_t
 from apr cimport apr_initialize
-from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array
+from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn_log_wrapper
 from core import SubversionException
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
-from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_stream_t, svn_filesize_t, svn_dirent_t
+from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_stream_t, svn_filesize_t, svn_dirent_t, svn_log_message_receiver_t
 
 apr_initialize()
 
@@ -129,42 +129,10 @@ cdef extern from "svn_delta.h":
 
 
 cdef extern from "svn_types.h":
-    ctypedef svn_error_t *(*svn_log_message_receiver_t) (baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *
     ctypedef svn_error_t *(*svn_commit_callback2_t) (svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *
-    ctypedef struct svn_log_changed_path_t:
-        char action
-        char *copyfrom_path
-        svn_revnum_t copyfrom_rev
 
 cdef svn_error_t *py_commit_callback(svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *:
     baton(commit_info.revision, commit_info.date, commit_info.author, commit_info.post_commit_err)
-
-cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *:
-    cdef apr_hash_index_t *idx
-    cdef char *key
-    cdef long klen
-    cdef svn_log_changed_path_t *val
-    if changed_paths == NULL:
-        py_changed_paths = None
-    else:
-        py_changed_paths = {}
-        idx = apr_hash_first(pool, changed_paths)
-        while idx:
-            apr_hash_this(idx, <void **>&key, &klen, <void **>&val)
-            if val.copyfrom_path != NULL:
-                py_changed_paths[key] = (chr(val.action), val.copyfrom_path, 
-                                         val.copyfrom_rev)
-            else:
-                py_changed_paths[key] = (chr(val.action), None, -1)
-            idx = apr_hash_next(idx)
-    revprops = {}    
-    if message != NULL:
-        revprops[PROP_REVISION_LOG] = message
-    if author != NULL:
-        revprops[PROP_REVISION_AUTHOR] = author
-    if date != NULL:
-        revprops[PROP_REVISION_DATE] = date
-    baton(py_changed_paths, revision, revprops)
 
 cdef extern from "svn_ra.h":
     svn_version_t *svn_ra_version()
@@ -465,8 +433,13 @@ cdef class DirectoryEditor:
 
     def add_directory(self, path, copyfrom_path=None, copyfrom_rev=-1):
         cdef void *child_baton
+        cdef char *c_copyfrom_path
+        if copyfrom_path is None:
+            c_copyfrom_path = NULL
+        else:
+            c_copyfrom_path = copyfrom_path
         check_error(self.editor.add_directory(path, self.dir_baton,
-                    copyfrom_path, copyfrom_rev, self.pool, &child_baton))
+                    c_copyfrom_path, copyfrom_rev, self.pool, &child_baton))
         return new_dir_editor(self.editor, child_baton, self.pool)
 
     def open_directory(self, path, base_revision=None):
@@ -491,10 +464,15 @@ cdef class DirectoryEditor:
         check_error(self.editor.absent_directory(path, self.dir_baton, 
                     self.pool))
 
-    def add_file(self, path, copy_path, copy_rev):
+    def add_file(self, path, copy_path=None, copy_rev=-1):
         cdef void *file_baton
         cdef FileEditor py_file_editor
-        check_error(self.editor.add_file(path, self.dir_baton, copy_path,
+        cdef char *c_copy_path
+        if copy_path is None:
+            c_copy_path = NULL
+        else:
+            c_copy_path = copy_path
+        check_error(self.editor.add_file(path, self.dir_baton, c_copy_path,
                     copy_rev, self.pool, &file_baton))
         py_file_editor = FileEditor()
         py_file_editor.editor = self.editor
@@ -536,7 +514,7 @@ cdef class Editor:
         check_error(self.editor.set_target_revision(self.edit_baton,
                     target_revision, self.pool))
     
-    def open_root(self, base_revision):
+    def open_root(self, base_revision=-1):
         cdef void *root_baton
         check_error(self.editor.open_root(self.edit_baton, base_revision,
                     self.pool, &root_baton))
@@ -547,6 +525,9 @@ cdef class Editor:
 
     def abort(self):
         check_error(self.editor.abort_edit(self.edit_baton, self.pool))
+
+    def __dealloc__(self):
+        apr_pool_destroy(self.pool)
 
 
 def version():
@@ -848,10 +829,10 @@ cdef class RemoteAccess:
         check_error(svn_ra_get_commit_editor2(self.ra, &editor, 
             &edit_baton, revprops[PROP_REVISION_LOG], py_commit_callback, 
             commit_callback, hash_lock_tokens, keep_locks, temp_pool))
-        apr_pool_destroy(temp_pool)
         py_editor = Editor()
         py_editor.editor = editor
         py_editor.edit_baton = edit_baton
+        py_editor.pool = temp_pool
         return py_editor
 
     def change_rev_prop(self, rev, name, value):

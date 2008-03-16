@@ -14,11 +14,12 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, svn_node_unknown, svn_node_none, svn_error_create
+from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, svn_node_unknown, svn_node_none, svn_error_create, svn_log_message_receiver_t, svn_log_changed_path_t
 from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 from apr cimport apr_hash_index_t, apr_hash_this, apr_hash_first, apr_hash_next
+from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 
 apr_initialize()
 
@@ -123,3 +124,32 @@ cdef apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, object l):
         el = <char **>apr_array_push(ret)
         el[0] = i
     return ret
+
+cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *:
+    cdef apr_hash_index_t *idx
+    cdef char *key
+    cdef long klen
+    cdef svn_log_changed_path_t *val
+    if changed_paths == NULL:
+        py_changed_paths = None
+    else:
+        py_changed_paths = {}
+        idx = apr_hash_first(pool, changed_paths)
+        while idx:
+            apr_hash_this(idx, <void **>&key, &klen, <void **>&val)
+            if val.copyfrom_path != NULL:
+                py_changed_paths[key] = (chr(val.action), val.copyfrom_path, 
+                                         val.copyfrom_rev)
+            else:
+                py_changed_paths[key] = (chr(val.action), None, -1)
+            idx = apr_hash_next(idx)
+    revprops = {}    
+    if message != NULL:
+        revprops[PROP_REVISION_LOG] = message
+    if author != NULL:
+        revprops[PROP_REVISION_AUTHOR] = author
+    if date != NULL:
+        revprops[PROP_REVISION_DATE] = date
+    baton(py_changed_paths, revision, revprops)
+
+

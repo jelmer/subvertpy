@@ -299,7 +299,8 @@ class SvnRaTransport(Transport):
     @convert_svn_error
     def get_commit_editor(self, revprops, done_cb, lock_token, keep_locks):
         self._open_real_transport()
-        self._ra.get_commit_editor(revprops, done_cb, lock_token, keep_locks)
+        return self._ra.get_commit_editor(revprops, done_cb, lock_token, 
+                                          keep_locks)
 
     def listable(self):
         """See Transport.listable().
