@@ -58,7 +58,13 @@ cdef extern from "svn_types.h":
         char *date
         char *author
         char *post_commit_err
-
+    ctypedef struct svn_dirent_t:
+        svn_node_kind_t kind
+        svn_filesize_t size
+        svn_boolean_t has_props
+        svn_revnum_t created_rev
+        apr_time_t time
+        char *last_author
 
 cdef extern from "svn_string.h":
     ctypedef struct svn_string_t:

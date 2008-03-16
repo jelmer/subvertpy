@@ -10,3 +10,4 @@ core.c
 ra.h
 core.h
 client.c
+repos.c
