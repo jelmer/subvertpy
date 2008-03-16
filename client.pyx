@@ -171,7 +171,15 @@ cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_he
 cdef object py_commit_info_tuple(svn_commit_info_t *ci):
     if ci == NULL:
         return None
-    return (ci.revision, ci.date, ci.author)
+    if ci.author == NULL:
+        py_author = None
+    else:
+        py_author = ci.author
+    if ci.date == NULL:
+        py_date = None
+    else:
+        py_date = ci.date
+    return (ci.revision, py_date, py_author)
 
 cdef class Client:
     cdef svn_client_ctx_t *client
@@ -231,6 +239,7 @@ cdef class Client:
         cdef svn_commit_info_t *commit_info
         cdef svn_opt_revision_t c_src_rev
         to_opt_revision(src_rev, &c_src_rev)
+        commit_info = NULL
         check_error(svn_client_copy3(&commit_info, src_path, 
                     &c_src_rev, dst_path, self.client, self.pool))
         return py_commit_info_tuple(commit_info)

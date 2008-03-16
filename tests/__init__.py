@@ -161,7 +161,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         :param oldpath: Relative path to original file.
         :param newpath: Relative path to new file.
         """
-        self.client_ctx.copy(oldpath, revnum, newpath)
+        self.client_ctx.copy(oldpath, newpath, revnum)
 
     def client_update(self, path):
         self.client_ctx.update(path, None, True)

@@ -111,8 +111,6 @@ class BranchPropertyList(CacheTable):
         if prev_path is None and prev_revnum == -1:
             previous = {}
         else:
-            import pdb
-            pdb.set_trace()
             previous = self.get_properties(prev_path.encode("utf-8"), 
                                            prev_revnum)
         ret = {}

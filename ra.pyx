@@ -790,14 +790,15 @@ cdef class RemoteAccess:
         return ret
 
     def do_switch(self, revision_to_update_to, update_target, recurse, 
-                  update_editor):
+                  switch_url, update_editor):
         cdef svn_ra_reporter2_t *reporter
         cdef void *report_baton
         cdef apr_pool_t *temp_pool
         cdef Reporter ret
         temp_pool = Pool(self.pool)
-        check_error(svn_ra_do_update(self.ra, &reporter, &report_baton, 
+        check_error(svn_ra_do_switch(self.ra, &reporter, &report_baton, 
                      revision_to_update_to, update_target, recurse, 
+                     switch_url,
                      &py_editor, update_editor, temp_pool))
         ret = Reporter()
         ret.reporter = reporter
