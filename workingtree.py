@@ -261,8 +261,8 @@ class SvnWorkingTree(WorkingTree):
                 subrelpath = os.path.join(relpath, entry.name)
                 if entry.name == "" or entry.kind != 'directory':
                     if ((entry.copyfrom_url == url or entry.url == url) and 
-                        not (entry.schedule in (wc.schedule_delete,
-                                                wc.schedule_replace))):
+                        not (entry.schedule in (wc.SCHEDULE_DELETE,
+                                                wc.SCHEDULE_REPLACE))):
                         yield os.path.join(
                                 self.branch.get_branch_path().strip("/"), 
                                 subrelpath)
@@ -272,19 +272,19 @@ class SvnWorkingTree(WorkingTree):
 
         def find_ids(entry, rootwc):
             relpath = urllib.unquote(entry.url[len(entry.repos):].strip("/"))
-            assert entry.schedule in (wc.schedule_normal, 
-                                      wc.schedule_delete,
-                                      wc.schedule_add,
-                                      wc.schedule_replace)
-            if entry.schedule == wc.schedule_normal:
+            assert entry.schedule in (wc.SCHEDULE_NORMAL, 
+                                      wc.SCHEDULE_DELETE,
+                                      wc.SCHEDULE_ADD,
+                                      wc.SCHEDULE_REPLACE)
+            if entry.schedule == wc.SCHEDULE_NORMAL:
                 assert entry.revision >= 0
                 # Keep old id
                 return self.path_to_file_id(entry.cmt_rev, entry.revision, 
                         relpath)
-            elif entry.schedule == wc.schedule_delete:
+            elif entry.schedule == wc.SCHEDULE_DELETE:
                 return (None, None)
-            elif (entry.schedule == wc.schedule_add or 
-                  entry.schedule == wc.schedule_replace):
+            elif (entry.schedule == wc.SCHEDULE_ADD or 
+                  entry.schedule == wc.SCHEDULE_REPLACE):
                 # See if the file this file was copied from disappeared
                 # and has no other copies -> in that case, take id of other file
                 if (entry.copyfrom_url and 

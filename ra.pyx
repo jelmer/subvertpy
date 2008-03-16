@@ -155,7 +155,7 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
                 py_changed_paths[key] = (chr(val.action), val.copyfrom_path, 
                                          val.copyfrom_rev)
             else:
-                py_changed_paths[key] = (chr(val.action), None, None)
+                py_changed_paths[key] = (chr(val.action), None, -1)
             idx = apr_hash_next(idx)
     revprops = {}    
     if message != NULL:
@@ -193,7 +193,7 @@ cdef extern from "svn_ra.h":
         svn_error_t *(*abort_report)(void *report_baton, apr_pool_t *pool)
 
     ctypedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress, 
-                           apr_off_t total, void *baton, apr_pool_t *pool)
+            apr_off_t total, void *baton, apr_pool_t *pool) except *
 
     ctypedef svn_error_t *(*svn_ra_get_wc_prop_func_t)(void *baton,
                                                   char *relpath,
@@ -220,7 +220,7 @@ cdef extern from "svn_ra.h":
 
     ctypedef struct svn_ra_callbacks2_t:
         svn_error_t *(*open_tmp_file)(apr_file_t **fp, 
-                                      void *callback_baton, apr_pool_t *pool)
+                void *callback_baton, apr_pool_t *pool) except *
         svn_auth_baton_t *auth_baton
         svn_ra_get_wc_prop_func_t get_wc_prop
         svn_ra_set_wc_prop_func_t set_wc_prop
@@ -371,6 +371,11 @@ cdef svn_error_t *py_lock_func (baton, char *path, int do_lock,
     # FIXME: Pass lock
     baton(path, do_lock, py_ra_err)
 
+cdef void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, apr_pool_t *pool) except *:
+    fn = <object>baton
+    if fn is None:
+        return
+    fn(progress, total)
 
 cdef char *c_lock_token(object py_lock_token):
     if py_lock_token is None:
@@ -695,11 +700,12 @@ cdef class RemoteAccess:
     cdef svn_ra_session_t *ra
     cdef apr_pool_t *pool
     cdef char *url
-    def __init__(self, url, callbacks=object(), config={}):
+    cdef object progress_func
+    def __init__(self, url, progress_cb=None, config={}):
         """Connect to a remote Subversion repository. 
 
         :param url: URL of the repository
-        :param callbacks: Object to report progress and errors to.
+        :param progress_cb: Progress callback function
         :param config: Optional configuration
         """
         cdef svn_error_t *error
@@ -709,6 +715,9 @@ cdef class RemoteAccess:
         self.pool = Pool(NULL)
         assert self.pool != NULL
         check_error(svn_ra_create_callbacks(&callbacks2, self.pool))
+        callbacks2.progress_func = py_progress_func
+        self.progress_func = progress_cb
+        callbacks2.progress_baton = <void *>self.progress_func
         config_hash = apr_hash_make(self.pool)
         for (key, val) in config.items():
             apr_hash_set(config_hash, key, len(key), val)

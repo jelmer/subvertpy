@@ -213,10 +213,8 @@ class SvnBasisTree(RevisionTree):
         self._inventory = Inventory(root_id=None)
         self._repository = workingtree.branch.repository
 
-        def add_file_to_inv(relpath, id, revid, wc):
-            props = wc.get_prop_diffs(self.workingtree.abspath(relpath))
-            if isinstance(props, list): # Subversion 1.5
-                props = props[1]
+        def add_file_to_inv(relpath, id, revid, adm):
+            (delta_props, props) = adm.get_prop_diffs(self.workingtree.abspath(relpath))
             if props.has_key(constants.PROP_SPECIAL):
                 ie = self._inventory.add_path(relpath, 'symlink', id)
                 ie.symlink_target = open(self._abspath(relpath)).read()[len("link "):]
@@ -235,14 +233,14 @@ class SvnBasisTree(RevisionTree):
 
         def find_ids(entry):
             relpath = urllib.unquote(entry.url[len(entry.repos):].strip("/"))
-            if entry.schedule in (wc.schedule_normal, 
-                                  wc.schedule_delete, 
-                                  wc.schedule_replace):
+            if entry.schedule in (wc.SCHEDULE_NORMAL, 
+                                  wc.SCHEDULE_DELETE, 
+                                  wc.SCHEDULE_REPLACE):
                 return self.id_map[workingtree.branch.unprefix(relpath)]
             return (None, None)
 
-        def add_dir_to_inv(relpath, wc, parent_id):
-            entries = wc.entries_read(False)
+        def add_dir_to_inv(relpath, adm, parent_id):
+            entries = adm.entries_read(False)
             entry = entries[""]
             (id, revid) = find_ids(entry)
             if id == None:
@@ -264,7 +262,7 @@ class SvnBasisTree(RevisionTree):
                 assert entry
                 
                 if entry.kind == core.NODE_DIR:
-                    subwc = wc.WorkingCopy(
+                    subwc = wc.WorkingCopy(adm, 
                             self.workingtree.abspath(subrelpath), 
                                              False, 0, None)
                     try:
@@ -274,13 +272,13 @@ class SvnBasisTree(RevisionTree):
                 else:
                     (subid, subrevid) = find_ids(entry)
                     if subid is not None:
-                        add_file_to_inv(subrelpath, subid, subrevid, wc)
+                        add_file_to_inv(subrelpath, subid, subrevid, adm)
 
-        wc = workingtree._get_wc() 
+        adm = workingtree._get_wc() 
         try:
-            add_dir_to_inv("", wc, None)
+            add_dir_to_inv("", adm, None)
         finally:
-            wc.adm_close()
+            adm.close()
 
     def _abspath(self, relpath):
         return wc.get_pristine_copy_path(self.workingtree.abspath(relpath))

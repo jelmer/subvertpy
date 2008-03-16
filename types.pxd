@@ -72,6 +72,11 @@ cdef extern from "svn_string.h":
         long len
     svn_string_t *svn_string_ncreate(char *bytes, long size, apr_pool_t *pool)
 
+cdef extern from "svn_props.h":
+    ctypedef struct svn_prop_t:
+        char *name
+        svn_string_t *value
+
 cdef extern from "svn_auth.h":
     ctypedef struct svn_auth_baton_t
     void svn_auth_open(svn_auth_baton_t **auth_baton,

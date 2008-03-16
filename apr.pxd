@@ -35,7 +35,12 @@ cdef extern from "apr_pools.h":
     void *apr_palloc(apr_pool_t *, apr_size_t)
 
 cdef extern from "apr_tables.h":
-    ctypedef struct apr_array_header_t
+    ctypedef struct apr_array_header_t:
+        apr_pool_t *pool
+        int elt_size
+        int nelts
+        int nalloc
+        char *elts
     apr_array_header_t *apr_array_make(apr_pool_t *p, int nelts, int elt_size)
     void *apr_array_push(apr_array_header_t *arr)
     void *apr_array_pop(apr_array_header_t *arr)

@@ -64,7 +64,7 @@ cdef void to_opt_revision(arg, svn_opt_revision_t *ret) except *:
 
 
 cdef extern from "svn_client.h":
-    ctypedef svn_error_t *(*svn_client_get_commit_log2_t) (char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool)
+    ctypedef svn_error_t *(*svn_client_get_commit_log2_t) (char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool) except *
 
     ctypedef struct svn_client_ctx_t:
         svn_auth_baton_t *auth_baton
@@ -135,11 +135,13 @@ cdef extern from "svn_client.h":
                    apr_pool_t *pool)
 
      
-cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool):
+cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool) except *:
     py_commit_items = []
     (py_log_msg, py_tmp_file) = baton(py_commit_items)
-    #FIXME: *log_msg = py_log_msg
-    #FIXME: *tmp_file = py_tmp_file
+    if py_log_msg is not None:
+        log_msg[0] = py_log_msg
+    if py_tmp_file is not None:
+        tmp_file[0] = py_tmp_file
     return NULL
 
 cdef object py_commit_info_tuple(svn_commit_info_t *ci):

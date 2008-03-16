@@ -14,8 +14,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t
-from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t
+from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_index_t, apr_array_header_t
+from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t, svn_prop_t
 
 from core cimport check_error, Pool, py_cancel_func
 
@@ -117,6 +117,15 @@ cdef extern from "svn_wc.h":
     svn_boolean_t svn_wc_is_wc_prop(char *name)
     svn_boolean_t svn_wc_is_entry_prop(char *name)
 
+    svn_error_t *svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
+                                   apr_hash_t **original_props,
+                                   char *path,
+                                   svn_wc_adm_access_t *adm_access,
+                                   apr_pool_t *pool)
+    svn_error_t *svn_wc_get_pristine_copy_path(char *path,
+                                           char **pristine_path,
+                                           apr_pool_t *pool)
+
 def version():
     """Get libsvn_wc version information.
 
@@ -139,14 +148,23 @@ class Entry:
         self.absent = absent
         self.incomplete = incomplete
 
+cdef py_entry(svn_wc_entry_t *entry):
+    ret = Entry(entry.name, entry.revision, entry.url, entry.repos, entry.uuid, entry.kind, entry.schedule, entry.copied, entry.deleted, entry.absent, entry.incomplete)
+    # FIXME: entry.copyfrom_url, entry.copyfrom_rev, entry.conflict_old, entry.conflict_new, entry.conflict_wrk, entry.prejfile, entry.text_time, entry.prop_time, entry.checksum, entry.cmt_rev, entry.cmt_date, entry.cmt_author, entry.lock_token, entry.lock_owner, entry.lock_comment, entry.lock_creation_date, entry.has_props, entry.has_prop_mods, entry.cachable_props, entry.present_props)
+    return ret
+
 cdef class WorkingCopy:
     cdef svn_wc_adm_access_t *adm
     cdef apr_pool_t *pool
-    def __init__(self, associated, path, write_lock=False, depth=0, 
+    def __init__(self, WorkingCopy associated, path, write_lock=False, depth=0, 
                  cancel_func=None):
+        cdef svn_wc_adm_access_t *parent_wc
         self.pool = Pool(NULL)
-        # FIXME: Use associated
-        check_error(svn_wc_adm_open3(&self.adm, NULL, path, 
+        if associated is None:
+            parent_wc = NULL
+        else:
+            parent_wc = associated.adm
+        check_error(svn_wc_adm_open3(&self.adm, parent_wc, path, 
                      write_lock, depth, py_cancel_func, cancel_func, 
                      self.pool))
 
@@ -174,14 +192,22 @@ cdef class WorkingCopy:
                     skip_checks, temp_pool))
         apr_pool_destroy(temp_pool)
 
-    def entries_read(self, show_hidden):
+    def entries_read(self, show_hidden=False):
         cdef apr_hash_t *entries
         cdef apr_pool_t *temp_pool
+        cdef apr_hash_index_t *idx
+        cdef char *key
+        cdef long klen
+        cdef svn_wc_entry_t *entry
         temp_pool = Pool(self.pool)
         check_error(svn_wc_entries_read(&entries, self.adm, 
                      show_hidden, temp_pool))
-        # FIXME: Create py_entries
         py_entries = {}
+        idx = apr_hash_first(temp_pool, entries)
+        while idx:
+            apr_hash_this(idx, <void **>&key, &klen, <void **>&entry)
+            py_entries[key] = py_entry(entry)
+            idx = apr_hash_next(idx)
         apr_pool_destroy(temp_pool)
         return py_entries
 
@@ -192,17 +218,40 @@ cdef class WorkingCopy:
         check_error(svn_wc_entry(&entry, path, self.adm, show_hidden, temp_pool))
         apr_pool_destroy(temp_pool)
 
-        py_entry = Entry(entry.name, entry.revision, entry.url, entry.repos, entry.uuid, entry.kind, entry.schedule, entry.copied, entry.deleted, entry.absent, entry.incomplete)
-        # FIXME: entry.copyfrom_url, entry.copyfrom_rev, entry.conflict_old, entry.conflict_new, entry.conflict_wrk, entry.prejfile, entry.text_time, entry.prop_time, entry.checksum, entry.cmt_rev, entry.cmt_date, entry.cmt_author, entry.lock_token, entry.lock_owner, entry.lock_comment, entry.lock_creation_date, entry.has_props, entry.has_prop_mods, entry.cachable_props, entry.present_props)
-        return py_entry
+        return py_entry(entry)
+
+    def get_prop_diffs(self, path):
+        cdef apr_pool_t *temp_pool
+        cdef apr_array_header_t *propchanges
+        cdef apr_hash_t *original_props
+        cdef apr_hash_index_t *idx
+        cdef svn_string_t *string
+        cdef char *key
+        cdef long klen
+        cdef svn_prop_t *el
+        temp_pool = Pool(self.pool)
+        check_error(svn_wc_get_prop_diffs(&propchanges, &original_props, 
+                    path, self.adm, self.pool))
+        py_propchanges = []
+        for i in range(propchanges.nelts):
+            el = <svn_prop_t *>propchanges.elts[i]
+            py_propchanges.append((el.name, PyString_FromStringAndSize(el.value.data, el.value.len)))
+        py_orig_props = {}
+        idx = apr_hash_first(temp_pool, original_props)
+        while idx:
+            apr_hash_this(idx, <void **>&key, &klen, <void **>&string)
+            py_orig_props[key] = PyString_FromStringAndSize(string.data, string.len)
+            idx = apr_hash_next(idx)
+        apr_pool_destroy(self.pool)
+        return (py_propchanges, py_orig_props)
 
     def close(self):
-        svn_wc_adm_close(self.adm)
-        self.adm = NULL
+        if self.adm != NULL:
+            svn_wc_adm_close(self.adm)
+            self.adm = NULL
 
     def __dealloc__(self):
-        if self.adm != NULL:
-            self.close()
+        self.close()
 
 
 def revision_status(wc_path, trail_url=None, committed=False, cancel_func=None):
@@ -226,11 +275,27 @@ def revision_status(wc_path, trail_url=None, committed=False, cancel_func=None):
     apr_pool_destroy(temp_pool)
     return ret
 
-cdef is_normal_prop(name):
+def is_normal_prop(name):
     return svn_wc_is_normal_prop(name)
 
-cdef is_wc_prop(name):
+def is_wc_prop(name):
     return svn_wc_is_wc_prop(name)
 
-cdef is_entry_prop(name):
+def is_entry_prop(name):
     return svn_wc_is_entry_prop(name)
+
+def get_pristine_copy_path(path):
+    cdef apr_pool_t *pool
+    cdef char *pristine_path
+    pool = Pool(NULL)
+    try:
+        check_error(svn_wc_get_pristine_copy_path(path, &pristine_path, pool))
+        ret = pristine_path
+    finally:
+        apr_pool_destroy(pool)
+    return ret
+
+SCHEDULE_NORMAL = 0
+SCHEDULE_ADD = 1
+SCHEDULE_DELETE = 2
+SCHEDULE_REPLACE = 3
