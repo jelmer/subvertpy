@@ -15,11 +15,22 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, svn_node_unknown, svn_node_none, svn_error_create, svn_log_message_receiver_t, svn_log_changed_path_t
-from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t
+from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t, apr_size_t
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 from apr cimport apr_hash_index_t, apr_hash_this, apr_hash_first, apr_hash_next
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
+from types cimport svn_stream_set_read, svn_stream_set_write, svn_stream_set_close, svn_stream_from_stringbuf, svn_stream_create
+from types cimport svn_stringbuf_t, svn_stringbuf_ncreate
+
+cdef extern from "Python.h":
+    void Py_INCREF(object)
+    void Py_DECREF(object)
+    char *PyString_AS_STRING(object)
+	
+cdef extern from "string.h":
+    ctypedef unsigned long size_t 
+    void *memcpy(void *dest, void *src, size_t len)
 
 apr_initialize()
 
@@ -151,5 +162,36 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
     if date != NULL:
         revprops[PROP_REVISION_DATE] = date
     baton(py_changed_paths, revision, revprops)
+
+cdef svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length):
+    self = <object>baton
+    ret = self.read(length[0])
+    length[0] = len(ret)
+    memcpy(buffer, PyString_AS_STRING(ret), len(ret))
+    return NULL
+
+cdef svn_error_t *py_stream_write(void *baton, char *data, apr_size_t *len):
+    self = <object>baton
+    self.write(PyString_FromStringAndSize(data, len[0]))
+    return NULL
+
+cdef svn_error_t *py_stream_close(void *baton):
+    self = <object>baton
+    self.close()
+    Py_DECREF(self)
+
+cdef svn_stream_t *string_stream(apr_pool_t *pool, text):
+    cdef svn_stringbuf_t *buf
+    buf = svn_stringbuf_ncreate(text, len(text), pool)
+    return svn_stream_from_stringbuf(buf, pool)
+
+cdef svn_stream_t *new_py_stream(apr_pool_t *pool, object py):
+    cdef svn_stream_t *stream
+    Py_INCREF(py)
+    stream = svn_stream_create(<void *>py, pool)
+    svn_stream_set_read(stream, py_stream_read)
+    svn_stream_set_write(stream, py_stream_write)
+    svn_stream_set_close(stream, py_stream_close)
+    return stream
 
 

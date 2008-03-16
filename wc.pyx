@@ -165,7 +165,13 @@ cdef py_entry(svn_wc_entry_t *entry):
         repos = entry.repos
     ret = Entry(entry.name, entry.revision, url, repos, uuid, entry.kind, entry.schedule, entry.copied, entry.deleted, entry.absent, entry.incomplete)
     ret.cmt_rev = entry.cmt_rev
-    # FIXME: entry.copyfrom_url, entry.copyfrom_rev, entry.conflict_old, entry.conflict_new, entry.conflict_wrk, entry.prejfile, entry.text_time, entry.prop_time, entry.checksum, entry.cmt_date, entry.cmt_author, entry.lock_token, entry.lock_owner, entry.lock_comment, entry.lock_creation_date, entry.has_props, entry.has_prop_mods, entry.cachable_props, entry.present_props)
+    if entry.copyfrom_url != NULL:
+        ret.copyfrom_url = entry.copyfrom_url
+        ret.copyfrom_rev = entry.copyfrom_rev
+    else:
+        ret.copyfrom_url = None
+        ret.copyfrom_rev = -1
+    # FIXME: entry.conflict_old, entry.conflict_new, entry.conflict_wrk, entry.prejfile, entry.text_time, entry.prop_time, entry.checksum, entry.cmt_date, entry.cmt_author, entry.lock_token, entry.lock_owner, entry.lock_comment, entry.lock_creation_date, entry.has_props, entry.has_prop_mods, entry.cachable_props, entry.present_props)
     return ret
 
 cdef class WorkingCopy:
@@ -194,7 +200,10 @@ cdef class WorkingCopy:
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
         check_error(svn_wc_prop_get(&value, name, path, self.adm, temp_pool))
-        ret = PyString_FromStringAndSize(value.data, value.len)
+        if value == NULL:
+            ret = None
+        else:
+            ret = PyString_FromStringAndSize(value.data, value.len)
         apr_pool_destroy(temp_pool)
         return ret
 
@@ -266,7 +275,8 @@ cdef class WorkingCopy:
             self.adm = NULL
 
     def __dealloc__(self):
-        apr_pool_destroy(self.pool)
+        if self.pool != NULL:
+            apr_pool_destroy(self.pool)
 
 
 def revision_status(wc_path, trail_url=None, committed=False, cancel_func=None):

@@ -326,7 +326,7 @@ class SvnWorkingTree(WorkingTree):
                 assert entry
                 
                 if entry.kind == core.NODE_DIR:
-                    subwc = wc.WorkingCopy(wc, self.abspath(subrelpath), 
+                    subwc = wc.WorkingCopy(adm, self.abspath(subrelpath), 
                                              False, 0, None)
                     try:
                         add_dir_to_inv(subrelpath, subwc, id)
@@ -467,12 +467,12 @@ class SvnWorkingTree(WorkingTree):
             adm.close()
             raise
 
-        self.client_ctx.log_msg_baton2 = None
+        self.client_ctx.set_log_msg_func(None)
 
-        revid = self.branch.generate_revision_id(commit_info.revision)
+        revid = self.branch.generate_revision_id(commit_info[0])
 
         self.base_revid = revid
-        self.base_revnum = commit_info.revision
+        self.base_revnum = commit_info[0]
         self.base_tree = SvnBasisTree(self)
 
         return revid

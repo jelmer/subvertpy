@@ -16,10 +16,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from apr cimport apr_pool_t, apr_array_header_t, apr_hash_t
-from types cimport svn_error_t, svn_lock_t
+from types cimport svn_error_t, svn_lock_t, svn_stream_t
 cdef apr_pool_t *Pool(apr_pool_t *parent)
 cdef check_error(svn_error_t *error)
 cdef svn_error_t *py_cancel_func(cancel_baton)
 cdef wrap_lock(svn_lock_t *)
 cdef apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, object l)
 cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *
+cdef svn_stream_t *new_py_stream(apr_pool_t *pool, object py)
+cdef svn_stream_t *string_stream(apr_pool_t *pool, text)

@@ -19,13 +19,12 @@ from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, ap
 from apr cimport apr_array_header_t, apr_array_make
 from apr cimport apr_file_t, apr_off_t, apr_size_t
 from apr cimport apr_initialize
-from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn_log_wrapper
+from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn_log_wrapper, new_py_stream
 from core import SubversionException
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
 from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_filesize_t, svn_dirent_t, svn_log_message_receiver_t
-from types cimport svn_stream_t, svn_stream_set_read, svn_stream_set_write, svn_stream_set_close, svn_stream_from_stringbuf, svn_stream_create
-from types cimport svn_stringbuf_t, svn_stringbuf_ncreate
+from types cimport svn_stream_t
 
 apr_initialize()
 
@@ -33,12 +32,6 @@ cdef extern from "Python.h":
     object PyString_FromStringAndSize(char *, unsigned long)
     void Py_INCREF(object)
     void Py_DECREF(object)
-    char *PyString_AS_STRING(object)
-
-
-cdef extern from "string.h":
-    ctypedef unsigned long size_t 
-    void *memcpy(void *dest, void *src, size_t len)
 
 cdef extern from "svn_delta.h":
     ctypedef enum svn_delta_action:
@@ -1009,37 +1002,6 @@ def get_ssl_client_cert_file_provider():
 
 def get_ssl_client_cert_pw_file_provider():
     pass # FIXME
-
-cdef svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length):
-    self = <object>baton
-    ret = self.read(length[0])
-    length[0] = len(ret)
-    memcpy(buffer, PyString_AS_STRING(ret), len(ret))
-    return NULL
-
-cdef svn_error_t *py_stream_write(void *baton, char *data, apr_size_t *len):
-    self = <object>baton
-    self.write(PyString_FromStringAndSize(data, len[0]))
-    return NULL
-
-cdef svn_error_t *py_stream_close(void *baton):
-    self = <object>baton
-    self.close()
-    Py_DECREF(self)
-
-cdef svn_stream_t *string_stream(apr_pool_t *pool, text):
-    cdef svn_stringbuf_t *buf
-    buf = svn_stringbuf_ncreate(text, len(text), pool)
-    return svn_stream_from_stringbuf(buf, pool)
-
-cdef svn_stream_t *new_py_stream(apr_pool_t *pool, object py):
-    cdef svn_stream_t *stream
-    Py_INCREF(py)
-    stream = svn_stream_create(<void *>py, pool)
-    svn_stream_set_read(stream, py_stream_read)
-    svn_stream_set_write(stream, py_stream_write)
-    svn_stream_set_close(stream, py_stream_close)
-    return stream
 
 def txdelta_send_stream(stream, TxDeltaWindowHandler handler):
     cdef unsigned char digest[16] 

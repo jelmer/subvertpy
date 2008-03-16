@@ -172,8 +172,15 @@ cdef extern from "svn_client.h":
                 apr_pool_t *pool)
      
 cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool) except *:
+    if baton is None:
+        return NULL
     py_commit_items = []
-    (py_log_msg, py_tmp_file) = baton(py_commit_items)
+    ret = baton(py_commit_items)
+    if isinstance(ret, tuple):
+        (py_log_msg, py_tmp_file) = ret
+    else:
+        py_tmp_file = None
+        py_log_msg = ret
     if py_log_msg is not None:
         log_msg[0] = py_log_msg
     if py_tmp_file is not None:

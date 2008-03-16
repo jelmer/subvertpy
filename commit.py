@@ -419,6 +419,8 @@ class SvnCommitBuilder(RootCommitBuilder):
             except RevpropChangeFailed:
                 pass # Ignore for now
 
+            self.revid = revid
+
         bp_parts = self.branch.get_branch_path().split("/")
         repository_latest_revnum = self.repository.transport.get_latest_revnum()
         lock = self.repository.transport.lock_write(".")
@@ -503,7 +505,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         finally:
             lock.unlock()
 
-        return revid
+        return self.revid
 
     def record_entry_contents(self, ie, parent_invs, path, tree,
                               content_summary):
