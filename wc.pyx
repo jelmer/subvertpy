@@ -14,8 +14,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy
-from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate
+from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t
+from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t
 
 from core cimport check_error, Pool, py_cancel_func
 
@@ -24,8 +24,49 @@ apr_initialize()
 cdef extern from "Python.h":
     object PyString_FromStringAndSize(char *, long len)
 
+
 cdef extern from "svn_wc.h":
     ctypedef struct svn_wc_adm_access_t
+    ctypedef enum svn_wc_schedule_t:
+        svn_wc_schedule_normal
+        svn_wc_schedule_add
+        svn_wc_schedule_delete
+        svn_wc_schedule_replace
+
+    ctypedef struct svn_wc_entry_t:
+        char *name
+        svn_revnum_t revision
+        char *url
+        char *repos
+        char *uuid
+        svn_node_kind_t kind
+        svn_wc_schedule_t schedule
+        svn_boolean_t copied
+        svn_boolean_t deleted
+        svn_boolean_t absent
+        svn_boolean_t incomplete
+        char *copyfrom_url
+        svn_revnum_t copyfrom_rev
+        char *conflict_old
+        char *conflict_new
+        char *conflict_wrk
+        char *prejfile
+        apr_time_t text_time
+        apr_time_t prop_time
+        char *checksum
+        svn_revnum_t cmt_rev
+        apr_time_t cmt_date
+        char *cmt_author
+        char *lock_token
+        char *lock_owner
+        char *lock_comment
+        apr_time_t lock_creation_date
+        svn_boolean_t has_props
+        svn_boolean_t has_prop_mods
+        char *cachable_props
+        char *present_props
+
+
     svn_version_t *svn_wc_version()
     svn_error_t *svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
                                   svn_wc_adm_access_t *associated,
@@ -49,7 +90,7 @@ cdef extern from "svn_wc.h":
                        char *trail_url,
                        svn_boolean_t committed,
                        svn_cancel_func_t cancel_func,
-                       object cancel_baton,
+                       cancel_baton,
                        apr_pool_t *pool)
     svn_error_t *svn_wc_prop_get(svn_string_t **value,
                              char *name,
@@ -66,6 +107,11 @@ cdef extern from "svn_wc.h":
                               svn_wc_adm_access_t *adm_access,
                               svn_boolean_t skip_checks,
                               apr_pool_t *pool)
+    svn_error_t *svn_wc_entry(svn_wc_entry_t **entry,
+                          char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t show_hidden,
+                          apr_pool_t *pool)
 
     svn_boolean_t svn_wc_is_normal_prop(char *name)
     svn_boolean_t svn_wc_is_wc_prop(char *name)
@@ -78,6 +124,20 @@ def version():
     """
     return (svn_wc_version().major, svn_wc_version().minor, 
             svn_wc_version().minor, svn_wc_version().tag)
+
+class Entry:
+    def __init__(self, name, revision, url, repos, uuid, kind, schedule, copied=False, deleted=False, absent=False, incomplete=False):
+        self.name = name
+        self.revision = revision
+        self.url = url
+        self.uuid = uuid
+        self.repos = repos
+        self.kind = kind
+        self.schedule = schedule
+        self.copied = copied
+        self.deleted = deleted
+        self.absent = absent
+        self.incomplete = incomplete
 
 cdef class WorkingCopy:
     cdef svn_wc_adm_access_t *adm
@@ -125,6 +185,17 @@ cdef class WorkingCopy:
         apr_pool_destroy(temp_pool)
         return py_entries
 
+    def entry(self, path, show_hidden=False):
+        cdef apr_pool_t *temp_pool
+        cdef svn_wc_entry_t *entry
+        temp_pool = Pool(self.pool)
+        check_error(svn_wc_entry(&entry, path, self.adm, show_hidden, temp_pool))
+        apr_pool_destroy(temp_pool)
+
+        py_entry = Entry(entry.name, entry.revision, entry.url, entry.repos, entry.uuid, entry.kind, entry.schedule, entry.copied, entry.deleted, entry.absent, entry.incomplete)
+        # FIXME: entry.copyfrom_url, entry.copyfrom_rev, entry.conflict_old, entry.conflict_new, entry.conflict_wrk, entry.prejfile, entry.text_time, entry.prop_time, entry.checksum, entry.cmt_rev, entry.cmt_date, entry.cmt_author, entry.lock_token, entry.lock_owner, entry.lock_comment, entry.lock_creation_date, entry.has_props, entry.has_prop_mods, entry.cachable_props, entry.present_props)
+        return py_entry
+
     def close(self):
         svn_wc_adm_close(self.adm)
         self.adm = NULL
@@ -134,11 +205,21 @@ cdef class WorkingCopy:
             self.close()
 
 
-def revision_status(wc_path, trail_url, committed, cancel_func=None):
+def revision_status(wc_path, trail_url=None, committed=False, cancel_func=None):
+    """Determine the revision status of a specified working copy.
+
+    :return: Tuple with minimum and maximum revnums found, whether the 
+             working copy was switched and whether it was modified.
+    """
     cdef svn_wc_revision_status_t *revstatus
     cdef apr_pool_t *temp_pool
+    cdef char *c_trail_url
     temp_pool = Pool(NULL)
-    check_error(svn_wc_revision_status(&revstatus, wc_path, trail_url,
+    if trail_url is None:
+        c_trail_url = NULL
+    else:
+        c_trail_url = trail_url
+    check_error(svn_wc_revision_status(&revstatus, wc_path, c_trail_url,
                  committed, py_cancel_func, cancel_func, temp_pool))
     ret = (revstatus.min_rev, revstatus.max_rev, 
             revstatus.switched, revstatus.modified)

@@ -165,7 +165,7 @@ class SvnBranch(Branch):
         :param revision_id: Tip of the checkout.
         :return: WorkingTree object of the checkout.
         """
-        if revision_id is None:
+        if revision_id is not None:
             revnum = self.lookup_revision_id(revision_id)
         else:
             revnum = None

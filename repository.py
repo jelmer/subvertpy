@@ -548,6 +548,7 @@ class SvnRepository(Repository):
         :raises: NoSuchRevision
         :return: Tuple with branch path, revision number and mapping.
         """
+        assert revid is not None
         def get_scheme(name):
             assert isinstance(name, str)
             return BranchingScheme.find_scheme(name)

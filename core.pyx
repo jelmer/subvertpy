@@ -22,7 +22,8 @@ from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 apr_initialize()
 
 cdef svn_error_t *py_cancel_func(cancel_baton):
-    cancel_baton()
+    if cancel_baton is not None:
+        cancel_baton()
     return NULL
 
 class SubversionException(Exception):
@@ -68,6 +69,7 @@ def time_from_cstring(data):
     """Parse a Subversion time string and return a UNIX timestamp."""
     cdef apr_time_t when
     cdef apr_pool_t *pool
+    pool = Pool(NULL)
     check_error(svn_time_from_cstring(&when, data, pool))
     apr_pool_destroy(pool)
     return when

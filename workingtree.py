@@ -72,22 +72,16 @@ class SvnWorkingTree(WorkingTree):
         self.bzrdir = bzrdir
         self._branch = branch
         self.base_revnum = 0
-        self.pool = Pool()
-        self.client_ctx = create_svn_client(self.pool)
-        self.client_ctx.log_msg_func2 = \
-                svn.client.svn_swig_py_get_commit_log_func
-
+        self.client_ctx = create_svn_client()
         self._get_wc()
-        status = wc.revision_status(self.basedir, None, True)
-        if status.min_rev != status.max_rev:
+        (min_rev, max_rev, switched, modified) = \
+                wc.revision_status(self.basedir, None, True)
+        if min_rev != max_rev:
             #raise WorkingTreeInconsistent(status.min_rev, status.max_rev)
-            rev = core.svn_opt_revision_t()
-            rev.kind = core.svn_opt_revision_number
-            rev.value.number = status.max_rev
-            assert status.max_rev == svn.client.update(self.basedir, rev,
-                                     True, self.client_ctx, Pool())
+            assert status.max_rev == self.client_ctx.update(self.basedir, 
+                                     max_rev, True)
 
-        self.base_revnum = status.max_rev
+        self.base_revnum = max_rev
         self.base_tree = SvnBasisTree(self)
         self.base_revid = branch.generate_revision_id(self.base_revnum)
 
@@ -147,9 +141,7 @@ class SvnWorkingTree(WorkingTree):
         raise NotImplementedError(self.apply_inventory_delta)
 
     def update(self, change_reporter=None):
-        rev = core.svn_opt_revision_t()
-        rev.kind = core.svn_opt_revision_head
-        svn.client.update(self.basedir, rev, True, self.client_ctx)
+        self.client_ctx.update(self.basedir)
 
     def remove(self, files, verbose=False, to_file=None):
         # FIXME: Use to_file argument
@@ -424,16 +416,16 @@ class SvnWorkingTree(WorkingTree):
             specific_files = [self.basedir.encode('utf8')]
 
         if message_callback is not None:
-            def log_message_func(items, pool):
+            def log_message_func(items):
                 """ Simple log message provider for unit tests. """
                 return message_callback(self).encode("utf-8")
         else:
             assert isinstance(message, basestring)
-            def log_message_func(items, pool):
+            def log_message_func(items):
                 """ Simple log message provider for unit tests. """
                 return message.encode("utf-8")
 
-        self.client_ctx.log_msg_baton2 = log_message_func
+        self.client_ctx.set_log_msg_func(log_message_func)
         if rev_id is not None:
             extra = "%d %s\n" % (self.branch.revno()+1, rev_id)
         else:
@@ -454,8 +446,7 @@ class SvnWorkingTree(WorkingTree):
 
         try:
             try:
-                commit_info = svn.client.commit3(specific_files, True, False, 
-                                                 self.client_ctx)
+                commit_info = self.client_ctx.commit(specific_files, True, False)
             except SubversionException, (_, num):
                 if num == constants.ERR_FS_TXN_OUT_OF_DATE:
                     raise OutOfDateTree(self)
@@ -569,10 +560,8 @@ class SvnWorkingTree(WorkingTree):
         (result.old_revno, result.old_revid) = self.branch.last_revision_info()
         if stop_revision is None:
             stop_revision = self.branch.last_revision()
-        rev = core.svn_opt_revision_t()
-        rev.kind = core.svn_opt_revision_number
-        rev.value.number = self.branch.lookup_revision_id(stop_revision)
-        fetched = svn.client.update(self.basedir, rev, True, self.client_ctx)
+        revnumber = self.branch.lookup_revision_id(stop_revision)
+        fetched = self.client_ctx.update(self.basedir, revnum, True)
         self.base_revid = self.branch.generate_revision_id(fetched)
         result.new_revid = self.base_revid
         result.new_revno = self.branch.revision_id_to_revno(result.new_revid)

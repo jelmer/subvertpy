@@ -150,18 +150,20 @@ cdef object py_commit_info_tuple(svn_commit_info_t *ci):
 cdef class Client:
     cdef svn_client_ctx_t *client
     cdef apr_pool_t *pool
+    cdef object callbacks
     def __init__(self):
         self.pool = Pool(NULL)
         check_error(svn_client_create_context(&self.client, self.pool))
+        self.callbacks = []
 
     def __dealloc__(self):
         apr_pool_destroy(self.pool)
-        Py_DECREF(<object>self.client.log_msg_baton2)
+        self.pool = NULL
 
     def set_log_msg_func(self, func):
         self.client.log_msg_func2 = py_log_msg_func2
         self.client.log_msg_baton2 = <void *>func
-        Py_INCREF(func)
+        self.callbacks.append(func)
 
     def add(self, path, recursive=True, force=False, no_ignore=False):
         check_error(svn_client_add3(path, recursive, force, no_ignore, 
