@@ -34,7 +34,7 @@ from mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_MERGE,
                      SVN_PROP_BZR_FILEIDS, parse_merge_property)
 from repository import (SvnRepository, SvnRepositoryFormat)
 from svk import SVN_PROP_SVK_MERGE
-from tree import apply_txdelta_handler
+from delta import apply_txdelta_handler
 
 
 def _escape_commit_message(message):

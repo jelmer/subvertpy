@@ -47,7 +47,7 @@ cdef extern from "svn_opt.h":
         svn_opt_revision_value_t value
 
 
-cdef void to_opt_revision(arg, svn_opt_revision_t *ret):
+cdef void to_opt_revision(arg, svn_opt_revision_t *ret) except *:
     if isinstance(arg, int):
         ret.kind = svn_opt_revision_number
         ret.value.number = arg

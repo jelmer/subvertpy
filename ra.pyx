@@ -866,7 +866,20 @@ cdef class RemoteAccess:
             idx = apr_hash_first(temp_pool, dirents)
             while idx:
                 apr_hash_this(idx, <void **>&key, &klen, <void **>&dirent)
-                py_dirents[key] = (dirent.kind, dirent.size, dirent.has_props, dirent.created_rev, dirent.time, dirent.last_author)
+                py_dirent = {}
+                if dirent_fields & 0x1:
+                    py_dirent['kind'] = dirent.kind
+                if dirent_fields & 0x2:
+                    py_dirent['size'] = dirent.size
+                if dirent_fields & 0x4:
+                    py_dirent['has_props'] = dirent.has_props
+                if dirent_fields & 0x8:
+                    py_dirent['created_rev'] = dirent.created_rev
+                if dirent_fields & 0x10:
+                    py_dirent['time'] = dirent.time
+                if dirent_fields & 0x20:
+                    py_dirent['last_author'] = dirent.last_author
+                py_dirents[key] = py_dirent
                 idx = apr_hash_next(idx)
 
         if props == NULL:

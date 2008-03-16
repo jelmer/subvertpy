@@ -29,18 +29,6 @@ import urllib
 import constants
 import core, wc
 
-def apply_txdelta_handler(src_stream, target_stream):
-    assert hasattr(src_stream, 'read')
-    assert hasattr(target_stream, 'write')
-    ret = svn.delta.svn_txdelta_apply(src_stream, target_stream, None)
-
-    def wrapper(window):
-        svn.delta.invoke_txdelta_window_handler(
-                ret[1], window, ret[2])
-
-    return wrapper
-
-
 class SvnRevisionTree(RevisionTree):
     """A tree that existed in a historical Subversion revision."""
     def __init__(self, repository, revision_id):
