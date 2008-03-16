@@ -23,6 +23,7 @@ from copy import copy
 from core import SubversionException
 from transport import SvnRaTransport
 import core
+import constants
 
 from cache import sqlite3
 

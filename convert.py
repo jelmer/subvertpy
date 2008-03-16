@@ -25,7 +25,7 @@ from bzrlib.transport import get_transport
 
 from format import get_rich_root_format
 
-import core, repos
+import core, repos, constants
 
 def transport_makedirs(transport, location_url):
     """Create missing directories.
@@ -61,7 +61,7 @@ def load_dumpfile(dumpfile, outputdir):
         created.
     """
     from cStringIO import StringIO
-    r = repos.create(outputdir, '', '', None, None)
+    r = repos.create(outputdir)
     if dumpfile.endswith(".gz"):
         import gzip
         file = gzip.GzipFile(dumpfile)

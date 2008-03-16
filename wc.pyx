@@ -155,7 +155,15 @@ cdef py_entry(svn_wc_entry_t *entry):
         uuid = None
     else:
         uuid = entry.uuid
-    ret = Entry(entry.name, entry.revision, entry.url, entry.repos, uuid, entry.kind, entry.schedule, entry.copied, entry.deleted, entry.absent, entry.incomplete)
+    if entry.url == NULL:
+        url = None
+    else:
+        url = entry.url
+    if entry.repos == NULL:
+        repos = None
+    else:
+        repos = entry.repos
+    ret = Entry(entry.name, entry.revision, url, repos, uuid, entry.kind, entry.schedule, entry.copied, entry.deleted, entry.absent, entry.incomplete)
     ret.cmt_rev = entry.cmt_rev
     # FIXME: entry.copyfrom_url, entry.copyfrom_rev, entry.conflict_old, entry.conflict_new, entry.conflict_wrk, entry.prejfile, entry.text_time, entry.prop_time, entry.checksum, entry.cmt_date, entry.cmt_author, entry.lock_token, entry.lock_owner, entry.lock_comment, entry.lock_creation_date, entry.has_props, entry.has_prop_mods, entry.cachable_props, entry.present_props)
     return ret

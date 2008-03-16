@@ -30,6 +30,7 @@ from bzrlib.trace import info, mutter
 
 from core import SubversionException
 import core
+import constants
 
 import os
 
@@ -239,7 +240,7 @@ class SvnRepository(Repository):
         def done(revmetadata):
             pass
         editor = self.transport.get_commit_editor(
-                {core.SVN_PROP_REVISION_LOG: "Updating branching scheme for Bazaar."},
+                {constants.PROP_REVISION_LOG: "Updating branching scheme for Bazaar."},
                 done, None, False)
         root = editor.open_root(-1)
         editor.change_dir_prop(root, SVN_PROP_BZR_BRANCHING_SCHEME, 

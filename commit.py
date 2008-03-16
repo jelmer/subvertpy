@@ -16,6 +16,7 @@
 """Committing and pushing to Subversion repositories."""
 
 from core import SubversionException, time_to_cstring
+import core
 
 from bzrlib import debug, osutils, urlutils
 from bzrlib.branch import Branch
@@ -32,6 +33,7 @@ from errors import ChangesRootLHSHistory, MissingPrefix, RevpropChangeFailed
 from ra import txdelta_send_stream
 from svk import (generate_svk_feature, serialize_svk_features, 
                  parse_svk_features, SVN_PROP_SVK_MERGE)
+import constants
 from mapping import parse_revision_id
 from repository import (SvnRepositoryFormat, SvnRepository)
 import urllib
@@ -433,7 +435,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             fileids[path] = id
 
         self.base_mapping.export_fileid_map(fileids, self._svn_revprops, self._svnprops)
-        self._svn_revprops[core.SVN_PROP_REVISION_LOG] = message.encode("utf-8")
+        self._svn_revprops[constants.PROP_REVISION_LOG] = message.encode("utf-8")
 
         try:
             existing_bp_parts = _check_dirs_exist(self.repository.transport, 
@@ -448,9 +450,9 @@ class SvnCommitBuilder(RootCommitBuilder):
                     raise
                 # Try without bzr: revprops
                 self.editor = self.repository.transport.get_commit_editor({
-                    core.SVN_PROP_REVISION_LOG: self._svn_revprops[core.SVN_PROP_REVISION_LOG]},
+                    constants.PROP_REVISION_LOG: self._svn_revprops[constants.PROP_REVISION_LOG]},
                     done, None, False)
-                del self._svn_revprops[core.SVN_PROP_REVISION_LOG]
+                del self._svn_revprops[constants.PROP_REVISION_LOG]
 
             root = self.editor.open_root(self.base_revnum)
 
@@ -501,8 +503,8 @@ class SvnCommitBuilder(RootCommitBuilder):
         if self.repository.get_config().get_override_svn_revprops():
             set_svn_revprops(self.repository.transport, 
                  self.revision_metadata.revision, {
-                core.SVN_PROP_REVISION_AUTHOR: self._committer,
-                core.SVN_PROP_REVISION_DATE: svn_time_to_cstring(1000000*self._timestamp)})
+                constants.PROP_REVISION_AUTHOR: self._committer,
+                constants.PROP_REVISION_DATE: svn_time_to_cstring(1000000*self._timestamp)})
 
         try:
             set_svn_revprops(self.repository.transport, self.revision_metadata.revision, 

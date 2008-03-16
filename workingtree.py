@@ -34,6 +34,7 @@ from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
 from branch import SvnBranch
 from commit import _revision_id_to_svk_feature
+import constants
 from convert import SvnConverter
 from errors import LocalCommitsUnsupported, NoSvnRepositoryPresent
 from mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_FILEIDS, 
@@ -325,7 +326,7 @@ class SvnWorkingTree(WorkingTree):
                 assert entry
                 
                 if entry.kind == core.NODE_DIR:
-                    subwc = svn.wc.adm_open3(wc, self.abspath(subrelpath), 
+                    subwc = wc.WorkingCopy(wc, self.abspath(subrelpath), 
                                              False, 0, None)
                     try:
                         add_dir_to_inv(subrelpath, subwc, id)

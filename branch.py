@@ -26,6 +26,7 @@ from bzrlib.workingtree import WorkingTree
 
 import core
 from core import SubversionException
+import constants
 
 from commit import push
 from errors import NotSvnBranchPath
