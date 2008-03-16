@@ -30,7 +30,7 @@ from format import get_rich_root_format
 from scheme import TrunkBranchingScheme, NoBranchingScheme
 from tests import TestCaseWithSubversionRepository
 
-import svn.repos
+import repos
 
 class TestLoadDumpfile(TestCaseInTempDir):
     def test_loaddumpfile(self):
@@ -51,8 +51,8 @@ V 27
 PROPS-END
 """)
         load_dumpfile(dumpfile, "d")
-        repos = svn.repos.open("d")
-        fs = svn.repos.fs(repos)
+        repos = repos.Repository("d")
+        fs = repos.fs()
         self.assertEqual("6987ef2d-cd6b-461f-9991-6f1abef3bd59", 
                 svn.fs.get_uuid(fs))
 

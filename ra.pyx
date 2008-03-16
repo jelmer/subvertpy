@@ -175,10 +175,10 @@ cdef extern from "svn_ra.h":
                            long revision,
                            int start_empty,
                            char *lock_token,
-                           apr_pool_t *pool)
+						   apr_pool_t *pool) except *
 
         svn_error_t *(*delete_path)(void *report_baton, 
-                char *path, apr_pool_t *pool)
+                char *path, apr_pool_t *pool) except *
 
         svn_error_t *(*link_path)(void *report_baton,
                                 char *path,
@@ -186,11 +186,11 @@ cdef extern from "svn_ra.h":
                                 long revision,
                                 int start_empty,
                                 char *lock_token,
-                                apr_pool_t *pool)
+                                apr_pool_t *pool) except *
 
-        svn_error_t *(*finish_report)(void *report_baton, apr_pool_t *pool)
+        svn_error_t *(*finish_report)(void *report_baton, apr_pool_t *pool) except *
 
-        svn_error_t *(*abort_report)(void *report_baton, apr_pool_t *pool)
+        svn_error_t *(*abort_report)(void *report_baton, apr_pool_t *pool) except *
 
     ctypedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress, 
             apr_off_t total, void *baton, apr_pool_t *pool) except *

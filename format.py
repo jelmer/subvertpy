@@ -85,7 +85,7 @@ class SvnRemoteFormat(BzrDirFormat):
         """See BzrDir.initialize_on_transport()."""
         from transport import get_svn_ra_transport
         from bzrlib.transport.local import LocalTransport
-        import svn.repos
+        import repos
 
         if not isinstance(transport, LocalTransport):
             raise NotImplementedError(self.initialize, 
@@ -93,7 +93,7 @@ class SvnRemoteFormat(BzrDirFormat):
                 "non-local transports")
 
         local_path = transport._local_base.rstrip("/")
-        svn.repos.create(local_path, '', '', None, None)
+        repos.create(local_path)
         # All revision property changes
         revprop_hook = os.path.join(local_path, "hooks", "pre-revprop-change")
         open(revprop_hook, 'w').write("#!/bin/sh")
@@ -116,12 +116,12 @@ class SvnWorkingTreeDirFormat(BzrDirFormat):
 
     @classmethod
     def probe_transport(klass, transport):
-        import svn
         from bzrlib.transport.local import LocalTransport
+        import wc
         format = klass()
 
         if isinstance(transport, LocalTransport) and \
-            transport.has(svn.wc.get_adm_dir()):
+            transport.has(wc.get_adm_dir()):
             return format
 
         raise bzr_errors.NotBranchError(path=transport.base)

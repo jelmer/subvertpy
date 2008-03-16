@@ -23,7 +23,6 @@ import calendar
 import errors
 from scheme import BranchingScheme, guess_scheme_from_branch_path
 import sha
-import svn
 import time
 import urllib
 

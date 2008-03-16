@@ -22,7 +22,7 @@ from bzrlib.errors import (NotBranchError, NotLocalUrl, NoRepositoryPresent,
 from bzrlib.transport.local import LocalTransport
 
 from core import SubversionException
-import core, svn.repos
+import core 
 
 from errors import NoSvnRepositoryPresent
 from format import get_rich_root_format, SvnRemoteFormat

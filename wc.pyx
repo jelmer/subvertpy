@@ -126,6 +126,8 @@ cdef extern from "svn_wc.h":
                                            char **pristine_path,
                                            apr_pool_t *pool)
 
+    char *svn_wc_get_adm_dir(apr_pool_t *pool)
+
 def version():
     """Get libsvn_wc version information.
 
@@ -283,6 +285,13 @@ def is_wc_prop(name):
 
 def is_entry_prop(name):
     return svn_wc_is_entry_prop(name)
+
+def get_adm_dir():
+    cdef apr_pool_t *pool
+    pool = Pool(NULL)
+    ret = svn_wc_get_adm_dir(pool)
+    apr_pool_destroy(pool)
+    return ret
 
 def get_pristine_copy_path(path):
     cdef apr_pool_t *pool

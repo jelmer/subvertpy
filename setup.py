@@ -17,7 +17,7 @@ def apr_include_dir():
 
 def svn_include_dir():
     """Determine the Subversion header file location."""
-    dirs = ["/usr/include/subversion-1", "/usr/local/include/subversion-1"]
+    dirs = ["/usr/local/include/subversion-1", "/usr/include/subversion-1"]
     for dir in dirs:
         if os.path.isdir(dir):
             return dir

@@ -30,7 +30,6 @@ from bzrlib.workingtree import WorkingTree
 
 import os
 import format
-import svn.core
 from bzrlib.plugins.svn.errors import ChangesRootLHSHistory, MissingPrefix
 from time import sleep
 from commit import push
