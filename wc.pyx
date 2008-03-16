@@ -152,7 +152,8 @@ class Entry:
 
 cdef py_entry(svn_wc_entry_t *entry):
     ret = Entry(entry.name, entry.revision, entry.url, entry.repos, entry.uuid, entry.kind, entry.schedule, entry.copied, entry.deleted, entry.absent, entry.incomplete)
-    # FIXME: entry.copyfrom_url, entry.copyfrom_rev, entry.conflict_old, entry.conflict_new, entry.conflict_wrk, entry.prejfile, entry.text_time, entry.prop_time, entry.checksum, entry.cmt_rev, entry.cmt_date, entry.cmt_author, entry.lock_token, entry.lock_owner, entry.lock_comment, entry.lock_creation_date, entry.has_props, entry.has_prop_mods, entry.cachable_props, entry.present_props)
+    ret.cmt_rev = entry.cmt_rev
+    # FIXME: entry.copyfrom_url, entry.copyfrom_rev, entry.conflict_old, entry.conflict_new, entry.conflict_wrk, entry.prejfile, entry.text_time, entry.prop_time, entry.checksum, entry.cmt_date, entry.cmt_author, entry.lock_token, entry.lock_owner, entry.lock_comment, entry.lock_creation_date, entry.has_props, entry.has_prop_mods, entry.cachable_props, entry.present_props)
     return ret
 
 cdef class WorkingCopy:
@@ -233,7 +234,7 @@ cdef class WorkingCopy:
         cdef svn_prop_t *el
         temp_pool = Pool(self.pool)
         check_error(svn_wc_get_prop_diffs(&propchanges, &original_props, 
-                    path, self.adm, self.pool))
+                    path, self.adm, temp_pool))
         py_propchanges = []
         for i in range(propchanges.nelts):
             el = <svn_prop_t *>propchanges.elts[i]
@@ -244,7 +245,7 @@ cdef class WorkingCopy:
             apr_hash_this(idx, <void **>&key, &klen, <void **>&string)
             py_orig_props[key] = PyString_FromStringAndSize(string.data, string.len)
             idx = apr_hash_next(idx)
-        apr_pool_destroy(self.pool)
+        apr_pool_destroy(temp_pool)
         return (py_propchanges, py_orig_props)
 
     def close(self):
@@ -253,7 +254,7 @@ cdef class WorkingCopy:
             self.adm = NULL
 
     def __dealloc__(self):
-        self.close()
+        apr_pool_destroy(self.pool)
 
 
 def revision_status(wc_path, trail_url=None, committed=False, cancel_func=None):

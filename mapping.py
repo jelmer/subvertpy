@@ -20,6 +20,7 @@ from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
 
 import calendar
+import core
 import errors
 from scheme import BranchingScheme, guess_scheme_from_branch_path
 import sha
@@ -154,7 +155,7 @@ def parse_svn_revprops(svn_revprops, rev):
             pass
 
     if svn_revprops.has_key(constants.PROP_REVISION_DATE):
-        rev.timestamp = 1.0 * core.secs_from_timestr(svn_revprops[constants.PROP_REVISION_DATE], None)
+        rev.timestamp = core.time_from_cstring(svn_revprops[constants.PROP_REVISION_DATE]) / 1000000.0
     else:
         rev.timestamp = 0.0 # FIXME: Obtain repository creation time
     rev.timezone = None
