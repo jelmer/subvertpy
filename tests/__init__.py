@@ -26,6 +26,7 @@ from bzrlib.trace import mutter
 from bzrlib.urlutils import local_path_to_url
 from bzrlib.workingtree import WorkingTree
 
+import constants
 import repos, wc, client
 
 class TestCaseWithSubversionRepository(TestCaseInTempDir):
@@ -140,12 +141,16 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         """
         self.client_ctx.add(relpath, recursive, False, False)
 
-    def client_log(self, path, start_revnum=None, stop_revnum=None):
+    def client_log(self, path, start_revnum=0, stop_revnum="HEAD"):
         assert isinstance(path, str)
         ret = {}
-        def rcvr(orig_paths, rev, author, date, message, pool):
-            ret[rev] = (orig_paths, author, date, message)
-        self.client_ctx.log([path], start_revnum, stop_revnum, True, True, rcvr)
+        def rcvr(orig_paths, rev, revprops):
+            ret[rev] = (orig_paths, 
+                        revprops.get(constants.PROP_REVISION_AUTHOR),
+                        revprops.get(constants.PROP_REVISION_DATE),
+                        revprops.get(constants.PROP_REVISION_LOG))
+        self.client_ctx.log([path], rcvr, None, start_revnum, stop_revnum, 
+                            True, True)
         return ret
 
     def client_delete(self, relpath):

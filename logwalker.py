@@ -249,9 +249,9 @@ class LogWalker(object):
         assert ft == core.NODE_DIR
 
         class DirLister:
-            def __init__(self, path, files):
+            def __init__(self, base, files):
                 self.files = files
-                self.path = path
+                self.base = base
 
             def change_prop(self, name, value):
                 pass
@@ -259,13 +259,13 @@ class LogWalker(object):
             def add_directory(self, path):
                 """See Editor.add_directory()."""
                 self.files.append(urlutils.join(self.base, path))
-                return DirLister(path, self.files)
+                return DirLister(self.base, self.files)
 
             def add_file(self, path):
                 self.files.append(urlutils.join(self.base, path))
                 return FileLister()
 
-            def close(self, id):
+            def close(self):
                 pass
 
         class FileLister:
@@ -278,7 +278,7 @@ class LogWalker(object):
             def apply_textdelta(self, base_checksum=None):
                 pass
 
-            def close(self, checksum):
+            def close(self, checksum=None):
                 pass
 
         class TreeLister:
@@ -292,7 +292,7 @@ class LogWalker(object):
 
             def open_root(self, revnum):
                 """See Editor.open_root()."""
-                return DirLister(path, self.files)
+                return DirLister(self.base, self.files)
 
             def close(self, checksum=None):
                 pass
@@ -302,14 +302,11 @@ class LogWalker(object):
 
         editor = TreeLister(path)
         old_base = transport.base
-        try:
-            root_repos = transport.get_svn_repos_root()
-            transport.reparent(urlutils.join(root_repos, path))
-            reporter = transport.do_update(revnum, True, editor)
-            reporter.set_path("", revnum, True, None)
-            reporter.finish_report()
-        finally:
-            transport.reparent(old_base)
+        root_repos = transport.get_svn_repos_root()
+        reporter = transport.do_switch(revnum, True, 
+                urlutils.join(root_repos, path), editor)
+        reporter.set_path("", 0, True, None)
+        reporter.finish_report()
         return editor.files
 
     def get_previous(self, path, revnum):

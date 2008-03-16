@@ -28,6 +28,7 @@ cdef extern from "svn_version.h":
 cdef extern from "svn_error.h":
     ctypedef struct svn_error_t:
         apr_status_t apr_err
+        svn_error_t *child
         char *message
         char *file
         char *line

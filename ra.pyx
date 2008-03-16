@@ -600,10 +600,13 @@ cdef svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *
         # Signals all delta windows have been received
         Py_DECREF(fn)
         return NULL
+    if fn is None:
+        # User doesn't care about deltas
+        return NULL
     ops = []
     for i in range(window.num_ops):
         ops.append((window.ops[i].action_code, window.ops[i].offset, window.ops[i].length))
-    fn(window.sview_offset, window.sview_len, window.tview_len, window.src_ops, ops, PyString_FromStringAndSize(window.new_data.data, window.new_data.len))
+    fn((window.sview_offset, window.sview_len, window.tview_len, window.src_ops, ops, PyString_FromStringAndSize(window.new_data.data, window.new_data.len)))
     return NULL
     
 

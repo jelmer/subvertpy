@@ -104,7 +104,7 @@ cdef extern from "svn_client.h":
                    svn_boolean_t recurse,
                    svn_boolean_t keep_locks,
                    svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool) except *
 
     svn_error_t *svn_client_delete2(svn_commit_info_t **commit_info_p,
                    apr_array_header_t *paths,
@@ -169,7 +169,7 @@ cdef extern from "svn_client.h":
                 svn_log_message_receiver_t receiver,
                 receiver_baton,
                 svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+                apr_pool_t *pool) except *
 
     svn_error_t *svn_client_propget2(apr_hash_t **props,
                     char *propname,

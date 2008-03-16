@@ -26,3 +26,4 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
 cdef svn_stream_t *new_py_stream(apr_pool_t *pool, object py)
 cdef svn_stream_t *string_stream(apr_pool_t *pool, text)
 cdef prop_hash_to_dict(apr_hash_t *)
+cdef svn_error_t *py_svn_error(exc)

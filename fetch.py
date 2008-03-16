@@ -359,13 +359,12 @@ class FileBuildEditor:
         self.file_stream = None
 
     def apply_textdelta(self, base_checksum=None):
-        actual_checksum = md5.new(self.file_data).hexdigest(),
+        actual_checksum = md5.new(self.file_data).hexdigest()
         assert (base_checksum is None or base_checksum == actual_checksum,
             "base checksum mismatch: %r != %r" % (base_checksum, 
                                                   actual_checksum))
         self.file_stream = StringIO()
-        return apply_txdelta_handler(StringIO(self.file_data), 
-                                     self.file_stream)
+        return apply_txdelta_handler(self.file_data, self.file_stream)
 
     def change_prop(self, name, value):
         if name == constants.PROP_EXECUTABLE: 

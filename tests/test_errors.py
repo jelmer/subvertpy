@@ -21,7 +21,7 @@ from bzrlib.tests import TestCase
 
 from errors import (convert_svn_error, convert_error, InvalidPropertyValue, 
                     InvalidSvnBranchPath, NotSvnBranchPath)
-from constants import ERR_UNKNOWN_HOSTNAME
+import constants
 
 from core import SubversionException
 
@@ -64,7 +64,7 @@ class TestConvertError(TestCase):
         self.assertIsInstance(convert_error(SubversionException("Unexpected end of stream", constants.ERR_INCOMPLETE_DATA)), UnexpectedEndOfContainerError)
 
     def test_convert_unknown_hostname(self):
-        self.assertIsInstance(convert_error(SubversionException("Unknown hostname 'bla'", SVN_ERR_UNKNOWN_HOSTNAME)), ConnectionError)
+        self.assertIsInstance(convert_error(SubversionException("Unknown hostname 'bla'", constants.ERR_UNKNOWN_HOSTNAME)), ConnectionError)
 
     def test_not_implemented(self):
         self.assertIsInstance(convert_error(SubversionException("Remote server doesn't support ...", constants.ERR_RA_NOT_IMPLEMENTED)), NotImplementedError)

@@ -88,7 +88,7 @@ class DirectoryTreeEditor:
         file_id, revision_id = self.tree.id_map[path]
         ie = self.tree._inventory.add_path(path, 'directory', file_id)
         ie.revision = revision_id
-        return DirectoryTreeEditor(self.editor, file_id)
+        return DirectoryTreeEditor(self.tree, file_id)
 
     def change_prop(self, name, value):
         from mapping import (SVN_PROP_BZR_ANCESTRY, 
@@ -108,11 +108,11 @@ class DirectoryTreeEditor:
             if self.file_id != self.tree._inventory.root.file_id:
                 mutter('%r set on non-root dir!' % name)
                 return
-        elif name in (SVN_PROP_ENTRY_COMMITTED_DATE,
-                      SVN_PROP_ENTRY_LAST_AUTHOR,
-                      SVN_PROP_ENTRY_LOCK_TOKEN,
-                      SVN_PROP_ENTRY_UUID,
-                      SVN_PROP_EXECUTABLE):
+        elif name in (constants.PROP_ENTRY_COMMITTED_DATE,
+                      constants.PROP_ENTRY_LAST_AUTHOR,
+                      constants.PROP_ENTRY_LOCK_TOKEN,
+                      constants.PROP_ENTRY_UUID,
+                      constants.PROP_EXECUTABLE):
             pass
         elif name.startswith(constants.PROP_WC_PREFIX):
             pass
@@ -198,7 +198,7 @@ class FileTreeEditor:
 
     def apply_textdelta(self, base_checksum=None):
         self.file_stream = StringIO()
-        return apply_txdelta_handler(StringIO(""), self.file_stream)
+        return apply_txdelta_handler("", self.file_stream)
 
 
 class SvnBasisTree(RevisionTree):

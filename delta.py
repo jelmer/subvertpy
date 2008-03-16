@@ -15,11 +15,28 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Subversion delta operations."""
 
-def apply_txdelta_handler(src_stream, target_stream):
-    assert hasattr(src_stream, 'read')
-    assert hasattr(target_stream, 'write')
+def apply_txdelta_handler(sbuf, target_stream):
+    def apply_window(window):
+        (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
+        sview = sbuf[sview_offset:sview_offset+sview_len]
+        tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
+        assert len(tview) == tview_len
+        target_stream.write(tview)
+    return apply_window
 
-    def wrapper(*args):
-        print args
+def txdelta_apply_ops(src_ops, ops, new_data, sview):
+    tview = ""
+    for (action, offset, length) in ops:
+        if action == 0:
+            # Copy from source area.
+            assert offset + length <= sview_len
+            tview += sview[offset:offset+length]
+        elif action == 1:
+            for i in xrange(length):
+                tview += tview[offset+i]
+        elif action == 2:
+            tview += new_data[offset:offset+length]
+        else:
+            raise Exception("Invalid delta instruction code")
 
-    return wrapper
+    return tview

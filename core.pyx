@@ -19,6 +19,7 @@ from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t, apr_size_
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 from apr cimport apr_hash_index_t, apr_hash_this, apr_hash_first, apr_hash_next
+import constants
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_stream_set_read, svn_stream_set_write, svn_stream_set_close, svn_stream_from_stringbuf, svn_stream_create
 from types cimport svn_stringbuf_t, svn_stringbuf_ncreate, svn_string_t
@@ -28,17 +29,23 @@ cdef extern from "Python.h":
     void Py_DECREF(object)
     object PyString_FromStringAndSize(char *, unsigned long)
     char *PyString_AS_STRING(object)
-	
+    
 cdef extern from "string.h":
     ctypedef unsigned long size_t 
     void *memcpy(void *dest, void *src, size_t len)
 
 apr_initialize()
 
+cdef svn_error_t *py_svn_error(exc):
+    cdef svn_error_t *ret
+    msg = "Python exception occurred: " + str(exc)
+    ret = svn_error_create(424242, NULL, msg)
+    return ret
+
 cdef svn_error_t *py_cancel_func(cancel_baton):
     if cancel_baton is not None:
         if cancel_baton():
-            return svn_error_create(200015, NULL, NULL) # cancelled
+            return svn_error_create(constants.ERR_CANCELLED, NULL, NULL)
     return NULL
 
 class SubversionException(Exception):
@@ -163,6 +170,7 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
     if date != NULL:
         revprops[PROP_REVISION_DATE] = date
     baton(py_changed_paths, revision, revprops)
+    return NULL
 
 cdef svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length):
     self = <object>baton
