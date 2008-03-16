@@ -59,3 +59,7 @@ PROP_ENTRY_COMMITTED_REV = 'svn:entry:committed-rev'
 PROP_ENTRY_LAST_AUTHOR = 'svn:entry:last-author'
 PROP_ENTRY_LOCK_TOKEN = 'svn:entry:lock-token'
 PROP_ENTRY_UUID = 'svn:entry:uuid'
+
+PROP_REVISION_LOG = "svn:log"
+PROP_REVISION_AUTHOR = "svn:author"
+PROP_REVISION_DATE = "svn:date"

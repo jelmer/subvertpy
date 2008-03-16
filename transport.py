@@ -71,93 +71,6 @@ def bzr_to_svn_url(url):
     return url.rstrip('/')
 
 
-class Editor:
-    """Simple object wrapper around the Subversion delta editor interface."""
-    def __init__(self, transport, (editor, editor_baton)):
-        self.editor = editor
-        self.editor_baton = editor_baton
-        self.recent_baton = []
-        self._transport = transport
-
-    @convert_svn_error
-    def open_root(self, base_revnum):
-        assert self.recent_baton == [], "root already opened"
-        baton = svn.delta.editor_invoke_open_root(self.editor, 
-                self.editor_baton, base_revnum)
-        self.recent_baton.append(baton)
-        return baton
-
-    @convert_svn_error
-    def close_directory(self, baton, *args, **kwargs):
-        assert self.recent_baton.pop() == baton, \
-                "only most recently opened baton can be closed"
-        svn.delta.editor_invoke_close_directory(self.editor, baton, *args, **kwargs)
-
-    @convert_svn_error
-    def close(self):
-        assert self.recent_baton == []
-        svn.delta.editor_invoke_close_edit(self.editor, self.editor_baton)
-
-    @convert_svn_error
-    def apply_textdelta(self, baton, *args, **kwargs):
-        assert self.recent_baton[-1] == baton
-        return svn.delta.editor_invoke_apply_textdelta(self.editor, baton,
-                *args, **kwargs)
-
-    @convert_svn_error
-    def change_dir_prop(self, baton, name, value, pool=None):
-        assert self.recent_baton[-1] == baton
-        return svn.delta.editor_invoke_change_dir_prop(self.editor, baton, 
-                                                       name, value, pool)
-
-    @convert_svn_error
-    def delete_entry(self, *args, **kwargs):
-        return svn.delta.editor_invoke_delete_entry(self.editor, *args, **kwargs)
-
-    @convert_svn_error
-    def add_file(self, path, parent_baton, *args, **kwargs):
-        assert self.recent_baton[-1] == parent_baton
-        baton = svn.delta.editor_invoke_add_file(self.editor, path, 
-            parent_baton, *args, **kwargs)
-        self.recent_baton.append(baton)
-        return baton
-
-    @convert_svn_error
-    def open_file(self, path, parent_baton, *args, **kwargs):
-        assert self.recent_baton[-1] == parent_baton
-        baton = svn.delta.editor_invoke_open_file(self.editor, path, 
-                                                 parent_baton, *args, **kwargs)
-        self.recent_baton.append(baton)
-        return baton
-
-    @convert_svn_error
-    def change_file_prop(self, baton, name, value, pool=None):
-        assert self.recent_baton[-1] == baton
-        svn.delta.editor_invoke_change_file_prop(self.editor, baton, name, 
-                                                 value, pool)
-
-    @convert_svn_error
-    def close_file(self, baton, *args, **kwargs):
-        assert self.recent_baton.pop() == baton
-        svn.delta.editor_invoke_close_file(self.editor, baton, *args, **kwargs)
-
-    @convert_svn_error
-    def add_directory(self, path, parent_baton, *args, **kwargs):
-        assert self.recent_baton[-1] == parent_baton
-        baton = svn.delta.editor_invoke_add_directory(self.editor, path, 
-            parent_baton, *args, **kwargs)
-        self.recent_baton.append(baton)
-        return baton
-
-    @convert_svn_error
-    def open_directory(self, path, parent_baton, *args, **kwargs):
-        assert self.recent_baton[-1] == parent_baton
-        baton = svn.delta.editor_invoke_open_directory(self.editor, path, 
-            parent_baton, *args, **kwargs)
-        self.recent_baton.append(baton)
-        return baton
-
-
 class SvnRaTransport(Transport):
     """Fake transport for Subversion-related namespaces.
     
@@ -235,7 +148,7 @@ class SvnRaTransport(Transport):
         return self._ra.get_latest_revnum()
 
     @convert_svn_error
-    def do_switch(self, switch_rev, recurse, switch_url, editor, pool=None):
+    def do_switch(self, switch_rev, recurse, switch_url, editor):
         self._open_real_transport()
         self.mutter('svn switch -r %d -> %r' % (switch_rev, switch_url))
         return self._ra.do_switch(switch_rev, "", recurse, switch_url, editor)
@@ -281,7 +194,7 @@ class SvnRaTransport(Transport):
         self._backing_url = self.svn_url
 
     @convert_svn_error
-    def get_dir(self, path, revnum, pool=None, kind=False):
+    def get_dir(self, path, revnum, kind=False):
         self.mutter("svn ls -r %d '%r'" % (revnum, path))
         assert len(path) == 0 or path[0] != "/"
         path = self._request_path(path)
@@ -329,7 +242,7 @@ class SvnRaTransport(Transport):
 
     @convert_svn_error
     def unlock(self, locks, break_lock=False):
-        def lock_cb(baton, path, do_lock, lock, ra_err, pool):
+        def lock_cb(baton, path, do_lock, lock, ra_err):
             pass
         return self._ra.unlock(locks, break_lock, lock_cb)
 
@@ -337,7 +250,7 @@ class SvnRaTransport(Transport):
     def lock_write(self, path_revs, comment=None, steal_lock=False):
         return self.PhonyLock() # FIXME
         tokens = {}
-        def lock_cb(baton, path, do_lock, lock, ra_err, pool):
+        def lock_cb(baton, path, do_lock, lock, ra_err):
             tokens[path] = lock
         self._ra.lock(path_revs, comment, steal_lock, lock_cb)
         return SvnLock(self, tokens)

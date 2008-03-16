@@ -21,7 +21,7 @@ from apr cimport apr_file_t, apr_off_t, apr_size_t
 from apr cimport apr_initialize
 from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array
 from core import SubversionException
-from core import SVN_PROP_REVISION_LOG, SVN_PROP_REVISION_AUTHOR, SVN_PROP_REVISION_DATE
+from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
 from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_stream_t, svn_filesize_t, svn_dirent_t
 
@@ -159,11 +159,11 @@ cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revi
             idx = apr_hash_next(idx)
     revprops = {}    
     if message != NULL:
-        revprops[SVN_PROP_REVISION_LOG] = message
+        revprops[PROP_REVISION_LOG] = message
     if author != NULL:
-        revprops[SVN_PROP_REVISION_AUTHOR] = author
+        revprops[PROP_REVISION_AUTHOR] = author
     if date != NULL:
-        revprops[SVN_PROP_REVISION_DATE] = date
+        revprops[PROP_REVISION_DATE] = date
     baton(py_changed_paths, revision, revprops)
 
 cdef extern from "svn_ra.h":
@@ -175,7 +175,7 @@ cdef extern from "svn_ra.h":
                            long revision,
                            int start_empty,
                            char *lock_token,
-						   apr_pool_t *pool) except *
+                           apr_pool_t *pool) except *
 
         svn_error_t *(*delete_path)(void *report_baton, 
                 char *path, apr_pool_t *pool) except *
@@ -199,24 +199,24 @@ cdef extern from "svn_ra.h":
                                                   char *relpath,
                                                   char *name,
                                                   svn_string_t **value,
-                                                  apr_pool_t *pool)
+                                                  apr_pool_t *pool) except *
 
     ctypedef svn_error_t *(*svn_ra_set_wc_prop_func_t)(void *baton,
                                                   char *path,
                                                   char *name,
                                                   svn_string_t *value,
-                                                  apr_pool_t *pool)
+                                                  apr_pool_t *pool) except *
 
     ctypedef svn_error_t *(*svn_ra_push_wc_prop_func_t)(void *baton,
                                                    char *path,
                                                    char *name,
                                                    svn_string_t *value,
-                                                   apr_pool_t *pool)
+                                                   apr_pool_t *pool) except *
 
     ctypedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
                                                           char *path,
                                                           char *name,
-                                                          apr_pool_t *pool)
+                                                          apr_pool_t *pool) except *
 
     ctypedef struct svn_ra_callbacks2_t:
         svn_error_t *(*open_tmp_file)(apr_file_t **fp, 
@@ -344,7 +344,7 @@ cdef extern from "svn_ra.h":
                                                int do_lock,
                                                svn_lock_t *lock,
                                                svn_error_t *ra_err,
-                                               apr_pool_t *pool)
+                                               apr_pool_t *pool) except *
 
     svn_error_t * svn_ra_unlock(svn_ra_session_t *session,
                   apr_hash_t *path_tokens,
@@ -364,7 +364,7 @@ cdef extern from "svn_ra.h":
 
 cdef svn_error_t *py_lock_func (baton, char *path, int do_lock, 
                                 svn_lock_t *lock, svn_error_t *ra_err, 
-                                apr_pool_t *pool):
+                                apr_pool_t *pool) except *:
     py_ra_err = None
     if ra_err != NULL:
         py_ra_err = SubversionException(ra_err.apr_err, ra_err.message)
@@ -754,7 +754,7 @@ cdef class RemoteAccess:
 
     def get_log(self, callback, paths, start, end, limit=0, 
                 discover_changed_paths=True, strict_node_history=True,
-                revprops=[SVN_PROP_REVISION_LOG,SVN_PROP_REVISION_AUTHOR,SVN_PROP_REVISION_DATE]):
+                revprops=[PROP_REVISION_LOG,PROP_REVISION_AUTHOR,PROP_REVISION_DATE]):
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(NULL)
         check_error(svn_ra_get_log(self.ra, 
@@ -815,10 +815,18 @@ cdef class RemoteAccess:
     def rev_proplist(self, rev):
         cdef apr_pool_t *temp_pool
         cdef apr_hash_t *props
+        cdef apr_hash_index_t *idx
+        cdef char *key
+        cdef long klen
+        cdef svn_string_t *val
         temp_pool = Pool(self.pool)
         check_error(svn_ra_rev_proplist(self.ra, rev, &props, temp_pool))
         py_props = {}
-        # FIXME: Convert props to py_props
+        idx = apr_hash_first(temp_pool, props)
+        while idx:
+            apr_hash_this(idx, <void **>&key, &klen, <void **>&val)
+            py_props[key] = PyString_FromStringAndSize(val.data, val.len)
+            idx = apr_hash_next(idx)
         apr_pool_destroy(temp_pool)
         return py_props
 
@@ -837,7 +845,7 @@ cdef class RemoteAccess:
             for k, v in lock_tokens.items():
                 apr_hash_set(hash_lock_tokens, k, len(k), <char *>v)
         check_error(svn_ra_get_commit_editor2(self.ra, &editor, 
-            &edit_baton, revprops[SVN_PROP_REVISION_LOG], py_commit_callback, 
+            &edit_baton, revprops[PROP_REVISION_LOG], py_commit_callback, 
             commit_callback, hash_lock_tokens, keep_locks, temp_pool))
         apr_pool_destroy(temp_pool)
         py_editor = Editor()
@@ -935,7 +943,9 @@ cdef class RemoteAccess:
         cdef apr_pool_t *temp_pool
         cdef apr_hash_t *hash_path_tokens
         temp_pool = Pool(self.pool)
-        # FIXME: Convert path_tokens to a apr_hash
+        hash_path_tokens = apr_hash_make(temp_pool)
+        for k, v in path_tokens:
+            apr_hash_set(hash_path_tokens, k, len(k), <char *>v)
         check_error(svn_ra_unlock(self.ra, hash_path_tokens, break_lock,
                      py_lock_func, lock_func, temp_pool))
         apr_pool_destroy(temp_pool)

@@ -18,6 +18,7 @@ from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, sv
 from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
+from apr cimport apr_hash_index_t, apr_hash_this, apr_hash_first, apr_hash_next
 
 apr_initialize()
 
@@ -78,11 +79,6 @@ def time_from_cstring(data):
     return when
 
 
-SVN_PROP_REVISION_LOG = "svn:log"
-SVN_PROP_REVISION_AUTHOR = "svn:author"
-SVN_PROP_REVISION_DATE = "svn:date"
-
-
 cdef extern from "svn_config.h":
     svn_error_t *svn_config_get_config(apr_hash_t **cfg_hash,
                                        char *config_dir,
@@ -91,7 +87,11 @@ cdef extern from "svn_config.h":
 def get_config(config_dir=None):
     cdef apr_pool_t *pool
     cdef apr_hash_t *cfg_hash
+    cdef apr_hash_index_t *idx
     cdef char *c_config_dir
+    cdef char *key
+    cdef char *val
+    cdef long klen
     pool = Pool(NULL)
     if config_dir is None:
         c_config_dir = NULL
@@ -99,7 +99,11 @@ def get_config(config_dir=None):
         c_config_dir = config_dir
     check_error(svn_config_get_config(&cfg_hash, c_config_dir, pool))
     ret = {}
-    # FIXME: Convert cfghash to ret
+    idx = apr_hash_first(pool, cfg_hash)
+    while idx:
+        apr_hash_this(idx, <void **>&key, &klen, <void **>&val)
+        ret[key] = val
+        idx = apr_hash_next(idx)
     apr_pool_destroy(pool)
     return ret
 

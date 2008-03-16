@@ -19,7 +19,7 @@ def apply_txdelta_handler(src_stream, target_stream):
     assert hasattr(src_stream, 'read')
     assert hasattr(target_stream, 'write')
 
-    def wrapper(window):
-        print window
+    def wrapper(*args):
+        print args
 
     return wrapper

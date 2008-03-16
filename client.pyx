@@ -26,6 +26,7 @@ apr_initialize()
 cdef extern from "Python.h":
     void Py_INCREF(object)
     void Py_DECREF(object)
+    object PyString_FromStringAndSize(char *, unsigned long)
 
 cdef extern from "svn_opt.h":
     ctypedef enum svn_opt_revision_kind:
@@ -134,6 +135,29 @@ cdef extern from "svn_client.h":
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 
+    svn_error_t *svn_client_revprop_get(char *propname,
+                       svn_string_t **propval,
+                       char *URL,
+                       svn_opt_revision_t *revision,
+                       svn_revnum_t *set_rev,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+
+    svn_error_t *svn_client_revprop_set(char *propname,
+                       svn_string_t *propval,
+                       char *URL,
+                       svn_opt_revision_t *revision,
+                       svn_revnum_t *set_rev,
+                       svn_boolean_t force,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+
+    svn_error_t *svn_client_revprop_list(apr_hash_t **props,
+                        char *URL,
+                        svn_opt_revision_t *revision,
+                        svn_revnum_t *set_rev,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool)
      
 cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool) except *:
     py_commit_items = []
@@ -227,3 +251,23 @@ cdef class Client:
                 string_list_to_apr_array(self.pool, paths), &c_rev, 
                 recurse, ignore_externals, self.client, self.pool))
         # FIXME: Convert and return result_revs
+
+    def revprop_get(self,propname, propval, url, rev=None):
+        cdef svn_revnum_t set_rev
+        cdef svn_opt_revision_t c_rev
+        cdef svn_string_t *c_val
+        to_opt_revision(rev, &c_rev)
+        check_error(svn_client_revprop_get(propname, &c_val, url, 
+                    &c_rev, &set_rev, self.client, self.pool))
+        return (PyString_FromStringAndSize(c_val.data, c_val.len), set_rev)
+
+    def revprop_set(self,propname, propval, url, rev=None, force=False):
+        cdef svn_revnum_t set_rev
+        cdef svn_opt_revision_t c_rev
+        cdef svn_string_t c_val
+        to_opt_revision(rev, &c_rev)
+        c_val.data = propval
+        c_val.len = len(propval)
+        check_error(svn_client_revprop_set(propname, &c_val, url, 
+                    &c_rev, &set_rev, force, self.client, self.pool))
+        return set_rev
