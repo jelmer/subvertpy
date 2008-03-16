@@ -393,14 +393,32 @@ class SvnCommitBuilder(RootCommitBuilder):
         """Finish the commit.
 
         """
-        def done(revision_data):
+        def done(revision, author, date):
             """Callback that is called by the Subversion commit editor 
             once the commit finishes.
-
-            :param revision_data: Revision metadata
             """
-            self.revision_metadata = revision_data
-        
+
+            # Make sure the logwalker doesn't try to use ra 
+            # during checkouts...
+            self.repository._log.fetch_revisions(revision)
+
+            revid = self.branch.generate_revision_id(revision)
+            self.mutter('commit %d finished. author: %r, date: %r, revid: %r' % 
+               (revision, author, date, revid))
+
+            assert self._new_revision_id is None or self._new_revision_id == revid
+
+            if self.repository.get_config().get_override_svn_revprops():
+                set_svn_revprops(self.repository.transport, revision, {
+                    constants.PROP_REVISION_AUTHOR: self._committer,
+                    constants.PROP_REVISION_DATE: svn_time_to_cstring(1000000*self._timestamp)})
+
+            try:
+                set_svn_revprops(self.repository.transport, revision, 
+                             self._svn_revprops) 
+            except RevpropChangeFailed:
+                pass # Ignore for now
+
         bp_parts = self.branch.get_branch_path().split("/")
         repository_latest_revnum = self.repository.transport.get_latest_revnum()
         lock = self.repository.transport.lock_write(".")
@@ -440,7 +458,6 @@ class SvnCommitBuilder(RootCommitBuilder):
         try:
             existing_bp_parts = _check_dirs_exist(self.repository.transport, 
                                               bp_parts, -1)
-            self.revision_metadata = None
             try:
                 self.editor = self.repository.transport.get_commit_editor(
                         self._svn_revprops, done, None, False)
@@ -485,32 +502,6 @@ class SvnCommitBuilder(RootCommitBuilder):
             self.editor.close()
         finally:
             lock.unlock()
-
-        assert self.revision_metadata is not None
-
-        # Make sure the logwalker doesn't try to use ra 
-        # during checkouts...
-        self.repository._log.fetch_revisions(self.revision_metadata.revision)
-
-        revid = self.branch.generate_revision_id(self.revision_metadata.revision)
-
-        assert self._new_revision_id is None or self._new_revision_id == revid
-
-        self.mutter('commit %d finished. author: %r, date: %r, revid: %r' % 
-               (self.revision_metadata.revision, self.revision_metadata.author, 
-                   self.revision_metadata.date, revid))
-
-        if self.repository.get_config().get_override_svn_revprops():
-            set_svn_revprops(self.repository.transport, 
-                 self.revision_metadata.revision, {
-                constants.PROP_REVISION_AUTHOR: self._committer,
-                constants.PROP_REVISION_DATE: svn_time_to_cstring(1000000*self._timestamp)})
-
-        try:
-            set_svn_revprops(self.repository.transport, self.revision_metadata.revision, 
-                         self._svn_revprops) 
-        except RevpropChangeFailed:
-            pass # Ignore for now
 
         return revid
 

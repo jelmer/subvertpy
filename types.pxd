@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from apr cimport apr_status_t, apr_pool_t, apr_time_t, apr_array_header_t, apr_hash_t
+from apr cimport apr_status_t, apr_pool_t, apr_time_t, apr_array_header_t, apr_hash_t, apr_size_t
 
 cdef extern from "svn_version.h":
     ctypedef struct svn_version_t:
@@ -24,9 +24,6 @@ cdef extern from "svn_version.h":
         int patch
         char *tag
 
-cdef extern from "svn_io.h":
-    ctypedef struct svn_stream_t
-    ctypedef unsigned long long svn_filesize_t
 
 cdef extern from "svn_error.h":
     ctypedef struct svn_error_t:
@@ -39,6 +36,7 @@ cdef extern from "svn_error.h":
 
 cdef extern from "svn_types.h":
     ctypedef int svn_boolean_t
+    ctypedef unsigned long long svn_filesize_t
     ctypedef svn_error_t *(*svn_cancel_func_t)(cancel_baton)
     ctypedef long svn_revnum_t
     ctypedef struct svn_lock_t:
@@ -76,7 +74,25 @@ cdef extern from "svn_string.h":
     ctypedef struct svn_string_t:
         char *data
         long len
+    ctypedef struct svn_stringbuf_t:
+        apr_pool_t *pool
+        char *data
+        apr_size_t len
+        apr_size_t blocksize
     svn_string_t *svn_string_ncreate(char *bytes, long size, apr_pool_t *pool)
+    svn_stringbuf_t *svn_stringbuf_ncreate(char *bytes, apr_size_t size, apr_pool_t *pool)
+
+
+cdef extern from "svn_io.h":
+    ctypedef struct svn_stream_t
+    ctypedef svn_error_t *(*svn_read_fn_t)(void *baton, char *buffer, apr_size_t *len) 
+    ctypedef svn_error_t *(*svn_write_fn_t)(void *baton, char *data, apr_size_t *len)
+    ctypedef svn_error_t *(*svn_close_fn_t)(void *baton) 
+    void svn_stream_set_read(svn_stream_t *stream, svn_read_fn_t read_fn)
+    void svn_stream_set_write(svn_stream_t *stream, svn_write_fn_t write_fn)
+    void svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
+    svn_stream_t *svn_stream_from_stringbuf(svn_stringbuf_t *str, apr_pool_t *pool)
+    svn_stream_t *svn_stream_create(void *baton, apr_pool_t *pool)
 
 cdef extern from "svn_props.h":
     ctypedef struct svn_prop_t:

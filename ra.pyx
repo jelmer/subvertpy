@@ -23,7 +23,9 @@ from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn
 from core import SubversionException
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
-from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_stream_t, svn_filesize_t, svn_dirent_t, svn_log_message_receiver_t
+from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_filesize_t, svn_dirent_t, svn_log_message_receiver_t
+from types cimport svn_stream_t, svn_stream_set_read, svn_stream_set_write, svn_stream_set_close, svn_stream_from_stringbuf, svn_stream_create
+from types cimport svn_stringbuf_t, svn_stringbuf_ncreate
 
 apr_initialize()
 
@@ -31,6 +33,12 @@ cdef extern from "Python.h":
     object PyString_FromStringAndSize(char *, unsigned long)
     void Py_INCREF(object)
     void Py_DECREF(object)
+    char *PyString_AS_STRING(object)
+
+
+cdef extern from "string.h":
+    ctypedef unsigned long size_t 
+    void *memcpy(void *dest, void *src, size_t len)
 
 cdef extern from "svn_delta.h":
     ctypedef enum svn_delta_action:
@@ -132,7 +140,7 @@ cdef extern from "svn_types.h":
     ctypedef svn_error_t *(*svn_commit_callback2_t) (svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *
 
 cdef svn_error_t *py_commit_callback(svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *:
-    baton(commit_info.revision, commit_info.date, commit_info.author, commit_info.post_commit_err)
+    baton(commit_info.revision, commit_info.date, commit_info.author)
 
 cdef extern from "svn_ra.h":
     svn_version_t *svn_ra_version()
@@ -1002,13 +1010,41 @@ def get_ssl_client_cert_file_provider():
 def get_ssl_client_cert_pw_file_provider():
     pass # FIXME
 
-cdef svn_stream_t *new_read_stream(object py):
-    return NULL #FIXME
+cdef svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length):
+    self = <object>baton
+    ret = self.read(length[0])
+    length[0] = len(ret)
+    memcpy(buffer, PyString_AS_STRING(ret), len(ret))
+    return NULL
+
+cdef svn_error_t *py_stream_write(void *baton, char *data, apr_size_t *len):
+    self = <object>baton
+    self.write(PyString_FromStringAndSize(data, len[0]))
+    return NULL
+
+cdef svn_error_t *py_stream_close(void *baton):
+    self = <object>baton
+    self.close()
+    Py_DECREF(self)
+
+cdef svn_stream_t *string_stream(apr_pool_t *pool, text):
+    cdef svn_stringbuf_t *buf
+    buf = svn_stringbuf_ncreate(text, len(text), pool)
+    return svn_stream_from_stringbuf(buf, pool)
+
+cdef svn_stream_t *new_py_stream(apr_pool_t *pool, object py):
+    cdef svn_stream_t *stream
+    Py_INCREF(py)
+    stream = svn_stream_create(<void *>py, pool)
+    svn_stream_set_read(stream, py_stream_read)
+    svn_stream_set_write(stream, py_stream_write)
+    svn_stream_set_close(stream, py_stream_close)
+    return stream
 
 def txdelta_send_stream(stream, TxDeltaWindowHandler handler):
     cdef unsigned char digest[16] 
     cdef apr_pool_t *pool
     pool = Pool(NULL)
-    check_error(svn_txdelta_send_stream(new_read_stream(stream), handler.txdelta, handler.txbaton, <unsigned char *>digest, pool))
+    check_error(svn_txdelta_send_stream(new_py_stream(pool, stream), handler.txdelta, handler.txbaton, <unsigned char *>digest, pool))
     apr_pool_destroy(pool)
     return PyString_FromStringAndSize(<char *>digest, 16)
