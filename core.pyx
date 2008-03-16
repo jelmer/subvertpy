@@ -25,7 +25,7 @@ cdef svn_error_t *py_cancel_func(cancel_baton):
     if cancel_baton is not None:
         if cancel_baton():
             return svn_error_create(200015, NULL, NULL) # cancelled
-    return svn_error_create(0, NULL, NULL)
+    return NULL
 
 class SubversionException(Exception):
     def __init__(self, num, msg):
