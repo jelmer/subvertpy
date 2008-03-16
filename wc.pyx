@@ -16,6 +16,7 @@
 
 from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_index_t, apr_array_header_t
 from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t, svn_prop_t, svn_lock_t
+from ra cimport svn_ra_reporter2_t
 
 from core cimport check_error, Pool, py_cancel_func
 
@@ -211,6 +212,22 @@ cdef extern from "svn_wc.h":
                             svn_wc_notify_func2_t notify_func,
                             void *notify_baton,
                             apr_pool_t *pool)
+    
+    ctypedef struct svn_wc_traversal_info_t
+
+    svn_error_t *svn_wc_crawl_revisions2(char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_ra_reporter2_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_boolean_t recurse,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool)
+
+    svn_wc_traversal_info_t *svn_wc_init_traversal_info(apr_pool_t *pool)
 
 def version():
     """Get libsvn_wc version information.
@@ -392,6 +409,20 @@ cdef class WorkingCopy:
                                 temp_pool))
         apr_pool_destroy(temp_pool)
 
+    def crawl_revisions(self, path, reporter, restore_files=True, 
+                        recurse=True, use_commit_times=True,
+                        notify_func=None):
+        cdef apr_pool_t *temp_pool
+        cdef svn_wc_traversal_info_t *traversal_info
+        temp_pool = Pool(self.pool)
+        traversal_info = svn_wc_init_traversal_info(temp_pool)
+        check_error(svn_wc_crawl_revisions2(path, self.adm, 
+                    &py_ra_reporter, <void *>reporter, 
+                    restore_files, recurse, use_commit_times, 
+                    py_wc_notify_func, <void *>notify_func,
+                    traversal_info, temp_pool))
+        apr_pool_destroy(temp_pool)
+
     def close(self):
         if self.adm != NULL:
             svn_wc_adm_close(self.adm)
@@ -454,3 +485,36 @@ SCHEDULE_NORMAL = 0
 SCHEDULE_ADD = 1
 SCHEDULE_DELETE = 2
 SCHEDULE_REPLACE = 3
+
+
+cdef svn_error_t *py_ra_report_set_path(void *baton, char *path, long revision, int start_empty, char *lock_token, apr_pool_t *pool) except *:
+    self = <object>baton
+    self.set_path(path, revision, start_empty, lock_token)
+    return NULL
+
+cdef svn_error_t *py_ra_report_delete_path(void *baton, char *path, apr_pool_t *pool) except *:
+    self = <object>baton
+    self.delete_path(path)
+    return NULL
+
+cdef svn_error_t *py_ra_report_link_path(void *report_baton, char *path, char *url, long revision, int start_empty, char *lock_token, apr_pool_t *pool) except *:
+    self = <object>report_baton
+    self.link_path(path, url, revision, start_empty, lock_token)
+    return NULL
+
+cdef svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool) except *:
+    self = <object>baton
+    self.finish()
+    return NULL
+
+cdef svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool) except *:
+    self = <object>baton
+    self.abort()
+    return NULL
+
+cdef svn_ra_reporter2_t py_ra_reporter
+py_ra_reporter.finish_report = py_ra_report_finish
+py_ra_reporter.abort_report = py_ra_report_abort
+py_ra_reporter.link_path = py_ra_report_link_path
+py_ra_reporter.delete_path = py_ra_report_delete_path
+py_ra_reporter.set_path = py_ra_report_set_path

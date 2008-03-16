@@ -248,7 +248,40 @@ class LogWalker(object):
             return []
         assert ft == core.NODE_DIR
 
-        class TreeLister(svn.delta.Editor):
+        class DirLister:
+            def __init__(self, path, files):
+                self.files = files
+                self.path = path
+
+            def change_prop(self, name, value):
+                pass
+
+            def add_directory(self, path):
+                """See Editor.add_directory()."""
+                self.files.append(urlutils.join(self.base, path))
+                return DirLister(path, self.files)
+
+            def add_file(self, path):
+                self.files.append(urlutils.join(self.base, path))
+                return FileLister()
+
+            def close(self, id):
+                pass
+
+        class FileLister:
+            def __init__(self):
+                pass
+
+            def change_prop(self, name, value):
+                pass
+
+            def apply_textdelta(self, base_checksum=None):
+                pass
+
+            def close(self, checksum):
+                pass
+
+        class TreeLister:
             def __init__(self, base):
                 self.files = []
                 self.base = base
@@ -257,39 +290,16 @@ class LogWalker(object):
                 """See Editor.set_target_revision()."""
                 pass
 
-            def open_root(self, revnum, baton):
+            def open_root(self, revnum):
                 """See Editor.open_root()."""
-                return path
+                return DirLister(path, self.files)
 
-            def add_directory(self, path, parent_baton, copyfrom_path, copyfrom_revnum):
-                """See Editor.add_directory()."""
-                self.files.append(urlutils.join(self.base, path))
-                return path
-
-            def change_dir_prop(self, id, name, value):
+            def close(self, checksum=None):
                 pass
 
-            def change_file_prop(self, id, name, value):
+            def abort(self):
                 pass
 
-            def add_file(self, path, parent_id, copyfrom_path, copyfrom_revnum, baton):
-                self.files.append(urlutils.join(self.base, path))
-                return path
-
-            def close_dir(self, id):
-                pass
-
-            def close_file(self, path, checksum):
-                pass
-
-            def close_edit(self):
-                pass
-
-            def abort_edit(self):
-                pass
-
-            def apply_textdelta(self, file_id, base_checksum):
-                pass
         editor = TreeLister(path)
         old_base = transport.base
         try:

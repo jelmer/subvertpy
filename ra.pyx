@@ -138,29 +138,6 @@ cdef svn_error_t *py_commit_callback(svn_commit_info_t *commit_info, baton, apr_
 cdef extern from "svn_ra.h":
     svn_version_t *svn_ra_version()
 
-    ctypedef struct svn_ra_reporter2_t:
-        svn_error_t *(*set_path)(void *report_baton,
-                           char *path,
-                           long revision,
-                           int start_empty,
-                           char *lock_token,
-                           apr_pool_t *pool) except *
-
-        svn_error_t *(*delete_path)(void *report_baton, 
-                char *path, apr_pool_t *pool) except *
-
-        svn_error_t *(*link_path)(void *report_baton,
-                                char *path,
-                                char *url,
-                                long revision,
-                                int start_empty,
-                                char *lock_token,
-                                apr_pool_t *pool) except *
-
-        svn_error_t *(*finish_report)(void *report_baton, apr_pool_t *pool) except *
-
-        svn_error_t *(*abort_report)(void *report_baton, apr_pool_t *pool) except *
-
     ctypedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress, 
             apr_off_t total, void *baton, apr_pool_t *pool) except *
 
@@ -1005,3 +982,4 @@ def txdelta_send_stream(stream, TxDeltaWindowHandler handler):
     check_error(svn_txdelta_send_stream(new_py_stream(pool, stream), handler.txdelta, handler.txbaton, <unsigned char *>digest, pool))
     apr_pool_destroy(pool)
     return PyString_FromStringAndSize(<char *>digest, 16)
+

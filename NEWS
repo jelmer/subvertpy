@@ -1,5 +1,11 @@
 bzr-svn 0.4.9	UNRELEASED
 
+  CHANGES
+
+   * The Python-Subversion bindings are no longer necessary. Instead, 
+     bzr-svn now comes with its own Python bindings for the Subversion 
+	 libraries.
+
   FEATURES
 
    * Set revision properties when possible.
