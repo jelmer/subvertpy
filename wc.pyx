@@ -74,7 +74,7 @@ cdef extern from "svn_wc.h":
                                   svn_boolean_t write_lock,
                                   int depth,
                                   svn_cancel_func_t cancel_func,
-                                  object cancel_baton,
+                                  cancel_baton,
                                   apr_pool_t *pool)
     svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
     char *svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access)

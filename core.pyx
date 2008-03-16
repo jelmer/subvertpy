@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, svn_node_unknown, svn_node_none
+from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, svn_node_unknown, svn_node_none, svn_error_create
 from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
@@ -23,8 +23,9 @@ apr_initialize()
 
 cdef svn_error_t *py_cancel_func(cancel_baton):
     if cancel_baton is not None:
-        cancel_baton()
-    return NULL
+        if cancel_baton():
+            return svn_error_create(200015, NULL, NULL) # cancelled
+    return svn_error_create(0, NULL, NULL)
 
 class SubversionException(Exception):
     def __init__(self, num, msg):
@@ -38,8 +39,10 @@ cdef wrap_lock(svn_lock_t *lock):
 
 cdef check_error(svn_error_t *error):
     if error:
-        raise SubversionException(error.apr_err, error.message)
-
+        if error.message != NULL:
+            raise SubversionException(error.apr_err, error.message)
+        else:
+            raise SubversionException(error.apr_err, None)
 
 cdef apr_pool_t *Pool(apr_pool_t *parent):
     cdef apr_status_t status

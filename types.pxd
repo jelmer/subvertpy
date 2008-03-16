@@ -34,7 +34,8 @@ cdef extern from "svn_error.h":
         char *message
         char *file
         char *line
-
+    cdef svn_error_t *svn_error_create(apr_status_t apr_err, 
+                                       svn_error_t *child, char *message)
 
 cdef extern from "svn_types.h":
     ctypedef int svn_boolean_t
