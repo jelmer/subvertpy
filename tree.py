@@ -28,6 +28,7 @@ import urllib
 
 import constants
 import core, wc
+from delta import apply_txdelta_handler
 
 class SvnRevisionTree(RevisionTree):
     """A tree that existed in a historical Subversion revision."""
@@ -166,9 +167,9 @@ class FileTreeEditor:
     def close(self, checksum=None):
         file_id, revision_id = self.tree.id_map[self.path]
         if self.is_symlink:
-            ie = self.tree._inventory.add_path(path, 'symlink', file_id)
+            ie = self.tree._inventory.add_path(self.path, 'symlink', file_id)
         else:
-            ie = self.tree._inventory.add_path(path, 'file', file_id)
+            ie = self.tree._inventory.add_path(self.path, 'file', file_id)
         ie.revision = revision_id
 
         if self.file_stream:
@@ -195,7 +196,7 @@ class FileTreeEditor:
 
         self.file_stream = None
 
-    def apply_textdelta(self, file_id, base_checksum):
+    def apply_textdelta(self, base_checksum=None):
         self.file_stream = StringIO()
         return apply_txdelta_handler(StringIO(""), self.file_stream)
 
