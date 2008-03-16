@@ -68,7 +68,7 @@ class TreeBuildEditor:
         ie = self.tree._inventory.add_path("", 'directory', file_id)
         ie.revision = revision_id
         self.tree._inventory.revision_id = revision_id
-        return file_id
+        return DirectoryTreeEditor(self.tree, file_id)
 
     def close(self):
         pass
