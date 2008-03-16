@@ -25,3 +25,4 @@ cdef apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, object l)
 cdef svn_error_t *py_svn_log_wrapper(baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool) except *
 cdef svn_stream_t *new_py_stream(apr_pool_t *pool, object py)
 cdef svn_stream_t *string_stream(apr_pool_t *pool, text)
+cdef prop_hash_to_dict(apr_hash_t *)

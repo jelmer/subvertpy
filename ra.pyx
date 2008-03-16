@@ -19,7 +19,7 @@ from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, ap
 from apr cimport apr_array_header_t, apr_array_make
 from apr cimport apr_file_t, apr_off_t, apr_size_t
 from apr cimport apr_initialize
-from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn_log_wrapper, new_py_stream
+from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn_log_wrapper, new_py_stream, prop_hash_to_dict
 from core import SubversionException
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
@@ -408,11 +408,15 @@ cdef class FileEditor:
         return py_txdelta
 
     def change_prop(self, name, value):
-        cdef svn_string_t c_value
-        c_value.data = value
-        c_value.len = len(value)
+        cdef svn_string_t c_value, *p_c_value
+        if value is None:
+            p_c_value = NULL
+        else:
+            c_value.data = value
+            c_value.len = len(value)
+            p_c_value = &c_value
         check_error(self.editor.change_file_prop(self.file_baton, name, 
-                    &c_value, self.pool))
+                    p_c_value, self.pool))
 
     def close(self, checksum=None):
         cdef char *c_checksum
@@ -428,7 +432,7 @@ cdef class DirectoryEditor:
     cdef void *dir_baton
     cdef apr_pool_t *pool
 
-    def delete_entry(self, path, revision):
+    def delete_entry(self, path, revision=-1):
         check_error(self.editor.delete_entry(path, revision, self.dir_baton,
                                              self.pool))
 
@@ -452,11 +456,15 @@ cdef class DirectoryEditor:
         return new_dir_editor(self.editor, child_baton, self.pool)
 
     def change_prop(self, name, value):
-        cdef svn_string_t c_value
-        c_value.data = value
-        c_value.len = len(value)
+        cdef svn_string_t c_value, *p_c_value
+        if value is None:
+            p_c_value = NULL
+        else:
+            c_value.data = value
+            c_value.len = len(value)
+            p_c_value = &c_value
         check_error(self.editor.change_dir_prop(self.dir_baton, name, 
-                    &c_value, self.pool))
+                    p_c_value, self.pool))
 
     def close(self):
         check_error(self.editor.close_directory(self.dir_baton, self.pool))
@@ -553,7 +561,7 @@ cdef svn_error_t *py_editor_open_root(void *edit_baton, svn_revnum_t base_revisi
 
 cdef svn_error_t *py_editor_delete_entry(char *path, long revision, void *parent_baton, apr_pool_t *pool) except *:
     self = <object>parent_baton
-    self.delete_entry(revision)
+    self.delete_entry(path, revision)
     return NULL
 
 cdef svn_error_t *py_editor_add_directory(char *path, void *parent_baton, char *copyfrom_path, long copyfrom_revision, apr_pool_t *dir_pool, void **child_baton) except *:
@@ -575,7 +583,10 @@ cdef svn_error_t *py_editor_open_directory(char *path, void *parent_baton, long 
 
 cdef svn_error_t *py_editor_change_dir_prop(void *dir_baton, char *name, svn_string_t *value, apr_pool_t *pool) except *:
     self = <object>dir_baton
-    self.change_prop(name, PyString_FromStringAndSize(value.data, value.len))
+    if value != NULL:
+        self.change_prop(name, PyString_FromStringAndSize(value.data, value.len))
+    else:
+        self.change_prop(name, None)
     return NULL
 
 cdef svn_error_t *py_editor_close_directory(void *dir_baton, apr_pool_t *pool) except *:
@@ -632,7 +643,10 @@ cdef svn_error_t *py_editor_apply_textdelta(void *file_baton, char *base_checksu
 
 cdef svn_error_t *py_editor_change_file_prop(void *file_baton, char *name, svn_string_t *value, apr_pool_t *pool) except *:
     self = <object>file_baton
-    self.change_prop(name, PyString_FromStringAndSize(value.data, value.len))
+    if value != NULL:
+        self.change_prop(name, PyString_FromStringAndSize(value.data, value.len))
+    else:
+        self.change_prop(name, None)
     return NULL
 
 cdef svn_error_t *py_editor_close_file(void *file_baton, char *text_checksum, apr_pool_t *pool) except *:
@@ -798,18 +812,9 @@ cdef class RemoteAccess:
     def rev_proplist(self, rev):
         cdef apr_pool_t *temp_pool
         cdef apr_hash_t *props
-        cdef apr_hash_index_t *idx
-        cdef char *key
-        cdef long klen
-        cdef svn_string_t *val
         temp_pool = Pool(self.pool)
         check_error(svn_ra_rev_proplist(self.ra, rev, &props, temp_pool))
-        py_props = {}
-        idx = apr_hash_first(temp_pool, props)
-        while idx:
-            apr_hash_this(idx, <void **>&key, &klen, <void **>&val)
-            py_props[key] = PyString_FromStringAndSize(val.data, val.len)
-            idx = apr_hash_next(idx)
+        py_props = prop_hash_to_dict(props)
         apr_pool_destroy(temp_pool)
         return py_props
 
@@ -853,7 +858,6 @@ cdef class RemoteAccess:
         cdef long fetch_rev
         cdef char *key
         cdef svn_dirent_t *dirent
-        cdef svn_string_t *string
         cdef long klen
         temp_pool = Pool(self.pool)
         check_error(svn_ra_get_dir2(self.ra, &dirents, &fetch_rev, &props,
@@ -882,16 +886,7 @@ cdef class RemoteAccess:
                 py_dirents[key] = py_dirent
                 idx = apr_hash_next(idx)
 
-        if props == NULL:
-            py_props = None
-        else:
-            py_props = {}
-            idx = apr_hash_first(temp_pool, props)
-            while idx:
-                apr_hash_this(idx, <void **>&key, &klen, <void **>&string)
-                py_props[key] = PyString_FromStringAndSize(string.data, string.len)
-                idx = apr_hash_next(idx)
-
+        py_props = prop_hash_to_dict(props)
         apr_pool_destroy(temp_pool)
         return (py_dirents, fetch_rev, py_props)
 

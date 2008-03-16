@@ -18,7 +18,7 @@ from apr cimport apr_initialize, apr_hash_t, apr_time_t
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 from apr cimport apr_pool_t, apr_pool_destroy
 from types cimport svn_error_t, svn_cancel_func_t, svn_auth_baton_t, svn_revnum_t, svn_boolean_t, svn_commit_info_t, svn_string_t, svn_log_message_receiver_t
-from core cimport Pool, check_error, string_list_to_apr_array, py_svn_log_wrapper
+from core cimport Pool, check_error, string_list_to_apr_array, py_svn_log_wrapper, prop_hash_to_dict
 
 # Make sure APR is initialized
 apr_initialize()
@@ -170,6 +170,15 @@ cdef extern from "svn_client.h":
                 receiver_baton,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
+
+    svn_error_t *svn_client_propget2(apr_hash_t **props,
+                    char *propname,
+                    char *target,
+                    svn_opt_revision_t *peg_revision,
+                    svn_opt_revision_t *revision,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
      
 cdef svn_error_t *py_log_msg_func2(char **log_msg, char **tmp_file, apr_array_header_t *commit_items, baton, apr_pool_t *pool) except *:
     if baton is None:
@@ -235,6 +244,7 @@ cdef class Client:
 
     def commit(self, targets, recurse=True, keep_locks=True):
         cdef svn_commit_info_t *commit_info
+        commit_info = NULL
         check_error(svn_client_commit3(&commit_info, 
                    string_list_to_apr_array(self.pool, targets),
                    recurse, keep_locks, self.client, self.pool))
@@ -242,6 +252,7 @@ cdef class Client:
 
     def mkdir(self, paths):
         cdef svn_commit_info_t *commit_info
+        commit_info = NULL
         check_error(svn_client_mkdir2(&commit_info, 
                     string_list_to_apr_array(self.pool, paths), 
                     self.client, self.pool))
@@ -249,6 +260,7 @@ cdef class Client:
 
     def delete(self, paths, force=False):
         cdef svn_commit_info_t *commit_info
+        commit_info = NULL
         check_error(svn_client_delete2(&commit_info, 
                     string_list_to_apr_array(self.pool, paths),
                     force, self.client, self.pool))
@@ -271,6 +283,18 @@ cdef class Client:
         check_error(svn_client_propset2(propname, &c_propval,
                     target, recurse, skip_checks, self.client, self.pool))
     
+    def propget(self, propname, target, peg_revision=None, revision=None,
+                recurse=False):
+        cdef svn_string_t c_propval
+        cdef svn_opt_revision_t c_peg_rev
+        cdef svn_opt_revision_t c_rev
+        cdef apr_hash_t *hash_props
+        to_opt_revision(peg_revision, &c_peg_rev)
+        to_opt_revision(revision, &c_rev)
+        check_error(svn_client_propget2(&hash_props, propname, target,
+                    &c_peg_rev, &c_rev, recurse, self.client, self.pool))
+        return prop_hash_to_dict(hash_props)
+
     def update(self, paths, rev=None, recurse=True, ignore_externals=False):
         cdef apr_array_header_t *result_revs
         cdef svn_opt_revision_t c_rev

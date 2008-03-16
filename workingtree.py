@@ -171,8 +171,6 @@ class SvnWorkingTree(WorkingTree):
     def move(self, from_paths, to_dir=None, after=False, **kwargs):
         # FIXME: Use after argument
         assert after != True
-        revt = core.svn_opt_revision_t()
-        revt.kind = core.svn_opt_revision_working
         for entry in from_paths:
             try:
                 to_wc = self._get_wc(to_dir, write_lock=True)
@@ -194,8 +192,6 @@ class SvnWorkingTree(WorkingTree):
     def rename_one(self, from_rel, to_rel, after=False):
         # FIXME: Use after
         assert after != True
-        revt = core.svn_opt_revision_t()
-        revt.kind = core.svn_opt_revision_unspecified
         (to_wc, to_file) = self._get_rel_wc(to_rel, write_lock=True)
         if os.path.dirname(from_rel) == os.path.dirname(to_rel):
             # Prevent lock contention

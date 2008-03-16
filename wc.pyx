@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_index_t, apr_array_header_t
-from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t, svn_prop_t
+from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t, svn_prop_t, svn_lock_t
 
 from core cimport check_error, Pool, py_cancel_func
 
@@ -128,6 +128,90 @@ cdef extern from "svn_wc.h":
 
     char *svn_wc_get_adm_dir(apr_pool_t *pool)
 
+    ctypedef enum svn_wc_notify_action_t:
+        svn_wc_notify_add
+        svn_wc_notify_copy
+        svn_wc_notify_delete
+        svn_wc_notify_restore
+        svn_wc_notify_revert
+        svn_wc_notify_failed_revert
+        svn_wc_notify_resolved
+        svn_wc_notify_skip
+        svn_wc_notify_update_delete
+        svn_wc_notify_update_add
+        svn_wc_notify_update_update
+        svn_wc_notify_update_completed
+        svn_wc_notify_update_external
+        svn_wc_notify_status_completed
+        svn_wc_notify_status_external
+        svn_wc_notify_commit_modified
+        svn_wc_notify_commit_added
+        svn_wc_notify_commit_deleted
+        svn_wc_notify_commit_replaced
+        svn_wc_notify_commit_postfix_txdelta
+        svn_wc_notify_blame_revision
+        svn_wc_notify_locked
+        svn_wc_notify_unlocked
+        svn_wc_notify_failed_lock
+        svn_wc_notify_failed_unlock
+
+    ctypedef enum svn_wc_notify_state_t:
+        svn_wc_notify_state_inapplicable
+        svn_wc_notify_state_unknown
+        svn_wc_notify_state_unchanged
+        svn_wc_notify_state_missing
+        svn_wc_notify_state_obstructed
+        svn_wc_notify_state_changed
+        svn_wc_notify_state_merged
+        svn_wc_notify_state_conflicted
+
+    ctypedef enum svn_wc_notify_lock_state_t:
+        svn_wc_notify_lock_state_inapplicable
+        svn_wc_notify_lock_state_unknown
+        svn_wc_notify_lock_state_unchanged
+        svn_wc_notify_lock_state_locked
+        svn_wc_notify_lock_state_unlocked
+                
+    ctypedef struct svn_wc_notify_t:
+        char *path
+        svn_wc_notify_action_t action
+        svn_node_kind_t kind
+        char *mime_type
+        svn_lock_t *lock
+        svn_error_t *err
+        svn_wc_notify_state_t content_state
+        svn_wc_notify_state_t prop_state
+        svn_wc_notify_lock_state_t lock_state
+        svn_revnum_t revision
+    ctypedef void svn_wc_notify_func2_t(void *baton, svn_wc_notify_t *notify, apr_pool_t *pool)
+
+    svn_error_t *svn_wc_add2(char *path,
+                         svn_wc_adm_access_t *parent_access,
+                         char *copyfrom_url,
+                         svn_revnum_t copyfrom_rev,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         apr_pool_t *pool)
+
+    svn_error_t *svn_wc_copy2(char *src,
+                          svn_wc_adm_access_t *dst_parent,
+                          char *dst_basename,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *pool)
+
+    svn_error_t *svn_wc_delete2(char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            apr_pool_t *pool)
+
 def version():
     """Get libsvn_wc version information.
 
@@ -135,6 +219,10 @@ def version():
     """
     return (svn_wc_version().major, svn_wc_version().minor, 
             svn_wc_version().minor, svn_wc_version().tag)
+
+
+cdef void py_wc_notify_func(void *baton, svn_wc_notify_t *notify, apr_pool_t *pool):
+    pass # FIXME
 
 class Entry:
     def __init__(self, name, revision, url, repos, uuid, kind, schedule, copied=False, deleted=False, absent=False, incomplete=False):
@@ -268,6 +356,41 @@ cdef class WorkingCopy:
             idx = apr_hash_next(idx)
         apr_pool_destroy(temp_pool)
         return (py_propchanges, py_orig_props)
+
+    def add(self, path, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None,
+            notify_func=None):
+        cdef apr_pool_t *temp_pool
+        cdef char *c_copyfrom_url
+        temp_pool = Pool(self.pool)
+        if copyfrom_url is None:
+            c_copyfrom_url = NULL
+        else:
+            c_copyfrom_url = copyfrom_url
+        check_error(svn_wc_add2(path, self.adm, c_copyfrom_url, 
+                                copyfrom_rev, py_cancel_func, 
+                                <void *>cancel_func,
+                                py_wc_notify_func, 
+                                <void *>notify_func, 
+                                temp_pool))
+        apr_pool_destroy(temp_pool)
+
+    def copy(self, src, dst, cancel_func=None, notify_func=None):
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
+        check_error(svn_wc_copy2(src, self.adm, dst,
+                                py_cancel_func, <void *>cancel_func,
+                                py_wc_notify_func, <void *>notify_func, 
+                                temp_pool))
+        apr_pool_destroy(temp_pool)
+
+    def delete(self, path, cancel_func=None, notify_func=None):
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
+        check_error(svn_wc_delete2(path, self.adm, 
+                                py_cancel_func, <void *>cancel_func,
+                                py_wc_notify_func, <void *>notify_func, 
+                                temp_pool))
+        apr_pool_destroy(temp_pool)
 
     def close(self):
         if self.adm != NULL:

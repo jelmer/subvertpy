@@ -21,11 +21,12 @@ from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 from apr cimport apr_hash_index_t, apr_hash_this, apr_hash_first, apr_hash_next
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_stream_set_read, svn_stream_set_write, svn_stream_set_close, svn_stream_from_stringbuf, svn_stream_create
-from types cimport svn_stringbuf_t, svn_stringbuf_ncreate
+from types cimport svn_stringbuf_t, svn_stringbuf_ncreate, svn_string_t
 
 cdef extern from "Python.h":
     void Py_INCREF(object)
     void Py_DECREF(object)
+    object PyString_FromStringAndSize(char *, unsigned long)
     char *PyString_AS_STRING(object)
 	
 cdef extern from "string.h":
@@ -194,4 +195,20 @@ cdef svn_stream_t *new_py_stream(apr_pool_t *pool, object py):
     svn_stream_set_close(stream, py_stream_close)
     return stream
 
-
+cdef prop_hash_to_dict(apr_hash_t *props):
+    cdef char *key
+    cdef apr_hash_index_t *idx
+    cdef long klen
+    cdef svn_string_t *val
+    cdef apr_pool_t *pool
+    if props == NULL:
+        return None
+    pool = Pool(NULL)
+    py_props = {}
+    idx = apr_hash_first(pool, props)
+    while idx:
+        apr_hash_this(idx, <void **>&key, &klen, <void **>&val)
+        py_props[key] = PyString_FromStringAndSize(val.data, val.len)
+        idx = apr_hash_next(idx)
+    apr_pool_destroy(pool)
+    return py_props

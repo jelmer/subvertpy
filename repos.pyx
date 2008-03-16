@@ -74,7 +74,7 @@ cdef class Repository:
         apr_pool_destroy(self.pool)
 
     def load_fs(self, dumpstream, feedback_stream, uuid_action,
-                parent_dir, use_pre_commit_hook=False, 
+                parent_dir="", use_pre_commit_hook=False, 
                 use_post_commit_hook=False,
                 cancel_func=None):
         cdef apr_pool_t *temp_pool

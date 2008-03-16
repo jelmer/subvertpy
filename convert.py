@@ -71,8 +71,7 @@ def load_dumpfile(dumpfile, outputdir):
     else:
         file = open(dumpfile)
     try:
-        r.load_fs2(file, StringIO(), 
-                repos.load_uuid_default, '', 0, 0, None)
+        r.load_fs(file, StringIO(), repos.LOAD_UUID_DEFAULT)
     except core.SubversionException, (_, num):
         if num == constants.ERR_STREAM_MALFORMED_DATA:
             raise NotDumpFile(dumpfile)
