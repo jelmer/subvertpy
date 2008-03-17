@@ -324,7 +324,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             elif self.new_inventory[child_ie.file_id].revision is None:
                 self.mutter('open dir %r' % new_child_path)
 
-                child_editor = self.editor.open_directory(
+                child_editor = dir_editor.open_directory(
                         urlutils.join(self.branch.get_branch_path(), new_child_path), 
                         self.base_revnum)
             else:

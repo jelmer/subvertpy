@@ -151,7 +151,7 @@ class SvnWorkingTree(WorkingTree):
         adm = self._get_wc(write_lock=True)
         try:
             for file in files:
-                adm.delete(self.abspath(file), None, None, None)
+                adm.delete(self.abspath(file))
         finally:
             adm.close()
 
@@ -180,7 +180,7 @@ class SvnWorkingTree(WorkingTree):
                 to_wc.close()
             try:
                 from_wc = self._get_wc(write_lock=True)
-                from_wc.delete(self.abspath(entry), None, None, None)
+                from_wc.delete(self.abspath(entry))
             finally:
                 from_wc.close()
             new_name = urlutils.join(to_dir, os.path.basename(entry))
@@ -200,8 +200,8 @@ class SvnWorkingTree(WorkingTree):
             (from_wc, _) = self._get_rel_wc(from_rel, write_lock=True)
         from_id = self.inventory.path2id(from_rel)
         try:
-            to_wc.copy(self.abspath(from_rel), to_file, None, None)
-            from_wc.delete(self.abspath(from_rel), None, None, None)
+            to_wc.copy(self.abspath(from_rel), to_file)
+            from_wc.delete(self.abspath(from_rel))
         finally:
             to_wc.close()
         self._change_fileid_mapping(None, from_rel)

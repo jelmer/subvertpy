@@ -51,10 +51,9 @@ V 27
 PROPS-END
 """)
         load_dumpfile(dumpfile, "d")
-        repos = repos.Repository("d")
-        fs = repos.fs()
+        r = repos.Repository("d")
         self.assertEqual("6987ef2d-cd6b-461f-9991-6f1abef3bd59", 
-                svn.fs.get_uuid(fs))
+                r.fs().get_uuid())
 
     def test_loaddumpfile_invalid(self):
         dumpfile = os.path.join(self.test_dir, "dumpfile")
