@@ -16,15 +16,15 @@
 
 from apr cimport apr_pool_t, apr_pool_destroy, apr_palloc
 from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_set
-from apr cimport apr_array_header_t, apr_array_make
-from apr cimport apr_file_t, apr_off_t, apr_size_t
-from apr cimport apr_initialize
+from apr cimport apr_array_header_t, apr_array_make, apr_array_push
+from apr cimport apr_file_t, apr_off_t, apr_size_t, apr_uint32_t
+from apr cimport apr_initialize, apr_pstrdup
 from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn_log_wrapper, new_py_stream, prop_hash_to_dict
 from core import SubversionException
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
 from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_filesize_t, svn_dirent_t, svn_log_message_receiver_t
-from types cimport svn_stream_t
+from types cimport svn_stream_t, svn_auth_get_simple_provider, svn_auth_provider_object_t, svn_auth_get_ssl_server_trust_file_provider, svn_auth_get_ssl_client_cert_file_provider, svn_auth_get_ssl_client_cert_pw_file_provider, svn_auth_get_username_provider, svn_auth_get_username_prompt_provider, svn_auth_cred_username_t, svn_auth_get_simple_prompt_provider, svn_auth_cred_simple_t, svn_auth_get_ssl_server_trust_prompt_provider, svn_auth_ssl_server_cert_info_t, svn_auth_cred_ssl_server_trust_t, svn_boolean_t, svn_auth_get_ssl_client_cert_pw_prompt_provider, svn_auth_cred_ssl_client_cert_pw_t 
 
 apr_initialize()
 
@@ -932,14 +932,26 @@ cdef class RemoteAccess:
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self.url)
 
+cdef class AuthProvider:
+    cdef apr_pool_t *pool
+    cdef svn_auth_provider_object_t *provider
+
+    def __dealloc__(self):
+        apr_pool_destroy(self.pool)
 
 cdef class Auth:
     cdef svn_auth_baton_t *auth_baton
     cdef apr_pool_t *pool
     def __init__(self, providers):
         cdef apr_array_header_t *c_providers    
+        cdef AuthProvider provider
+        cdef svn_auth_provider_object_t **el
         self.pool = Pool(NULL)
         c_providers = apr_array_make(self.pool, len(providers), 4)
+        for p in providers:
+            el = <svn_auth_provider_object_t **>apr_array_push(c_providers)
+            provider = p
+            el[0] = provider.provider
         svn_auth_open(&self.auth_baton, c_providers, self.pool)
 
     def set_parameter(self, name, value):
@@ -951,32 +963,92 @@ cdef class Auth:
     def __dealloc__(self):
         apr_pool_destroy(self.pool)
 
+cdef svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *baton, char *realm, int may_save, apr_pool_t *pool):
+    fn = <object>baton
+    (username, cred[0].may_save) = fn(realm, may_save)
+    cred[0].username = apr_pstrdup(pool, username)
+    return NULL
+
 def get_username_prompt_provider(prompt_func, retry_limit):
-    pass # FIXME
+    cdef AuthProvider auth
+    auth = AuthProvider()
+    auth.pool = Pool(NULL)
+    svn_auth_get_username_prompt_provider (&auth.provider, py_username_prompt, <void *>prompt_func, retry_limit, auth.pool)
+    return auth
+
+cdef svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton, char *realm, char *username, int may_save, apr_pool_t *pool):
+    fn = <object>baton
+    (py_username, password, cred[0].may_save) = fn(realm, may_save)
+    cred[0].username = apr_pstrdup(pool, py_username)
+    cred[0].password = apr_pstrdup(pool, password)
+    return NULL
 
 def get_simple_prompt_provider(prompt_func, retry_limit):
-    pass # FIXME
+    cdef AuthProvider auth
+    auth = AuthProvider()
+    auth.pool = Pool(NULL)
+    svn_auth_get_simple_prompt_provider (&auth.provider, py_simple_prompt, <void *>prompt_func, retry_limit, auth.pool)
+    return auth
+
+cdef svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred, void *baton, char *realm, apr_uint32_t failures, svn_auth_ssl_server_cert_info_t *cert_info, svn_boolean_t may_save, apr_pool_t *pool):
+    fn = <object>baton
+    (cred[0].may_save, cred[0].accepted_failures) = fn(realm, failures, (cert_info.hostname, cert_info.fingerprint, cert_info.valid_from, cert_info.valid_until, cert_info.issuer_dname, cert_info.ascii_cert), may_save)
+    return NULL
 
 def get_ssl_server_trust_prompt_provider(prompt_func):
-    pass # FIXME
+    cdef AuthProvider auth
+    auth = AuthProvider()
+    auth.pool = Pool(NULL)
+    svn_auth_get_ssl_server_trust_prompt_provider (&auth.provider, py_ssl_server_trust_prompt, <void *>prompt_func, auth.pool)
+    return auth
+
+cdef svn_error_t *py_ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred, void *baton, char *realm, svn_boolean_t may_save, apr_pool_t *pool):
+    fn = <object>baton
+    (password, cred[0].may_save) = fn(realm, may_save)
+    cred[0].password = apr_pstrdup(pool, password)
+    return NULL
 
 def get_ssl_client_cert_pw_prompt_provider(prompt_func, retry_limit):
-    pass # FIXME
+    cdef AuthProvider auth
+    auth = AuthProvider()
+    auth.pool = Pool(NULL)
+    svn_auth_get_ssl_client_cert_pw_prompt_provider (&auth.provider, py_ssl_client_cert_pw_prompt, <void *>prompt_func, retry_limit, auth.pool)
+    return auth
 
 def get_username_provider():
-    pass # FIXME
+    cdef AuthProvider auth
+    auth = AuthProvider()
+    auth.pool = Pool(NULL)
+    svn_auth_get_username_provider(&auth.provider, auth.pool)
+    return auth
 
 def get_simple_provider():
-    pass # FIXME
+    cdef AuthProvider auth
+    auth = AuthProvider()
+    auth.pool = Pool(NULL)
+    svn_auth_get_simple_provider(&auth.provider, auth.pool)
+    return auth
 
 def get_ssl_server_trust_file_provider():
-    pass # FIXME
+    cdef AuthProvider auth
+    auth = AuthProvider()
+    auth.pool = Pool(NULL)
+    svn_auth_get_ssl_server_trust_file_provider(&auth.provider, auth.pool)
+    return auth
 
 def get_ssl_client_cert_file_provider():
-    pass # FIXME
+    cdef AuthProvider auth
+    auth = AuthProvider()
+    auth.pool = Pool(NULL)
+    svn_auth_get_ssl_client_cert_file_provider(&auth.provider, auth.pool)
+    return auth
 
 def get_ssl_client_cert_pw_file_provider():
-    pass # FIXME
+    cdef AuthProvider auth
+    auth = AuthProvider()
+    auth.pool = Pool(NULL)
+    svn_auth_get_ssl_client_cert_pw_file_provider(&auth.provider, auth.pool)
+    return auth
 
 def txdelta_send_stream(stream, TxDeltaWindowHandler handler):
     cdef unsigned char digest[16] 

@@ -60,6 +60,8 @@ cdef wrap_lock(svn_lock_t *lock):
 
 cdef check_error(svn_error_t *error):
     if error:
+        if error.apr_err == 424242:
+            return
         if error.message != NULL:
             raise SubversionException(error.message, error.apr_err)
         else:

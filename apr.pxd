@@ -21,6 +21,7 @@ cdef extern from "apr_errno.h":
     ctypedef int apr_status_t
 
 cdef extern from "apr_general.h":
+    ctypedef unsigned long apr_uint32_t
     apr_status_t apr_initialize()
 
 cdef extern from "apr_file_io.h":
@@ -33,6 +34,9 @@ cdef extern from "apr_pools.h":
     void apr_pool_destroy(apr_pool_t *)
     apr_status_t apr_pool_create(apr_pool_t **newpool, apr_pool_t *parent)
     void *apr_palloc(apr_pool_t *, apr_size_t)
+
+cdef extern from "apr_strings.h":
+    char *apr_pstrdup(apr_pool_t *p, char *s)
 
 cdef extern from "apr_tables.h":
     ctypedef struct apr_array_header_t:

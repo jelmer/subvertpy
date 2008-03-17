@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from apr cimport apr_status_t, apr_pool_t, apr_time_t, apr_array_header_t, apr_hash_t, apr_size_t
+from apr cimport apr_status_t, apr_pool_t, apr_time_t, apr_array_header_t, apr_hash_t, apr_size_t, apr_uint32_t
 
 cdef extern from "svn_version.h":
     ctypedef struct svn_version_t:
@@ -152,6 +152,30 @@ cdef extern from "svn_auth.h":
     ctypedef svn_error_t *(*svn_auth_username_prompt_func_t) (svn_auth_cred_username_t **cred, void *baton, char *realm, svn_boolean_t may_save, apr_pool_t *pool)
 
     void svn_auth_get_username_prompt_provider (svn_auth_provider_object_t **provider, svn_auth_username_prompt_func_t prompt_func, void *prompt_baton, int retry_limit, apr_pool_t *pool)
+
+    ctypedef struct svn_auth_ssl_server_cert_info_t:
+        char *hostname
+        char *fingerprint
+        char *valid_from
+        char *valid_until
+        char *issuer_dname
+        char *ascii_cert
+
+    ctypedef struct svn_auth_cred_ssl_server_trust_t:
+        svn_boolean_t may_save
+        apr_uint32_t accepted_failures
+
+    ctypedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (svn_auth_cred_ssl_server_trust_t **cred, void *baton, char *realm, apr_uint32_t failures, svn_auth_ssl_server_cert_info_t *cert_info, svn_boolean_t may_save, apr_pool_t *pool)
+
+    void svn_auth_get_ssl_server_trust_prompt_provider(svn_auth_provider_object_t **provider, svn_auth_ssl_server_trust_prompt_func_t prompt_func, void *prompt_baton, apr_pool_t *pool)
+
+    ctypedef struct svn_auth_cred_ssl_client_cert_pw_t:
+        char *password
+        svn_boolean_t may_save
+
+    ctypedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t) (svn_auth_cred_ssl_client_cert_pw_t **cred, void *baton, char *realm, svn_boolean_t may_save, apr_pool_t *pool)
+
+    void svn_auth_get_ssl_client_cert_pw_prompt_provider(svn_auth_provider_object_t **provider, svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func, void *prompt_baton, int retry_limit, apr_pool_t *pool)
 
     void svn_auth_get_simple_provider(svn_auth_provider_object_t **provider, apr_pool_t *pool)
     void svn_auth_get_username_provider(svn_auth_provider_object_t **provider, apr_pool_t *pool)
