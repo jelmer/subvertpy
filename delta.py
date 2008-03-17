@@ -29,7 +29,6 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
     for (action, offset, length) in ops:
         if action == 0:
             # Copy from source area.
-            assert offset + length <= sview_len
             tview += sview[offset:offset+length]
         elif action == 1:
             for i in xrange(length):

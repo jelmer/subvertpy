@@ -97,7 +97,7 @@ class LogWalker(object):
                      (revision, p.strip("/"), action, copyfrom_path, copyfrom_rev))
 
             self.saved_revnum = revision
-            if self.saved_revnum % 1000 == 0:
+            if self.saved_revnum % 10000 == 0:
                 self.db.commit()
 
         try:

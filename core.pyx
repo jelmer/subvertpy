@@ -49,7 +49,7 @@ cdef svn_error_t *py_cancel_func(cancel_baton):
     return NULL
 
 class SubversionException(Exception):
-    def __init__(self, num, msg):
+    def __init__(self, msg, num):
         Exception.__init__(self, msg, num)
         self.num = num
         self.msg = msg
@@ -61,9 +61,9 @@ cdef wrap_lock(svn_lock_t *lock):
 cdef check_error(svn_error_t *error):
     if error:
         if error.message != NULL:
-            raise SubversionException(error.apr_err, error.message)
+            raise SubversionException(error.message, error.apr_err)
         else:
-            raise SubversionException(error.apr_err, None)
+            raise SubversionException(None, error.apr_err)
 
 cdef apr_pool_t *Pool(apr_pool_t *parent):
     cdef apr_status_t status
