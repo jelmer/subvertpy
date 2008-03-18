@@ -582,13 +582,36 @@ class InterFromSvnRepository(InterRepository):
         """See InterRepository.copy_content."""
         self.fetch(revision_id, pb, find_ghosts=False)
 
-    def _fetch_replay(self, revids, pb=None):
-        """Copy a set of related revisions using ra_replay.
+    def _fetch_revision(self, editor, transport, repos_root, parent_revid):
+        if parent_revid is None:
+            branch_url = urlutils.join(repos_root, 
+                                       editor.branch_path)
+            transport.reparent(branch_url)
+            assert transport.svn_url == branch_url.rstrip("/"), \
+                "Expected %r, got %r" % (transport.svn_url, branch_url)
+            reporter = transport.do_update(editor.revnum, True, 
+                                           editor)
 
-        :param revids: Revision ids to copy.
-        :param pb: Optional progress bar
-        """
-        raise NotImplementedError(self._copy_revisions_replay)
+            # Report status of existing paths
+            reporter.set_path("", editor.revnum, True, None)
+        else:
+            (parent_branch, parent_revnum, mapping) = \
+                    self.source.lookup_revision_id(parent_revid)
+            transport.reparent(urlutils.join(repos_root, parent_branch))
+
+            if parent_branch != editor.branch_path:
+                reporter = transport.do_switch(editor.revnum, True, 
+                    urlutils.join(repos_root, editor.branch_path), 
+                    editor)
+            else:
+                reporter = transport.do_update(editor.revnum, True, editor)
+
+            # Report status of existing paths
+            reporter.set_path("", parent_revnum, False, None)
+
+        lock = transport.lock_read(".")
+        reporter.finish_report()
+        lock.unlock()
 
     def _fetch_switch(self, revids, pb=None, lhs_parent=None):
         """Copy a set of related revisions using ra_switch.
@@ -629,35 +652,7 @@ class InterFromSvnRepository(InterRepository):
                 editor.start_revision(revid, parent_inv)
 
                 try:
-                    if parent_revid is None:
-                        branch_url = urlutils.join(repos_root, 
-                                                   editor.branch_path)
-                        transport.reparent(branch_url)
-                        assert transport.svn_url == branch_url.rstrip("/"), \
-                            "Expected %r, got %r" % (transport.svn_url, branch_url)
-                        reporter = transport.do_update(editor.revnum, True, 
-                                                       editor)
-
-                        # Report status of existing paths
-                        reporter.set_path("", editor.revnum, True, None)
-                    else:
-                        (parent_branch, parent_revnum, mapping) = \
-                                self.source.lookup_revision_id(parent_revid)
-                        transport.reparent(urlutils.join(repos_root, parent_branch))
-
-                        if parent_branch != editor.branch_path:
-                            reporter = transport.do_switch(editor.revnum, True, 
-                                urlutils.join(repos_root, editor.branch_path), 
-                                editor)
-                        else:
-                            reporter = transport.do_update(editor.revnum, True, editor)
-
-                        # Report status of existing paths
-                        reporter.set_path("", parent_revnum, False, None)
-
-                    lock = transport.lock_read(".")
-                    reporter.finish_report()
-                    lock.unlock()
+                    self._fetch_revision(editor, transport, repos_root, parent_revid)
                 except:
                     editor.abort()
                     raise

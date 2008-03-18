@@ -782,7 +782,7 @@ cdef class RemoteAccess:
         ret.pool = temp_pool
         return ret
 
-    def replay(self, revision, low_water_mark, send_deltas, update_editor):
+    def replay(self, revision, low_water_mark, update_editor, send_deltas=True):
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
         check_error(svn_ra_replay(self.ra, revision, low_water_mark,
