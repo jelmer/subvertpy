@@ -28,7 +28,6 @@ from ra import (get_username_prompt_provider,
                 )
 from ra import Auth
 import constants
-import client
 
 class SubversionAuthenticationConfig(AuthenticationConfig):
     """Simple extended version of AuthenticationConfig that can provide 
@@ -149,14 +148,14 @@ def create_auth_baton():
         get_ssl_server_trust_file_provider(),
         ]
 
-    if hasattr(client, 'get_windows_simple_provider'):
-        providers.append(client.get_windows_simple_provider())
+    if hasattr(core, 'get_windows_simple_provider'):
+        providers.append(core.get_windows_simple_provider())
 
-    if hasattr(client, 'get_keychain_simple_provider'):
-        providers.append(client.get_keychain_simple_provider())
+    if hasattr(core, 'get_keychain_simple_provider'):
+        providers.append(core.get_keychain_simple_provider())
 
-    if hasattr(client, 'get_windows_ssl_server_trust_provider'):
-        providers.append(client.get_windows_ssl_server_trust_provider())
+    if hasattr(core, 'get_windows_ssl_server_trust_provider'):
+        providers.append(core.get_windows_ssl_server_trust_provider())
 
     return Auth(providers)
 

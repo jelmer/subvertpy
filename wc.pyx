@@ -14,9 +14,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_index_t, apr_array_header_t, apr_array_pop, apr_hash_make, apr_hash_set
+from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_index_t, apr_array_header_t, apr_array_pop, apr_hash_make, apr_hash_set, apr_palloc
 from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t, svn_prop_t, svn_lock_t
-from ra cimport svn_ra_reporter2_t
+from ra cimport svn_ra_reporter2_t, svn_delta_editor_t, new_editor
 
 from core cimport check_error, Pool, py_cancel_func
 
@@ -237,6 +237,20 @@ cdef extern from "svn_wc.h":
                                 char *repos, svn_revnum_t revision,
                                 apr_pool_t *pool)
 
+    svn_error_t *svn_wc_get_update_editor2(svn_revnum_t *target_revision,
+                                       svn_wc_adm_access_t *anchor,
+                                       char *target,
+                                       svn_boolean_t use_commit_times,
+                                       svn_boolean_t recurse,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       char *diff3_cmd,
+                                       svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       svn_wc_traversal_info_t *ti,
+                                       apr_pool_t *pool)
 
 def version():
     """Get libsvn_wc version information.
@@ -433,6 +447,25 @@ cdef class WorkingCopy:
                     traversal_info, temp_pool))
         apr_pool_destroy(temp_pool)
 
+    def get_update_editor(self, target, use_commit_times=True, recurse=True, 
+                    notify_func=None, cancel_func=None, diff3_cmd=None):
+        cdef char *c_diff3_cmd
+        cdef svn_delta_editor_t *editor
+        cdef void *edit_baton
+        cdef apr_pool_t *pool
+        cdef svn_revnum_t *latest_revnum
+        if diff3_cmd is None:
+            c_diff3_cmd = NULL
+        else:
+            c_diff3_cmd = diff3_cmd
+        pool = Pool(NULL)
+        latest_revnum = <svn_revnum_t *>apr_palloc(pool, sizeof(svn_revnum_t))
+        check_error(svn_wc_get_update_editor2(latest_revnum, self.adm, target, 
+                    use_commit_times, recurse, py_wc_notify_func, <void *>notify_func, 
+                    py_cancel_func, <void *>cancel_func, c_diff3_cmd, &editor, &edit_baton, 
+                    NULL, pool))
+        return new_editor(editor, edit_baton, pool)
+
     def close(self):
         if self.adm != NULL:
             svn_wc_adm_close(self.adm)
@@ -499,7 +532,11 @@ SCHEDULE_REPLACE = 3
 
 cdef svn_error_t *py_ra_report_set_path(void *baton, char *path, long revision, int start_empty, char *lock_token, apr_pool_t *pool) except *:
     self = <object>baton
-    self.set_path(path, revision, start_empty, lock_token)
+    if lock_token == NULL:
+        py_lock_token = None
+    else:
+        py_lock_token = lock_token
+    self.set_path(path, revision, start_empty, py_lock_token)
     return NULL
 
 cdef svn_error_t *py_ra_report_delete_path(void *baton, char *path, apr_pool_t *pool) except *:
@@ -509,7 +546,11 @@ cdef svn_error_t *py_ra_report_delete_path(void *baton, char *path, apr_pool_t *
 
 cdef svn_error_t *py_ra_report_link_path(void *report_baton, char *path, char *url, long revision, int start_empty, char *lock_token, apr_pool_t *pool) except *:
     self = <object>report_baton
-    self.link_path(path, url, revision, start_empty, lock_token)
+    if lock_token == NULL:
+        py_lock_token = None
+    else:
+        py_lock_token = lock_token
+    self.link_path(path, url, revision, start_empty, py_lock_token)
     return NULL
 
 cdef svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool) except *:

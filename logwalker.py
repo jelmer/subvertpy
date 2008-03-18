@@ -306,7 +306,7 @@ class LogWalker(object):
         reporter = transport.do_switch(revnum, True, 
                 urlutils.join(root_repos, path), editor)
         reporter.set_path("", 0, True)
-        reporter.finish_report()
+        reporter.finish()
         return editor.files
 
     def get_previous(self, path, revnum):

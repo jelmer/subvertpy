@@ -636,7 +636,7 @@ class InterFromSvnRepository(InterRepository):
             reporter.set_path("", parent_revnum, False)
 
         lock = transport.lock_read(".")
-        reporter.finish_report()
+        reporter.finish()
         lock.unlock()
 
     def _fetch_switch(self, revids, pb=None, lhs_parent=None):

@@ -45,8 +45,7 @@ from repository import SvnRepository
 from svk import SVN_PROP_SVK_MERGE, parse_svk_features, serialize_svk_features
 from mapping import escape_svn_path
 from scheme import BranchingScheme
-from transport import (SvnRaTransport, bzr_to_svn_url, create_svn_client,
-                       svn_config) 
+from transport import (SvnRaTransport, bzr_to_svn_url, svn_config) 
 from tree import SvnBasisTree
 
 import os
@@ -57,6 +56,7 @@ from core import SubversionException, time_to_cstring
 
 from format import get_rich_root_format
 
+
 class SvnWorkingTree(WorkingTree):
     """WorkingTree implementation that uses a Subversion Working Copy for storage."""
     def __init__(self, bzrdir, local_path, branch):
@@ -64,7 +64,6 @@ class SvnWorkingTree(WorkingTree):
         self.basedir = local_path
         self.bzrdir = bzrdir
         self._branch = branch
-        self.client_ctx = create_svn_client()
         self._get_wc()
         (min_rev, max_rev, switched, modified) = \
                 wc.revision_status(self.basedir, None, True)
@@ -131,9 +130,27 @@ class SvnWorkingTree(WorkingTree):
     def apply_inventory_delta(self, changes):
         raise NotImplementedError(self.apply_inventory_delta)
 
+    def _update(self, revnum=None):
+        if revnum is None:
+            revnum = self.branch.get_revnum()
+        adm = self._get_wc()
+        # FIXME: honor SVN_CONFIG_SECTION_HELPERS:SVN_CONFIG_OPTION_DIFF3_CMD
+        # FIXME: honor SVN_CONFIG_SECTION_MISCELLANY:SVN_CONFIG_OPTION_USE_COMMIT_TIMES
+        # FIXME: honor SVN_CONFIG_SECTION_MISCELLANY:SVN_CONFIG_OPTION_PRESERVED_CF_EXTS
+        try:
+            editor = adm.get_update_editor(self.basedir, use_commit_times=False, recurse=True)
+            assert editor is not None
+            reporter = self.branch.repository.transport.do_update(revnum, True, editor)
+            adm.crawl_revisions(self.basedir, reporter, restore_files=False, recurse=True, 
+                                use_commit_times=False)
+            # FIXME: handle externals
+        finally:
+            adm.close()
+        return revnum
+
     def update(self, change_reporter=None, possible_transports=None, revnum=None):
         orig_revnum = self.base_revnum
-        self.base_revnum = self.client_ctx.update([self.basedir], rev=revnum)[0]
+        self.base_revnum = self._update(revnum)
         self.base_revid = self.branch.generate_revision_id(self.base_revnum)
         self.base_tree = None
         self.read_working_inventory()
@@ -417,6 +434,8 @@ class SvnWorkingTree(WorkingTree):
                 """ Simple log message provider for unit tests. """
                 return message.encode("utf-8")
 
+        import client
+        self.client_ctx = client.Client()
         self.client_ctx.set_log_msg_func(log_message_func)
         if rev_id is not None:
             extra = "%d %s\n" % (self.branch.revno()+1, rev_id)
@@ -556,7 +575,7 @@ class SvnWorkingTree(WorkingTree):
         if stop_revision is None:
             stop_revision = self.branch.last_revision()
         revnumber = self.branch.lookup_revision_id(stop_revision)
-        fetched = self.client_ctx.update([self.basedir], revnum, True)
+        fetched = self._update(revnum)
         self.base_revnum = fetched
         self.base_revid = self.branch.generate_revision_id(fetched)
         self.base_tree = None

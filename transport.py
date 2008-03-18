@@ -25,7 +25,6 @@ from core import SubversionException
 from auth import create_auth_baton
 import ra
 import core
-import client
 import constants
 
 from errors import convert_svn_error, NoSvnRepositoryPresent
@@ -35,12 +34,6 @@ svn_config = core.get_config(None)
 def get_client_string():
     """Return a string that can be send as part of the User Agent string."""
     return "bzr%s+bzr-svn%s" % (bzrlib.__version__, bzrlib.plugins.svn.__version__)
-
-
-def create_svn_client():
-    ret = client.Client()
-    # FIXME ret.
-    return ret
 
 
 # Don't run any tests on SvnTransport as it is not intended to be 

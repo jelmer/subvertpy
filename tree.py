@@ -110,7 +110,7 @@ class SvnRevisionTree(RevisionTree):
                 self.revnum, True, 
                 urlutils.join(root_repos, self.branch_path), editor)
         reporter.set_path("", 0, True)
-        reporter.finish_report()
+        reporter.finish()
 
     def get_file_lines(self, file_id):
         return osutils.split_lines(self.file_data[file_id])
@@ -207,7 +207,7 @@ class FileTreeEditor:
             self.is_executable = (value != None)
         elif name == constants.PROP_SPECIAL:
             self.is_symlink = (value != None)
-        elif name == svn.core.SVN_PROP_EXTERNALS:
+        elif name == constants.PROP_EXTERNALS:
             mutter('%r property on file!' % name)
         elif name == constants.PROP_ENTRY_COMMITTED_REV:
             self.last_file_rev = int(value)
