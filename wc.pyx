@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_index_t, apr_array_header_t
+from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_index_t, apr_array_header_t, apr_array_pop, apr_hash_make, apr_hash_set
 from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t, svn_prop_t, svn_lock_t
 from ra cimport svn_ra_reporter2_t
 
@@ -228,6 +228,10 @@ cdef extern from "svn_wc.h":
                         apr_pool_t *pool)
 
     svn_wc_traversal_info_t *svn_wc_init_traversal_info(apr_pool_t *pool)
+
+    svn_error_t *svn_wc_get_default_ignores(apr_array_header_t **patterns,
+                                        apr_hash_t *config,
+                                        apr_pool_t *pool)
 
 def version():
     """Get libsvn_wc version information.
@@ -518,3 +522,21 @@ py_ra_reporter.abort_report = py_ra_report_abort
 py_ra_reporter.link_path = py_ra_report_link_path
 py_ra_reporter.delete_path = py_ra_report_delete_path
 py_ra_reporter.set_path = py_ra_report_set_path
+
+def get_default_ignores(config):
+    cdef apr_array_header_t *patterns
+    cdef apr_pool_t *pool
+    cdef char **pattern
+    cdef apr_hash_t *hash_config
+    pool = Pool(NULL)
+    hash_config = apr_hash_make(pool)
+    for k, v in config.items():
+        apr_hash_set(hash_config, <char *>k, len(k), <char *>v)
+    check_error(svn_wc_get_default_ignores(&patterns, hash_config, pool))
+    ret = []
+    pattern = <char **>apr_array_pop(patterns)
+    while pattern != NULL:
+        ret.append(pattern[0])
+        pattern = <char **>apr_array_pop(patterns)
+    apr_pool_destroy(pool)
+    return ret
