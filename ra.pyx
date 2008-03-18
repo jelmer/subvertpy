@@ -530,6 +530,7 @@ cdef svn_error_t *py_editor_set_target_revision(void *edit_baton, svn_revnum_t t
     return NULL
 
 cdef svn_error_t *py_editor_open_root(void *edit_baton, svn_revnum_t base_revision, apr_pool_t *dir_pool, void **root_baton) except *:
+    root_baton[0] = NULL
     self = <object>edit_baton
     ret = self.open_root(base_revision)
     Py_INCREF(ret)
@@ -542,6 +543,7 @@ cdef svn_error_t *py_editor_delete_entry(char *path, long revision, void *parent
     return NULL
 
 cdef svn_error_t *py_editor_add_directory(char *path, void *parent_baton, char *copyfrom_path, long copyfrom_revision, apr_pool_t *dir_pool, void **child_baton) except *:
+    child_baton[0] = NULL
     self = <object>parent_baton
     if copyfrom_path == NULL:
         ret = self.add_directory(path)
@@ -552,6 +554,7 @@ cdef svn_error_t *py_editor_add_directory(char *path, void *parent_baton, char *
     return NULL
 
 cdef svn_error_t *py_editor_open_directory(char *path, void *parent_baton, long base_revision, apr_pool_t *dir_pool, void **child_baton) except *:
+    child_baton[0] = NULL
     self = <object>parent_baton
     ret = self.open_directory(path, base_revision)
     Py_INCREF(ret)
@@ -578,6 +581,7 @@ cdef svn_error_t *py_editor_absent_directory(char *path, void *parent_baton, apr
     return NULL
 
 cdef svn_error_t *py_editor_add_file(char *path, void *parent_baton, char *copy_path, long copy_revision, apr_pool_t *file_pool, void **file_baton) except *:
+    file_baton[0] = NULL
     self = <object>parent_baton
     if copy_path == NULL:
         ret = self.add_file(path)
@@ -588,6 +592,7 @@ cdef svn_error_t *py_editor_add_file(char *path, void *parent_baton, char *copy_
     return NULL
 
 cdef svn_error_t *py_editor_open_file(char *path, void *parent_baton, long base_revision, apr_pool_t *file_pool, void **file_baton) except *:
+    file_baton[0] = NULL
     self = <object>parent_baton
     ret = self.open_file(path, base_revision)
     Py_INCREF(ret)
@@ -611,6 +616,7 @@ cdef svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *
     
 
 cdef svn_error_t *py_editor_apply_textdelta(void *file_baton, char *base_checksum, apr_pool_t *pool, svn_txdelta_window_handler_t *handler, void **handler_baton) except *:
+    handler_baton[0] = NULL
     self = <object>file_baton
     if base_checksum == NULL:
         ret = self.apply_textdelta()
