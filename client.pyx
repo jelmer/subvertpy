@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from apr cimport apr_initialize, apr_hash_t, apr_time_t
-from apr cimport apr_array_header_t, apr_array_make, apr_array_push
+from apr cimport apr_array_header_t, apr_array_make, apr_array_push, apr_array_pop
 from apr cimport apr_pool_t, apr_pool_destroy
 from types cimport svn_error_t, svn_cancel_func_t, svn_auth_baton_t, svn_revnum_t, svn_boolean_t, svn_commit_info_t, svn_string_t, svn_log_message_receiver_t
 from core cimport Pool, check_error, string_list_to_apr_array, py_svn_log_wrapper, prop_hash_to_dict
@@ -298,11 +298,17 @@ cdef class Client:
     def update(self, paths, rev=None, recurse=True, ignore_externals=False):
         cdef apr_array_header_t *result_revs
         cdef svn_opt_revision_t c_rev
+        cdef svn_revnum_t *ret_rev
         to_opt_revision(rev, &c_rev)
         check_error(svn_client_update2(&result_revs, 
                 string_list_to_apr_array(self.pool, paths), &c_rev, 
                 recurse, ignore_externals, self.client, self.pool))
-        # FIXME: Convert and return result_revs
+        ret = []
+        ret_rev = <svn_revnum_t *>apr_array_pop(result_revs)
+        while ret_rev != NULL:
+            ret.append(ret_rev[0])
+            ret_rev = <svn_revnum_t *>apr_array_pop(result_revs)
+        return ret
 
     def revprop_get(self,propname, propval, url, rev=None):
         cdef svn_revnum_t set_rev

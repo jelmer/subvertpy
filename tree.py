@@ -58,8 +58,6 @@ class TreeBuildEditor:
         self.tree = tree
         self.repository = tree._repository
         self.last_revnum = {}
-        self.dir_revnum = {}
-        self.dir_ignores = {}
 
     def set_target_revision(self, revnum):
         self.revnum = revnum
@@ -81,7 +79,6 @@ class DirectoryTreeEditor:
     def __init__(self, tree, file_id):
         self.tree = tree
         self.file_id = file_id
-        self.dir_ignores = None
 
     def add_directory(self, path, copyfrom_path=None, copyfrom_revnum=-1):
         path = path.decode("utf-8")
@@ -96,11 +93,7 @@ class DirectoryTreeEditor:
                         SVN_PROP_BZR_FILEIDS, SVN_PROP_BZR_REVISION_ID,
                         SVN_PROP_BZR_BRANCHING_SCHEME, SVN_PROP_BZR_MERGE)
 
-        if name == constants.PROP_ENTRY_COMMITTED_REV:
-            self.dir_revnum = int(value)
-        elif name == constants.PROP_IGNORE:
-            self.dir_ignores = value
-        elif name.startswith(SVN_PROP_BZR_ANCESTRY):
+        if name.startswith(SVN_PROP_BZR_ANCESTRY):
             if self.file_id != self.tree._inventory.root.file_id:
                 mutter('%r set on non-root dir!' % name)
                 return
@@ -109,10 +102,12 @@ class DirectoryTreeEditor:
                 mutter('%r set on non-root dir!' % name)
                 return
         elif name in (constants.PROP_ENTRY_COMMITTED_DATE,
+                      constants.PROP_ENTRY_COMMITTED_REV,
                       constants.PROP_ENTRY_LAST_AUTHOR,
                       constants.PROP_ENTRY_LOCK_TOKEN,
                       constants.PROP_ENTRY_UUID,
-                      constants.PROP_EXECUTABLE):
+                      constants.PROP_EXECUTABLE,
+                      constants.PROP_IGNORE):
             pass
         elif name.startswith(constants.PROP_WC_PREFIX):
             pass
@@ -130,9 +125,7 @@ class DirectoryTreeEditor:
         return FileTreeEditor(self.tree, path)
 
     def close(self):
-        if (self.dir_ignores is not None and 
-            self.file_id in self.tree._inventory):
-            self.tree._inventory[self.file_id].ignores = self.dir_ignores
+        pass
 
 
 class FileTreeEditor:

@@ -79,8 +79,8 @@ class SvnWorkingTree(WorkingTree):
                 wc.revision_status(self.basedir, None, True)
         if min_rev != max_rev:
             #raise WorkingTreeInconsistent(status.min_rev, status.max_rev)
-            assert status.max_rev == self.client_ctx.update(self.basedir, 
-                                     max_rev, True)
+            assert max_rev == self.client_ctx.update(self.basedir, 
+                                     max_rev, True)[0]
 
         self.base_revnum = max_rev
         self.base_tree = SvnBasisTree(self)
@@ -104,7 +104,7 @@ class SvnWorkingTree(WorkingTree):
         ignores.update(wc.get_default_ignores(svn_config))
 
         def dir_add(adm, prefix, patprefix):
-            ignorestr = adm.prop_get(core.SVN_PROP_IGNORE, 
+            ignorestr = adm.prop_get(constants.PROP_IGNORE, 
                                     self.abspath(prefix).rstrip("/"))
             if ignorestr is not None:
                 for pat in ignorestr.splitlines():

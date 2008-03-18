@@ -276,10 +276,10 @@ class SvnRaTransport(Transport):
             raise
 
     @convert_svn_error
-    def replay(self, revision, low_water_mark, send_deltas, editor):
+    def replay(self, revision, low_water_mark, editor, send_deltas=True):
         self._open_real_transport()
         self.mutter('svn replay -r%r:%r' % (low_water_mark, revision))
-        self._ra.replay(revision, low_water_mark, send_deltas, editor)
+        self._ra.replay(revision, low_water_mark, editor, send_deltas)
 
     @convert_svn_error
     def do_update(self, revnum, recurse, editor):
