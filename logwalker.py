@@ -305,7 +305,7 @@ class LogWalker(object):
         root_repos = transport.get_svn_repos_root()
         reporter = transport.do_switch(revnum, True, 
                 urlutils.join(root_repos, path), editor)
-        reporter.set_path("", 0, True, None)
+        reporter.set_path("", 0, True)
         reporter.finish_report()
         return editor.files
 

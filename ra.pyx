@@ -235,15 +235,15 @@ cdef extern from "svn_ra.h":
                                       apr_pool_t *pool)
 
     svn_error_t *svn_ra_replay(svn_ra_session_t *session,
-                                   long revision,
-                                   long low_water_mark,
+                                   svn_revnum_t revision,
+                                   svn_revnum_t low_water_mark,
                                    int send_deltas,
                                    svn_delta_editor_t *editor,
                                    edit_baton,
                                    apr_pool_t *pool)
 
     svn_error_t *svn_ra_rev_proplist(svn_ra_session_t *session,
-                                     long rev,
+                                     svn_revnum_t rev,
                                      apr_hash_t **props,
                                      apr_pool_t *pool)
 
@@ -258,17 +258,17 @@ cdef extern from "svn_ra.h":
                                            apr_pool_t *pool)
 
     svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
-                                    long rev,
+                                    svn_revnum_t rev,
                                     char *name,
                                     svn_string_t *value,
                                     apr_pool_t *pool)
 
     svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                                  apr_hash_t **dirents,
-                                 long *fetched_rev,
+                                 svn_revnum_t *fetched_rev,
                                  apr_hash_t **props,
                                  char *path,
-                                 long revision,
+                                 svn_revnum_t revision,
                                  long dirent_fields,
                                  apr_pool_t *pool)
 
@@ -336,7 +336,7 @@ cdef class Reporter:
     cdef void *report_baton
     cdef apr_pool_t *pool
 
-    def set_path(self, char *path, int revision, int start_empty, char *lock_token):
+    def set_path(self, char *path, svn_revnum_t revision, int start_empty, lock_token=None):
         check_error(self.reporter.set_path(self.report_baton, path, revision, 
                      start_empty, c_lock_token(lock_token), self.pool))
 
@@ -344,7 +344,7 @@ cdef class Reporter:
         check_error(self.reporter.delete_path(self.report_baton, path, 
                      self.pool))
 
-    def link_path(self, char *path, char *url, int revision, int start_empty, char *lock_token):
+    def link_path(self, char *path, char *url, svn_revnum_t revision, int start_empty, lock_token=None):
         check_error(self.reporter.link_path(self.report_baton, path, url, 
                     revision, start_empty, c_lock_token(lock_token), self.pool))
 
@@ -367,7 +367,7 @@ cdef class FileEditor:
     cdef svn_delta_editor_t *editor
     cdef apr_pool_t *pool
 
-    def apply_textdelta(self, char *base_checksum=NULL):
+    def apply_textdelta(self, base_checksum=None):
         cdef char *c_base_checksum
         cdef svn_txdelta_window_handler_t txdelta_handler
         cdef void *txdelta_baton
@@ -395,7 +395,7 @@ cdef class FileEditor:
         check_error(self.editor.change_file_prop(self.file_baton, name, 
                     p_c_value, self.pool))
 
-    def close(self, char *checksum=NULL):
+    def close(self, checksum=None):
         cdef char *c_checksum
         if checksum is None:
             c_checksum = NULL
@@ -409,11 +409,11 @@ cdef class DirectoryEditor:
     cdef void *dir_baton
     cdef apr_pool_t *pool
 
-    def delete_entry(self, char *path, int revision=-1):
+    def delete_entry(self, char *path, svn_revnum_t revision=-1):
         check_error(self.editor.delete_entry(path, revision, self.dir_baton,
                                              self.pool))
 
-    def add_directory(self, char *path, char *copyfrom_path=NULL, int copyfrom_rev=-1):
+    def add_directory(self, char *path, copyfrom_path=None, int copyfrom_rev=-1):
         cdef void *child_baton
         cdef char *c_copyfrom_path
         if copyfrom_path is None:
@@ -448,7 +448,7 @@ cdef class DirectoryEditor:
         check_error(self.editor.absent_directory(path, self.dir_baton, 
                     self.pool))
 
-    def add_file(self, char *path, char *copy_path=NULL, int copy_rev=-1):
+    def add_file(self, char *path, copy_path=None, int copy_rev=-1):
         cdef void *file_baton
         cdef FileEditor py_file_editor
         cdef char *c_copy_path
@@ -730,7 +730,7 @@ cdef class RemoteAccess:
         apr_pool_destroy(temp_pool)
         return latest_revnum
 
-    def get_log(self, callback, paths, int start, int end, int limit=0, 
+    def get_log(self, callback, paths, svn_revnum_t start, svn_revnum_t end, int limit=0, 
                 int discover_changed_paths=True, int strict_node_history=True,
                 revprops=[PROP_REVISION_LOG,PROP_REVISION_AUTHOR,PROP_REVISION_DATE]):
         cdef apr_pool_t *temp_pool
@@ -751,7 +751,7 @@ cdef class RemoteAccess:
         apr_pool_destroy(temp_pool)
         return root
 
-    def do_update(self, int revision_to_update_to, char *update_target, int recurse, 
+    def do_update(self, svn_revnum_t revision_to_update_to, char *update_target, int recurse, 
                   update_editor):
         cdef svn_ra_reporter2_t *reporter
         cdef void *report_baton
@@ -767,7 +767,7 @@ cdef class RemoteAccess:
         ret.pool = temp_pool
         return ret
 
-    def do_switch(self, int revision_to_update_to, char *update_target, int recurse, 
+    def do_switch(self, svn_revnum_t revision_to_update_to, char *update_target, int recurse, 
                   char *switch_url, update_editor):
         cdef svn_ra_reporter2_t *reporter
         cdef void *report_baton
@@ -784,14 +784,14 @@ cdef class RemoteAccess:
         ret.pool = temp_pool
         return ret
 
-    def replay(self, int revision, int low_water_mark, update_editor, int send_deltas=True):
+    def replay(self, svn_revnum_t revision, svn_revnum_t low_water_mark, update_editor, int send_deltas=True):
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
         check_error(svn_ra_replay(self.ra, revision, low_water_mark,
                      send_deltas, &py_editor, update_editor, temp_pool))
         apr_pool_destroy(temp_pool)
 
-    def rev_proplist(self, int rev):
+    def rev_proplist(self, svn_revnum_t rev):
         cdef apr_pool_t *temp_pool
         cdef apr_hash_t *props
         temp_pool = Pool(self.pool)
@@ -823,7 +823,7 @@ cdef class RemoteAccess:
         py_editor.pool = temp_pool
         return py_editor
 
-    def change_rev_prop(self, int rev, char *name, char *value):
+    def change_rev_prop(self, svn_revnum_t rev, char *name, char *value):
         cdef apr_pool_t *temp_pool
         cdef svn_string_t *val_string
         temp_pool = Pool(self.pool)
@@ -832,7 +832,7 @@ cdef class RemoteAccess:
                      val_string, temp_pool))
         apr_pool_destroy(temp_pool)
     
-    def get_dir(self, char *path, int revision=-1, int dirent_fields=0):
+    def get_dir(self, char *path, svn_revnum_t revision=-1, int dirent_fields=0):
         cdef apr_pool_t *temp_pool
         cdef apr_hash_t *dirents
         cdef apr_hash_index_t *idx
@@ -880,7 +880,7 @@ cdef class RemoteAccess:
         apr_pool_destroy(temp_pool)
         return wrap_lock(lock)
 
-    def check_path(self, char *path, int revision):
+    def check_path(self, char *path, svn_revnum_t revision):
         cdef svn_node_kind_t kind
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)

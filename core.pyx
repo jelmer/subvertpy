@@ -18,7 +18,7 @@ from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, sv
 from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t, apr_size_t
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
-from apr cimport apr_hash_index_t, apr_hash_this, apr_hash_first, apr_hash_next
+from apr cimport apr_hash_index_t, apr_hash_this, apr_hash_first, apr_hash_next, apr_strerror
 import constants
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_stream_set_read, svn_stream_set_write, svn_stream_set_close, svn_stream_from_stringbuf, svn_stream_create
@@ -70,11 +70,11 @@ cdef check_error(svn_error_t *error):
 cdef apr_pool_t *Pool(apr_pool_t *parent):
     cdef apr_status_t status
     cdef apr_pool_t *ret
+    cdef char errmsg[1024]
     ret = NULL
     status = apr_pool_create(&ret, parent)
     if status != 0:
-        # FIXME: Clearer error
-        raise Exception("APR Error")
+        raise Exception(apr_strerror(status, errmsg, sizeof(errmsg)))
     return ret
 
 
@@ -83,7 +83,7 @@ cdef extern from "svn_time.h":
     svn_error_t *svn_time_from_cstring(apr_time_t *when, char *data, 
                                        apr_pool_t *pool)
 
-def time_to_cstring(int when):
+def time_to_cstring(apr_time_t when):
     """Convert a UNIX timestamp to a Subversion CString."""
     cdef apr_pool_t *pool
     pool = Pool(NULL)

@@ -378,7 +378,7 @@ cdef class WorkingCopy:
         apr_pool_destroy(temp_pool)
         return (py_propchanges, py_orig_props)
 
-    def add(self, char *path, char *copyfrom_url=NULL, int copyfrom_rev=-1, cancel_func=None,
+    def add(self, char *path, copyfrom_url=None, int copyfrom_rev=-1, cancel_func=None,
             notify_func=None):
         cdef apr_pool_t *temp_pool
         cdef char *c_copyfrom_url
@@ -437,7 +437,7 @@ cdef class WorkingCopy:
             apr_pool_destroy(self.pool)
 
 
-def revision_status(char *wc_path, char *trail_url=NULL, int committed=False, cancel_func=None):
+def revision_status(char *wc_path, trail_url=None, int committed=False, cancel_func=None):
     """Determine the revision status of a specified working copy.
 
     :return: Tuple with minimum and maximum revnums found, whether the 

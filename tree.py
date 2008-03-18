@@ -45,7 +45,7 @@ class SvnRevisionTree(RevisionTree):
         reporter = repository.transport.do_switch(
                 self.revnum, True, 
                 urlutils.join(root_repos, self.branch_path), editor)
-        reporter.set_path("", 0, True, None)
+        reporter.set_path("", 0, True)
         reporter.finish_report()
 
     def get_file_lines(self, file_id):

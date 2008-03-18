@@ -616,7 +616,7 @@ class InterFromSvnRepository(InterRepository):
             reporter = transport.do_update(editor.revnum, True, editor)
 
             # Report status of existing paths
-            reporter.set_path("", editor.revnum, True, None)
+            reporter.set_path("", editor.revnum, True)
         else:
             (parent_branch, parent_revnum, mapping) = \
                     self.source.lookup_revision_id(parent_revid)
@@ -629,7 +629,7 @@ class InterFromSvnRepository(InterRepository):
                 reporter = transport.do_update(editor.revnum, True, editor)
 
             # Report status of existing paths
-            reporter.set_path("", parent_revnum, False, None)
+            reporter.set_path("", parent_revnum, False)
 
         lock = transport.lock_read(".")
         reporter.finish_report()
