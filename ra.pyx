@@ -57,7 +57,7 @@ cdef extern from "svn_delta.h":
 
     ctypedef struct svn_delta_editor_t:
         svn_error_t *(*set_target_revision)(void *edit_baton, 
-                svn_revnum_t target_revision, apr_pool_t *pool) except *
+                svn_revnum_t target_revision, apr_pool_t *pool) except * 
         svn_error_t *(*open_root)(void *edit_baton, svn_revnum_t base_revision, 
                                   apr_pool_t *dir_pool, void **root_baton)
 
@@ -517,8 +517,9 @@ def version():
 
     :return: tuple with major, minor, patch version number and tag.
     """
-    return (svn_ra_version().major, svn_ra_version().minor, 
-            svn_ra_version().minor, svn_ra_version().tag)
+    cdef svn_version_t *ver
+    ver = svn_ra_version()
+    return (ver.major, ver.minor, ver.minor, ver.tag)
 
 cdef svn_error_t *py_editor_set_target_revision(void *edit_baton, svn_revnum_t target_revision, apr_pool_t *pool) except *:
     self = <object>edit_baton

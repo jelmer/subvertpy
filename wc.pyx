@@ -238,8 +238,9 @@ def version():
 
     :return: tuple with major, minor, patch version number and tag.
     """
-    return (svn_wc_version().major, svn_wc_version().minor, 
-            svn_wc_version().minor, svn_wc_version().tag)
+    cdef svn_version_t *ver
+    ver = svn_wc_version()
+    return (ver.major, ver.minor, ver.minor, ver.tag)
 
 
 cdef void py_wc_notify_func(void *baton, svn_wc_notify_t *notify, apr_pool_t *pool):
