@@ -24,6 +24,11 @@ import urllib
 import core
 from bzrlib.plugins.svn import constants
 
+
+class InvalidExternalsDescription(BzrError):
+    _fmt = """Unable to parse externals description."""
+
+
 class NotSvnBranchPath(NotBranchError):
     """Error raised when a path was specified that did not exist."""
     _fmt = """%(path)s is not a valid Subversion branch path. 
