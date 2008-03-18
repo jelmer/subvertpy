@@ -424,10 +424,8 @@ cdef class DirectoryEditor:
                     c_copyfrom_path, copyfrom_rev, self.pool, &child_baton))
         return new_dir_editor(self.editor, child_baton, self.pool)
 
-    def open_directory(self, path, base_revision=None):
+    def open_directory(self, path, base_revision=-1):
         cdef void *child_baton
-        if base_revision is None:
-            base_revision = -1
         check_error(self.editor.open_directory(path, self.dir_baton,
                     base_revision, self.pool, &child_baton))
         return new_dir_editor(self.editor, child_baton, self.pool)
@@ -548,7 +546,7 @@ cdef svn_error_t *py_editor_add_directory(char *path, void *parent_baton, char *
     if copyfrom_path == NULL:
         ret = self.add_directory(path)
     else:
-        ret = self.add_directory(path, copyfrom_path, copy_revision)
+        ret = self.add_directory(path, copyfrom_path, copyfrom_revision)
     Py_INCREF(ret)
     child_baton[0] = <void *>ret
     return NULL

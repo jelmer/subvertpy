@@ -240,7 +240,7 @@ class DirectoryBuildEditor:
     def open_directory(self, path, base_revnum):
         assert isinstance(path, str)
         path = path.decode("utf-8")
-        assert base_revnum >= 0
+        assert isinstance(base_revnum, int)
         base_file_id = self.editor._get_old_id(self.old_id, path)
         base_revid = self.editor.old_inventory[base_file_id].revision
         file_id = self.editor._get_existing_id(self.old_id, self.new_id, path)
@@ -674,7 +674,7 @@ class InterFromSvnRepository(InterRepository):
                 editor.start_revision(revid, parent_inv)
 
                 try:
-                    self._fetch_revision(editor, transport, repos_root, parent_revid)
+                    self._fetch_revision_update(editor, transport, repos_root, parent_revid)
                 except:
                     editor.abort()
                     raise
