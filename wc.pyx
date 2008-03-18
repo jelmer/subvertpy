@@ -252,6 +252,24 @@ cdef extern from "svn_wc.h":
                                        svn_wc_traversal_info_t *ti,
                                        apr_pool_t *pool)
 
+    svn_error_t *svn_wc_transmit_text_deltas2(char **tempfile,
+                                          unsigned char digest[],
+                                          char *path,
+                                          svn_wc_adm_access_t *adm_access,
+                                          svn_boolean_t fulltext,
+                                          svn_delta_editor_t *editor,
+                                          void *file_baton,
+                                          apr_pool_t *pool)
+
+    svn_error_t *svn_wc_transmit_prop_deltas(char *path,
+                                         svn_wc_adm_access_t *adm_access,
+                                         svn_wc_entry_t *entry,
+                                         svn_delta_editor_t *editor,
+                                         void *baton,
+                                         char **tempfile,
+                                         apr_pool_t *pool)
+
+
 def version():
     """Get libsvn_wc version information.
 
