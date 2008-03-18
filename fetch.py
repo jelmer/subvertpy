@@ -147,8 +147,7 @@ class RevisionBuildEditor:
         return DirectoryBuildEditor(self, old_file_id, file_id, file_parents)
 
     def close(self):
-        assert len(self._premature_deletes) == 0
-        self._finish_commit()
+        pass
 
     def _store_directory(self, file_id, parents):
         raise NotImplementedError(self._store_directory)
@@ -207,6 +206,10 @@ class DirectoryBuildEditor:
     def close(self):
         self.editor.inventory[self.new_id].revision = self.editor.revid
         self.editor._store_directory(self.new_id, self.parent_revids)
+
+        if self.new_id == self.editor.inventory.root.file_id:
+            assert len(self.editor._premature_deletes) == 0
+            self.editor._finish_commit()
 
     def add_directory(self, path, copyfrom_path=None, copyfrom_revnum=-1):
         assert isinstance(path, str)
@@ -583,14 +586,34 @@ class InterFromSvnRepository(InterRepository):
         self.fetch(revision_id, pb, find_ghosts=False)
 
     def _fetch_revision(self, editor, transport, repos_root, parent_revid):
+        if self._supports_replay:
+            try:
+                self._fetch_revision_replay(editor, transport, repos_root, parent_revid)
+                return
+            except NotImplementedError:
+                self._supports_replay = False
+        self._fetch_revision_update(editor, transport, repos_root, parent_revid)
+
+    def _fetch_revision_replay(self, editor, transport, repos_root, parent_revid):
+        if parent_revid is not None:
+            parent_revnum = self.source.lookup_revision_id(parent_revid)[1]
+        else:
+            parent_revnum = editor.revnum-1
+        branch_url = urlutils.join(repos_root, editor.branch_path)
+        transport.reparent(branch_url)
+        lock = transport.lock_read(".")
+        try:
+            transport.replay(editor.revnum, parent_revnum, editor, True)
+        finally:
+            lock.unlock()
+
+    def _fetch_revision_update(self, editor, transport, repos_root, parent_revid):
         if parent_revid is None:
-            branch_url = urlutils.join(repos_root, 
-                                       editor.branch_path)
+            branch_url = urlutils.join(repos_root, editor.branch_path)
             transport.reparent(branch_url)
             assert transport.svn_url == branch_url.rstrip("/"), \
                 "Expected %r, got %r" % (transport.svn_url, branch_url)
-            reporter = transport.do_update(editor.revnum, True, 
-                                           editor)
+            reporter = transport.do_update(editor.revnum, True, editor)
 
             # Report status of existing paths
             reporter.set_path("", editor.revnum, True, None)
@@ -601,8 +624,7 @@ class InterFromSvnRepository(InterRepository):
 
             if parent_branch != editor.branch_path:
                 reporter = transport.do_switch(editor.revnum, True, 
-                    urlutils.join(repos_root, editor.branch_path), 
-                    editor)
+                    urlutils.join(repos_root, editor.branch_path), editor)
             else:
                 reporter = transport.do_update(editor.revnum, True, editor)
 
@@ -671,6 +693,8 @@ class InterFromSvnRepository(InterRepository):
         """Fetch revisions. """
         if revision_id == NULL_REVISION:
             return
+
+        self._supports_replay = True # assume replay supported by default
         # Dictionary with paths as keys, revnums as values
 
         # Loop over all the revnums until revision_id
