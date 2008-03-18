@@ -227,11 +227,11 @@ cdef class Client:
         self.client.log_msg_baton2 = <void *>func
         self.callbacks.append(func)
 
-    def add(self, path, recursive=True, force=False, no_ignore=False):
+    def add(self, char *path, int recursive=True, int force=False, int no_ignore=False):
         check_error(svn_client_add3(path, recursive, force, no_ignore, 
                     self.client, self.pool))
 
-    def checkout(self, url, path, peg_rev=None, rev=None, recurse=True, 
+    def checkout(self, char *url, char *path, peg_rev=None, rev=None, recurse=True, 
                  ignore_externals=False):
         cdef svn_revnum_t result_rev
         cdef svn_opt_revision_t c_peg_rev, c_rev
@@ -242,7 +242,7 @@ cdef class Client:
             ignore_externals, self.client, self.pool))
         return result_rev
 
-    def commit(self, targets, recurse=True, keep_locks=True):
+    def commit(self, targets, int recurse=True, int keep_locks=True):
         cdef svn_commit_info_t *commit_info
         commit_info = NULL
         check_error(svn_client_commit3(&commit_info, 
@@ -258,7 +258,7 @@ cdef class Client:
                     self.client, self.pool))
         return py_commit_info_tuple(commit_info)
 
-    def delete(self, paths, force=False):
+    def delete(self, paths, int force=False):
         cdef svn_commit_info_t *commit_info
         commit_info = NULL
         check_error(svn_client_delete2(&commit_info, 
@@ -266,7 +266,7 @@ cdef class Client:
                     force, self.client, self.pool))
         return py_commit_info_tuple(commit_info)
 
-    def copy(self, src_path, dst_path, src_rev=None):
+    def copy(self, char *src_path, char *dst_path, src_rev=None):
         cdef svn_commit_info_t *commit_info
         cdef svn_opt_revision_t c_src_rev
         to_opt_revision(src_rev, &c_src_rev)
@@ -275,15 +275,15 @@ cdef class Client:
                     &c_src_rev, dst_path, self.client, self.pool))
         return py_commit_info_tuple(commit_info)
 
-    def propset(self, propname, propval, target, recurse=True, 
-            skip_checks=False):
+    def propset(self, char *propname, char *propval, char *target, int recurse=True, 
+            int skip_checks=False):
         cdef svn_string_t c_propval
         c_propval.data = propval
         c_propval.len = len(propval)
         check_error(svn_client_propset2(propname, &c_propval,
                     target, recurse, skip_checks, self.client, self.pool))
     
-    def propget(self, propname, target, peg_revision=None, revision=None,
+    def propget(self, char *propname, char *target, peg_revision=None, revision=None,
                 recurse=False):
         cdef svn_string_t c_propval
         cdef svn_opt_revision_t c_peg_rev
@@ -295,7 +295,7 @@ cdef class Client:
                     &c_peg_rev, &c_rev, recurse, self.client, self.pool))
         return prop_hash_to_dict(hash_props)
 
-    def update(self, paths, rev=None, recurse=True, ignore_externals=False):
+    def update(self, paths, rev=None, int recurse=True, int ignore_externals=False):
         cdef apr_array_header_t *result_revs
         cdef svn_opt_revision_t c_rev
         cdef svn_revnum_t *ret_rev
@@ -310,7 +310,7 @@ cdef class Client:
             ret_rev = <svn_revnum_t *>apr_array_pop(result_revs)
         return ret
 
-    def revprop_get(self,propname, propval, url, rev=None):
+    def revprop_get(self, char *propname, char *propval, char *url, rev=None):
         cdef svn_revnum_t set_rev
         cdef svn_opt_revision_t c_rev
         cdef svn_string_t *c_val
@@ -319,7 +319,7 @@ cdef class Client:
                     &c_rev, &set_rev, self.client, self.pool))
         return (PyString_FromStringAndSize(c_val.data, c_val.len), set_rev)
 
-    def revprop_set(self,propname, propval, url, rev=None, force=False):
+    def revprop_set(self, char *propname, char *propval, char *url, rev=None, int force=False):
         cdef svn_revnum_t set_rev
         cdef svn_opt_revision_t c_rev
         cdef svn_string_t c_val
@@ -331,7 +331,7 @@ cdef class Client:
         return set_rev
 
     def log(self, targets, callback, peg_revision=None, start=None, end=None,
-            limit=0, discover_changed_paths=True, strict_node_history=True):
+            int limit=0, int discover_changed_paths=True, int strict_node_history=True):
         cdef svn_opt_revision_t c_peg_rev, c_start_rev, c_end_rev
         to_opt_revision(peg_revision, &c_peg_rev)
         to_opt_revision(start, &c_start_rev)

@@ -83,7 +83,7 @@ cdef extern from "svn_time.h":
     svn_error_t *svn_time_from_cstring(apr_time_t *when, char *data, 
                                        apr_pool_t *pool)
 
-def time_to_cstring(when):
+def time_to_cstring(int when):
     """Convert a UNIX timestamp to a Subversion CString."""
     cdef apr_pool_t *pool
     pool = Pool(NULL)
@@ -91,7 +91,7 @@ def time_to_cstring(when):
     apr_pool_destroy(pool)
     return ret
 
-def time_from_cstring(data):
+def time_from_cstring(char *data):
     """Parse a Subversion time string and return a UNIX timestamp."""
     cdef apr_time_t when
     cdef apr_pool_t *pool

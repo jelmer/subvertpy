@@ -286,7 +286,7 @@ cdef py_entry(svn_wc_entry_t *entry):
 cdef class WorkingCopy:
     cdef svn_wc_adm_access_t *adm
     cdef apr_pool_t *pool
-    def __init__(self, WorkingCopy associated, path, write_lock=False, depth=0, 
+    def __init__(self, WorkingCopy associated, char *path, int write_lock=False, int depth=0, 
                  cancel_func=None):
         cdef svn_wc_adm_access_t *parent_wc
         self.pool = Pool(NULL)
@@ -304,7 +304,7 @@ cdef class WorkingCopy:
     def locked(self):
         return svn_wc_adm_locked(self.adm)
 
-    def prop_get(self, name, path):
+    def prop_get(self, char *name, char *path):
         cdef svn_string_t *value
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
@@ -316,7 +316,7 @@ cdef class WorkingCopy:
         apr_pool_destroy(temp_pool)
         return ret
 
-    def prop_set(self, name, value, path, skip_checks=False):
+    def prop_set(self, char *name, char *value, char *path, int skip_checks=False):
         cdef apr_pool_t *temp_pool
         cdef svn_string_t *cvalue
         temp_pool = Pool(self.pool)
@@ -325,7 +325,7 @@ cdef class WorkingCopy:
                     skip_checks, temp_pool))
         apr_pool_destroy(temp_pool)
 
-    def entries_read(self, show_hidden=False):
+    def entries_read(self, int show_hidden=False):
         cdef apr_hash_t *entries
         cdef apr_pool_t *temp_pool
         cdef apr_hash_index_t *idx
@@ -344,7 +344,7 @@ cdef class WorkingCopy:
         apr_pool_destroy(temp_pool)
         return py_entries
 
-    def entry(self, path, show_hidden=False):
+    def entry(self, char *path, int show_hidden=False):
         cdef apr_pool_t *temp_pool
         cdef svn_wc_entry_t *entry
         temp_pool = Pool(self.pool)
@@ -353,7 +353,7 @@ cdef class WorkingCopy:
 
         return py_entry(entry)
 
-    def get_prop_diffs(self, path):
+    def get_prop_diffs(self, char *path):
         cdef apr_pool_t *temp_pool
         cdef apr_array_header_t *propchanges
         cdef apr_hash_t *original_props
@@ -378,7 +378,7 @@ cdef class WorkingCopy:
         apr_pool_destroy(temp_pool)
         return (py_propchanges, py_orig_props)
 
-    def add(self, path, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None,
+    def add(self, char *path, char *copyfrom_url=NULL, int copyfrom_rev=-1, cancel_func=None,
             notify_func=None):
         cdef apr_pool_t *temp_pool
         cdef char *c_copyfrom_url
@@ -395,7 +395,7 @@ cdef class WorkingCopy:
                                 temp_pool))
         apr_pool_destroy(temp_pool)
 
-    def copy(self, src, dst, cancel_func=None, notify_func=None):
+    def copy(self, char *src, char *dst, cancel_func=None, notify_func=None):
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
         check_error(svn_wc_copy2(src, self.adm, dst,
@@ -404,7 +404,7 @@ cdef class WorkingCopy:
                                 temp_pool))
         apr_pool_destroy(temp_pool)
 
-    def delete(self, path, cancel_func=None, notify_func=None):
+    def delete(self, char *path, cancel_func=None, notify_func=None):
         cdef apr_pool_t *temp_pool
         temp_pool = Pool(self.pool)
         check_error(svn_wc_delete2(path, self.adm, 
@@ -413,8 +413,8 @@ cdef class WorkingCopy:
                                 temp_pool))
         apr_pool_destroy(temp_pool)
 
-    def crawl_revisions(self, path, reporter, restore_files=True, 
-                        recurse=True, use_commit_times=True,
+    def crawl_revisions(self, char *path, reporter, int restore_files=True, 
+                        int recurse=True, int use_commit_times=True,
                         notify_func=None):
         cdef apr_pool_t *temp_pool
         cdef svn_wc_traversal_info_t *traversal_info
@@ -437,7 +437,7 @@ cdef class WorkingCopy:
             apr_pool_destroy(self.pool)
 
 
-def revision_status(wc_path, trail_url=None, committed=False, cancel_func=None):
+def revision_status(char *wc_path, char *trail_url=NULL, int committed=False, cancel_func=None):
     """Determine the revision status of a specified working copy.
 
     :return: Tuple with minimum and maximum revnums found, whether the 
@@ -458,13 +458,13 @@ def revision_status(wc_path, trail_url=None, committed=False, cancel_func=None):
     apr_pool_destroy(temp_pool)
     return ret
 
-def is_normal_prop(name):
+def is_normal_prop(char *name):
     return svn_wc_is_normal_prop(name)
 
-def is_wc_prop(name):
+def is_wc_prop(char *name):
     return svn_wc_is_wc_prop(name)
 
-def is_entry_prop(name):
+def is_entry_prop(char *name):
     return svn_wc_is_entry_prop(name)
 
 def get_adm_dir():
@@ -474,7 +474,7 @@ def get_adm_dir():
     apr_pool_destroy(pool)
     return ret
 
-def get_pristine_copy_path(path):
+def get_pristine_copy_path(char *path):
     cdef apr_pool_t *pool
     cdef char *pristine_path
     pool = Pool(NULL)
