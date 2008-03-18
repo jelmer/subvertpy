@@ -32,7 +32,7 @@ from commit import push
 from errors import NotSvnBranchPath
 from format import get_rich_root_format
 from repository import SvnRepository
-from transport import bzr_to_svn_url, create_svn_client
+from transport import bzr_to_svn_url
 
 
 class FakeControlFiles(object):
@@ -166,16 +166,18 @@ class SvnBranch(Branch):
         :param revision_id: Tip of the checkout.
         :return: WorkingTree object of the checkout.
         """
+        import os, wc
         if revision_id is not None:
             revnum = self.lookup_revision_id(revision_id)
         else:
-            revnum = None
+            revnum = self.get_revnum()
 
-        client_ctx = create_svn_client()
-        client_ctx.checkout(bzr_to_svn_url(self.base), to_location, revnum, 
-                            True)
-
-        return WorkingTree.open(to_location)
+        os.mkdir(to_location)
+        wc.ensure_adm(to_location, self.repository.uuid, bzr_to_svn_url(self.base),
+                      bzr_to_svn_url(self.repository.base), revnum)
+        wt = WorkingTree.open(to_location)
+        wt.update(["."], revnum=revnum)
+        return wt
 
     def create_checkout(self, to_location, revision_id=None, lightweight=False,
                         accelerator_tree=None):

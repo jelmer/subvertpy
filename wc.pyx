@@ -233,6 +233,11 @@ cdef extern from "svn_wc.h":
                                         apr_hash_t *config,
                                         apr_pool_t *pool)
 
+    svn_error_t *svn_wc_ensure_adm2(char *path, char *uuid, char *url,
+                                char *repos, svn_revnum_t revision,
+                                apr_pool_t *pool)
+
+
 def version():
     """Get libsvn_wc version information.
 
@@ -541,3 +546,16 @@ def get_default_ignores(config):
         pattern = <char **>apr_array_pop(patterns)
     apr_pool_destroy(pool)
     return ret
+
+
+def ensure_adm(char *path, char *uuid, char *url, repos=None, svn_revnum_t rev=-1):
+    cdef apr_pool_t *pool
+    cdef char *c_repos
+    pool = Pool(NULL)
+    if repos is None:
+        c_repos = NULL
+    else:
+        c_repos = repos
+    check_error(svn_wc_ensure_adm2(path, uuid, url, c_repos, rev, pool))
+    apr_pool_destroy(pool)
+

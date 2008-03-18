@@ -57,14 +57,6 @@ from core import SubversionException, time_to_cstring
 
 from format import get_rich_root_format
 
-class WorkingTreeInconsistent(BzrError):
-    _fmt = """Working copy is in inconsistent state (%(min_revnum)d:%(max_revnum)d)"""
-
-    def __init__(self, min_revnum, max_revnum):
-        self.min_revnum = min_revnum
-        self.max_revnum = max_revnum
-
-
 class SvnWorkingTree(WorkingTree):
     """WorkingTree implementation that uses a Subversion Working Copy for storage."""
     def __init__(self, bzrdir, local_path, branch):
@@ -72,21 +64,19 @@ class SvnWorkingTree(WorkingTree):
         self.basedir = local_path
         self.bzrdir = bzrdir
         self._branch = branch
-        self.base_revnum = 0
         self.client_ctx = create_svn_client()
         self._get_wc()
         (min_rev, max_rev, switched, modified) = \
                 wc.revision_status(self.basedir, None, True)
-        if min_rev != max_rev:
-            #raise WorkingTreeInconsistent(status.min_rev, status.max_rev)
-            assert max_rev == self.client_ctx.update(self.basedir, 
-                                     max_rev, True)[0]
 
+        self.base_tree = None
         self.base_revnum = max_rev
-        self.base_tree = SvnBasisTree(self)
-        self.base_revid = branch.generate_revision_id(self.base_revnum)
-
-        self.read_working_inventory()
+        if max_rev < 0:
+            self.base_revid = None
+            self._set_inventory(Inventory(), dirty=False)
+        else:
+            self.base_revid = branch.generate_revision_id(self.base_revnum)
+            self.read_working_inventory()
 
         self.controldir = os.path.join(self.basedir, wc.get_adm_dir(), 
                                        'bzr')
@@ -141,8 +131,13 @@ class SvnWorkingTree(WorkingTree):
     def apply_inventory_delta(self, changes):
         raise NotImplementedError(self.apply_inventory_delta)
 
-    def update(self, change_reporter=None):
-        self.client_ctx.update(self.basedir)
+    def update(self, change_reporter=None, possible_transports=None, revnum=None):
+        orig_revnum = self.base_revnum
+        self.base_revnum = self.client_ctx.update([self.basedir], rev=revnum)[0]
+        self.base_revid = self.branch.generate_revision_id(self.base_revnum)
+        self.base_tree = None
+        self.read_working_inventory()
+        return self.base_revnum - orig_revnum
 
     def remove(self, files, verbose=False, to_file=None):
         # FIXME: Use to_file argument
@@ -219,7 +214,7 @@ class SvnWorkingTree(WorkingTree):
         assert isinstance(path, str)
 
         rp = self.branch.unprefix(path)
-        entry = self.base_tree.id_map[rp]
+        entry = self.basis_tree().id_map[rp]
         assert entry[0] is not None
         assert isinstance(entry[0], str), "fileid %r for %r is not a string" % (entry[0], path)
         return entry
@@ -349,13 +344,13 @@ class SvnWorkingTree(WorkingTree):
         if revid is None or revid == NULL_REVISION:
             self.base_revid = revid
             self.base_revnum = 0
-            self.base_tree = RevisionTree(self, Inventory(), revid)
+            self.base_tree = None
             return
 
         rev = self.branch.lookup_revision_id(revid)
         self.base_revnum = rev
         self.base_revid = revid
-        self.base_tree = SvnBasisTree(self)
+        self.base_tree = None
 
         # TODO: Implement more efficient version
         newrev = self.branch.repository.get_revision(revid)
@@ -469,7 +464,7 @@ class SvnWorkingTree(WorkingTree):
 
         self.base_revid = revid
         self.base_revnum = commit_info[0]
-        self.base_tree = SvnBasisTree(self)
+        self.base_tree = None
 
         return revid
 
@@ -543,11 +538,15 @@ class SvnWorkingTree(WorkingTree):
         if self.base_revid is None or self.base_revid == NULL_REVISION:
             return self.branch.repository.revision_tree(self.base_revid)
 
+        if self.base_tree is None:
+            self.base_tree = SvnBasisTree(self)
+
         return self.base_tree
 
     def pull(self, source, overwrite=False, stop_revision=None, 
              delta_reporter=None, possible_transports=None):
         # FIXME: Use delta_reporter
+        # FIXME: Use source
         # FIXME: Use overwrite
         result = PullResult()
         result.source_branch = source
@@ -557,8 +556,11 @@ class SvnWorkingTree(WorkingTree):
         if stop_revision is None:
             stop_revision = self.branch.last_revision()
         revnumber = self.branch.lookup_revision_id(stop_revision)
-        fetched = self.client_ctx.update(self.basedir, revnum, True)
+        fetched = self.client_ctx.update([self.basedir], revnum, True)
+        self.base_revnum = fetched
         self.base_revid = self.branch.generate_revision_id(fetched)
+        self.base_tree = None
+        self.read_working_inventory()
         result.new_revid = self.base_revid
         result.new_revno = self.branch.revision_id_to_revno(result.new_revid)
         return result
