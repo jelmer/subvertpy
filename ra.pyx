@@ -579,13 +579,16 @@ py_editor.absent_file = py_editor_absent_file
 py_editor.close_edit = py_editor_close_edit
 py_editor.abort_edit = py_editor_abort_edit
 
+cdef class Auth
+
 cdef class RemoteAccess:
     """Connection to a remote Subversion repository."""
     cdef svn_ra_session_t *ra
     cdef apr_pool_t *pool
     cdef char *url
     cdef object progress_func
-    def __init__(self, char *url, progress_cb=None, config={}):
+    cdef Auth auth
+    def __init__(self, char *url, progress_cb=None, Auth auth=None, config={}):
         """Connect to a remote Subversion repository. 
 
         :param url: URL of the repository
@@ -595,11 +598,16 @@ cdef class RemoteAccess:
         cdef svn_error_t *error
         cdef svn_ra_callbacks2_t *callbacks2
         cdef apr_hash_t *config_hash
+        if auth is None:
+            auth = Auth()
+        self.auth = auth
         self.url = url
         self.pool = Pool(NULL)
         assert self.pool != NULL
         check_error(svn_ra_create_callbacks(&callbacks2, self.pool))
         callbacks2.progress_func = py_progress_func
+        Py_INCREF(self.auth)
+        callbacks2.auth_baton = self.auth.auth_baton
         self.progress_func = progress_cb
         callbacks2.progress_baton = <void *>self.progress_func
         config_hash = apr_hash_make(self.pool)
@@ -836,6 +844,7 @@ cdef class RemoteAccess:
     def __dealloc__(self):
         if self.pool != NULL:
             apr_pool_destroy(self.pool)
+        Py_DECREF(self.auth)
 
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self.url)
@@ -850,7 +859,7 @@ cdef class AuthProvider:
 cdef class Auth:
     cdef svn_auth_baton_t *auth_baton
     cdef apr_pool_t *pool
-    def __init__(self, providers):
+    def __init__(self, providers=[]):
         cdef apr_array_header_t *c_providers    
         cdef AuthProvider provider
         cdef svn_auth_provider_object_t **el
@@ -869,7 +878,8 @@ cdef class Auth:
         return <char *>svn_auth_get_parameter(self.auth_baton, name)
 
     def __dealloc__(self):
-        apr_pool_destroy(self.pool)
+        if self.pool != NULL:
+            apr_pool_destroy(self.pool)
 
 cdef svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *baton, char *realm, int may_save, apr_pool_t *pool):
     fn = <object>baton

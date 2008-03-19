@@ -15,13 +15,27 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from apr cimport apr_pool_t, apr_hash_t, apr_pool_destroy
-from types cimport svn_error_t, svn_boolean_t, svn_cancel_func_t, svn_stream_t
+from types cimport svn_error_t, svn_boolean_t, svn_cancel_func_t, svn_stream_t, svn_node_kind_t, svn_revnum_t, svn_filesize_t
 
 from core cimport Pool, check_error, new_py_stream, py_cancel_func
 
 cdef extern from "svn_fs.h":
     ctypedef struct svn_fs_t
+    ctypedef struct svn_fs_root_t
     svn_error_t *svn_fs_get_uuid(svn_fs_t *fs, char **uuid, apr_pool_t *pool)
+    svn_error_t *svn_fs_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root, char *path, apr_pool_t *pool)
+    svn_boolean_t svn_fs_is_txn_root(svn_fs_root_t *root)
+    svn_boolean_t svn_fs_is_revision_root(svn_fs_root_t *root)
+    svn_error_t *svn_fs_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
+    svn_error_t *svn_fs_revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+    svn_error_t *svn_fs_make_dir(svn_fs_root_t *root, char *path, apr_pool_t *pool)
+    svn_error_t *svn_fs_delete(svn_fs_root_t *root, char *path, apr_pool_t *pool)
+    svn_error_t *svn_fs_copy(svn_fs_root_t *from_root, char *from_path, svn_fs_root_t *to_root, char *to_path, apr_pool_t *pool)
+    svn_error_t *svn_fs_file_length(svn_filesize_t *length_p, svn_fs_root_t *root, char *path, apr_pool_t *pool)
+    svn_error_t *svn_fs_file_md5_checksum(unsigned char digest[], svn_fs_root_t *root, char *path, apr_pool_t *pool)
+    svn_error_t *svn_fs_file_contents(svn_stream_t **contents, svn_fs_root_t *root, char *path, apr_pool_t *pool)
+    void svn_fs_close_root(svn_fs_root_t *root)
+
 
 cdef extern from "svn_repos.h":
     ctypedef struct svn_repos_t
@@ -90,6 +104,75 @@ cdef class Repository:
     def fs(self):
         return FileSystem(self)
 
+cdef class FileSystemRoot:
+    cdef svn_fs_root_t *root
+    cdef apr_pool_t *pool
+
+    def __dealloc__(self):
+        if self.pool != NULL:
+            apr_pool_destroy(self.pool)
+
+    def check_path(self, char *path):
+        cdef svn_node_kind_t kind
+        cdef apr_pool_t *pool
+        pool = Pool(NULL)
+        check_error(svn_fs_check_path(&kind, self.root, path, pool))
+        apr_pool_destroy(pool)
+        return kind
+
+    def make_dir(self, char *path):
+        cdef apr_pool_t *pool
+        pool = Pool(self.pool)
+        check_error(svn_fs_make_dir(self.root, path, pool))
+        apr_pool_destroy(pool)
+
+    def delete(self, char *path):
+        cdef apr_pool_t *pool
+        pool = Pool(self.pool)
+        check_error(svn_fs_delete(self.root, path, pool))
+        apr_pool_destroy(pool)
+
+    def copy(self, char *from_path, FileSystemRoot to_root, char *to_path):
+        cdef apr_pool_t *pool
+        pool = Pool(self.pool)
+        check_error(svn_fs_copy(self.root, from_path, to_root.root, to_path, pool))
+        apr_pool_destroy(pool)
+
+    def file_length(self, char *path):
+        cdef apr_pool_t *pool
+        cdef svn_filesize_t length
+        pool = Pool(self.pool)
+        check_error(svn_fs_file_length(&length, self.root, path, pool))
+        apr_pool_destroy(pool)
+        return length
+
+    def file_md5_checksum(self, char *path):
+        cdef char digest[64]
+        cdef apr_pool_t *pool
+        pool = Pool(NULL)
+        check_error(svn_fs_file_md5_checksum(<unsigned char*>digest, self.root, path, pool))
+        ret = digest
+        apr_pool_destroy(pool)
+        return ret
+
+    def file_contents(self, char *path):
+        cdef apr_pool_t *pool
+        cdef svn_stream_t *stream
+        pool = Pool(self.pool)
+        check_error(svn_fs_file_contents(&stream, self.root, path, pool))
+        apr_pool_destroy(pool)
+        return None # FIXME
+
+    def is_txn_root(self):
+        return svn_fs_is_txn_root(self.root)
+
+    def is_revision_root(self):
+        return svn_fs_is_revision_root(self.root)
+
+    def close(self):
+        svn_fs_close_root(self.root)
+
+
 cdef class FileSystem:
     cdef svn_fs_t *fs
     cdef apr_pool_t *pool
@@ -104,6 +187,22 @@ cdef class FileSystem:
         cdef char *uuid
         check_error(svn_fs_get_uuid(self.fs, &uuid, self.pool))
         return uuid
+
+    def youngest_revision(self):
+        cdef apr_pool_t *pool
+        cdef svn_revnum_t youngest
+        pool = Pool(NULL)
+        check_error(svn_fs_youngest_rev(&youngest, self.fs, pool))
+        apr_pool_destroy(pool)
+        return youngest
+
+    def revision_root(self, svn_revnum_t rev):
+        cdef FileSystemRoot ret
+        ret = FileSystemRoot()
+        ret.pool = Pool(NULL)
+        check_error(svn_fs_revision_root(&ret.root, self.fs, rev, ret.pool))
+        return ret
+
 
 LOAD_UUID_DEFAULT = 0
 LOAD_UUID_IGNORE = 1
