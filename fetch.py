@@ -102,6 +102,8 @@ class RevisionBuildEditor:
         self.id_map = self.source.transform_fileid_map(self.source.uuid, 
                               self.revnum, self.branch_path, changes, renames, 
                               self.mapping)
+        self._bzr_merges = ()
+        self._svk_merges = ()
         self._premature_deletes = set()
         self.old_inventory = prev_inventory
         self.inventory = prev_inventory.copy()

@@ -644,6 +644,9 @@ class PushNewBranchTests(TestCaseWithSubversionRepository):
         check(copybranch)
 
     def test_push_non_lhs_parent(self):        
+        from bzrlib.debug import debug_flags
+        debug_flags.add("commit")
+        debug_flags.add("fetch")
         repos_url = self.make_client("a", "dc")
         bzrwt = BzrDir.create_standalone_workingtree("c", 
             format=format.get_rich_root_format())
@@ -745,7 +748,7 @@ class PushNewBranchTests(TestCaseWithSubversionRepository):
         bzrwt.add_pending_merge(merge_revid)
         self.assertEquals(bzrwt.get_parent_ids()[1], merge_revid)
         revid2 = bzrwt.commit("Merge something", rev_id="mergerevid")
-        bzr_parents = bzrwt.branch.repository.revision_parents(revid2)
+        bzr_parents = bzrwt.branch.repository.get_revision(revid2).parent_ids
         trunk = Branch.open(repos_url + "/trunk")
         trunk.pull(bzrwt.branch)
 
@@ -755,7 +758,7 @@ class PushNewBranchTests(TestCaseWithSubversionRepository):
         self.assertEquals([revid1, revid2], trunk.revision_history())
         self.client_update("dc")
         self.assertEquals(
-                '1 initialrevid\n',
+                '1 initialrevid\n2 mergerevid\n',
                 self.client_get_prop("dc/trunk", SVN_PROP_BZR_REVISION_ID+"trunk0"))
 
 

@@ -136,9 +136,9 @@ def parse_merge_property(line):
     """
     if ' ' in line:
         mutter('invalid revision id %r in merged property, skipping' % line)
-        return []
+        return ()
 
-    return filter(lambda x: x != "", line.split("\t"))
+    return tuple(filter(lambda x: x != "", line.split("\t")))
 
 def parse_svn_revprops(svn_revprops, rev):
     if svn_revprops.has_key(constants.PROP_REVISION_AUTHOR):
@@ -532,12 +532,11 @@ class BzrSvnMappingFileProps:
                 fileprops.get(SVN_PROP_BZR_REVISION_INFO, ""), rev)
 
     def get_rhs_parents(self, branch_path, revprops, fileprops):
-        rhs_parents = []
         bzr_merges = fileprops.get(SVN_PROP_BZR_ANCESTRY+str(self.scheme), None)
         if bzr_merges is not None:
             return parse_merge_property(bzr_merges.splitlines()[-1])
 
-        return []
+        return ()
 
     def get_rhs_ancestors(self, branch_path, revprops, fileprops):
         ancestry = []
@@ -562,20 +561,19 @@ class BzrSvnMappingFileProps:
 
         return svnprops
  
-    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, 
-                        fileprops):
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, old_fileprops):
         # Keep track of what Subversion properties to set later on
         fileprops = {}
         fileprops[SVN_PROP_BZR_REVISION_INFO] = generate_revision_metadata(
             timestamp, timezone, committer, revprops)
 
         if len(merges) > 0:
-            fileprops.update(self._record_merges(merges, fileprops))
+            fileprops.update(self._record_merges(merges, old_fileprops))
 
         # Set appropriate property if revision id was specified by 
         # caller
         if revision_id is not None:
-            old = fileprops.get(SVN_PROP_BZR_REVISION_ID+str(self.scheme), "")
+            old = old_fileprops.get(SVN_PROP_BZR_REVISION_ID+str(self.scheme), "")
             fileprops[SVN_PROP_BZR_REVISION_ID+str(self.scheme)] = old + "%d %s\n" % (revno, revision_id)
 
         return ({}, fileprops)
@@ -752,7 +750,6 @@ class BzrSvnMappingv3Hybrid(BzrSvnMappingv3):
     def import_revision(self, svn_revprops, fileprops, rev):
         self.fileprops.import_revision(svn_revprops, fileprops, rev)
         self.revprops.import_revision(svn_revprops, fileprops, rev)
-
 
 class BzrSvnMappingRegistry(registry.Registry):
     """Registry for the various Bzr<->Svn mappings."""
