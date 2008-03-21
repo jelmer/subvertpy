@@ -24,9 +24,10 @@ from ra import (get_username_prompt_provider,
                 get_simple_provider, get_username_provider, 
                 get_ssl_client_cert_file_provider, 
                 get_ssl_client_cert_pw_file_provider,
-                get_ssl_server_trust_file_provider
+                get_ssl_server_trust_file_provider,
+                Auth
                 )
-from ra import Auth
+import ra
 import constants
 
 class SubversionAuthenticationConfig(AuthenticationConfig):
@@ -148,14 +149,14 @@ def create_auth_baton():
         get_ssl_server_trust_file_provider(),
         ]
 
-    if hasattr(core, 'get_windows_simple_provider'):
-        providers.append(core.get_windows_simple_provider())
+    if hasattr(ra, 'get_windows_simple_provider'):
+        providers.append(ra.get_windows_simple_provider())
 
-    if hasattr(core, 'get_keychain_simple_provider'):
-        providers.append(core.get_keychain_simple_provider())
+    if hasattr(ra, 'get_keychain_simple_provider'):
+        providers.append(ra.get_keychain_simple_provider())
 
-    if hasattr(core, 'get_windows_ssl_server_trust_provider'):
-        providers.append(core.get_windows_ssl_server_trust_provider())
+    if hasattr(ra, 'get_windows_ssl_server_trust_provider'):
+        providers.append(ra.get_windows_ssl_server_trust_provider())
 
     return Auth(providers)
 

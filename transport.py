@@ -83,9 +83,9 @@ class SvnRaTransport(Transport):
 
         try:
             self.mutter('opening SVN RA connection to %r' % self._backing_url)
-            self._ra = ra.RemoteAccess(self._backing_url.encode('utf8'))
+            self._ra = ra.RemoteAccess(self._backing_url.encode('utf8'), 
+                    auth=create_auth_baton())
             # FIXME: Callbacks
-            # FIXME: self._ra = create_auth_baton()
         except SubversionException, (_, num):
             if num in (constants.ERR_RA_SVN_REPOS_NOT_FOUND,):
                 raise NoSvnRepositoryPresent(url=url)
