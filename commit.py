@@ -38,6 +38,14 @@ from mapping import parse_revision_id
 from repository import (SvnRepositoryFormat, SvnRepository)
 import urllib
 
+
+def is_valid_property_name(prop):
+    for c in prop:
+        if not c.isalnum() and not c in "-:":
+            return False
+    return True
+
+
 def _revision_id_to_svk_feature(revid):
     """Create a SVK feature identifier from a revision id.
 
@@ -460,6 +468,8 @@ class SvnCommitBuilder(RootCommitBuilder):
         try:
             existing_bp_parts = _check_dirs_exist(self.repository.transport, 
                                               bp_parts, -1)
+            for prop in self._svn_revprops:
+                assert is_valid_property_name(prop)
             try:
                 self.editor = self.repository.transport.get_commit_editor(
                         self._svn_revprops, done, None, False)
@@ -494,9 +504,11 @@ class SvnCommitBuilder(RootCommitBuilder):
 
             # Set all the revprops
             for prop, value in self._svnprops.items():
+                assert is_valid_property_name(prop)
                 if value is not None:
                     value = value.encode('utf-8')
                 branch_editors[-1].change_prop(prop, value)
+                self.mutter("Setting root file property %r -> %r" % (prop, value))
 
             for dir_editor in reversed(branch_editors):
                 dir_editor.close()
