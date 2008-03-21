@@ -269,7 +269,21 @@ cdef extern from "svn_wc.h":
                                          void *baton,
                                          char **tempfile,
                                          apr_pool_t *pool)
+    ctypedef struct svn_wc_entry_callbacks_t:
+        svn_error_t *(*found_entry)(char *path,
+                              svn_wc_entry_t *entry,
+                              void *walk_baton,
+                              apr_pool_t *pool)
 
+    svn_error_t *svn_wc_walk_entries2(char *path,
+                                  svn_wc_adm_access_t *adm_access,
+                                  svn_wc_entry_callbacks_t 
+                                  *walk_callbacks,
+                                  void *walk_baton,
+                                  svn_boolean_t show_hidden,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *pool)
 
 def version():
     """Get libsvn_wc version information.
@@ -280,6 +294,15 @@ def version():
     ver = svn_wc_version()
     return (ver.major, ver.minor, ver.minor, ver.tag)
 
+cdef svn_error_t *py_wc_found_entry(char *path, svn_wc_entry_t *entry, void *walk_baton, apr_pool_t *pool):
+    fn = <object>walk_baton
+    # FIXME: entry
+    fn(path)
+    return NULL
+
+
+cdef svn_wc_entry_callbacks_t py_wc_entry_callbacks
+py_wc_entry_callbacks.found_entry = py_wc_found_entry
 
 cdef void py_wc_notify_func(void *baton, svn_wc_notify_t *notify, apr_pool_t *pool):
     pass # FIXME
@@ -382,6 +405,15 @@ cdef class WorkingCopy:
             idx = apr_hash_next(idx)
         apr_pool_destroy(temp_pool)
         return py_entries
+
+    def walk_entries(self, char *path, callbacks, int show_hidden=False, cancel_func=None):
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
+        check_error(svn_wc_walk_entries2(path, self.adm, 
+                    &py_wc_entry_callbacks, <void *>callbacks,
+                    show_hidden, py_cancel_func, <void *>cancel_func,
+                    temp_pool))
+        apr_pool_destroy(temp_pool)
 
     def entry(self, char *path, int show_hidden=False):
         cdef apr_pool_t *temp_pool
