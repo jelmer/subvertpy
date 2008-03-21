@@ -294,7 +294,7 @@ class SvnRepository(Repository):
     def transform_fileid_map(self, uuid, revnum, branch, changes, renames, 
                              mapping):
         return self.fileid_map.apply_changes(uuid, revnum, branch, changes, 
-                                             renames, mapping)
+                                             renames, mapping)[0]
 
     def all_revision_ids(self, mapping=None):
         if mapping is None:
@@ -321,26 +321,13 @@ class SvnRepository(Repository):
 
     def get_ancestry(self, revision_id, topo_sorted=True):
         """See Repository.get_ancestry().
-        
-        Note: only the first bit is topologically ordered!
         """
-        if revision_id is None: 
-            return [None]
-
-        (path, revnum, mapping) = self.lookup_revision_id(revision_id)
-
-        ancestry = [revision_id]
-
-        svn_revprops = lazy_dict(lambda: self.transport.revprop_list(revnum))
-        svn_fileprops = lazy_dict(lambda: self.branchprop_list.get_properties(path, revnum))
-        ancestry.extend(mapping.get_rhs_ancestors(path, svn_revprops, svn_fileprops))
-
-        if revnum > 0:
-            for (branch, rev) in self.follow_branch(path, revnum - 1, mapping):
-                ancestry.append(
-                    self.generate_revision_id(rev, branch, mapping))
-
-        ancestry.append(None)
+        ancestry = []
+        graph = self.get_graph()
+        for rev, parents in graph.iter_ancestry([revision_id]):
+            if rev == NULL_REVISION:
+                rev = None
+            ancestry.append(rev)
         ancestry.reverse()
         return ancestry
 
@@ -836,7 +823,15 @@ class SvnRepository(Repository):
 
         ret = {}
         for (revid, parents) in graph.iter_ancestry(revision_ids):
-            ret[revid] = parents
+            if revid == NULL_REVISION:
+                continue
+            if (NULL_REVISION,) == parents:
+                ret[revid] = ()
+            else:
+                ret[revid] = parents
+
+        if revision_id is not None and revision_id != NULL_REVISION and ret[revision_id] is None:
+            raise NoSuchRevision(self, revision_id)
 
         return ret
 
