@@ -22,7 +22,7 @@ from apr cimport apr_hash_index_t, apr_hash_this, apr_hash_first, apr_hash_next,
 import constants
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_stream_set_read, svn_stream_set_write, svn_stream_set_close, svn_stream_from_stringbuf, svn_stream_create
-from types cimport svn_stringbuf_t, svn_stringbuf_ncreate, svn_string_t
+from types cimport svn_stringbuf_t, svn_stringbuf_ncreate, svn_string_t, svn_revnum_t
 
 cdef extern from "Python.h":
     void Py_INCREF(object)
@@ -134,6 +134,17 @@ NODE_DIR = svn_node_dir
 NODE_FILE = svn_node_file
 NODE_UNKNOWN = svn_node_unknown
 NODE_NONE = svn_node_none
+
+cdef apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, object l):
+    cdef apr_array_header_t *ret
+    cdef svn_revnum_t *el
+    if l is None:
+        return NULL
+    ret = apr_array_make(pool, len(l), sizeof(svn_revnum_t))
+    for i in l:
+        el = <svn_revnum_t *>apr_array_push(ret)
+        el[0] = i
+    return ret
 
 cdef apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, object l):
     cdef apr_array_header_t *ret

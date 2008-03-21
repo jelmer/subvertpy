@@ -19,7 +19,7 @@ from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, ap
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
 from apr cimport apr_file_t, apr_off_t, apr_size_t, apr_uint32_t
 from apr cimport apr_initialize, apr_pstrdup
-from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn_log_wrapper, new_py_stream, prop_hash_to_dict, py_svn_error
+from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn_log_wrapper, new_py_stream, prop_hash_to_dict, py_svn_error, revnum_list_to_apr_array
 from core import SubversionException
 from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
 from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
@@ -216,6 +216,14 @@ cdef extern from "svn_ra.h":
                 svn_ra_lock_callback_t lock_func,
                 lock_baton,
                 apr_pool_t *pool)
+
+    svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
+                                  apr_hash_t **locations,
+                                  char *path,
+                                  svn_revnum_t peg_revision,
+                                  apr_array_header_t *location_revisions,
+                                  apr_pool_t *pool)
+
 
 cdef pyify_lock(svn_lock_t *lock):
     return None # FIXME
@@ -847,7 +855,7 @@ cdef class RemoteAccess:
                      py_lock_func, lock_func, temp_pool))
         apr_pool_destroy(temp_pool)
 
-    def get_locks(self, path):
+    def get_locks(self, char *path):
         cdef apr_pool_t *temp_pool
         cdef apr_hash_t *hash_locks
         cdef apr_hash_index_t *idx
@@ -861,6 +869,27 @@ cdef class RemoteAccess:
         while idx:
             apr_hash_this(idx, <void **>&key, &klen, <void **>&lock)
             ret[key] = pyify_lock(lock)
+            idx = apr_hash_next(idx)
+        apr_pool_destroy(temp_pool)
+        return ret
+
+    def get_locations(self, char *path, svn_revnum_t peg_revision, location_revisions):
+        cdef apr_pool_t *temp_pool
+        cdef apr_hash_t *hash_locations
+        cdef apr_hash_index_t *idx
+        cdef svn_revnum_t *key
+        cdef long klen
+        cdef char *val
+        temp_pool = Pool(NULL)
+        check_error(svn_ra_get_locations(self.ra, &hash_locations,
+                    path, peg_revision, 
+                    revnum_list_to_apr_array(temp_pool, location_revisions),
+                    temp_pool))
+        ret = {}
+        idx = apr_hash_first(temp_pool, hash_locations)
+        while idx:
+            apr_hash_this(idx, <void **>&key, &klen, <void **>&val)
+            ret[key[0]] = val
             idx = apr_hash_next(idx)
         apr_pool_destroy(temp_pool)
         return ret
