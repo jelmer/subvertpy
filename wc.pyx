@@ -67,6 +67,7 @@ cdef extern from "svn_wc.h":
         char *cachable_props
         char *present_props
 
+    svn_error_t *svn_wc_check_wc(char *path, int *wc_format, apr_pool_t *pool)
 
     svn_version_t *svn_wc_version()
     svn_error_t *svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
@@ -618,3 +619,10 @@ def ensure_adm(char *path, char *uuid, char *url, repos=None, svn_revnum_t rev=-
     check_error(svn_wc_ensure_adm2(path, uuid, url, c_repos, rev, pool))
     apr_pool_destroy(pool)
 
+def check_wc(char *path):
+    cdef apr_pool_t *pool
+    cdef int wc_format
+    pool = Pool(NULL)
+    check_error(svn_wc_check_wc(path, &wc_format, pool))
+    apr_pool_destroy(pool)
+    return wc_format
