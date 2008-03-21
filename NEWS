@@ -16,6 +16,8 @@ bzr-svn 0.4.9	UNRELEASED
 
    * Be a bit quieter with messages about experimental mappings. (#162496)
 
+   * Properly warn when trying to open a working copy with a newer version.
+
   INTERNALS
 
    * Allow multiple mappings to be available at the same time.

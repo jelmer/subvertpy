@@ -21,7 +21,7 @@ from bzrlib.branch import PullResult
 from bzrlib.bzrdir import BzrDirFormat, BzrDir
 from bzrlib.errors import (InvalidRevisionId, NotBranchError, NoSuchFile,
                            NoRepositoryPresent, BzrError, UninitializableFormat,
-                           OutOfDateTree)
+                           OutOfDateTree, UnsupportedFormatError)
 from bzrlib.inventory import Inventory, InventoryFile, InventoryLink
 from bzrlib.lockable_files import TransportLock, LockableFiles
 from bzrlib.lockdir import LockDir
@@ -742,7 +742,10 @@ class SvnCheckout(BzrDir):
         self.local_path = transport.local_abspath(".")
         
         # Open related remote repository + branch
-        adm = wc.WorkingCopy(None, self.local_path, False, 0, None)
+        try:
+            adm = wc.WorkingCopy(None, self.local_path, False, 0, None)
+        except SubversionException, (msg, constants.ERR_WC_UNSUPPORTED_FORMAT):
+            raise UnsupportedFormatError(msg, kind='workingtree')
         try:
             svn_url = adm.entry(self.local_path, True).url
         finally:

@@ -864,6 +864,7 @@ cdef class Auth:
         cdef AuthProvider provider
         cdef svn_auth_provider_object_t **el
         self.pool = Pool(NULL)
+        self.providers = providers
         c_providers = apr_array_make(self.pool, len(providers), 4)
         for p in providers:
             el = <svn_auth_provider_object_t **>apr_array_push(c_providers)
