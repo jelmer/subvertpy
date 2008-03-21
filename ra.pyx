@@ -182,6 +182,11 @@ cdef extern from "svn_ra.h":
                                  char *path,
                                  apr_pool_t *pool)
 
+    svn_error_t *svn_ra_get_locks(svn_ra_session_t *session,
+                              apr_hash_t **locks,
+                              char *path,
+                              apr_pool_t *pool)
+
     svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
                                    char *path,
                                    long revision,
@@ -212,6 +217,8 @@ cdef extern from "svn_ra.h":
                 lock_baton,
                 apr_pool_t *pool)
 
+cdef pyify_lock(svn_lock_t *lock):
+    return None # FIXME
 
 cdef svn_error_t *py_lock_func (baton, char *path, int do_lock, 
                                 svn_lock_t *lock, svn_error_t *ra_err, 
@@ -219,8 +226,7 @@ cdef svn_error_t *py_lock_func (baton, char *path, int do_lock,
     py_ra_err = None
     if ra_err != NULL:
         py_ra_err = SubversionException(ra_err.apr_err, ra_err.message)
-    # FIXME: Pass lock
-    baton(path, do_lock, py_ra_err)
+    baton(path, do_lock, pyify_lock(lock), py_ra_err)
 
 cdef void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, apr_pool_t *pool) except *:
     fn = <object>baton
@@ -841,6 +847,24 @@ cdef class RemoteAccess:
                      py_lock_func, lock_func, temp_pool))
         apr_pool_destroy(temp_pool)
 
+    def get_locks(self, path):
+        cdef apr_pool_t *temp_pool
+        cdef apr_hash_t *hash_locks
+        cdef apr_hash_index_t *idx
+        cdef char *key
+        cdef long klen
+        cdef svn_lock_t *lock
+        temp_pool = Pool(self.pool)
+        check_error(svn_ra_get_locks(self.ra, &hash_locks, path, temp_pool))
+        ret = {}
+        idx = apr_hash_first(temp_pool, hash_locks)
+        while idx:
+            apr_hash_this(idx, <void **>&key, &klen, <void **>&lock)
+            ret[key] = pyify_lock(lock)
+            idx = apr_hash_next(idx)
+        apr_pool_destroy(temp_pool)
+        return ret
+
     def __dealloc__(self):
         if self.pool != NULL:
             apr_pool_destroy(self.pool)
@@ -859,6 +883,7 @@ cdef class AuthProvider:
 cdef class Auth:
     cdef svn_auth_baton_t *auth_baton
     cdef apr_pool_t *pool
+    cdef providers
     def __init__(self, providers=[]):
         cdef apr_array_header_t *c_providers    
         cdef AuthProvider provider
