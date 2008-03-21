@@ -224,6 +224,15 @@ cdef extern from "svn_ra.h":
                                   apr_array_header_t *location_revisions,
                                   apr_pool_t *pool)
 
+    ctypedef svn_error_t *(*svn_ra_file_rev_handler_t) (void *baton, char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
+
+    svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
+                                  char *path,
+                                  svn_revnum_t start,
+                                  svn_revnum_t end,
+                                  svn_ra_file_rev_handler_t handler,
+                                  void *handler_baton,
+                                  apr_pool_t *pool)
 
 cdef pyify_lock(svn_lock_t *lock):
     return None # FIXME
@@ -595,6 +604,12 @@ py_editor.abort_edit = py_editor_abort_edit
 
 cdef class Auth
 
+cdef svn_error_t *py_file_rev_handler(void *baton, char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool):
+    fn = <object>baton
+    fn(path, rev, prop_hash_to_dict(rev_props))
+    return NULL
+
+
 cdef class RemoteAccess:
     """Connection to a remote Subversion repository."""
     cdef svn_ra_session_t *ra
@@ -893,6 +908,15 @@ cdef class RemoteAccess:
             idx = apr_hash_next(idx)
         apr_pool_destroy(temp_pool)
         return ret
+    
+    def get_file_revs(self, char *path, svn_revnum_t start, svn_revnum_t end,
+                      file_rev_handler):
+        cdef apr_pool_t *temp_pool
+        temp_pool = Pool(self.pool)
+        check_error(svn_ra_get_file_revs(self.ra, path, start, end, 
+                    py_file_rev_handler, <void *>file_rev_handler, 
+                    temp_pool))
+        apr_pool_destroy(temp_pool)
 
     def __dealloc__(self):
         if self.pool != NULL:
