@@ -98,8 +98,10 @@ class RevisionBuildEditor:
     def start_revision(self, revid, prev_inventory):
         self.revid = revid
         (self.branch_path, self.revnum, self.mapping) = self.source.lookup_revision_id(revid)
+        self.svn_revprops = self.source._log._get_transport().revprop_list(self.revnum)
         changes = self.source._log.get_revision_paths(self.revnum, self.branch_path)
-        renames = self.source.revision_fileid_renames(revid)
+        renames = self.source.revision_fileid_renames(self.branch_path, self.revnum, self.mapping, 
+                                                      revprops=self.svn_revprops)
         self.id_map = self.source.transform_fileid_map(self.source.uuid, 
                               self.revnum, self.branch_path, changes, renames, 
                               self.mapping)
@@ -123,10 +125,9 @@ class RevisionBuildEditor:
         # Commit SVN revision properties to a Revision object
         rev = Revision(revision_id=revid, parent_ids=self._get_parent_ids())
 
-        svn_revprops = self.source._log._get_transport().revprop_list(self.revnum)
-        self.mapping.import_revision(svn_revprops, self._branch_fileprops, rev)
+        self.mapping.import_revision(self.svn_revprops, self._branch_fileprops, rev)
 
-        signature = svn_revprops.get(SVN_REVPROP_BZR_SIGNATURE)
+        signature = self.svn_revprops.get(SVN_REVPROP_BZR_SIGNATURE)
 
         return (rev, signature)
 
@@ -566,15 +567,11 @@ class InterFromSvnRepository(InterRepository):
         """
         needed = []
         parents = {}
-        (path, until_revnum, mapping) = self.source.lookup_revision_id(revision_id)
 
         prev_revid = None
         pb = ui.ui_factory.nested_progress_bar()
         try:
-            for (branch, revnum) in self.source.follow_branch(path, 
-                                                              until_revnum, mapping):
-                pb.update("determining revisions to fetch", until_revnum-revnum, until_revnum)
-                revid = self.source.generate_revision_id(revnum, branch, mapping)
+            for revid in self.source.iter_lhs_ancestry(revision_id, pb):
 
                 if prev_revid is not None:
                     parents[prev_revid] = revid

@@ -445,7 +445,7 @@ class SvnWorkingTree(WorkingTree):
         adm = self._get_wc(write_lock=True)
         try:
             adm.prop_set(SVN_PROP_BZR_REVISION_ID+str(self.branch.mapping.scheme), 
-                             self._get_bzr_revids() + extra,
+                             self._get_bzr_revids(self._get_base_branch_props()) + extra,
                              self.basedir)
             adm.prop_set(SVN_PROP_BZR_REVISION_INFO, 
                              generate_revision_metadata(timestamp, 
@@ -467,14 +467,12 @@ class SvnWorkingTree(WorkingTree):
             # Reset properties so the next subversion commit won't 
             # accidently set these properties.
             adm = self._get_wc(write_lock=True)
+            base_branch_props = self._get_base_branch_props()
             adm.prop_set(SVN_PROP_BZR_REVISION_ID+str(self.branch.mapping.scheme), 
-                             self._get_bzr_revids(), self.basedir)
+                             self._get_bzr_revids(base_branch_props), self.basedir)
             adm.prop_set(SVN_PROP_BZR_REVISION_INFO, 
-                self.branch.repository.branchprop_list.get_property(
-                self.branch.get_branch_path(self.base_revnum), 
-                self.base_revnum, 
-                SVN_PROP_BZR_REVISION_INFO, ""), 
-                self.basedir)
+                              base_branch_props.get(SVN_PROP_BZR_REVISION_INFO, ""),
+                              self.basedir)
             adm.close()
             raise
 
@@ -620,14 +618,14 @@ class SvnWorkingTree(WorkingTree):
         return dict(map(lambda x: str(x).split("\t"), 
             existing.splitlines()))
 
-    def _get_bzr_revids(self):
-        return self._get_base_branch_props().get(SVN_PROP_BZR_REVISION_ID+str(self.branch.mapping.scheme), "")
+    def _get_bzr_revids(self, base_branch_props):
+        return base_branch_props.get(SVN_PROP_BZR_REVISION_ID+str(self.branch.mapping.scheme), "")
 
-    def _get_bzr_merges(self):
-        return self._get_base_branch_props().get(SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), "")
+    def _get_bzr_merges(self, base_branch_props):
+        return base_branch_props.get(SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), "")
 
-    def _get_svk_merges(self):
-        return self._get_base_branch_props().get(SVN_PROP_SVK_MERGE, "")
+    def _get_svk_merges(self, base_branch_props):
+        return base_branch_props.get(SVN_PROP_SVK_MERGE, "")
 
     def set_pending_merges(self, merges):
         """See MutableTree.set_pending_merges()."""
@@ -640,10 +638,10 @@ class SvnWorkingTree(WorkingTree):
                 bzr_merge = ""
 
             adm.prop_set(SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), 
-                                 self._get_bzr_merges() + bzr_merge, 
+                                 self._get_bzr_merges(self._get_base_branch_props()) + bzr_merge, 
                                  self.basedir)
             
-            svk_merges = parse_svk_features(self._get_svk_merges())
+            svk_merges = parse_svk_features(self._get_svk_merges(self._get_base_branch_props()))
 
             # Set svk:merge
             for merge in merges:
@@ -664,7 +662,7 @@ class SvnWorkingTree(WorkingTree):
         self.set_pending_merges(merges)
 
     def pending_merges(self):
-        merged = self._get_bzr_merges().splitlines()
+        merged = self._get_bzr_merges(self._get_base_branch_props()).splitlines()
         adm = self._get_wc()
         try:
             merged_data = adm.prop_get(
