@@ -40,7 +40,7 @@ from cache import create_cache_dir, sqlite3
 from config import SvnRepositoryConfig
 import errors
 import logwalker
-from mapping import (SVN_PROP_BZR_REVISION_ID, 
+from mapping import (SVN_PROP_BZR_REVISION_ID, SVN_REVPROP_BZR_SIGNATURE,
                      SVN_PROP_BZR_BRANCHING_SCHEME, BzrSvnMappingv3FileProps,
                      parse_revision_metadata, parse_revid_property, 
                      parse_merge_property, BzrSvnMapping,
@@ -444,8 +444,7 @@ class SvnRepository(Repository):
             if revid is not None:
                 yield revid
 
-    def revision_parents(self, revision_id, svn_fileprops=None, 
-                         svn_revprops=None):
+    def revision_parents(self, revision_id, svn_fileprops=None, svn_revprops=None):
         """See Repository.revision_parents()."""
         parent_ids = ()
         (branch, revnum, mapping) = self.lookup_revision_id(revision_id)
@@ -467,15 +466,17 @@ class SvnRepository(Repository):
 
         return parent_ids
 
-    def get_revision(self, revision_id):
+    def get_revision(self, revision_id, svn_revprops=None, svn_fileprops=None):
         """See Repository.get_revision."""
         if not revision_id or not isinstance(revision_id, str):
             raise InvalidRevisionId(revision_id=revision_id, branch=self)
 
         (path, revnum, mapping) = self.lookup_revision_id(revision_id)
         
-        svn_revprops = lazy_dict(lambda: self.transport.revprop_list(revnum))
-        svn_fileprops = lazy_dict(lambda: self.branchprop_list.get_changed_properties(path, revnum))
+        if svn_revprops is None:
+            svn_revprops = lazy_dict(lambda: self.transport.revprop_list(revnum))
+        if svn_fileprops is None:
+            svn_fileprops = lazy_dict(lambda: self.branchprop_list.get_changed_properties(path, revnum))
         parent_ids = self.revision_parents(revision_id, svn_fileprops=svn_fileprops, svn_revprops=svn_revprops)
 
         # Commit SVN revision properties to a Revision object
@@ -547,7 +548,6 @@ class SvnRepository(Repository):
 
         # Try a simple parse
         try:
-            # FIXME: Also try to parse with the other formats..
             (uuid, branch_path, revnum, mapping) = parse_revision_id(revid)
             assert isinstance(branch_path, str)
             assert isinstance(mapping, BzrSvnMapping)
@@ -796,10 +796,9 @@ class SvnRepository(Repository):
         :return: False, as no signatures are stored for revisions in Subversion 
             at the moment.
         """
-        # TODO: Retrieve from SVN_PROP_BZR_SIGNATURE 
-        return False # SVN doesn't store GPG signatures. Perhaps 
-                     # store in SVN revision property?
-
+        (path, revnum, mapping) = self.lookup_revision_id(revision_id)
+        revprops = self.transport.revprop_list(revnum)
+        return revprops.has_key(SVN_REVPROP_BZR_SIGNATURE)
 
     def get_signature_text(self, revision_id):
         """Return the signature text for a particular revision.
@@ -808,9 +807,16 @@ class SvnRepository(Repository):
                             signature.
         :raises NoSuchRevision: Always
         """
-        # TODO: Retrieve from SVN_PROP_BZR_SIGNATURE 
-        # SVN doesn't store GPG signatures
-        raise NoSuchRevision(self, revision_id)
+        (path, revnum, mapping) = self.lookup_revision_id(revision_id)
+        revprops = self.transport.revprop_list(revnum)
+        try:
+            return revprops[SVN_REVPROP_BZR_SIGNATURE]
+        except KeyError:
+            raise NoSuchRevision(self, revision_id)
+
+    def add_signature_text(self, revision_id, signature):
+        (path, revnum, mapping) = self.lookup_revision_id(revision_id)
+        self.transport.change_rev_prop(revnum, SVN_REVPROP_BZR_SIGNATURE, signature)
 
     def get_revision_graph(self, revision_id=None):
         """See Repository.get_revision_graph()."""

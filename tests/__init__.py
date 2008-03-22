@@ -120,6 +120,9 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
 
     def client_get_revprop(self, url, revnum, name):
         return self.client_ctx.revprop_get(name, url, revnum)[0]
+
+    def client_set_revprop(self, url, revnum, name, value):
+        return self.client_ctx.revprop_set(name, url, renum, value)
         
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.

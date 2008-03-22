@@ -471,7 +471,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             existing_bp_parts = _check_dirs_exist(self.repository.transport, 
                                               bp_parts, -1)
             for prop in self._svn_revprops:
-                assert is_valid_property_name(prop)
+                assert is_valid_property_name(prop), "Invalid property name %r" % prop
             try:
                 self.editor = self.repository.transport.get_commit_editor(
                         self._svn_revprops, done, None, False)
@@ -506,7 +506,7 @@ class SvnCommitBuilder(RootCommitBuilder):
 
             # Set all the revprops
             for prop, value in self._svnprops.items():
-                assert is_valid_property_name(prop)
+                assert is_valid_property_name(prop), "Invalid property name %r" % prop
                 if value is not None:
                     value = value.encode('utf-8')
                 branch_editors[-1].change_prop(prop, value)
@@ -701,6 +701,8 @@ def push(target, source, revision_id):
     except ChangesRootLHSHistory:
         raise BzrError("Unable to push revision %r because it would change the ordering of existing revisions on the Subversion repository root. Use rebase and try again or push to a non-root path" % revision_id)
 
+    # FIXME: copy revisions signature
+
     if 'validate' in debug.debug_flags:
         crev = target.repository.get_revision(revision_id)
         ctree = target.repository.revision_tree(revision_id)
@@ -764,6 +766,8 @@ class InterToSvnRepository(InterRepository):
                              
                 replay_delta(builder, base_tree, old_tree)
                 builder.commit(rev.message)
+
+                # FIXME: Copy revision signature for rev
         finally:
             self.source.unlock()
  

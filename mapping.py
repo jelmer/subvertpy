@@ -49,6 +49,7 @@ SVN_REVPROP_BZR_ROOT = 'bzr:root'
 SVN_REVPROP_BZR_SCHEME = 'bzr:scheme'
 SVN_REVPROP_BZR_SIGNATURE = 'bzr:gpg-signature'
 SVN_REVPROP_BZR_TIMESTAMP = 'bzr:timestamp'
+SVN_REVPROP_BZR_LOG = 'bzr:log'
 
 
 def escape_svn_path(x):
@@ -241,6 +242,9 @@ def parse_bzr_svn_revprops(props, rev):
 
     if props.has_key(SVN_REVPROP_BZR_COMMITTER):
         rev.committer = props[SVN_REVPROP_BZR_COMMITTER].decode("utf-8")
+
+    if props.has_key(SVN_REVPROP_BZR_LOG):
+        rev.message = props[SVN_REVPROP_BZR_LOG]
 
     for name, value in props.items():
         if name.startswith(SVN_REVPROP_BZR_REVPROP_PREFIX):
@@ -795,12 +799,9 @@ def parse_revision_id(revid):
     """
     if not revid.startswith("svn-"):
         raise InvalidRevisionId(revid, None)
-    try:
-        mapping_version = revid[len("svn-"):len("svn-vx")]
-        mapping = mapping_registry.get(mapping_version)
-        return mapping.parse_revision_id(revid)
-    except KeyError:
-        pass
+    mapping_version = revid[len("svn-"):len("svn-vx")]
+    mapping = mapping_registry.get(mapping_version)
+    return mapping.parse_revision_id(revid)
 
 
 def get_default_mapping():
