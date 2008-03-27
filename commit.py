@@ -2,7 +2,7 @@
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
@@ -21,13 +21,13 @@ import core
 from bzrlib import debug, osutils, urlutils
 from bzrlib.branch import Branch
 from bzrlib.errors import (BzrError, InvalidRevisionId, DivergedBranches, 
-                           UnrelatedBranches)
+                           UnrelatedBranches, AppendRevisionsOnlyViolation,
+                           )
 from bzrlib.inventory import Inventory
 from bzrlib.repository import RootCommitBuilder, InterRepository
 from bzrlib.revision import NULL_REVISION
-from bzrlib.trace import mutter
+from bzrlib.trace import mutter, warning
 
-from copy import deepcopy
 from cStringIO import StringIO
 from errors import ChangesRootLHSHistory, MissingPrefix, RevpropChangeFailed
 from ra import txdelta_send_stream
@@ -36,16 +36,8 @@ from svk import (generate_svk_feature, serialize_svk_features,
 import constants
 from mapping import parse_revision_id
 from repository import (SvnRepositoryFormat, SvnRepository, lazy_dict)
+from scheme import is_valid_property_name
 import urllib
-
-
-def is_valid_property_name(prop):
-    if not prop[0].isalnum() and not prop[0] in ":_":
-        return False
-    for c in prop[1:]:
-        if not c.isalnum() and not c in "-:._":
-            return False
-    return True
 
 
 def _revision_id_to_svk_feature(revid):
@@ -418,10 +410,14 @@ class SvnCommitBuilder(RootCommitBuilder):
 
             assert self._new_revision_id is None or self._new_revision_id == revid
 
-            if self.repository.get_config().get_override_svn_revprops():
-                set_svn_revprops(self.repository.transport, revision, {
-                    constants.PROP_REVISION_AUTHOR: self._committer,
-                    constants.PROP_REVISION_DATE: svn_time_to_cstring(1000000*self._timestamp)})
+            override_svn_revprops = self.repository.get_config().get_override_svn_revprops()
+            if override_svn_revprops is not None:
+                new_revprops = {}
+                if svn.core.SVN_PROP_REVISION_AUTHOR in override_svn_revprops:
+                    new_revprops[svn.core.SVN_PROP_REVISION_AUTHOR] = self._committer
+                if svn.core.SVN_PROP_REVISION_DATE in override_svn_revprops:
+                    new_revprops[svn.core.SVN_PROP_REVISION_DATE] = svn_time_to_cstring(1000000*self._timestamp)
+                set_svn_revprops(self.repository.transport, self.revision_metadata.revision, new_revprops)
 
             try:
                 set_svn_revprops(self.repository.transport, revision, 
@@ -465,13 +461,17 @@ class SvnCommitBuilder(RootCommitBuilder):
             fileids[path] = id
 
         self.base_mapping.export_fileid_map(fileids, self._svn_revprops, self._svnprops)
-        self._svn_revprops[constants.PROP_REVISION_LOG] = message.encode("utf-8")
+        if self.repository.get_config().get_log_strip_trailing_newline():
+            self.base_mapping.export_message(message, self._svn_revprops, self._svnprops)
+            message = message.rstrip("\n")
+        self._svn_revprops[constants.SVN_PROP_REVISION_LOG] = message.encode("utf-8")
 
         try:
             existing_bp_parts = _check_dirs_exist(self.repository.transport, 
                                               bp_parts, -1)
             for prop in self._svn_revprops:
-                assert is_valid_property_name(prop), "Invalid property name %r" % prop
+                if not is_valid_property_name(prop):
+                    warning("Setting property %r with invalid characters in name" % prop)
             try:
                 self.editor = self.repository.transport.get_commit_editor(
                         self._svn_revprops, done, None, False)
@@ -496,6 +496,9 @@ class SvnCommitBuilder(RootCommitBuilder):
                 elif self.base_revnum < self.repository._log.find_latest_change(self.branch.get_branch_path(), repository_latest_revnum, include_children=True):
                     replace_existing = True
 
+            if replace_existing and self.branch._get_append_revisions_only():
+                raise AppendRevisionsOnlyViolation(self.branch.base)
+
             # TODO: Accept create_prefix argument (#118787)
             branch_editors = self.open_branch_editors(root, bp_parts,
                 existing_bp_parts, self.base_path, self.base_revnum, 
@@ -506,7 +509,8 @@ class SvnCommitBuilder(RootCommitBuilder):
 
             # Set all the revprops
             for prop, value in self._svnprops.items():
-                assert is_valid_property_name(prop), "Invalid property name %r" % prop
+                if not is_valid_property_name(prop):
+                    warning("Setting property %r with invalid characters in name" % prop)
                 if value is not None:
                     value = value.encode('utf-8')
                 branch_editors[-1].change_prop(prop, value)
@@ -605,7 +609,7 @@ def push_new(target_repository, target_branch_path, source,
     if stop_revision is None:
         stop_revision = source.last_revision()
     history = source.revision_history()
-    revhistory = deepcopy(history)
+    revhistory = list(history)
     start_revid = NULL_REVISION
     while len(revhistory) > 0:
         revid = revhistory.pop()

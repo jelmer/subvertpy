@@ -2,7 +2,7 @@
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
@@ -129,7 +129,7 @@ class TestConversion(TestCaseWithSubversionRepository):
         oldrepos = Repository.open(self.repos_url)
         convert_repository(oldrepos, "e", TrunkBranchingScheme(), 
             create_shared_repo=True,
-            filter_branch=lambda (bp, revnum, exists): bp.endswith("somebranch"))
+            filter_branch=lambda branch: branch.get_branch_path().endswith("somebranch"))
         newrepos = Repository.open("e")
         self.assertTrue(os.path.exists("e/branches/somebranch"))
         self.assertFalse(os.path.exists("e/branches/anotherbranch"))

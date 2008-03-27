@@ -5,6 +5,7 @@ SETUP ?= ./setup.py
 PYDOCTOR ?= pydoctor
 CTAGS ?= ctags
 PYLINT ?= pylint
+RST2HTML ?= rst2html
 TESTS ?= svn
 
 all:: build
@@ -28,7 +29,7 @@ $(TMP_PLUGINS_DIR):
 	mkdir -p $@
 
 $(TMP_PLUGINS_DIR)/svn: $(TMP_PLUGINS_DIR)
-	ln -sf $@ ..
+	ln -sf .. $@
 
 check:: build-inplace $(TMP_PLUGINS_DIR)/svn 
 	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(DEBUGGER) $(PYTHON) $(BZR) selftest $(TEST_OPTIONS) $(TESTS)
@@ -47,6 +48,9 @@ lint::
 
 pydoctor::
 	$(PYDOCTOR) --make-html -c bzr-svn.cfg
+
+FAQ.html README.html: %.html: %
+	$(RST2HTML) $< > $@
 
 tags::
 	$(CTAGS) -R .

@@ -2,7 +2,7 @@
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
@@ -56,6 +56,19 @@ from core import SubversionException, time_to_cstring
 
 from format import get_rich_root_format
 
+def generate_ignore_list(ignore_map):
+    """Create a list of ignores, ordered by directory.
+    
+    :param ignore_map: Dictionary with paths as keys, patterns as values.
+    :return: list of ignores
+    """
+    ignores = []
+    keys = ignore_map.keys()
+    keys.sort()
+    for k in keys:
+        ignores.append("./" + os.path.join(k.strip("/"), ignore_map[k].strip("/")))
+    return ignores
+
 
 class SvnWorkingTree(WorkingTree):
     """WorkingTree implementation that uses a Subversion Working Copy for storage."""
@@ -105,6 +118,7 @@ class SvnWorkingTree(WorkingTree):
                 if entry == "":
                     continue
 
+                # Ignore ignores on things that aren't directories
                 if entries[entry].kind != core.NODE_DIR:
                     continue
 
@@ -744,9 +758,9 @@ class SvnCheckout(BzrDir):
         finally:
             adm.close()
 
-        remote_transport = SvnRaTransport(svn_url)
-        self.remote_bzrdir = SvnRemoteAccess(remote_transport)
-        self.svn_root_transport = remote_transport.clone_root()
+        self.remote_transport = SvnRaTransport(svn_url)
+        self.remote_bzrdir = SvnRemoteAccess(self.remote_transport)
+        self.svn_root_transport = self.remote_transport.clone_root()
         self.root_transport = self.transport = transport
         
     def clone(self, path, revision_id=None, force_new_repo=False):
@@ -800,7 +814,7 @@ class SvnCheckout(BzrDir):
         repos = self._find_repository()
 
         try:
-            branch = SvnBranch(self.svn_root_transport.base, repos, 
+            branch = SvnBranch(self.remote_transport.base, repos, 
                                self.remote_bzrdir.branch_path)
         except SubversionException, (_, num):
             if num == constants.ERR_WC_NOT_DIRECTORY:

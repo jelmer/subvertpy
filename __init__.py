@@ -2,7 +2,7 @@
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
@@ -31,7 +31,7 @@ import revspec
 # versions ending in 'exp' mean experimental mappings
 # versions ending in 'dev' mean development version
 # versions ending in 'final' mean release (well tested, etc)
-version_info = (0, 4, 9, 'dev', 0)
+version_info = (0, 4, 10, 'dev', 0)
 
 if version_info[3] == 'final':
     version_string = '%d.%d.%d' % version_info[:3]
@@ -39,7 +39,7 @@ else:
     version_string = '%d.%d.%d%s%d' % version_info
 __version__ = version_string
 
-COMPATIBLE_BZR_VERSIONS = [(1, 3)]
+COMPATIBLE_BZR_VERSIONS = [(1, 4)]
 
 def check_bzrlib_version(desired):
     """Check that bzrlib is compatible.
@@ -205,10 +205,10 @@ class cmd_svn_import(Command):
             raise BzrCommandError(
                     "Not a Subversion repository: %s" % from_location)
 
-        def filter_branch((branch_path, revnum, exists)):
-            if prefix is not None and not branch_path.startswith(prefix):
+        def filter_branch(branch):
+            if prefix is not None and not branch.get_branch_path().startswith(prefix):
                 return False
-            return exists
+            return True
 
         convert_repository(from_repos, to_location, scheme, not standalone, 
                 trees, all, filter_branch=filter_branch)

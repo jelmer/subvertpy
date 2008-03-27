@@ -11,3 +11,5 @@ ra.h
 core.h
 client.c
 repos.c
+FAQ.html
+README.html

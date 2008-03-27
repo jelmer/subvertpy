@@ -2,7 +2,7 @@
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
@@ -91,3 +91,10 @@ class TestCheckout(TestCaseWithSubversionRepository):
         x = Branch.open("dc")
         x.create_checkout("de", lightweight=True)
 
+    def test_checkout_branch(self):
+        repos_url = self.make_client("d", "dc")
+        self.build_tree({"dc/trunk": None})
+        self.client_add("dc/trunk")
+        self.client_commit("dc", "msg")
+        x = self.open_checkout_bzrdir("dc/trunk")
+        self.assertEquals(repos_url+"/trunk", x.open_branch().base)
