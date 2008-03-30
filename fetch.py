@@ -34,7 +34,7 @@ from mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_MERGE,
                      SVN_PROP_BZR_FILEIDS, SVN_REVPROP_BZR_SIGNATURE,
                      parse_merge_property,
                      parse_revision_metadata)
-from repository import (SvnRepository, SvnRepositoryFormat)
+from repository import (SvnRepository, SvnRepositoryFormat, lazy_dict)
 from svk import SVN_PROP_SVK_MERGE
 from delta import apply_txdelta_handler
 from tree import (parse_externals_description, inventory_add_external)
@@ -100,8 +100,8 @@ class RevisionBuildEditor:
         (self.branch_path, self.revnum, self.mapping) = self.source.lookup_revision_id(revid)
         self.svn_revprops = self.source._log._get_transport().revprop_list(self.revnum)
         changes = self.source._log.get_revision_paths(self.revnum, self.branch_path)
-        renames = self.source.revision_fileid_renames(self.branch_path, self.revnum, self.mapping, 
-                                                      revprops=self.svn_revprops)
+        fileprops = lazy_dict(self.source.branchprop_list.get_changed_properties, self.branch_path, self.revnum)
+        renames = self.mapping.import_fileid_map(self.svn_revprops, fileprops)
         self.id_map = self.source.transform_fileid_map(self.source.uuid, 
                               self.revnum, self.branch_path, changes, renames, 
                               self.mapping)
@@ -560,8 +560,8 @@ class InterFromSvnRepository(InterRepository):
         """
         needed = []
 
-        graph = self.source.get_graph()
         if fetch_rhs_ancestry:
+            graph = self.source.get_graph()
             for (revid, parent_revids) in graph.iter_ancestry([revision_id]):
                 if revid == NULL_REVISION:
                     continue
@@ -571,16 +571,22 @@ class InterFromSvnRepository(InterRepository):
                     needed.append((revid, parent_revids))
                 elif not find_ghosts:
                     break
+            needed.reverse()
         else:
-            for (revid, parent_revid) in graph.iter_lhs_ancestry(revision_id):
-                if revid == NULL_REVISION:
-                    continue
+            revs = []
+            prev = None
+            parents = {}
+            for revid in self.source.iter_reverse_revision_history(revision_id):
+                parents[prev] = revid
                 if not self.target.has_revision(revid):
-                    needed.append((revid, (parent_revid,)))
+                    revs.append(revid)
                 elif not find_ghosts:
                     break
+                prev = revid
+            parents[prev] = NULL_REVISION
 
-        needed.reverse()
+            needed = [(revid, (parents[revid],)) for revid in reversed(revs)]
+
         return needed
 
     def copy_content(self, revision_id=None, pb=None):

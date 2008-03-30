@@ -225,7 +225,7 @@ class SvnRaTransport(Transport):
     def get_lock(self, path):
         return self._ra.get_lock(path)
 
-    class SvnLock:
+    class SvnLock(object):
         def __init__(self, transport, tokens):
             self._tokens = tokens
             self._transport = transport
@@ -303,7 +303,7 @@ class SvnRaTransport(Transport):
     # There is no real way to do locking directly on the transport 
     # nor is there a need to as the remote server will take care of 
     # locking
-    class PhonyLock:
+    class PhonyLock(object):
         def unlock(self):
             pass
 

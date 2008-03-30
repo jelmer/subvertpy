@@ -535,6 +535,7 @@ class HeavyWeightCheckoutTests(TestCaseWithSubversionRepository):
         tree1 = master_branch.repository.revision_tree(revid1)
         tree2 = master_branch.repository.revision_tree(revid2)
         delta = tree2.changes_from(tree1)
+        mutter("changes %r" % list(master_branch.repository.iter_reverse_branch_changes("", 2, master_branch.repository.get_mapping())))
         self.assertEquals(0, len(delta.added))
         self.assertEquals(0, len(delta.removed))
         self.assertEquals(1, len(delta.renamed))
@@ -581,6 +582,7 @@ class RevpropTests(TestCaseWithSubversionRepository):
         transport = SvnRaTransport(repos_url)
         self.assertRaises(RevpropChangeFailed, 
                 lambda: set_svn_revprops(transport, 1, {"svn:author": "Somebody", "svn:date": time_to_cstring(1000000*473385600)}))
+
 
 class SvkTestCase(TestCase):
     def test_revid_svk_map(self):

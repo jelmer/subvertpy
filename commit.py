@@ -143,7 +143,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         if self.base_revid is None:
             base_branch_props = {}
         else:
-            base_branch_props = lazy_dict(lambda: self.repository.branchprop_list.get_properties(self.base_path, self.base_revnum))
+            base_branch_props = lazy_dict(self.repository.branchprop_list.get_properties, self.base_path, self.base_revnum)
         (self._svn_revprops, self._svnprops) = self.base_mapping.export_revision(self.branch.get_branch_path(), timestamp, timezone, committer, revprops, revision_id, self.base_revno+1, merges, base_branch_props)
 
         if len(merges) > 0:
@@ -622,7 +622,7 @@ def push_new(target_repository, target_branch_path, source,
 
     # Get commit builder but specify that target_branch_path should
     # be created and copied from (copy_path, copy_revnum)
-    class ImaginaryBranch:
+    class ImaginaryBranch(object):
         """Simple branch that pretends to be empty but already exist."""
         def __init__(self, repository):
             self.repository = repository

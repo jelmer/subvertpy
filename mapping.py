@@ -251,7 +251,7 @@ def parse_bzr_svn_revprops(props, rev):
             rev.properties[name[len(SVN_REVPROP_BZR_REVPROP_PREFIX):]] = value
 
 
-class BzrSvnMapping:
+class BzrSvnMapping(object):
     """Class that maps between Subversion and Bazaar semantics."""
     experimental = False
     _warned_experimental = False
@@ -527,7 +527,7 @@ class BzrSvnMappingv3(BzrSvnMapping):
         return type(self) == type(other) and self.scheme == other.scheme
 
 
-class BzrSvnMappingFileProps:
+class BzrSvnMappingFileProps(object):
     @classmethod
     def supports_custom_fileprops(cls):
         """Whether this mapping can be used with custom file properties."""
@@ -613,7 +613,7 @@ class BzrSvnMappingFileProps:
 class BzrSvnMappingv3FileProps(BzrSvnMappingFileProps, BzrSvnMappingv3):
     pass
 
-class BzrSvnMappingRevProps:
+class BzrSvnMappingRevProps(object):
     @classmethod
     def supports_custom_revprops(cls):
         """Whether this mapping can be used with custom revision properties."""
