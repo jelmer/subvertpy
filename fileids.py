@@ -25,9 +25,12 @@ import urllib
 
 from mapping import escape_svn_path
 
-def get_local_changes(paths, mapping, generate_revid, get_children=None):
+def get_local_changes(paths, branch, mapping, generate_revid, 
+                      get_children=None):
     new_paths = {}
     for p in sorted(paths.keys()):
+        if p != branch and not p.startswith(branch+"/"):
+            continue
         data = paths[p]
         new_p = mapping.scheme.unprefix(p)[1]
         if data[1] is not None:
@@ -100,7 +103,7 @@ class FileIdMap(object):
         :param renames: List of renames (known file ids for particular paths)
         :param mapping: Mapping
         """
-        changes = get_local_changes(global_changes, mapping,
+        changes = get_local_changes(global_changes, branch, mapping,
                     self.repos.generate_revision_id, find_children)
         if find_children is not None:
             def get_children(path, revid):
