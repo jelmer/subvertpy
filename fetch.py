@@ -28,13 +28,14 @@ import md5
 import constants
 
 from bzrlib.plugins.svn.errors import InvalidFileName
-from mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_MERGE, 
+from logwalker import lazy_dict
+from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_MERGE, 
                      SVN_PROP_BZR_PREFIX, SVN_PROP_BZR_REVISION_INFO, 
-                     SVN_PROP_BZR_BRANCHING_SCHEME, SVN_PROP_BZR_REVISION_ID,
+                     SVN_PROP_BZR_REVISION_ID,
                      SVN_PROP_BZR_FILEIDS, SVN_REVPROP_BZR_SIGNATURE,
                      parse_merge_property,
                      parse_revision_metadata)
-from repository import (SvnRepository, SvnRepositoryFormat, lazy_dict)
+from repository import SvnRepository, SvnRepositoryFormat
 from svk import SVN_PROP_SVK_MERGE
 from delta import apply_txdelta_handler
 from tree import (parse_externals_description, inventory_add_external)
@@ -95,26 +96,28 @@ class RevisionBuildEditor:
     def set_target_revision(self, target_revision):
         pass
 
-    def start_revision(self, revid, prev_inventory):
+    def start_revision(self, revid, prev_inventory, revmeta):
         self.revid = revid
         (self.branch_path, self.revnum, self.mapping) = self.source.lookup_revision_id(revid)
-        self.svn_revprops = self.source._log._get_transport().revprop_list(self.revnum)
-        changes = self.source._log.get_revision_paths(self.revnum, self.branch_path)
-        fileprops = lazy_dict(self.source.branchprop_list.get_changed_properties, self.branch_path, self.revnum)
-        renames = self.mapping.import_fileid_map(self.svn_revprops, fileprops)
-        self.id_map = self.source.transform_fileid_map(self.source.uuid, 
-                              self.revnum, self.branch_path, changes, renames, 
-                              self.mapping)
-        self._bzr_merges = ()
-        self._svk_merges = ()
+        self.revmeta = revmeta
+        self._id_map = None
+        self.dir_baserev = {}
+        self._revinfo = None
         self._premature_deletes = set()
         self.old_inventory = prev_inventory
         self.inventory = prev_inventory.copy()
-        self._branch_fileprops = {}
         self._start_revision()
 
-    def _get_parent_ids(self):
-        return self.source.revision_parents(self.revid, self._branch_fileprops)
+    def _get_id_map(self):
+        if self._id_map is not None:
+            return self._id_map
+
+        renames = self.mapping.import_fileid_map(self.revmeta.revprops, self.revmeta.fileprops)
+        self._id_map = self.source.transform_fileid_map(self.source.uuid, 
+                              self.revnum, self.branch_path, self.revmeta.paths, renames, 
+                              self.mapping)
+
+        return self._id_map
 
     def _get_revision(self, revid):
         """Creates the revision object.
@@ -123,11 +126,11 @@ class RevisionBuildEditor:
         """
 
         # Commit SVN revision properties to a Revision object
-        rev = Revision(revision_id=revid, parent_ids=self._get_parent_ids())
+        rev = Revision(revision_id=revid, parent_ids=self.revmeta.get_parent_ids(self.mapping))
 
-        self.mapping.import_revision(self.svn_revprops, self._branch_fileprops, rev)
+        self.mapping.import_revision(self.revmeta.revprops, self.revmeta.fileprops, rev)
 
-        signature = self.svn_revprops.get(SVN_REVPROP_BZR_SIGNATURE)
+        signature = self.revmeta.revprops.get(SVN_REVPROP_BZR_SIGNATURE)
 
         return (rev, signature)
 
@@ -140,11 +143,8 @@ class RevisionBuildEditor:
         else:
             assert self.old_inventory.root.revision is not None
             old_file_id = self.old_inventory.root.file_id
-            if self.id_map.has_key(""):
-                file_id = self.id_map[""]
-            else:
-                file_id = old_file_id
-            file_parents = [self.old_inventory.root.revision]
+            file_id = self._get_id_map().get("", old_file_id)
+            self.dir_baserev[file_id] = [self.old_inventory.root.revision]
 
         if self.inventory.root is not None and \
                 file_id == self.inventory.root.file_id:
@@ -179,8 +179,9 @@ class RevisionBuildEditor:
         assert isinstance(path, unicode)
         assert isinstance(old_parent_id, str)
         assert isinstance(new_parent_id, str)
-        if self.id_map.has_key(path):
-            return self.id_map[path]
+        ret = self._get_id_map().get(path)
+        if ret is not None:
+            return ret
         return self.old_inventory[old_parent_id].children[urlutils.basename(path)].file_id
 
     def _get_old_id(self, parent_id, old_path):
@@ -191,8 +192,9 @@ class RevisionBuildEditor:
     def _get_new_id(self, parent_id, new_path):
         assert isinstance(new_path, unicode)
         assert isinstance(parent_id, str)
-        if self.id_map.has_key(new_path):
-            return self.id_map[new_path]
+        ret = self._get_id_map().get(new_path)
+        if ret is not None:
+            return ret
         return self.mapping.generate_file_id(self.source.uuid, self.revnum, self.branch_path, new_path)
 
     def _rename(self, file_id, parent_id, path):
@@ -272,39 +274,21 @@ class DirectoryBuildEditor:
 
     def change_prop(self, name, value):
         if self.new_id == self.editor.inventory.root.file_id:
-            self.editor._branch_fileprops[name] = value
+            # Replay lazy_dict, since it may be more expensive
+            if type(self.revmeta.fileprops) != dict:
+                self.revmeta.fileprops = {}
+            self.revmeta.fileprops[name] = value
 
-        if name == SVN_PROP_BZR_BRANCHING_SCHEME:
-            if self.new_id != self.editor.inventory.root.file_id:
-                mutter('rogue %r on non-root directory' % name)
-                return
-        elif name == SVN_PROP_BZR_ANCESTRY+str(self.editor.mapping.scheme):
-            if self.new_id != self.editor.inventory.root.file_id:
-                mutter('rogue %r on non-root directory' % name)
-                return
-            
-            self.editor._bzr_merges = parse_merge_property(value.splitlines()[-1])
-        elif name == SVN_PROP_SVK_MERGE:
-            self.editor._svk_merges = None # Force Repository.revision_parents() to look it up
-        elif name == SVN_PROP_BZR_REVISION_INFO:
-            if self.new_id != self.editor.inventory.root.file_id:
-                mutter('rogue %r on non-root directory' % SVN_PROP_BZR_REVISION_INFO)
-                return
- 
-        elif name in (constants.PROP_ENTRY_COMMITTED_DATE,
-                      constants.PROP_ENTRY_COMMITTED_REV,
-                      constants.PROP_ENTRY_LAST_AUTHOR,
-                      constants.PROP_ENTRY_LOCK_TOKEN,
-                      constants.PROP_ENTRY_UUID,
-                      constants.PROP_EXECUTABLE,
-                      SVN_PROP_BZR_MERGE, SVN_PROP_BZR_FILEIDS):
+        if name in (constants.PROP_ENTRY_COMMITTED_DATE,
+                    constants.PROP_ENTRY_COMMITTED_REV,
+                    constants.PROP_ENTRY_LAST_AUTHOR,
+                    constants.PROP_ENTRY_LOCK_TOKEN,
+                    constants.PROP_ENTRY_UUID,
+                    constants.PROP_EXECUTABLE):
             pass
-        elif (name.startswith(SVN_PROP_BZR_ANCESTRY) or 
-              name.startswith(SVN_PROP_BZR_REVISION_ID) or 
-              name.startswith(constants.PROP_WC_PREFIX)):
+        elif (name.startswith(constants.PROP_WC_PREFIX)):
             pass
-        elif (name.startswith(constants.PROP_PREFIX) or
-              name.startswith(SVN_PROP_BZR_PREFIX)):
+        elif name.startswith(constants.PROP_PREFIX):
             mutter('unsupported dir property %r' % name)
 
     def add_file(self, path, copyfrom_path=None, copyfrom_revnum=-1):
@@ -527,29 +511,41 @@ class InterFromSvnRepository(InterRepository):
     def _get_repo_format_to_test():
         return None
 
-    def _find_all(self):
+    def _find_all(self, mapping, pb=None):
         """Find all revisions from the source repository that are not 
         yet in the target repository.
         """
         parents = {}
+        meta_map = {}
         graph = self.source.get_graph()
-        available_revs = set(self.source.all_revision_ids())
+        available_revs = set()
+        for revmeta in self.source.iter_all_changes(pb=pb):
+            revid = revmeta.get_revision_id(mapping)
+            available_revs.add(revid)
+            meta_map[revid] = revmeta
         missing = available_revs.difference(self.target.has_revisions(available_revs))
         needed = list(graph.iter_topo_order(missing))
         parents = graph.get_parent_map(needed)
-        return [(revid, parents[revid]) for revid in needed]
+        return [(revid, parents[revid][0], meta_map[revid]) for revid in needed]
 
-    def _find_branches(self, branches, find_ghosts=False, fetch_rhs_ancestry=False):
+    def _find_branches(self, branches, find_ghosts=False, fetch_rhs_ancestry=False, pb=None):
         set_needed = set()
         ret_needed = list()
         for revid in branches:
-            for (rev, parents) in self._find_until(revid, find_ghosts=find_ghosts, fetch_rhs_ancestry=False):
-                if rev not in set_needed:
-                    ret_needed.append((rev, parents))
-                    set_needed.add(rev)
+            if pb:
+                pb.update("determining revisions to fetch", branches.index(revid), len(branches))
+            try:
+                nestedpb = ui.ui_factory.nested_progress_bar()
+                for rev in self._find_until(revid, find_ghosts=find_ghosts, fetch_rhs_ancestry=False,
+                                            pb=nestedpb):
+                    if rev[0] not in set_needed:
+                        ret_needed.append(rev)
+                        set_needed.add(rev[0])
+            finally:
+                nestedpb.finished()
         return ret_needed
 
-    def _find_until(self, revision_id, find_ghosts=False, fetch_rhs_ancestry=False):
+    def _find_until(self, revision_id, find_ghosts=False, fetch_rhs_ancestry=False, pb=None):
         """Find all missing revisions until revision_id
 
         :param revision_id: Stop revision
@@ -558,34 +554,37 @@ class InterFromSvnRepository(InterRepository):
         :return: Tuple with revisions missing and a dictionary with 
             parents for those revision.
         """
+        extra = set()
         needed = []
-
-        if fetch_rhs_ancestry:
-            graph = self.source.get_graph()
-            for (revid, parent_revids) in graph.iter_ancestry([revision_id]):
-                if revid == NULL_REVISION:
-                    continue
-                if parent_revids is None: # Ghost
-                    continue
-                if not self.target.has_revision(revid):
-                    needed.append((revid, parent_revids))
-                elif not find_ghosts:
-                    break
-            needed.reverse()
-        else:
-            revs = []
+        revs = []
+        meta_map = {}
+        lhs_parent = {}
+        def check_revid(revision_id):
             prev = None
-            parents = {}
-            for revid in self.source.iter_reverse_revision_history(revision_id):
-                parents[prev] = revid
+            (branch_path, revnum, mapping) = self.source.lookup_revision_id(revision_id)
+            for revmeta in self.source.iter_reverse_branch_changes(branch_path, revnum, mapping):
+                if pb:
+                    pb.update("determining revisions to fetch", revnum-revmeta.revnum, revnum)
+                revid = revmeta.get_revision_id(mapping)
+                lhs_parent[prev] = revid
+                meta_map[revid] = revmeta
+                if fetch_rhs_ancestry:
+                    extra.update(revmeta.get_rhs_parents(mapping))
                 if not self.target.has_revision(revid):
                     revs.append(revid)
                 elif not find_ghosts:
+                    prev = None
                     break
                 prev = revid
-            parents[prev] = NULL_REVISION
+            lhs_parent[prev] = NULL_REVISION
 
-            needed = [(revid, (parents[revid],)) for revid in reversed(revs)]
+        check_revid(revision_id)
+
+        for revid in extra:
+            if revid not in revs:
+                check_revid(revid)
+
+        needed = [(revid, lhs_parent[revid], meta_map[revid]) for revid in reversed(revs)]
 
         return needed
 
@@ -616,44 +615,51 @@ class InterFromSvnRepository(InterRepository):
             lock.unlock()
 
     def _fetch_revision_update(self, editor, transport, repos_root, parent_revid):
-        if parent_revid == NULL_REVISION:
-            branch_url = urlutils.join(repos_root, editor.branch_path)
-            transport.reparent(branch_url)
-            assert transport.svn_url == branch_url.rstrip("/"), \
-                "Expected %r, got %r" % (transport.svn_url, branch_url)
-            reporter = transport.do_update(editor.revnum, True, editor)
+            if parent_revid == NULL_REVISION:
+                branch_url = urlutils.join(repos_root, 
+                                           editor.branch_path)
+                conn.reparent(branch_url)
+                assert conn.url == branch_url, \
+                    "Expected %r, got %r" % (conn.url, branch_url)
+                reporter = conn.do_update(editor.revnum, True, editor)
 
-            # Report status of existing paths
-            reporter.set_path("", editor.revnum, True)
-        else:
-            (parent_branch, parent_revnum, mapping) = \
-                    self.source.lookup_revision_id(parent_revid)
-            transport.reparent(urlutils.join(repos_root, parent_branch))
-
-            if parent_branch != editor.branch_path:
-                reporter = transport.do_switch(editor.revnum, True, 
-                    urlutils.join(repos_root, editor.branch_path), editor)
+                try:
+                    # Report status of existing paths
+                    reporter.set_path("", editor.revnum, True, None)
+                except:
+                    reporter.abort()
+                    raise
             else:
-                reporter = transport.do_update(editor.revnum, True, editor)
+                (parent_branch, parent_revnum, mapping) = \
+                        self.source.lookup_revision_id(parent_revid)
+                conn.reparent(urlutils.join(repos_root, parent_branch))
 
-            # Report status of existing paths
-            reporter.set_path("", parent_revnum, False)
+                if parent_branch != editor.branch_path:
+                    reporter = conn.do_switch(editor.revnum, True, 
+                        urlutils.join(repos_root, editor.branch_path), 
+                        editor)
+                else:
+                    reporter = conn.do_update(editor.revnum, True, editor)
 
-        lock = transport.lock_read(".")
-        reporter.finish()
-        lock.unlock()
+                try:
+                    # Report status of existing paths
+                    reporter.set_path("", parent_revnum, False)
+                except:
+                    reporter.abort()
+                    raise
 
-    def _fetch_switch(self, revids, pb=None):
-        """Copy a set of related revisions using ra_switch.
+            reporter.finish()
+
+    def _fetch_switch(self, conn, revids, pb=None):
+        """Copy a set of related revisions using svn.ra.switch.
 
         :param revids: List of revision ids of revisions to copy, 
                        newest first.
         :param pb: Optional progress bar.
         """
-        repos_root = self.source.transport.get_svn_repos_root()
+        repos_root = conn.get_repos_root()
 
         prev_revid = None
-        transport = self.source.transport
         if pb is None:
             pb = ui.ui_factory.nested_progress_bar()
             nested_pb = pb
@@ -667,10 +673,8 @@ class InterFromSvnRepository(InterRepository):
         editor = revbuildklass(self.source, self.target)
 
         try:
-            for (revid, parent_revids) in revids:
+            for (revid, parent_revid, revmeta) in revids:
                 pb.update('copying revision', num, len(revids))
-
-                parent_revid = parent_revids[0]
 
                 assert parent_revid is not None
 
@@ -681,10 +685,13 @@ class InterFromSvnRepository(InterRepository):
                 else:
                     parent_inv = prev_inv
 
-                editor.start_revision(revid, parent_inv)
+                editor.start_revision(revid, parent_inv, revmeta)
 
                 try:
+<<<<<<< TREE
                     self._fetch_revision_update(editor, transport, repos_root, parent_revid)
+=======
+>>>>>>> MERGE-SOURCE
                 except:
                     editor.abort()
                     raise
@@ -696,7 +703,6 @@ class InterFromSvnRepository(InterRepository):
             self.target.unlock()
             if nested_pb is not None:
                 nested_pb.finished()
-        self.source.transport.reparent_root()
 
     def fetch(self, revision_id=None, pb=None, find_ghosts=False, 
               branches=None, fetch_rhs_ancestry=False):
@@ -707,18 +713,20 @@ class InterFromSvnRepository(InterRepository):
         self._supports_replay = True # assume replay supported by default
         # Dictionary with paths as keys, revnums as values
 
+        if pb:
+            pb.update("determining revisions to fetch", 0, 2)
+
         # Loop over all the revnums until revision_id
         # (or youngest_revnum) and call self.target.add_revision() 
         # or self.target.add_inventory() each time
         self.target.lock_read()
         try:
             if branches is not None:
-                needed = self._find_branches(branches, find_ghosts, fetch_rhs_ancestry)
+                needed = self._find_branches(branches, find_ghosts, fetch_rhs_ancestry, pb=pb)
             elif revision_id is None:
-                needed = self._find_all()
+                needed = self._find_all(self.source.get_mapping(), pb=pb)
             else:
-                needed = self._find_until(revision_id, 
-                                                     find_ghosts, fetch_rhs_ancestry)
+                needed = self._find_until(revision_id, find_ghosts, fetch_rhs_ancestry, pb=pb)
         finally:
             self.target.unlock()
 
@@ -726,7 +734,11 @@ class InterFromSvnRepository(InterRepository):
             # Nothing to fetch
             return
 
-        self._fetch_switch(needed, pb)
+        conn = self.source.transport.get_connection()
+        try:
+            self._fetch_switch(conn, needed, pb)
+        finally:
+            self.source.transport.add_connection(conn)
 
     @staticmethod
     def is_compatible(source, target):

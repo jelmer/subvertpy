@@ -29,7 +29,7 @@ from commit import set_svn_revprops, _revision_id_to_svk_feature
 from copy import copy
 from errors import RevpropChangeFailed
 import os
-from remote import SvnRaTransport
+from transport import SvnRaTransport
 from tests import TestCaseWithSubversionRepository
 
 from core import time_to_cstring
@@ -78,6 +78,14 @@ class TestNativeCommit(TestCaseWithSubversionRepository):
         new_revision = wt.branch.repository.get_revision(
                             wt.branch.last_revision())
         self.assertEqual(wt.branch.last_revision(), new_revision.revision_id)
+
+    def test_commit_unicode_filename(self):
+        self.make_client('d', 'dc')
+        self.build_tree({u'dc/I²C': "data"})
+        self.client_add(u"dc/I²C".encode("utf-8"))
+        wt = self.open_checkout("dc")
+        wt.commit(message="data")
+
 
     def test_commit_local(self):
         self.make_client('d', 'dc')
@@ -132,8 +140,8 @@ class TestNativeCommit(TestCaseWithSubversionRepository):
         self.assertEqual("some-ghost-revision\n", 
                 self.client_get_prop(repos_url, "bzr:ancestry:v3-none", 1))
         self.assertEqual((wt.branch.generate_revision_id(0), "some-ghost-revision"),
-                         wt.branch.repository.revision_parents(
-                             wt.branch.last_revision()))
+                         wt.branch.repository.get_revision(
+                             wt.branch.last_revision()).parent_ids)
 
     def test_commit_rename_file(self):
         repos_url = self.make_client('d', 'dc')
@@ -303,6 +311,14 @@ class TestPush(TestCaseWithSubversionRepository):
         self.assertRaises(DivergedBranches, 
                           olddir.open_branch().pull,
                           self.newdir.open_branch())
+
+    def test_unicode_filename(self):
+        self.build_tree({u'dc/I²C': 'other data'})
+        wt = self.newdir.open_workingtree()
+        wt.add(u'I²C')
+        wt.commit(message="Commit from Bzr")
+        self.assertEqual(1, int(self.olddir.open_branch().pull(
+                                self.newdir.open_branch())))
 
     def test_change(self):
         self.build_tree({'dc/foo/bla': 'other data'})

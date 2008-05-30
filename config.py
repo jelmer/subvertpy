@@ -1,4 +1,4 @@
-# Copyright (C) 2007 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2007-2008 Jelmer Vernooij <jelmer@samba.org>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,12 +15,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Stores per-repository settings."""
 
-from bzrlib import osutils, urlutils
-from bzrlib.config import IniBasedConfig, config_dir, ensure_config_dir_exists, GlobalConfig, LocationConfig, Config
+from bzrlib import osutils, urlutils, trace
+from bzrlib.config import IniBasedConfig, config_dir, ensure_config_dir_exists, GlobalConfig, LocationConfig, Config, STORE_BRANCH, STORE_GLOBAL, STORE_LOCATION
 
 import os
 
-from scheme import BranchingScheme
 import svn.core
 
 # Settings are stored by UUID. 
@@ -58,11 +57,19 @@ class SvnRepositoryConfig(IniBasedConfig):
                 return None
             return GlobalConfig()._get_user_option(name)
 
+    def get_reuse_revisions(self):
+        ret = self._get_user_option("reuse-revisions")
+        if ret is None:
+            return "other-branches"
+        assert ret in ("none", "other-branches", "removed-branches")
+        return ret
+
     def get_branching_scheme(self):
         """Get the branching scheme.
 
         :return: BranchingScheme instance.
         """
+        from mapping3.scheme import BranchingScheme
         schemename = self._get_user_option("branching-scheme", use_global=False)
         if schemename is not None:
             return BranchingScheme.find_scheme(schemename.encode('ascii'))
@@ -116,7 +123,10 @@ class SvnRepositoryConfig(IniBasedConfig):
                     return [svn.core.SVN_PROP_REVISION_DATE, svn.core.SVN_PROP_REVISION_AUTHOR]
                 return []
             except ValueError:
-                return parser.get_value(section, "override-svn-revprops").split(",")
+                val = parser.get_value(section, "override-svn-revprops")
+                if not isinstance(val, list):
+                    return [val]
+                return val
             except KeyError:
                 return None
         ret = get_list(self._get_parser(), self.uuid)
@@ -185,6 +195,15 @@ class BranchConfig(Config):
             self._repository_config = SvnRepositoryConfig(self.branch.repository.uuid)
         return self._repository_config
 
+    def get_set_revprops(self):
+        return self._get_repository_config().get_set_revprops()
+
+    def get_log_strip_trailing_newline(self):
+        return self._get_repository_config().get_log_strip_trailing_newline()
+
+    def get_override_svn_revprops(self):
+        return self._get_repository_config().get_override_svn_revprops()
+
     def _get_user_option(self, option_name):
         """See Config._get_user_option."""
         for source in self.option_sources:
@@ -212,3 +231,26 @@ class BranchConfig(Config):
             except svn.core.SubversionException:
                 return None
         return None
+
+    def set_user_option(self, name, value, store=STORE_LOCATION,
+        warn_masked=False):
+        if store == STORE_GLOBAL:
+            self._get_global_config().set_user_option(name, value)
+        elif store == STORE_BRANCH:
+            raise NotImplementedError("Saving in branch config not supported for Subversion branches")
+        else:
+            self._get_location_config().set_user_option(name, value, store)
+        if not warn_masked:
+            return
+        if store in (STORE_GLOBAL, STORE_BRANCH):
+            mask_value = self._get_location_config().get_user_option(name)
+            if mask_value is not None:
+                trace.warning('Value "%s" is masked by "%s" from'
+                              ' locations.conf', value, mask_value)
+            else:
+                if store == STORE_GLOBAL:
+                    branch_config = self._get_branch_data_config()
+                    mask_value = branch_config.get_user_option(name)
+                    if mask_value is not None:
+                        trace.warning('Value "%s" is masked by "%s" from'
+                                      ' branch.conf', value, mask_value)

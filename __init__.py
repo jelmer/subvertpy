@@ -22,7 +22,7 @@ from bzrlib.bzrdir import BzrDirFormat, format_registry
 from bzrlib.commands import Command, register_command, display_command, Option
 from bzrlib.help_topics import topic_registry
 from bzrlib.revisionspec import SPEC_TYPES
-from bzrlib.trace import warning
+from bzrlib.trace import warning, mutter
 from bzrlib.transport import register_lazy_transport, register_transport_proto
 
 import format
@@ -31,7 +31,7 @@ import revspec
 # versions ending in 'exp' mean experimental mappings
 # versions ending in 'dev' mean development version
 # versions ending in 'final' mean release (well tested, etc)
-version_info = (0, 4, 10, 'dev', 0)
+version_info = (0, 4, 11, 'dev', 0)
 
 if version_info[3] == 'final':
     version_string = '%d.%d.%d' % version_info[:3]
@@ -39,7 +39,7 @@ else:
     version_string = '%d.%d.%d%s%d' % version_info
 __version__ = version_string
 
-COMPATIBLE_BZR_VERSIONS = [(1, 4)]
+COMPATIBLE_BZR_VERSIONS = [(1, 4), (1, 5)]
 
 def check_bzrlib_version(desired):
     """Check that bzrlib is compatible.
@@ -79,7 +79,7 @@ register_lazy_transport('svn://', 'bzrlib.plugins.svn.transport',
 register_lazy_transport('svn+', 'bzrlib.plugins.svn.transport', 
                         'SvnRaTransport')
 topic_registry.register_lazy('svn-branching-schemes', 
-                             'bzrlib.plugins.svn.scheme',
+                             'bzrlib.plugins.svn.mapping3.scheme',
                              'help_schemes', 'Subversion branching schemes')
 
 BzrDirFormat.register_control_format(format.SvnRemoteFormat)
@@ -127,7 +127,7 @@ def get_scheme(schemename):
     """
     if isinstance(schemename, unicode):
         schemename = schemename.encode("ascii")
-    from scheme import BranchingScheme
+    from mapping3.scheme import BranchingScheme
     from bzrlib.errors import BzrCommandError
     
     ret = BranchingScheme.find_scheme(schemename)
@@ -210,8 +210,8 @@ class cmd_svn_import(Command):
                 return False
             return True
 
-        convert_repository(from_repos, to_location, scheme, not standalone, 
-                trees, all, filter_branch=filter_branch)
+        convert_repository(from_repos, to_location, scheme, None, 
+                           not standalone, trees, all, filter_branch=filter_branch)
 
         if tmp_repos is not None:
             from bzrlib import osutils
@@ -321,7 +321,11 @@ class cmd_svn_push(Command):
             revision_id = None
         try:
             target_branch = bzrdir.open_branch()
-            target_branch.pull(source_branch, revision_id)
+            target_branch.lock_write()
+            try:
+                target_branch.pull(source_branch, revision_id)
+            finally:
+                target_branch.unlock()
         except NotBranchError:
             target_branch = bzrdir.import_branch(source_branch, revision_id)
         # We successfully created the target, remember it
@@ -350,7 +354,7 @@ class cmd_svn_branching_scheme(Command):
         from bzrlib.repository import Repository
         from bzrlib.trace import info
         from repository import SvnRepository
-        from scheme import scheme_from_branch_list
+        from mapping3.scheme import scheme_from_branch_list
         def scheme_str(scheme):
             if scheme is None:
                 return ""
@@ -362,16 +366,16 @@ class cmd_svn_branching_scheme(Command):
         if repository_wide:
             scheme = repos._get_property_scheme()
         else:
-            scheme = repos.get_scheme()
+            scheme = repos.get_mapping().scheme
         if set:
             schemestr = edit_commit_message("", 
                                             start_message=scheme_str(scheme))
             scheme = scheme_from_branch_list(
                 map(lambda x:x.strip("\n"), schemestr.splitlines()))
             if repository_wide:
-                repos.set_property_scheme(scheme)
+                set_property_scheme(repos, scheme)
             else:
-                repos.set_branching_scheme(scheme, mandatory=True)
+                set_config_scheme(repos, scheme, mandatory=True)
         elif scheme is not None:
             info(scheme_str(scheme))
 

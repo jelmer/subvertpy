@@ -19,28 +19,19 @@ from bzrlib import ui
 from bzrlib.errors import BzrError
 from bzrlib.trace import mutter
 
-from errors import InvalidSvnBranchPath
+from bzrlib.errors import NotBranchError
 
 from base64 import urlsafe_b64decode, urlsafe_b64encode
+from errors import InvalidSvnBranchPath
+import util
 import bz2
-
-def is_valid_property_name(prop):
-    if not prop[0].isalnum() and not prop[0] in ":_":
-        return False
-    for c in prop[1:]:
-        if not c.isalnum() and not c in "-:._":
-            return False
-    return True
-
+import urllib
 
 class BranchingScheme(object):
     """ Divides SVN repository data up into branches. Since there
     is no proper way to do this, there are several subclasses of this class
     each of which handles a particular convention that may be in use.
     """
-    def __init__(self):
-        pass
-
     def is_branch(self, path):
         """Check whether a location refers to a branch.
         
@@ -190,7 +181,7 @@ class ListBranchingScheme(BranchingScheme):
             if self._pattern_cmp(parts[:len(pattern)], pattern):
                 return ("/".join(parts[:len(pattern)]), 
                         "/".join(parts[len(pattern):]))
-        raise InvalidSvnBranchPath(path=path, scheme=self)
+        raise InvalidSvnBranchPath(path, self)
 
     def __eq__(self, other):
         return self.branch_list == other.branch_list
@@ -280,7 +271,7 @@ class TrunkBranchingScheme(ListBranchingScheme):
         assert isinstance(path, str)
         parts = path.strip("/").split("/")
         if len(parts) == 0 or self.level >= len(parts):
-            raise InvalidSvnBranchPath(path=path, scheme=self)
+            raise InvalidSvnBranchPath(path, self)
 
         if parts[self.level] == "trunk" or parts[self.level] == "hooks":
             return ("/".join(parts[0:self.level+1]).strip("/"), 
@@ -290,7 +281,7 @@ class TrunkBranchingScheme(ListBranchingScheme):
             return ("/".join(parts[0:self.level+2]).strip("/"), 
                     "/".join(parts[self.level+2:]).strip("/"))
         else:
-            raise InvalidSvnBranchPath(path=path, scheme=self)
+            raise InvalidSvnBranchPath(path, self)
 
     def __str__(self):
         return "trunk%d" % self.level
@@ -341,13 +332,13 @@ class SingleBranchingScheme(ListBranchingScheme):
         assert isinstance(path, str)
         path = path.strip("/")
         if not path.startswith(self.path):
-            raise InvalidSvnBranchPath(path=path, scheme=self)
+            raise InvalidSvnBranchPath(path, self)
 
         return (path[0:len(self.path)].strip("/"), 
                 path[len(self.path):].strip("/"))
 
     def __str__(self):
-        if is_valid_property_name(self.path):
+        if util.is_valid_property_name(self.path):
             return "single-%s" % self.path
         else:
             return "single1-%s" % prop_name_quote(self.path)
@@ -435,7 +426,7 @@ def guess_scheme_from_history(changed_paths, last_revnum,
                               relpath=None):
     """Try to determine the best fitting branching scheme.
 
-    :param changed_paths: Iterator over (branch_path, changes, revnum)
+    :param changed_paths: Iterator over (branch_path, changes, revnum, revprops)
         as returned from LogWalker.iter_changes().
     :param last_revnum: Number of entries in changed_paths.
     :param relpath: Branch path that should be accepted by the branching 
@@ -446,7 +437,7 @@ def guess_scheme_from_history(changed_paths, last_revnum,
     pb = ui.ui_factory.nested_progress_bar()
     scheme_cache = {}
     try:
-        for (bp, revpaths, revnum) in changed_paths:
+        for (revpaths, revnum, revprops) in changed_paths:
             assert isinstance(revpaths, dict)
             pb.update("analyzing repository layout", last_revnum-revnum, 
                       last_revnum)

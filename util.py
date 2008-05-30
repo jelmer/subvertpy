@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2008 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@samba.org>
  
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,20 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from bzrlib.tests import TestCase
-from svk import parse_svk_feature
-from svk import parse_svk_features
-
-class SvkTests(TestCase):
-    def test_parse_svk_feature_root(self):
-        self.assertEqual(("auuid", "", 6), 
-                 parse_svk_feature("auuid:/:6"))
-
-    def test_svk_revid_map_nested(self):
-        self.assertEqual(("auuid", "bp", 6),
-                         parse_svk_feature("auuid:/bp:6"))
-
-    def test_parse_erroneous_svk_feature_root(self):
-        self.assertEqual(set(["auuid:/bp:6"]),
-                 parse_svk_features("auuid:/bp:6\n::"))
-
+def is_valid_property_name(prop):
+    if not prop[0].isalnum() and not prop[0] in ":_":
+        return False
+    for c in prop[1:]:
+        if not c.isalnum() and not c in "-:._":
+            return False
+    return True

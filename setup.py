@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.4
+#!/usr/bin/env python
 # Setup file for bzr-svn
 # Copyright (C) 2005-2008 Jelmer Vernooij <jelmer@samba.org>
 
@@ -26,7 +26,7 @@ def svn_include_dir():
 setup(name='bzr-svn',
       description='Support for Subversion branches in Bazaar',
       keywords='plugin bzr svn',
-      version='0.4.10',
+      version='0.4.11',
       url='http://bazaar-vcs.org/BzrForeignBranches/Subversion',
       download_url='http://bazaar-vcs.org/BzrSvn',
       license='GPL',
@@ -40,6 +40,7 @@ setup(name='bzr-svn',
       package_dir={'bzrlib.plugins.svn':'.', 
                    'bzrlib.plugins.svn.tests':'tests'},
       packages=['bzrlib.plugins.svn', 
+                'bzrlib.plugins.svn.mapping3', 
                 'bzrlib.plugins.svn.tests'],
       ext_modules=[
           Extension("core", ["core.pyx"], libraries=["svn_subr-1"], 

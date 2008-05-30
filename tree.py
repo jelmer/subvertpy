@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2006 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2005-2008 Jelmer Vernooij <jelmer@samba.org>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -154,21 +154,14 @@ class DirectoryTreeEditor:
         ie.revision = revision_id
         return DirectoryTreeEditor(self.tree, file_id)
 
+<<<<<<< TREE
     def change_prop(self, name, value):
         from mapping import (SVN_PROP_BZR_ANCESTRY, 
                         SVN_PROP_BZR_PREFIX, SVN_PROP_BZR_REVISION_INFO, 
                         SVN_PROP_BZR_FILEIDS, SVN_PROP_BZR_REVISION_ID,
                         SVN_PROP_BZR_BRANCHING_SCHEME, SVN_PROP_BZR_MERGE)
 
-        if name.startswith(SVN_PROP_BZR_ANCESTRY):
-            if self.file_id != self.tree._inventory.root.file_id:
-                mutter('%r set on non-root dir!' % name)
-                return
-        elif name in (SVN_PROP_BZR_FILEIDS, SVN_PROP_BZR_BRANCHING_SCHEME):
-            if self.file_id != self.tree._inventory.root.file_id:
-                mutter('%r set on non-root dir!' % name)
-                return
-        elif name in (constants.PROP_ENTRY_COMMITTED_DATE,
+        if name in (constants.PROP_ENTRY_COMMITTED_DATE,
                       constants.PROP_ENTRY_COMMITTED_REV,
                       constants.PROP_ENTRY_LAST_AUTHOR,
                       constants.PROP_ENTRY_LOCK_TOKEN,
@@ -178,13 +171,7 @@ class DirectoryTreeEditor:
             pass
         elif name.startswith(constants.PROP_WC_PREFIX):
             pass
-        elif (name == SVN_PROP_BZR_REVISION_INFO or 
-              name.startswith(SVN_PROP_BZR_REVISION_ID)):
-            pass
-        elif name == SVN_PROP_BZR_MERGE:
-            pass
-        elif (name.startswith(constants.PROP_PREFIX) or
-              name.startswith(SVN_PROP_BZR_PREFIX)):
+        elif name.startswith(constants.PROP_PREFIX):
             mutter('unsupported dir property %r' % name)
 
     def add_file(self, path, copyfrom_path=None, copyfrom_revnum=-1):
@@ -222,8 +209,7 @@ class FileTreeEditor:
             pass
         elif name.startswith(constants.PROP_WC_PREFIX):
             pass
-        elif (name.startswith(constants.PROP_PREFIX) or
-              name.startswith(SVN_PROP_BZR_PREFIX)):
+        elif name.startswith(constants.SVN_PROP_PREFIX):
             mutter('unsupported file property %r' % name)
 
     def close(self, checksum=None):
@@ -299,7 +285,7 @@ class SvnBasisTree(RevisionTree):
             if entry.schedule in (wc.SCHEDULE_NORMAL, 
                                   wc.SCHEDULE_DELETE, 
                                   wc.SCHEDULE_REPLACE):
-                return self.id_map[workingtree.branch.unprefix(relpath)]
+                return self.id_map[workingtree.branch.unprefix(relpath.decode("utf-8"))]
             return (None, None)
 
         def add_dir_to_inv(relpath, adm, parent_id):
@@ -312,16 +298,19 @@ class SvnBasisTree(RevisionTree):
             # First handle directory itself
             ie = self._inventory.add_path(relpath, 'directory', id)
             ie.revision = revid
-            if relpath == "":
+            if relpath == u"":
                 self._inventory.revision_id = revid
 
-            for name in entries:
-                if name == "":
+            for name, entry in entries.items():
+                name = name.decode("utf-8")
+                if name == u"":
                     continue
+
+                assert isinstance(relpath, unicode)
+                assert isinstance(name, unicode)
 
                 subrelpath = os.path.join(relpath, name)
 
-                entry = entries[name]
                 assert entry
                 
                 if entry.kind == core.NODE_DIR:
@@ -339,12 +328,12 @@ class SvnBasisTree(RevisionTree):
 
         adm = workingtree._get_wc() 
         try:
-            add_dir_to_inv("", adm, None)
+            add_dir_to_inv(u"", adm, None)
         finally:
             adm.close()
 
     def _abspath(self, relpath):
-        return wc.get_pristine_copy_path(self.workingtree.abspath(relpath))
+        return wc.get_pristine_copy_path(self.workingtree.abspath(relpath).encode("utf-8"))
 
     def get_file_lines(self, file_id):
         base_copy = self._abspath(self.id2path(file_id))

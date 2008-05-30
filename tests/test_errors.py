@@ -82,8 +82,9 @@ class TestConvertError(TestCase):
           "Invalid property value for Subversion property svn:foobar: corrupt", 
           str(error))
 
+    def test_notsvnbranchpath_nonascii(self):
+        NotSvnBranchPath('\xc3\xb6', None)
+
     def test_invalidsvnbranchpath_nonascii(self):
         InvalidSvnBranchPath('\xc3\xb6', None)
 
-    def test_notsvnbranchpath_nonascii(self):
-        NotSvnBranchPath('\xc3\xb6', None)

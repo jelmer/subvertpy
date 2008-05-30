@@ -29,23 +29,27 @@ from ra import (get_username_prompt_provider,
                 )
 import ra
 import constants
+import urlparse
+import urllib
 
 class SubversionAuthenticationConfig(AuthenticationConfig):
     """Simple extended version of AuthenticationConfig that can provide 
     the information Subversion requires.
     """
-    def __init__(self, file=None, scheme="svn", host=None):
+    def __init__(self, scheme, host, port, path, file=None):
         super(SubversionAuthenticationConfig, self).__init__(file)
         self.scheme = scheme
         self.host = host
-
+        self.port = port
+        self.path = path
+       
     def get_svn_username(self, realm, may_save):
         """Look up a Subversion user name in the Bazaar authentication cache.
 
         :param realm: Authentication realm (optional)
         :param may_save: Whether or not the username should be saved.
         """
-        username = self.get_user(self.scheme, host=self.host, realm=realm)
+        username = self.get_user(self.scheme, host=self.host, path=self.path, realm=realm)
         return (username, False)
 
     def get_svn_simple(self, realm, username, may_save, pool):
@@ -57,15 +61,15 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
         :param may_save: Whether or not the username should be saved.
         :param pool: Allocation pool, is ignored.
         """
-        username = username or self.get_username(realm, may_save, 
-                                             pool, prompt="%s password" % realm)
+        username = self.get_user(self.scheme, 
+                host=self.host, path=self.path, realm=realm) or username
         password = self.get_password(self.scheme, host=self.host, 
-                                    user=simple_cred.username, realm=realm,
-                                    prompt="%s password" % realm)
+            path=self.path, user=simple_cred.username, 
+            realm=realm, prompt="%s %s password" % (realm, simple_cred.username))
         return (username, password, False)
 
     def get_svn_ssl_server_trust(self, realm, failures, cert_info, may_save, 
-                                 pool):
+                                     pool):
         """Return a Subversion auth provider that verifies SSL server trust.
 
         :param realm: Realm name (optional)
@@ -117,7 +121,6 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
                 self.get_svn_simple_prompt_provider(1),
                 self.get_svn_ssl_server_trust_prompt_provider()]
 
-
 def get_ssl_client_cert_pw(realm, may_save, pool):
     """Simple SSL client certificate password prompter.
 
@@ -133,21 +136,13 @@ def get_ssl_client_cert_pw_provider(tries):
     return get_ssl_client_cert_pw_prompt_provider(
                 get_ssl_client_cert_pw, tries)
 
-
-def create_auth_baton():
-    """Create a Subversion authentication baton. """
-    # Give the client context baton a suite of authentication
-    # providers.h
-    providers = []
-    providers += SubversionAuthenticationConfig().get_svn_auth_providers()
-    providers += [
-        get_ssl_client_cert_pw_provider(1),
-        get_simple_provider(),
-        get_username_provider(),
-        get_ssl_client_cert_file_provider(),
-        get_ssl_client_cert_pw_file_provider(),
-        get_ssl_server_trust_file_provider(),
-        ]
+def get_stock_svn_providers():
+    providers = [get_simple_provider(),
+            get_username_provider(),
+            get_ssl_client_cert_file_provider(),
+            get_ssl_client_cert_pw_file_provider(),
+            get_ssl_server_trust_file_provider(),
+            ]
 
     if hasattr(ra, 'get_windows_simple_provider'):
         providers.append(ra.get_windows_simple_provider())
@@ -160,3 +155,31 @@ def create_auth_baton():
 
     return Auth(providers)
 
+
+def create_auth_baton(url):
+    """Create an authentication baton for the specified URL."""
+    assert isinstance(url, str)
+    (scheme, netloc, path, _, _) = urlparse.urlsplit(url)
+    (creds, host) = urllib.splituser(netloc)
+    (host, port) = urllib.splitport(host)
+
+    auth_config = SubversionAuthenticationConfig(scheme, host, port, path)
+
+    # Specify Subversion providers first, because they use file data
+    # rather than prompting the user.
+    providers = get_stock_svn_providers()
+
+    if svn.core.SVN_VER_MAJOR == 1 and svn.core.SVN_VER_MINOR >= 5:
+        providers += auth_config.get_svn_auth_providers()
+        providers += [get_ssl_client_cert_pw_provider(1)]
+
+    auth_baton = svn.core.svn_auth_open(providers)
+    if creds is not None:
+        (auth_baton.user, auth_baton.password) = urllib.splitpasswd(creds)
+        if auth_baton.user is not None:
+            svn.core.svn_auth_set_parameter(auth_baton, 
+                svn.core.SVN_AUTH_PARAM_DEFAULT_USERNAME, auth_baton.user)
+        if auth_baton.password is not None:
+            svn.core.svn_auth_set_parameter(auth_baton, 
+                svn.core.SVN_AUTH_PARAM_DEFAULT_PASSWORD, auth_baton.password)
+    return auth_baton

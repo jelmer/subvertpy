@@ -19,7 +19,7 @@
 from tests import TestCaseWithSubversionRepository
 from bzrlib.errors import NotBranchError, NoSuchFile, FileExists, InvalidURL
 from bzrlib import urlutils
-from transport import SvnRaTransport, bzr_to_svn_url
+from transport import SvnRaTransport, bzr_to_svn_url, _url_unescape_uri
 from unittest import TestCase
 
 import os
@@ -40,13 +40,6 @@ class SvnRaTest(TestCaseWithSubversionRepository):
         t = SvnRaTransport(repos_url)
         self.assertIsInstance(t, SvnRaTransport)
         self.assertEqual(t.base, repos_url)
-
-    def test_reparent(self):
-        repos_url = self.make_client('d', 'dc')
-        t = SvnRaTransport(repos_url)
-        t.mkdir("foo")
-        t.reparent("%s/foo" % repos_url)
-        self.assertEqual("%s/foo" % repos_url, t.base)
 
     def test_lock_read(self):
         repos_url = self.make_client('d', 'dc')
@@ -116,8 +109,6 @@ class SvnRaTest(TestCaseWithSubversionRepository):
         t = SvnRaTransport(repos_url)
         tt = t.clone()
         self.assertEqual(tt.base, t.base)
-        tt.reparent(urlutils.join(t.base, "dir"))
-        self.assertNotEqual(tt.base, t.base)
 
     def test_mkdir(self):
         repos_url = self.make_client('d', 'dc')
@@ -187,3 +178,9 @@ class UrlConversionTest(TestCase):
                          bzr_to_svn_url("http://host/location"))
         self.assertEqual("http://host/location", 
                          bzr_to_svn_url("svn+http://host/location"))
+        self.assertEqual("http://host/gtk+/location", 
+                         bzr_to_svn_url("svn+http://host/gtk%2B/location"))
+
+    def test_url_unescape_uri(self):
+        self.assertEquals("http://svn.gnome.org/svn/gtk+/trunk",
+                _url_unescape_uri("http://svn.gnome.org/svn/gtk%2B/trunk"))

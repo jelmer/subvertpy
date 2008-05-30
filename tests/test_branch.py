@@ -20,6 +20,7 @@ from bzrlib.branch import Branch
 from bzrlib.bzrdir import BzrDir
 from bzrlib.errors import NoSuchFile, NoSuchRevision, NotBranchError
 from bzrlib.repository import Repository
+from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter
 
 import os
@@ -27,8 +28,9 @@ from unittest import TestCase
 
 from branch import FakeControlFiles, SvnBranchFormat
 from convert import load_dumpfile
-from mapping import (SVN_PROP_BZR_REVISION_ID, BzrSvnMappingv3FileProps)
-from scheme import TrunkBranchingScheme
+from mapping import SVN_PROP_BZR_REVISION_ID
+from mapping3 import BzrSvnMappingv3FileProps
+from mapping3.scheme import TrunkBranchingScheme
 from tests import TestCaseWithSubversionRepository
 
 class WorkingSubversionBranch(TestCaseWithSubversionRepository):
@@ -192,7 +194,7 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
         """The None revid should map to revno 0."""
         repos_url = self.make_client('a', 'dc')
         branch = Branch.open(repos_url)
-        self.assertEquals(0, branch.revision_id_to_revno(None))
+        self.assertEquals(0, branch.revision_id_to_revno(NULL_REVISION))
 
     def test_revision_id_to_revno_nonexistant(self):
         """revision_id_to_revno() should raise NoSuchRevision if
@@ -502,6 +504,7 @@ foohosts""")
         weave = newbranch.repository.weave_store.get_weave(
             tree.inventory.path2id("hosts"),
             newbranch.repository.get_transaction())
+
         self.assertEqual(set([
             oldbranch.generate_revision_id(6),
             oldbranch.generate_revision_id(7)]),

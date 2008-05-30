@@ -28,7 +28,7 @@ from bzrlib.lockdir import LockDir
 from bzrlib.osutils import file_kind, fingerprint_file, supports_executable
 from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter
-from bzrlib.tree import RevisionTree
+from bzrlib.revisiontree import RevisionTree
 from bzrlib.transport.local import LocalTransport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
@@ -37,15 +37,15 @@ from commit import _revision_id_to_svk_feature
 import constants
 from convert import SvnConverter
 from errors import LocalCommitsUnsupported, NoSvnRepositoryPresent
-from mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_FILEIDS, 
+from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_FILEIDS, 
                      SVN_PROP_BZR_REVISION_ID, SVN_PROP_BZR_REVISION_INFO,
                      generate_revision_metadata)
 from remote import SvnRemoteAccess
 from repository import SvnRepository
 from svk import SVN_PROP_SVK_MERGE, parse_svk_features, serialize_svk_features
-from mapping import escape_svn_path
-from scheme import BranchingScheme
-from transport import (SvnRaTransport, bzr_to_svn_url, svn_config) 
+from bzrlib.plugins.svn.mapping import escape_svn_path
+from transport import (SvnRaTransport, bzr_to_svn_url, create_svn_client,
+                       svn_config) 
 from tree import SvnBasisTree
 
 import os
@@ -76,22 +76,18 @@ class SvnWorkingTree(WorkingTree):
         version = wc.check_wc(local_path)
         self._format = SvnWorkingTreeFormat(version)
         self.basedir = local_path
+        assert isinstance(self.basedir, unicode)
         self.bzrdir = bzrdir
         self._branch = branch
         self._get_wc()
-        (min_rev, max_rev, switched, modified) = \
-                wc.revision_status(self.basedir, None, True)
+        status = svn.wc.revision_status(self.basedir, None, True, None, None)
+        self.base_revnum = status.max_rev
+        self.base_tree = SvnBasisTree(self)
+        self.base_revid = branch.generate_revision_id(self.base_revnum)
 
-        self.base_tree = None
-        self.base_revnum = max_rev
-        if max_rev < 0:
-            self.base_revid = None
-            self._set_inventory(Inventory(), dirty=False)
-        else:
-            self.base_revid = branch.generate_revision_id(self.base_revnum)
-            self.read_working_inventory()
+        self.read_working_inventory()
 
-        self.controldir = os.path.join(self.basedir, wc.get_adm_dir(), 
+        self.controldir = os.path.join(self.basedir, svn.wc.get_adm_dir(), 
                                        'bzr')
         try:
             os.makedirs(self.controldir)
@@ -754,11 +750,11 @@ class SvnCheckout(BzrDir):
         except SubversionException, (msg, constants.ERR_WC_UNSUPPORTED_FORMAT):
             raise UnsupportedFormatError(msg, kind='workingtree')
         try:
-            svn_url = adm.entry(self.local_path, True).url
+            self.svn_url = adm.entry(self.local_path, True).url
         finally:
             adm.close()
 
-        self.remote_transport = SvnRaTransport(svn_url)
+        self.remote_transport = SvnRaTransport(self.svn_url)
         self.remote_bzrdir = SvnRemoteAccess(self.remote_transport)
         self.svn_root_transport = self.remote_transport.clone_root()
         self.root_transport = self.transport = transport
