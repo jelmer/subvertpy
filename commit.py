@@ -253,7 +253,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                                   self.old_inv.id2path(child_ie.file_id), 
                                   new_child_path))
                 child_editor = dir_editor.add_file(
-                        full_new_child_path,
+                        full_new_child_path, 
                     urlutils.join(self.repository.transport.svn_url, self.base_path, self.old_inv.id2path(child_ie.file_id)),
                     self.base_revnum)
 
@@ -669,7 +669,8 @@ def push_new(target_repository, target_branch_path, source,
     push(ImaginaryBranch(target_repository), source, start_revid)
 
 
-def push_revision_tree(target, config, source_repo, base_revid, revision_id, rev):
+def push_revision_tree(target, config, source_repo, base_revid, revision_id, 
+                       rev):
     old_tree = source_repo.revision_tree(revision_id)
     base_tree = source_repo.revision_tree(base_revid)
 

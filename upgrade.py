@@ -19,7 +19,6 @@ from bzrlib.errors import BzrError, InvalidRevisionId
 from bzrlib.trace import info, mutter
 import bzrlib.ui as ui
 
-from errors import RebaseNotPresent
 import itertools
 from bzrlib.plugins.svn.mapping import parse_revision_id
 
@@ -110,24 +109,7 @@ def generate_upgrade_map(new_mapping, revs):
 
     return rename_map
 
-MIN_REBASE_VERSION = (0, 2)
-
-def check_rebase_version():
-    """Check what version of bzr-rebase is installed.
-
-    Raises an exception when the version installed is older than 
-    MIN_REBASE_VERSION.
-
-    :raises RebaseNotPresent: Raised if bzr-rebase is not installed or too old.
-    """
-    try:
-        from bzrlib.plugins.rebase import version_info as rebase_version_info
-        if rebase_version_info[:2] < MIN_REBASE_VERSION:
-            raise RebaseNotPresent("Version %r present, at least %r required" 
-                                   % (rebase_version_info, MIN_REBASE_VERSION))
-    except ImportError, e:
-        raise RebaseNotPresent(e)
-
+MIN_REBASE_VERSION = (0, 4)
 
 def create_upgrade_plan(repository, svn_repository, new_mapping,
                         revision_id=None, allow_changes=False):
@@ -142,8 +124,9 @@ def create_upgrade_plan(repository, svn_repository, new_mapping,
         of revisions.
     :return: Tuple with a rebase plan and map of renamed revisions.
     """
+    from bzrlib.plugins.svn import check_rebase_version
     from bzrlib.plugins.rebase.rebase import generate_transpose_plan
-    check_rebase_version()
+    check_rebase_version(MIN_REBASE_VERSION)
 
     graph = repository.get_graph()
     if revision_id is None:
@@ -164,8 +147,13 @@ def create_upgrade_plan(repository, svn_repository, new_mapping,
             newrev = repository.get_revision(newrevid)
             check_revision_changed(oldrev, newrev)
 
-    plan = generate_transpose_plan(repository.get_revision_graph(revision_id), upgrade_map, 
-      repository.revision_parents,
+    if revision_id is None:
+        heads = repository.all_revision_ids() 
+    else:
+        heads = [revision_id]
+
+    plan = generate_transpose_plan(graph.iter_ancestry(heads), upgrade_map, 
+      graph,
       lambda revid: create_upgraded_revid(revid, new_mapping.upgrade_suffix))
     def remove_parents((oldrevid, (newrevid, parents))):
         return (oldrevid, newrevid)
@@ -187,7 +175,8 @@ def upgrade_repository(repository, svn_repository, new_mapping=None,
     :param verbose: Whether to print list of rewrites
     :return: Dictionary of mapped revisions
     """
-    check_rebase_version()
+    from bzrlib.plugins.svn import check_rebase_version
+    check_rebase_version(MIN_REBASE_VERSION)
     from bzrlib.plugins.rebase.rebase import (
         replay_snapshot, rebase, rebase_todo)
 

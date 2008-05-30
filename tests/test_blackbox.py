@@ -23,12 +23,20 @@ from mapping3 import BzrSvnMappingv3FileProps
 from mapping3.scheme import NoBranchingScheme
 from tests import TestCaseWithSubversionRepository
 
-import os
+import os, sys
 
 class TestBranch(ExternalBase, TestCaseWithSubversionRepository):
     def test_branch_empty(self):
         repos_url = self.make_client('d', 'de')
         self.run_bzr("branch %s dc" % repos_url)
+
+    def test_branch_onerev(self):
+        repos_url = self.make_client('d', 'de')
+        self.build_tree({'de/foo': 'bar'})
+        self.client_add('de/foo')
+        self.client_commit("de", "msg")
+        self.run_bzr("branch %s dc" % repos_url)
+        self.check_output("2\n", "revno de")
         
     def test_log_empty(self):
         repos_url = self.make_client('d', 'de')
@@ -219,3 +227,49 @@ Node-copyfrom-path: x
         self.client_commit("dc", "Msg")
         self.run_bzr("checkout --lightweight dc de")
 
+    # this method imported from bzrlib.tests.test_msgeditor:
+    def make_fake_editor(self, message='test message from fed\\n'):
+        """Set up environment so that an editor will be a known script.
+
+        Sets up BZR_EDITOR so that if an editor is spawned it will run a
+        script that just adds a known message to the start of the file.
+        """
+        f = file('fed.py', 'wb')
+        f.write('#!%s\n' % sys.executable)
+        f.write("""\
+# coding=utf-8
+import sys
+if len(sys.argv) == 2:
+    fn = sys.argv[1]
+    f = file(fn, 'rb')
+    s = f.read()
+    f.close()
+    f = file(fn, 'wb')
+    f.write('%s')
+    f.write(s)
+    f.close()
+""" % (message, ))
+        f.close()
+        if sys.platform == "win32":
+            # [win32] make batch file and set BZR_EDITOR
+            f = file('fed.bat', 'w')
+            f.write("""\
+@echo off
+"%s" fed.py %%1
+""" % sys.executable)
+            f.close()
+            os.environ['BZR_EDITOR'] = 'fed.bat'
+        else:
+            # [non-win32] make python script executable and set BZR_EDITOR
+            os.chmod('fed.py', 0755)
+            os.environ['BZR_EDITOR'] = './fed.py'
+
+    def test_set_branching_scheme_local(self):
+        self.make_fake_editor()
+        repos_url = self.make_client("a", "dc")
+        self.check_output("", 'svn-branching-scheme --set %s' % repos_url)
+
+    def test_set_branching_scheme_global(self):
+        self.make_fake_editor()
+        repos_url = self.make_client("a", "dc")
+        self.check_output("", 'svn-branching-scheme --repository-wide --set %s' % repos_url)

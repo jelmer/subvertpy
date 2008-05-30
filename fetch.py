@@ -195,7 +195,8 @@ class RevisionBuildEditor:
         ret = self._get_id_map().get(new_path)
         if ret is not None:
             return ret
-        return self.mapping.generate_file_id(self.source.uuid, self.revnum, self.branch_path, new_path)
+        return self.mapping.generate_file_id(self.source.uuid, self.revnum, 
+                                             self.branch_path, new_path)
 
     def _rename(self, file_id, parent_id, path):
         assert isinstance(path, unicode)
@@ -337,7 +338,7 @@ class DirectoryBuildEditor:
                 if p.startswith("%s/" % path):
                     self.editor._premature_deletes.remove(p)
         else:
-            self.editor.inventory.remove_recursive_id(self.editor._get_old_id(self.new_id, path))
+            self.editor.inventory.remove_recursive_id(self.editor._get_old_id(self.old_id, path))
 
 class FileBuildEditor:
     def __init__(self, editor, path, file_id, file_parents=[], data="", 
@@ -398,26 +399,30 @@ class FileBuildEditor:
 
         self.editor._store_file(self.file_id, lines, self.file_parents)
 
+        assert self.is_symlink in (True, False)
+
         if self.file_id in self.editor.inventory:
-            ie = self.editor.inventory[self.file_id]
-        elif self.is_symlink:
-            ie = self.editor.inventory.add_path(self.path, 'symlink', self.file_id)
-        else:
-            ie = self.editor.inventory.add_path(self.path, 'file', self.file_id)
-        ie.revision = self.editor.revid
+            del self.editor.inventory[self.file_id]
 
         if self.is_symlink:
-            ie.kind = 'symlink'
+            ie = self.editor.inventory.add_path(path, 'symlink', self.file_id)
             ie.symlink_target = lines[0][len("link "):]
             ie.text_sha1 = None
             ie.text_size = None
-            ie.text_id = None
+            ie.executable = False
+            ie.revision = self.revid
         else:
+            ie = self.inventory.add_path(path, 'file', self.file_id)
+            ie.revision = self.revid
             ie.kind = 'file'
+            ie.symlink_target = None
             ie.text_sha1 = osutils.sha_strings(lines)
             ie.text_size = sum(map(len, lines))
+            assert ie.text_size is not None
             if self.is_executable is not None:
                 ie.executable = self.is_executable
+
+        self.file_stream = None
 
 
 class WeaveRevisionBuildEditor(RevisionBuildEditor):
@@ -592,73 +597,13 @@ class InterFromSvnRepository(InterRepository):
         """See InterRepository.copy_content."""
         self.fetch(revision_id, pb, find_ghosts=False)
 
-    def _fetch_revision(self, editor, transport, repos_root, parent_revid):
-        if self._supports_replay:
-            try:
-                self._fetch_revision_replay(editor, transport, repos_root, parent_revid)
-                return
-            except NotImplementedError:
-                self._supports_replay = False
-        self._fetch_revision_update(editor, transport, repos_root, parent_revid)
-
-    def _fetch_revision_replay(self, editor, transport, repos_root, parent_revid):
-        if parent_revid is not None:
-            parent_revnum = self.source.lookup_revision_id(parent_revid)[1]
-        else:
-            parent_revnum = editor.revnum-1
-        branch_url = urlutils.join(repos_root, editor.branch_path)
-        transport.reparent(branch_url)
-        lock = transport.lock_read(".")
-        try:
-            transport.replay(editor.revnum, parent_revnum, editor, True)
-        finally:
-            lock.unlock()
-
-    def _fetch_revision_update(self, editor, transport, repos_root, parent_revid):
-            if parent_revid == NULL_REVISION:
-                branch_url = urlutils.join(repos_root, 
-                                           editor.branch_path)
-                conn.reparent(branch_url)
-                assert conn.url == branch_url, \
-                    "Expected %r, got %r" % (conn.url, branch_url)
-                reporter = conn.do_update(editor.revnum, True, editor)
-
-                try:
-                    # Report status of existing paths
-                    reporter.set_path("", editor.revnum, True, None)
-                except:
-                    reporter.abort()
-                    raise
-            else:
-                (parent_branch, parent_revnum, mapping) = \
-                        self.source.lookup_revision_id(parent_revid)
-                conn.reparent(urlutils.join(repos_root, parent_branch))
-
-                if parent_branch != editor.branch_path:
-                    reporter = conn.do_switch(editor.revnum, True, 
-                        urlutils.join(repos_root, editor.branch_path), 
-                        editor)
-                else:
-                    reporter = conn.do_update(editor.revnum, True, editor)
-
-                try:
-                    # Report status of existing paths
-                    reporter.set_path("", parent_revnum, False)
-                except:
-                    reporter.abort()
-                    raise
-
-            reporter.finish()
-
-    def _fetch_switch(self, conn, revids, pb=None):
+    def _fetch_switch(self, repos_root, revids, pb=None):
         """Copy a set of related revisions using svn.ra.switch.
 
         :param revids: List of revision ids of revisions to copy, 
                        newest first.
         :param pb: Optional progress bar.
         """
-        repos_root = conn.get_repos_root()
-
         prev_revid = None
         if pb is None:
             pb = ui.ui_factory.nested_progress_bar()
@@ -688,10 +633,45 @@ class InterFromSvnRepository(InterRepository):
                 editor.start_revision(revid, parent_inv, revmeta)
 
                 try:
-<<<<<<< TREE
-                    self._fetch_revision_update(editor, transport, repos_root, parent_revid)
-=======
->>>>>>> MERGE-SOURCE
+                    conn = None
+                    try:
+                        if parent_revid == NULL_REVISION:
+                            branch_url = urlutils.join(repos_root, 
+                                                       editor.branch_path)
+
+                            conn = self.source.transport.connections.get(branch_url)
+                            reporter = conn.do_update(editor.revnum, True, 
+                                                           editor)
+
+                            try:
+                                # Report status of existing paths
+                                reporter.set_path("", editor.revnum, True, None)
+                            except:
+                                reporter.abort_report()
+                                raise
+                        else:
+                            (parent_branch, parent_revnum, mapping) = \
+                                    self.source.lookup_revision_id(parent_revid)
+                            conn = self.source.transport.connections.get(urlutils.join(repos_root, parent_branch))
+
+                            if parent_branch != editor.branch_path:
+                                reporter = conn.do_switch(editor.revnum, True, 
+                                    urlutils.join(repos_root, editor.branch_path), 
+                                    editor)
+                            else:
+                                reporter = conn.do_update(editor.revnum, True, editor)
+
+                            try:
+                                # Report status of existing paths
+                                reporter.set_path("", parent_revnum, False, None)
+                            except:
+                                reporter.abort_report()
+                                raise
+
+                        reporter.finish_report()
+                    finally:
+                        if conn is not None:
+                            self.source.transport.add_connection(conn)
                 except:
                     editor.abort()
                     raise
@@ -734,11 +714,7 @@ class InterFromSvnRepository(InterRepository):
             # Nothing to fetch
             return
 
-        conn = self.source.transport.get_connection()
-        try:
-            self._fetch_switch(conn, needed, pb)
-        finally:
-            self.source.transport.add_connection(conn)
+        self._fetch_switch(self.source.transport.get_svn_repos_root(), needed, pb)
 
     @staticmethod
     def is_compatible(source, target):

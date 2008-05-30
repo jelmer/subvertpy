@@ -130,10 +130,10 @@ class CachingLogWalker(CacheTable):
 
         extra = ""
         if path == "":
-            extra += " OR path LIKE '%'"
+            extra += " OR path GLOB '*'"
         else:
-            extra += " OR path LIKE '%s/%%'" % path.strip("/")
-        extra += " OR ('%s' LIKE (path || '/%%') AND (action = 'R' OR action = 'A'))" % path.strip("/")
+            extra += " OR path GLOB '%s/*'" % path.strip("/")
+        extra += " OR ('%s' GLOB (path || '/*') AND (action = 'R' OR action = 'A'))" % path.strip("/")
  
         query = "SELECT rev FROM changed_path WHERE (path='%s'%s) AND rev <= %d ORDER BY rev DESC LIMIT 1" % (path.strip("/"), extra, revnum)
 
@@ -356,7 +356,7 @@ class LogWalker(object):
                 if revnum == 0 and changed_paths is None:
                     revpaths = {"": ('A', None, -1)}
                 else:
-                    assert isinstance(changed_paths, dict), "invalid paths in %r:%r" % (revnum, path)
+                    assert isinstance(changed_paths, dict), "invalid paths %r in %r" % (changed_paths, revnum)
                     revpaths = struct_revpaths_to_tuples(changed_paths)
                 revprops = lazy_dict(known_revprops, self._transport.revprop_list, revnum)
                 yield (revpaths, revnum, revprops)

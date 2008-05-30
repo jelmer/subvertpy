@@ -64,6 +64,25 @@ def check_bzrlib_version(desired):
         if not (bzrlib_version[0], bzrlib_version[1]-1) in desired:
             raise BzrError('Version mismatch')
 
+
+def check_rebase_version(min_version):
+    """Check what version of bzr-rebase is installed.
+
+    Raises an exception when the version installed is older than 
+    min_version.
+
+    :raises RebaseNotPresent: Raised if bzr-rebase is not installed or too old.
+    """
+    from bzrlib.plugins.svn.errors import RebaseNotPresent
+    try:
+        from bzrlib.plugins.rebase import version_info as rebase_version_info
+        if rebase_version_info[:2] < min_version:
+            raise RebaseNotPresent("Version %r present, at least %r required" 
+                                   % (rebase_version_info, min_version))
+    except ImportError, e:
+        raise RebaseNotPresent(e)
+
+
 register_transport_proto('svn+ssh://', 
     help="Access using the Subversion smart server tunneled over SSH.")
 register_transport_proto('svn+file://', 
@@ -316,7 +335,7 @@ class cmd_svn_push(Command):
                 raise BzrCommandError(
                     'bzr svn-push --revision takes exactly one revision' 
                     ' identifier')
-            revision_id = revision[0].in_history(source_branch).rev_id
+            revision_id = revision[0].as_revision_id(source_branch)
         else:
             revision_id = None
         try:
@@ -355,6 +374,7 @@ class cmd_svn_branching_scheme(Command):
         from bzrlib.trace import info
         from repository import SvnRepository
         from mapping3.scheme import scheme_from_branch_list
+        from mapping3 import config_set_scheme, get_property_scheme, set_property_scheme
         def scheme_str(scheme):
             if scheme is None:
                 return ""
@@ -364,7 +384,7 @@ class cmd_svn_branching_scheme(Command):
         if not isinstance(repos, SvnRepository):
             raise BzrCommandError("Not a Subversion repository: %s" % location)
         if repository_wide:
-            scheme = repos._get_property_scheme()
+            scheme = get_property_scheme(repos)
         else:
             scheme = repos.get_mapping().scheme
         if set:
@@ -375,7 +395,7 @@ class cmd_svn_branching_scheme(Command):
             if repository_wide:
                 set_property_scheme(repos, scheme)
             else:
-                set_config_scheme(repos, scheme, mandatory=True)
+                config_set_scheme(repos, scheme, mandatory=True)
         elif scheme is not None:
             info(scheme_str(scheme))
 
