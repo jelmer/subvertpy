@@ -16,51 +16,71 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <stdbool.h>
 #include <Python.h>
 #include <apr_general.h>
 #include <string.h>
 #include <svn_time.h>
 #include <svn_config.h>
- 
-from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, svn_node_unknown, svn_node_none, svn_error_create, svn_log_message_receiver_t, svn_log_changed_path_t
-from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t, apr_size_t
-from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
-from apr cimport apr_array_header_t, apr_array_make, apr_array_push
-from apr cimport apr_hash_index_t, apr_hash_this, apr_hash_first, apr_hash_next, apr_strerror
-import constants
-from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
-from types cimport svn_stream_set_read, svn_stream_set_write, svn_stream_set_close, svn_stream_from_stringbuf, svn_stream_create
-from types cimport svn_stringbuf_t, svn_stringbuf_ncreate, svn_string_t, svn_revnum_t
+#include <svn_io.h>
 
+PyAPI_DATA(PyTypeObject) SubversionExceptionType;
+ 
 svn_error_t *py_cancel_func(void *cancel_baton)
 {
-    if (cancel_baton != Py_None) {
-        if cancel_baton():
-            return svn_error_create(constants.ERR_CANCELLED, NULL, NULL)
+	PyObject *py_fn = (PyObject *)cancel_baton;
+    if (py_fn != Py_None) {
+        PyObject *ret = PyObject_CallFunction(py_fn, NULL);
+		if (PyBool_Check(ret) && ret == Py_True) {
+            return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+		}
 	}
     return NULL;
 }
 
-class SubversionException(Exception):
-    def __init__(self, msg, num):
-        Exception.__init__(self, msg, num)
-        self.num = num
-        self.msg = msg
+typedef struct {
+	PyObject_HEAD
+	char *msg;
+	int num;
+} SubversionExceptionObject;
 
+static PyObject *SubversionException_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+	const char *kwnames[] = { "msg", "num", NULL };
+	SubversionExceptionObject *ret;
+	/* FIXME */
+	ret = PyObject_New(SubversionExceptionObject, &SubversionExceptionType);
+	if (ret == NULL)
+		return NULL;
+
+	return (PyObject *)ret;
+}
+
+void PyErr_SetSubversionException(svn_error_t *error)
+{
+	/* FIXME */
+}
+
+PyTypeObject SubversionExceptionType = {
+	PyObject_HEAD_INIT(&PyExc_BaseException) 0,
+	.tp_name = "core.SubversionException",
+	.tp_basicsize = sizeof(SubversionExceptionObject),
+	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	.tp_new = SubversionException_new,
+};
 
 static PyObject *wrap_lock(svn_lock_t *lock)
 {
-    return (lock.path, lock.token, lock.owner, lock.comment, lock.is_dav_comment, lock.creation_date, lock.expiration_date);
+    return Py_BuildValue("(zzzbzz)", lock->path, lock->token, lock->owner, 
+						 lock->comment, lock->is_dav_comment, 
+						 lock->creation_date, lock->expiration_date);
 }
 
 bool check_error(svn_error_t *error)
 {
     if (error != NULL) {
-        if (error->message != NULL) {
-            raise SubversionException(error.message, error.apr_err)
-        else:
-            raise SubversionException(Py_None, error.apr_err)
-		return false;
+		PyErr_SetSubversionException(error);
+   		return false;
 	}
 	return true;
 }
@@ -73,30 +93,46 @@ apr_pool_t *Pool(apr_pool_t *parent)
     ret = NULL;
     status = apr_pool_create(&ret, parent);
     if (status != 0) {
-        raise Exception(apr_strerror(status, errmsg, sizeof(errmsg)))
+        PyErr_SetString(PyExc_Exception, 
+						apr_strerror(status, errmsg, sizeof(errmsg)));
+		return NULL;
 	}
     return ret;
 }
 
-def time_to_cstring(apr_time_t when):
-    """Convert a UNIX timestamp to a Subversion CString."""
-    cdef apr_pool_t *pool
-    pool = Pool(NULL)
-    ret = svn_time_to_cstring(when, pool)
-    apr_pool_destroy(pool)
-    return ret
+/** Convert a UNIX timestamp to a Subversion CString. */
+static PyObject *time_to_cstring(PyObject *self, PyObject *args)
+{
+	PyObject *ret;
+    apr_pool_t *pool;
+	apr_time_t when;
+	if (!PyArg_ParseTuple(args, "l", &when))
+		return NULL;
+    pool = Pool(NULL);
+	if (pool == NULL)
+		return NULL;
+    ret = PyString_FromString(svn_time_to_cstring(when, pool));
+    apr_pool_destroy(pool);
+    return ret;
+}
 
-def time_from_cstring(char *data):
-    """Parse a Subversion time string and return a UNIX timestamp."""
-    cdef apr_time_t when
-    cdef apr_pool_t *pool
-    pool = Pool(NULL)
-    check_error(svn_time_from_cstring(&when, data, pool))
-    apr_pool_destroy(pool)
-    return when
+/** Parse a Subversion time string and return a UNIX timestamp. */
+static PyObject *time_from_cstring(PyObject *self, PyObject *args)
+{
+    apr_time_t when;
+    apr_pool_t *pool;
+	char *data;
 
+	if (!PyArg_ParseTuple(args, "s", &data))
+		return NULL;
 
-PyObject *get_config(config_dir=Py_None)
+    pool = Pool(NULL);
+    check_error(svn_time_from_cstring(&when, data, pool));
+    apr_pool_destroy(pool);
+    return PyLong_FromLong(when);
+}
+
+static PyObject *get_config(PyObject *self, PyObject *args)
 {
     apr_pool_t *pool;
     apr_hash_t *cfg_hash;
@@ -105,54 +141,62 @@ PyObject *get_config(config_dir=Py_None)
     char *key;
     char *val;
     long klen;
+	PyObject *config_dir = Py_None, *ret;
+
+	if (!PyArg_ParseTuple(args, "z", &config_dir))
+		return NULL;
+
     pool = Pool(NULL);
     if (config_dir == Py_None) {
         c_config_dir = NULL;
 	} else {
         c_config_dir = PyString_AsString(config_dir);
 	}
-    check_error(svn_config_get_config(&cfg_hash, c_config_dir, pool));
+    if (check_error(svn_config_get_config(&cfg_hash, c_config_dir, pool))) {
+		apr_pool_destroy(pool);
+		return NULL;
+	}
     ret = PyDict_New();
-    idx = apr_hash_first(pool, cfg_hash);
-    while (idx != NULL) {
-        apr_hash_this(idx, <void **>&key, &klen, <void **>&val);
-        PyDict_SetItemString(ret, key, val);
-        idx = apr_hash_next(idx);
+    for (idx = apr_hash_first(pool, cfg_hash); idx != NULL; 
+		 idx = apr_hash_next(idx)) {
+        apr_hash_this(idx, (void **)&key, &klen, (void **)&val);
+        PyDict_SetItemString(ret, key, PyString_FromString(val));
 	}
     apr_pool_destroy(pool);
     return ret;
 }
 
-NODE_DIR = svn_node_dir
-NODE_FILE = svn_node_file
-NODE_UNKNOWN = svn_node_unknown
-NODE_NONE = svn_node_none
-
 apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l)
 {
+	int i;
     apr_array_header_t *ret;
-    svn_revnum_t *el;
     if (l == Py_None) {
         return NULL;
 	}
-    ret = apr_array_make(pool, len(l), sizeof(svn_revnum_t));
-    for i in l:
-        el = <svn_revnum_t *>apr_array_push(ret)
-        el[0] = i
+    ret = apr_array_make(pool, PyList_Size(l), sizeof(svn_revnum_t));
+	if (ret == NULL) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+    for (i = 0; i < PyList_Size(l); i++) {
+		svn_revnum_t *el = (svn_revnum_t *)apr_array_push(ret);
+        *el = PyLong_AsLong(PyList_GetItem(l, i));
+	}
     return ret;
 }
 
 apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, PyObject *l)
 {
     apr_array_header_t *ret;
-    char **el;
+	int i;
     if (l == Py_None) {
         return NULL;
 	}
-    ret = apr_array_make(pool, len(l), 4);
-    for i in l:
-        el = <char **>apr_array_push(ret)
-        el[0] = i
+    ret = apr_array_make(pool, PyList_Size(l), 4);
+	for (i = 0; i < PyList_Size(l); i++) {
+		char **el = (char **)apr_array_push(ret);
+        *el = PyString_AsString(PyList_GetItem(l, i));
+	}
     return ret;
 }
 
@@ -162,79 +206,86 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, long rev
     char *key;
     long klen;
     svn_log_changed_path_t *val;
-	PyObject *revprops, *py_changed_paths;
+	PyObject *revprops, *py_changed_paths, *ret;
+
     if (changed_paths == NULL) {
         py_changed_paths = Py_None;
 	} else {
         py_changed_paths = PyDict_New();
-        idx = apr_hash_first(pool, changed_paths);
-        while (idx != NULL) {
-            apr_hash_this(idx, <void **>&key, &klen, <void **>&val);
-            if (val.copyfrom_path != NULL) {
-                PyDict_SetItemString(py_changed_paths, key, (chr(val.action), val.copyfrom_path, 
-                                         val.copyfrom_rev));
-			} else {
-                PyDict_SetItemString(py_changed_paths, key, (chr(val.action), Py_None, -1));
-			}
-            idx = apr_hash_next(idx);
+        for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
+             idx = apr_hash_next(idx)) {
+            apr_hash_this(idx, (void **)&key, &klen, (void **)&val);
+			PyDict_SetItemString(py_changed_paths, key, 
+					Py_BuildValue("(czi)", val->action, val->copyfrom_path, 
+                                         val->copyfrom_rev));
 		}
 	}
     revprops = PyDict_New();
     if (message != NULL) {
-        PyDict_SetItemString(revprops, PROP_REVISION_LOG, PyString_FromString(message));
+        PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, 
+							 PyString_FromString(message));
 	}
     if (author != NULL) {
-        PyDict_SetItemString(revprops, PROP_REVISION_AUTHOR, author);
+        PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, 
+							 PyString_FromString(author));
 	}
     if (date != NULL) {
-        PyDict_SetItemString(revprops, PROP_REVISION_DATE, date);
+        PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, 
+							 PyString_FromString(date));
 	}
-    baton(py_changed_paths, revision, revprops);
-    return NULL;
+    ret = PyObject_CallFunction((PyObject *)baton, "OiO", py_changed_paths, 
+								 revision, revprops);
+	/* FIXME: Handle ret != NULL */
+	return NULL;
 }
 
 static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length)
 {
-    PyObject *self = (PyObject *)baton;
-    ret = self.read(length[0]);
-    length[0] = len(ret);
-    memcpy(buffer, PyString_AS_STRING(ret), len(ret));
+    PyObject *self = (PyObject *)baton, *ret;
+    ret = PyObject_CallMethod(self, "read", "i", *length);
+	/* FIXME: Handle ret != NULL and !PyString_Check(ret) */
+    *length = PyString_Size(ret);
+    memcpy(buffer, PyString_AS_STRING(ret), *length);
     return NULL;
 }
 
-static svn_error_t *py_stream_write(void *baton, char *data, apr_size_t *len)
+static svn_error_t *py_stream_write(void *baton, const char *data, apr_size_t *len)
 {
-    self = <object>baton
-    self.write(PyString_FromStringAndSize(data, len[0]))
-    return NULL:
+    PyObject *self = (PyObject *)baton, *ret;
+    ret = PyObject_CallMethod(self, "write", "s#", data, len[0]);
+	/* FIXME: Handle ret != NULL */
+	return NULL;
 }
 
 static svn_error_t *py_stream_close(void *baton)
 {
-    self = <object>baton
-    self.close()
+    PyObject *self = (PyObject *)baton, *ret;
+    ret = PyObject_CallMethod(self, "close", NULL);
+	/* FIXME: Handle ret != NULL */
     Py_DECREF(self);
+	return NULL;
 }
 
-svn_stream_t *string_stream(apr_pool_t *pool, PyObject *text)
+static svn_stream_t *string_stream(apr_pool_t *pool, PyObject *text)
 {
     svn_stringbuf_t *buf;
-    buf = svn_stringbuf_ncreate(text, len(text), pool);
+    buf = svn_stringbuf_ncreate(PyString_AsString(text), 
+								PyString_Size(text), pool);
     return svn_stream_from_stringbuf(buf, pool);
 }
 
 svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py)
 {
-    cdef svn_stream_t *stream
-    Py_INCREF(py)
-    stream = svn_stream_create(<void *>py, pool)
+    svn_stream_t *stream;
+    Py_INCREF(py);
+    stream = svn_stream_create((void *)py, pool);
     svn_stream_set_read(stream, py_stream_read);
     svn_stream_set_write(stream, py_stream_write);
     svn_stream_set_close(stream, py_stream_close);
     return stream;
 }
 
-PyObject *prop_hash_to_dict(apr_hash_t *props):
+PyObject *prop_hash_to_dict(apr_hash_t *props)
 {
     char *key;
     apr_hash_index_t *idx;
@@ -247,17 +298,34 @@ PyObject *prop_hash_to_dict(apr_hash_t *props):
 	}
     pool = Pool(NULL);
     py_props = PyDict_New();
-    idx = apr_hash_first(pool, props);
-    while (idx != NULL) {
-        apr_hash_this(idx, <void **>&key, &klen, <void **>&val);
-        PyDict_SetItemString(py_props, key, PyString_FromStringAndSize(val.data, val.len));
-        idx = apr_hash_next(idx);
+    for (idx = apr_hash_first(pool, props); idx != NULL; 
+		 idx = apr_hash_next(idx)) {
+        apr_hash_this(idx, (void **)&key, &klen, (void **)&val);
+        PyDict_SetItemString(py_props, key, 
+							 PyString_FromStringAndSize(val->data, val->len));
 	}
     apr_pool_destroy(pool);
     return py_props;
 }
 
+static PyMethodDef core_methods[] = {
+	{ "get_config", get_config, METH_VARARGS, NULL },
+	{ "time_from_cstring", time_from_cstring, METH_VARARGS, NULL },
+	{ NULL }
+};
+
 void initcore(void)
 {
+	PyObject *mod;
+
 	apr_initialize();
+
+	mod = Py_InitModule3("core", core_methods, "Core functions");
+	if (mod == NULL)
+		return;
+
+	PyModule_AddObject(mod, "NODE_DIR", PyInt_FromLong(svn_node_dir));
+	PyModule_AddObject(mod, "NODE_FILE", PyInt_FromLong(svn_node_file));
+	PyModule_AddObject(mod, "NODE_UNKNOWN", PyInt_FromLong(svn_node_unknown));
+	PyModule_AddObject(mod, "NODE_NONE", PyInt_FromLong(svn_node_none));
 }

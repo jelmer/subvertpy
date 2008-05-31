@@ -32,32 +32,44 @@ from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
 from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_filesize_t, svn_dirent_t, svn_log_message_receiver_t
 from types cimport svn_stream_t, svn_auth_get_simple_provider, svn_auth_provider_object_t, svn_auth_get_ssl_server_trust_file_provider, svn_auth_get_ssl_client_cert_file_provider, svn_auth_get_ssl_client_cert_pw_file_provider, svn_auth_get_username_provider, svn_auth_get_username_prompt_provider, svn_auth_cred_username_t, svn_auth_get_simple_prompt_provider, svn_auth_cred_simple_t, svn_auth_get_ssl_server_trust_prompt_provider, svn_auth_ssl_server_cert_info_t, svn_auth_cred_ssl_server_trust_t, svn_boolean_t, svn_auth_get_ssl_client_cert_pw_prompt_provider, svn_auth_cred_ssl_client_cert_pw_t 
 
-cdef svn_error_t *py_commit_callback(svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *:
-    baton(commit_info.revision, commit_info.date, commit_info.author)
+svn_error_t *py_commit_callback(svn_commit_info_t *commit_info, baton, apr_pool_t *pool)
+{
+    baton(commit_info.revision, commit_info.date, commit_info.author);
+}
 
-cdef pyify_lock(svn_lock_t *lock):
-    return None # FIXME
+PyObject *pyify_lock(svn_lock_t *lock)
+{
+    return Py_None; /* FIXME */
+}
 
 cdef svn_error_t *py_lock_func (baton, char *path, int do_lock, 
                                 svn_lock_t *lock, svn_error_t *ra_err, 
-                                apr_pool_t *pool) except *:
-    py_ra_err = None
-    if ra_err != NULL:
+                                apr_pool_t *pool)
+{
+    py_ra_err = Py_None;
+    if (ra_err != NULL) {
         py_ra_err = SubversionException(ra_err.apr_err, ra_err.message)
-    baton(path, do_lock, pyify_lock(lock), py_ra_err)
+	}
+    baton(path, do_lock, pyify_lock(lock), py_ra_err);
+}
 
-cdef void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, apr_pool_t *pool) except *:
-    fn = <object>baton
-    if fn is None:
-        return
-    fn(progress, total)
+void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, apr_pool_t *pool)
+{
+    PyObject *fn = (PyObject *)baton;
+    if (fn == Py_None) {
+        return;
+	}
+    fn(progress, total);
+}
 
-cdef char *c_lock_token(object py_lock_token):
-    if py_lock_token is None:
-        return NULL
-    else:
-        return py_lock_token
-
+char *c_lock_token(PyObject *py_lock_token)
+{
+    if (py_lock_token == Py_None) {
+        return NULL;
+    } else {
+        return PyString_AsString(py_lock_token);
+	}
+}
 
 cdef class Reporter:
     """Change reporter."""
@@ -207,6 +219,7 @@ cdef class DirectoryEditor:
     def absent_file(self, char *path):
         check_error(self.editor.absent_file(path, self.dir_baton, self.pool))
 
+
 cdef new_dir_editor(svn_delta_editor_t *editor, void *child_baton, apr_pool_t *pool):
     cdef DirectoryEditor py_dir_editor
     py_dir_editor = DirectoryEditor()
@@ -241,174 +254,223 @@ cdef class Editor:
         apr_pool_destroy(self.pool)
 
 
-def version():
+PyObject *version()
+{
     """Get libsvn_ra version information.
 
     :return: tuple with major, minor, patch version number and tag.
     """
-    cdef svn_version_t *ver
-    ver = svn_ra_version()
-    return (ver.major, ver.minor, ver.patch, ver.tag)
+    svn_version_t *ver;
+    ver = svn_ra_version();
+    return Py_BuildValue("(iiii)", ver.major, ver.minor, ver.patch, ver.tag);
+}
 
-cdef svn_error_t *py_editor_set_target_revision(void *edit_baton, svn_revnum_t target_revision, apr_pool_t *pool) except *:
-    self = <object>edit_baton
-    self.set_target_revision(target_revision)
-    return NULL
+static svn_error_t *py_editor_set_target_revision(void *edit_baton, svn_revnum_t target_revision, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)edit_baton;
+    self.set_target_revision(target_revision);
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_open_root(void *edit_baton, svn_revnum_t base_revision, apr_pool_t *dir_pool, void **root_baton):
-    root_baton[0] = NULL
-    self = <object>edit_baton
-    ret = self.open_root(base_revision)
-    Py_INCREF(ret)
-    root_baton[0] = <void *>ret
-    return NULL
+static svn_error_t *py_editor_open_root(void *edit_baton, svn_revnum_t base_revision, apr_pool_t *dir_pool, void **root_baton)
+{
+    root_baton[0] = NULL;
+    PyObject *self = (PyObject *)edit_baton;
+    ret = self.open_root(base_revision);
+    Py_INCREF(ret);
+    root_baton[0] = <void *>ret;
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_delete_entry(char *path, long revision, void *parent_baton, apr_pool_t *pool):
-    self = <object>parent_baton
-    self.delete_entry(path, revision)
-    return NULL
+static svn_error_t *py_editor_delete_entry(char *path, long revision, void *parent_baton, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)parent_baton;
+    self.delete_entry(path, revision);
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_add_directory(char *path, void *parent_baton, char *copyfrom_path, long copyfrom_revision, apr_pool_t *dir_pool, void **child_baton):
-    child_baton[0] = NULL
-    self = <object>parent_baton
-    if copyfrom_path == NULL:
-        ret = self.add_directory(path)
-    else:
-        ret = self.add_directory(path, copyfrom_path, copyfrom_revision)
-    Py_INCREF(ret)
-    child_baton[0] = <void *>ret
-    return NULL
+static svn_error_t *py_editor_add_directory(char *path, void *parent_baton, char *copyfrom_path, long copyfrom_revision, apr_pool_t *dir_pool, void **child_baton)
+{
+    PyObject *self = (PyObject *)parent_baton;
+    *child_baton = NULL
+    if (copyfrom_path == NULL) {
+        ret = self.add_directory(path);
+	} else {
+        ret = self.add_directory(path, copyfrom_path, copyfrom_revision);
+	}
+    Py_INCREF(ret);
+    *child_baton = <void *>ret;
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_open_directory(char *path, void *parent_baton, long base_revision, apr_pool_t *dir_pool, void **child_baton):
-    child_baton[0] = NULL
-    self = <object>parent_baton
-    ret = self.open_directory(path, base_revision)
-    Py_INCREF(ret)
-    child_baton[0] = <void *>ret 
-    return NULL
+svn_error_t *py_editor_open_directory(char *path, void *parent_baton, long base_revision, apr_pool_t *dir_pool, void **child_baton)
+{
+    PyObject *self = (PyObject *)parent_baton;
+    *child_baton = NULL;
+    ret = self.open_directory(path, base_revision);
+    Py_INCREF(ret);
+    *child_baton = <void *>ret;
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_change_dir_prop(void *dir_baton, char *name, svn_string_t *value, apr_pool_t *pool):
-    self = <object>dir_baton
-    if value != NULL:
-        self.change_prop(name, PyString_FromStringAndSize(value.data, value.len))
-    else:
-        self.change_prop(name, None)
-    return NULL
+static svn_error_t *py_editor_change_dir_prop(void *dir_baton, char *name, svn_string_t *value, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)dir_baton;
+    if (value != NULL) {
+        self.change_prop(name, PyString_FromStringAndSize(value.data, value.len));
+	} else {
+        self.change_prop(name, Py_None);
+	}
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_close_directory(void *dir_baton, apr_pool_t *pool):
-    self = <object>dir_baton
-    self.close()
-    Py_DECREF(self)
-    return NULL
+static svn_error_t *py_editor_close_directory(void *dir_baton, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)dir_baton;
+    self.close();
+    Py_DECREF(self);
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_absent_directory(char *path, void *parent_baton, apr_pool_t *pool):
-    self = <object>parent_baton
-    self.absent_directory(path)
-    return NULL
+static svn_error_t *py_editor_absent_directory(char *path, void *parent_baton, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)parent_baton;
+    self.absent_directory(path);
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_add_file(char *path, void *parent_baton, char *copy_path, long copy_revision, apr_pool_t *file_pool, void **file_baton):
-    file_baton[0] = NULL
-    self = <object>parent_baton
-    if copy_path == NULL:
-        ret = self.add_file(path)
-    else:
-        ret = self.add_file(path, copy_path, copy_revision)
-    Py_INCREF(ret)
-    file_baton[0] = <void *>ret
-    return NULL
+static svn_error_t *py_editor_add_file(char *path, void *parent_baton, char *copy_path, long copy_revision, apr_pool_t *file_pool, void **file_baton)
+{
+    PyObject *self = (PyObject *)parent_baton;
+    *file_baton = NULL;
+    if (copy_path == NULL) {
+        ret = self.add_file(path);
+	} else {
+        ret = self.add_file(path, copy_path, copy_revision);
+	}
+    Py_INCREF(ret);
+    *file_baton = (void *)ret;
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_open_file(char *path, void *parent_baton, long base_revision, apr_pool_t *file_pool, void **file_baton):
-    file_baton[0] = NULL
-    self = <object>parent_baton
-    ret = self.open_file(path, base_revision)
-    Py_INCREF(ret)
-    file_baton[0] = <void *>ret
-    return NULL
+static svn_error_t *py_editor_open_file(char *path, void *parent_baton, long base_revision, apr_pool_t *file_pool, void **file_baton)
+{
+    PyObject *self = (PyObject *)parent_baton;
+    *file_baton = NULL;
+    ret = self.open_file(path, base_revision);
+    Py_INCREF(ret);
+    *file_baton = (void *)ret;
+    return NULL;
+}
 
-cdef svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton):
-    fn = <object>baton
-    if window == NULL:
-        # Signals all delta windows have been received
-        Py_DECREF(fn)
-        return NULL
-    if fn is None:
-        # User doesn't care about deltas
-        return NULL
-    ops = []
-    for i in range(window.num_ops):
+static svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton)
+{
+	int i;
+	PyObject *ops;
+    PyObject *fn = (PyObject *)baton;
+    if (window == NULL) {
+        /* Signals all delta windows have been received */
+        Py_DECREF(fn);
+        return NULL;
+	}
+    if (fn == Py_None) {
+        /* User doesn't care about deltas */
+        return NULL;
+	}
+    ops = PyList_New();
+	for (i = 0; i < window.num_ops; i++) {
         ops.append((window.ops[i].action_code, window.ops[i].offset, window.ops[i].length))
-    fn((window.sview_offset, window.sview_len, window.tview_len, window.src_ops, ops, PyString_FromStringAndSize(window.new_data.data, window.new_data.len)))
-    return NULL
-    
+	}
+    fn((window.sview_offset, window.sview_len, window.tview_len, window.src_ops, ops, PyString_FromStringAndSize(window.new_data.data, window.new_data.len)));
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_apply_textdelta(void *file_baton, char *base_checksum, apr_pool_t *pool, svn_txdelta_window_handler_t *handler, void **handler_baton):
-    handler_baton[0] = NULL
-    self = <object>file_baton
-    if base_checksum == NULL:
-        ret = self.apply_textdelta()
-    else:
-        ret = self.apply_textdelta(base_checksum)
-    Py_INCREF(ret)
-    handler_baton[0] = <void *>ret
-    handler[0] = py_txdelta_window_handler
-    return NULL
+svn_error_t *py_editor_apply_textdelta(void *file_baton, char *base_checksum, apr_pool_t *pool, svn_txdelta_window_handler_t *handler, void **handler_baton)
+{
+    PyObject *self = (PyObject *)file_baton;
+    *handler_baton = NULL;
+    if (base_checksum == NULL) {
+        ret = self.apply_textdelta();
+	} else {
+        ret = self.apply_textdelta(base_checksum);
+	}
+    Py_INCREF(ret);
+    *handler_baton = (void *)ret;
+    *handler = py_txdelta_window_handler;
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_change_file_prop(void *file_baton, char *name, svn_string_t *value, apr_pool_t *pool):
-    self = <object>file_baton
-    if value != NULL:
-        self.change_prop(name, PyString_FromStringAndSize(value.data, value.len))
-    else:
-        self.change_prop(name, None)
-    return NULL
+static svn_error_t *py_editor_change_file_prop(void *file_baton, char *name, svn_string_t *value, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)file_baton;
+    if (value != NULL) {
+        self.change_prop(name, PyString_FromStringAndSize(value.data, value.len));
+	} else {
+        self.change_prop(name, Py_None);
+	}
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_close_file(void *file_baton, char *text_checksum, apr_pool_t *pool):
-    self = <object>file_baton
-    if text_checksum != NULL:
-        self.close()
-    else:
-        self.close(text_checksum)
-    Py_DECREF(self)
-    return NULL
+static svn_error_t *py_editor_close_file(void *file_baton, char *text_checksum, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)file_baton
+    if (text_checksum != NULL) {
+        self.close();
+	} else {
+        self.close(text_checksum);
+	}
+    Py_DECREF(self);
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_absent_file(char *path, void *parent_baton, apr_pool_t *pool):
-    self = <object>parent_baton
-    self.absent_file(path)
-    return NULL
+static svn_error_t *py_editor_absent_file(char *path, void *parent_baton, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)parent_baton;
+    self.absent_file(path);
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_close_edit(void *edit_baton, apr_pool_t *pool):
-    self = <object>edit_baton
-    self.close()
-    return NULL
+static svn_error_t *py_editor_close_edit(void *edit_baton, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)edit_baton;
+    self.close();
+    return NULL;
+}
 
-cdef svn_error_t *py_editor_abort_edit(void *edit_baton, apr_pool_t *pool):
-    self = <object>edit_baton
-    self.abort()
-    return NULL
+static svn_error_t *py_editor_abort_edit(void *edit_baton, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)edit_baton;
+    self.abort();
+    return NULL;
+}
 
-cdef svn_delta_editor_t py_editor
-py_editor.set_target_revision = py_editor_set_target_revision
-py_editor.open_root = py_editor_open_root
-py_editor.delete_entry = py_editor_delete_entry
-py_editor.add_directory = py_editor_add_directory
-py_editor.open_directory = py_editor_open_directory
-py_editor.change_dir_prop = py_editor_change_dir_prop
-py_editor.close_directory = py_editor_close_directory
-py_editor.absent_directory = py_editor_absent_directory
-py_editor.add_file = py_editor_add_file
-py_editor.open_file = py_editor_open_file
-py_editor.apply_textdelta = py_editor_apply_textdelta
-py_editor.change_file_prop = py_editor_change_file_prop
-py_editor.close_file = py_editor_close_file
-py_editor.absent_file = py_editor_absent_file
-py_editor.close_edit = py_editor_close_edit
-py_editor.abort_edit = py_editor_abort_edit
+svn_delta_editor_t py_editor = {
+	.set_target_revision = py_editor_set_target_revision,
+	.open_root = py_editor_open_root,
+	.delete_entry = py_editor_delete_entry,
+	.add_directory = py_editor_add_directory,
+	.open_directory = py_editor_open_directory,
+	.change_dir_prop = py_editor_change_dir_prop,
+	.close_directory = py_editor_close_directory,
+	.absent_directory = py_editor_absent_directory,
+	.add_file = py_editor_add_file,
+	.open_file = py_editor_open_file,
+	.apply_textdelta = py_editor_apply_textdelta,
+	.change_file_prop = py_editor_change_file_prop,
+	.close_file = py_editor_close_file,
+	.absent_file = py_editor_absent_file,
+	.close_edit = py_editor_close_edit,
+	.abort_edit = py_editor_abort_edit
+};
 
 cdef class Auth
 
-cdef svn_error_t *py_file_rev_handler(void *baton, char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool):
-    fn = <object>baton
-    fn(path, rev, prop_hash_to_dict(rev_props))
-    return NULL
+static svn_error_t *py_file_rev_handler(void *baton, char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
+{
+    PyObject *fn = (PyObject *)baton;
+    fn(path, rev, prop_hash_to_dict(rev_props));
+    return NULL;
+}
 
 
 cdef class RemoteAccess:
@@ -761,11 +823,13 @@ cdef class Auth:
         if self.pool != NULL:
             apr_pool_destroy(self.pool)
 
-cdef svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *baton, char *realm, int may_save, apr_pool_t *pool):
-    fn = <object>baton
-    (username, cred[0].may_save) = fn(realm, may_save)
-    cred[0].username = apr_pstrdup(pool, username)
-    return NULL
+static svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *baton, char *realm, int may_save, apr_pool_t *pool)
+{
+    PyObject *fn = (PyObject *)baton;
+    (username, cred[0].may_save) = fn(realm, may_save);
+    cred[0].username = apr_pstrdup(pool, username);
+    return NULL;
+}
 
 def get_username_prompt_provider(prompt_func, int retry_limit):
     cdef AuthProvider auth
@@ -774,12 +838,14 @@ def get_username_prompt_provider(prompt_func, int retry_limit):
     svn_auth_get_username_prompt_provider (&auth.provider, py_username_prompt, <void *>prompt_func, retry_limit, auth.pool)
     return auth
 
-cdef svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton, char *realm, char *username, int may_save, apr_pool_t *pool):
-    fn = <object>baton
-    (py_username, password, cred[0].may_save) = fn(realm, may_save)
-    cred[0].username = apr_pstrdup(pool, py_username)
-    cred[0].password = apr_pstrdup(pool, password)
-    return NULL
+static svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton, char *realm, char *username, int may_save, apr_pool_t *pool)
+{
+    PyObject *fn = (PyObject *)baton;
+    (py_username, password, cred[0].may_save) = fn(realm, may_save);
+    cred[0].username = apr_pstrdup(pool, py_username);
+    cred[0].password = apr_pstrdup(pool, password);
+    return NULL;
+}
 
 def get_simple_prompt_provider(prompt_func, int retry_limit):
     cdef AuthProvider auth
@@ -848,24 +914,32 @@ def get_ssl_client_cert_pw_file_provider():
     svn_auth_get_ssl_client_cert_pw_file_provider(&auth.provider, auth.pool)
     return auth
 
-def txdelta_send_stream(stream, TxDeltaWindowHandler handler):
-    cdef unsigned char digest[16] 
-    cdef apr_pool_t *pool
-    pool = Pool(NULL)
-    check_error(svn_txdelta_send_stream(new_py_stream(pool, stream), handler.txdelta, handler.txbaton, <unsigned char *>digest, pool))
-    apr_pool_destroy(pool)
-    return PyString_FromStringAndSize(<char *>digest, 16)
+PyObject *txdelta_send_stream(stream, TxDeltaWindowHandler handler):
+{
+    unsigned char digest[16];
+    apr_pool_t *pool;
+    pool = Pool(NULL);
+    check_error(svn_txdelta_send_stream(new_py_stream(pool, stream), handler.txdelta, handler.txbaton, <unsigned char *>digest, pool));
+    apr_pool_destroy(pool);
+    return PyString_FromStringAndSize(<char *>digest, 16);
+}
 
-
-cdef new_editor(svn_delta_editor_t *editor, void *edit_baton, apr_pool_t *pool):
-    cdef Editor ret
-    ret = Editor()
-    ret.editor = editor
-    ret.edit_baton = edit_baton
-    ret.pool = pool
-    return ret
+PyObject *new_editor(svn_delta_editor_t *editor, void *edit_baton, apr_pool_t *pool)
+{
+    Editor ret;
+    ret = Editor();
+    ret.editor = editor;
+    ret.edit_baton = edit_baton;
+    ret.pool = pool;
+    return ret;
+}
 
 void initra(void)
 {
+	PyObject *mod;
 	apr_initialize();
+
+	mod = Py_InitModule3("ra", ra_methods, "Remote Access");
+	if (mod == NULL)
+		return;
 }
