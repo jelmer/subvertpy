@@ -127,4 +127,8 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, long rev
 	return NULL;
 }
 
+svn_error_t *py_svn_error(void)
+{
+	return NULL; /* FIXME */
+}
 

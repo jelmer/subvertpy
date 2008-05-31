@@ -58,7 +58,8 @@ svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const
         return NULL;
     py_commit_items = PyList_New(commit_items->nelts);
     ret = PyObject_CallFunction(baton, "O", py_commit_items);
-    /* FIXME: Handle ret == NULL */
+	if (ret == NULL)
+		return py_svn_error();
     if (PyTuple_Check(ret)) {
         py_log_msg = PyTuple_GetItem(ret, 0);
         py_tmp_file = PyTuple_GetItem(ret, 1);

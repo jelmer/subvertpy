@@ -162,7 +162,9 @@ static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length
 {
     PyObject *self = (PyObject *)baton, *ret;
     ret = PyObject_CallMethod(self, "read", "i", *length);
-	/* FIXME: Handle ret != NULL and !PyString_Check(ret) */
+	if (ret == NULL)
+		return py_svn_error();
+	/* FIXME: Handle !PyString_Check(ret) */
     *length = PyString_Size(ret);
     memcpy(buffer, PyString_AS_STRING(ret), *length);
     return NULL;
@@ -172,7 +174,8 @@ static svn_error_t *py_stream_write(void *baton, const char *data, apr_size_t *l
 {
     PyObject *self = (PyObject *)baton, *ret;
     ret = PyObject_CallMethod(self, "write", "s#", data, len[0]);
-	/* FIXME: Handle ret != NULL */
+	if (ret == NULL)
+		return py_svn_error();
 	return NULL;
 }
 
@@ -180,7 +183,8 @@ static svn_error_t *py_stream_close(void *baton)
 {
     PyObject *self = (PyObject *)baton, *ret;
     ret = PyObject_CallMethod(self, "close", NULL);
-	/* FIXME: Handle ret != NULL */
+	if (ret == NULL)
+		return py_svn_error();
     Py_DECREF(self);
 	return NULL;
 }
