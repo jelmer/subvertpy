@@ -442,7 +442,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         if self._config.get_log_strip_trailing_newline():
             self.base_mapping.export_message(message, self._svn_revprops, self._svnprops)
             message = message.rstrip("\n")
-        self._svn_revprops[constants.SVN_PROP_REVISION_LOG] = message.encode("utf-8")
+        self._svn_revprops[constants.PROP_REVISION_LOG] = message.encode("utf-8")
 
         try:
             existing_bp_parts = _check_dirs_exist(self.repository.transport, 
@@ -516,10 +516,10 @@ class SvnCommitBuilder(RootCommitBuilder):
         override_svn_revprops = self._config.get_override_svn_revprops()
         if override_svn_revprops is not None:
             new_revprops = {}
-            if svn.core.SVN_PROP_REVISION_AUTHOR in override_svn_revprops:
-                new_revprops[svn.core.SVN_PROP_REVISION_AUTHOR] = self._committer.encode("utf-8")
-            if svn.core.SVN_PROP_REVISION_DATE in override_svn_revprops:
-                new_revprops[svn.core.SVN_PROP_REVISION_DATE] = svn_time_to_cstring(1000000*self._timestamp)
+            if constants.PROP_REVISION_AUTHOR in override_svn_revprops:
+                new_revprops[constants.PROP_REVISION_AUTHOR] = self._committer.encode("utf-8")
+            if constants.PROP_REVISION_DATE in override_svn_revprops:
+                new_revprops[constants.PROP_REVISION_DATE] = svn_time_to_cstring(1000000*self._timestamp)
             set_svn_revprops(self.repository.transport, self.revision_metadata.revision, new_revprops)
 
         try:

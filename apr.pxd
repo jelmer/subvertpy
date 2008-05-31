@@ -1,4 +1,5 @@
-# Copyright (C) 2008 Jelmer Vernooij <jelmer@samba.org>
+# Copyright © 2008 Jelmer Vernooij <jelmer@samba.org>
+# -*- coding: utf-8 -*-
 # vim: ft=pyrex
 
 # This program is free software; you can redistribute it and/or modify
@@ -62,5 +63,3 @@ cdef extern from "apr_hash.h":
 
 cdef extern from "apr_time.h":
     ctypedef unsigned long long apr_time_t
-
-

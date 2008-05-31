@@ -144,7 +144,7 @@ class RevisionBuildEditor:
             assert self.old_inventory.root.revision is not None
             old_file_id = self.old_inventory.root.file_id
             file_id = self._get_id_map().get("", old_file_id)
-            self.dir_baserev[file_id] = [self.old_inventory.root.revision]
+            file_parents = [self.old_inventory.root.revision]
 
         if self.inventory.root is not None and \
                 file_id == self.inventory.root.file_id:
@@ -276,9 +276,9 @@ class DirectoryBuildEditor:
     def change_prop(self, name, value):
         if self.new_id == self.editor.inventory.root.file_id:
             # Replay lazy_dict, since it may be more expensive
-            if type(self.revmeta.fileprops) != dict:
-                self.revmeta.fileprops = {}
-            self.revmeta.fileprops[name] = value
+            if type(self.editor.revmeta.fileprops) != dict:
+                self.editor.revmeta.fileprops = {}
+            self.editor.revmeta.fileprops[name] = value
 
         if name in (constants.PROP_ENTRY_COMMITTED_DATE,
                     constants.PROP_ENTRY_COMMITTED_REV,
@@ -405,15 +405,15 @@ class FileBuildEditor:
             del self.editor.inventory[self.file_id]
 
         if self.is_symlink:
-            ie = self.editor.inventory.add_path(path, 'symlink', self.file_id)
+            ie = self.editor.inventory.add_path(self.path, 'symlink', self.file_id)
             ie.symlink_target = lines[0][len("link "):]
             ie.text_sha1 = None
             ie.text_size = None
             ie.executable = False
-            ie.revision = self.revid
+            ie.revision = self.editor.revid
         else:
-            ie = self.inventory.add_path(path, 'file', self.file_id)
-            ie.revision = self.revid
+            ie = self.editor.inventory.add_path(self.path, 'file', self.file_id)
+            ie.revision = self.editor.revid
             ie.kind = 'file'
             ie.symlink_target = None
             ie.text_sha1 = osutils.sha_strings(lines)
@@ -647,7 +647,7 @@ class InterFromSvnRepository(InterRepository):
                                 # Report status of existing paths
                                 reporter.set_path("", editor.revnum, True, None)
                             except:
-                                reporter.abort_report()
+                                reporter.abort()
                                 raise
                         else:
                             (parent_branch, parent_revnum, mapping) = \
@@ -665,10 +665,10 @@ class InterFromSvnRepository(InterRepository):
                                 # Report status of existing paths
                                 reporter.set_path("", parent_revnum, False, None)
                             except:
-                                reporter.abort_report()
+                                reporter.abort()
                                 raise
 
-                        reporter.finish_report()
+                        reporter.finish()
                     finally:
                         if conn is not None:
                             self.source.transport.add_connection(conn)

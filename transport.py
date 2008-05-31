@@ -160,14 +160,6 @@ class Connection(object):
         return self._ra.do_switch(switch_rev, "", recurse, switch_url, editor)
 
     @convert_svn_error
-    def get_log(self, path, from_revnum, to_revnum, limit, discover_changed_paths, 
-                strict_node_history, revprops, rcvr):
-        self.mutter('svn log %r:%r %r' % (from_revnum, to_revnum, path))
-        return self._ra.get_log(rcvr, [self._request_path(path)], 
-                              from_revnum, to_revnum, limit, discover_changed_paths, 
-                              strict_node_history, revprops)
-
-    @convert_svn_error
     def change_rev_prop(self, revnum, name, value):
         self.mutter('svn revprop -r%d --set %s=%s' % (revnum, name, value))
         self._ra.change_rev_prop(revnum, name, value)
@@ -252,7 +244,6 @@ class Connection(object):
 
     @convert_svn_error
     def get_commit_editor(self, revprops, done_cb, lock_token, keep_locks):
-        self._open_real_transport()
         return self._ra.get_commit_editor(revprops, done_cb, lock_token, 
                                           keep_locks)
 
@@ -276,8 +267,7 @@ class Connection(object):
     @convert_svn_error
     @needs_busy
     def get_log(self, paths, from_revnum, to_revnum, limit, 
-                discover_changed_paths, strict_node_history, revprops, rcvr, 
-                pool=None):
+                discover_changed_paths, strict_node_history, revprops, rcvr):
         # No paths starting with slash, please
         assert paths is None or all([not p.startswith("/") for p in paths])
         self.mutter('svn log %r:%r %r (limit: %r)' % (from_revnum, to_revnum, paths, limit))
@@ -414,7 +404,6 @@ class SvnRaTransport(Transport):
 
     def iter_log(self, paths, from_revnum, to_revnum, limit, discover_changed_paths, 
                  strict_node_history, revprops):
-
         assert paths is None or isinstance(paths, list)
         assert paths is None or all([isinstance(x, str) for x in paths])
         assert isinstance(from_revnum, int) and isinstance(to_revnum, int)
@@ -443,8 +432,8 @@ class SvnRaTransport(Transport):
 
             def run(self):
                 assert self.conn is None, "already running"
-                def rcvr(log_entry, pool):
-                    self.pending.append((log_entry.changed_paths, log_entry.revision, log_entry.revprops))
+                def rcvr(*args):
+                    self.pending.append(args)
                     self.semaphore.release()
                 self.conn = self.transport.get_connection()
                 try:
@@ -478,7 +467,7 @@ class SvnRaTransport(Transport):
             return conn.get_log(newpaths, 
                     from_revnum, to_revnum,
                     limit, discover_changed_paths, strict_node_history, 
-                    revprops, rcvr, pool)
+                    revprops, rcvr)
         finally:
             self.add_connection(conn)
 
@@ -563,10 +552,10 @@ class SvnRaTransport(Transport):
         finally:
             self.add_connection(conn)
 
-    def revprop_list(self, revnum, pool=None):
+    def revprop_list(self, revnum):
         conn = self.get_connection()
         try:
-            return conn.revprop_list(revnum, pool)
+            return conn.revprop_list(revnum)
         finally:
             self.add_connection(conn)
 
