@@ -154,7 +154,6 @@ class DirectoryTreeEditor:
         ie.revision = revision_id
         return DirectoryTreeEditor(self.tree, file_id)
 
-<<<<<<< TREE
     def change_prop(self, name, value):
         from mapping import (SVN_PROP_BZR_ANCESTRY, 
                         SVN_PROP_BZR_PREFIX, SVN_PROP_BZR_REVISION_INFO, 

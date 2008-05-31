@@ -103,7 +103,7 @@ class Connection(object):
         try:
             self.mutter('opening SVN RA connection to %r' % url)
             self._ra = ra.RemoteAccess(url.encode('utf8'), 
-                    auth=create_auth_baton())
+                    auth=create_auth_baton(self.url))
             # FIXME: Callbacks
         except SubversionException, (_, num):
             if num in (constants.ERR_RA_SVN_REPOS_NOT_FOUND,):
@@ -270,7 +270,7 @@ class Connection(object):
         tokens = {}
         def lock_cb(baton, path, do_lock, lock, ra_err, pool):
             tokens[path] = lock
-        svn.ra.lock(self._ra, path_revs, comment, steal_lock, lock_cb)
+        self._ra.lock(path_revs, comment, steal_lock, lock_cb)
         return SvnLock(self, tokens)
 
     @convert_svn_error
@@ -280,46 +280,20 @@ class Connection(object):
                 pool=None):
         # No paths starting with slash, please
         assert paths is None or all([not p.startswith("/") for p in paths])
-        if (paths is None and 
-            (svn.core.SVN_VER_MINOR < 6 or svn.core.SVN_VER_REVISION < 31470)):
-            paths = ["/"]
         self.mutter('svn log %r:%r %r (limit: %r)' % (from_revnum, to_revnum, paths, limit))
-        if hasattr(svn.ra, 'get_log2'):
-            return svn.ra.get_log2(self._ra, paths, 
-                           from_revnum, to_revnum, limit, 
-                           discover_changed_paths, strict_node_history, False, 
-                           revprops, rcvr, pool)
-
-        class LogEntry(object):
-            def __init__(self, changed_paths, rev, author, date, message):
-                self.changed_paths = changed_paths
-                self.revprops = {}
-                if svn.core.SVN_PROP_REVISION_AUTHOR in revprops:
-                    self.revprops[svn.core.SVN_PROP_REVISION_AUTHOR] = author
-                if svn.core.SVN_PROP_REVISION_LOG in revprops:
-                    self.revprops[svn.core.SVN_PROP_REVISION_LOG] = message
-                if svn.core.SVN_PROP_REVISION_DATE in revprops:
-                    self.revprops[svn.core.SVN_PROP_REVISION_DATE] = date
-                # FIXME: Check other revprops
-                # FIXME: Handle revprops is None
-                self.revision = rev
-                self.has_children = None
-
-        def rcvr_convert(orig_paths, rev, author, date, message, pool):
-            rcvr(LogEntry(orig_paths, rev, author, date, message), pool)
-
-        return svn.ra.get_log(self._ra, paths, 
-                              from_revnum, to_revnum, limit, discover_changed_paths, 
-                              strict_node_history, rcvr_convert, pool)
+        return self._ra.get_log(rcvr, paths, 
+                       from_revnum, to_revnum, limit, 
+                       discover_changed_paths, strict_node_history, 
+                       revprops)
 
     @convert_svn_error
     @needs_busy
     def reparent(self, url):
         if self.url == url:
             return
-        if hasattr(svn.ra, 'reparent'):
+        if hasattr(self._ra, 'reparent'):
             self.mutter('svn reparent %r' % url)
-            svn.ra.reparent(self._ra, url)
+            self._ra.reparent(url)
             self.url = url
         else:
             raise NotImplementedError(self.reparent)
@@ -363,7 +337,6 @@ class SvnRaTransport(Transport):
     to fool Bazaar. """
     @convert_svn_error
     def __init__(self, url="", _backing_url=None, pool=None):
-        self.pool = Pool()
         bzr_url = url
         self.svn_url = bzr_to_svn_url(url)
         # _backing_url is an evil hack so the root directory of a repository 
@@ -550,7 +523,7 @@ class SvnRaTransport(Transport):
         try:
             (dirents, _, _) = self.get_dir(relpath, self.get_latest_revnum())
         except SubversionException, (msg, num):
-            if num == svn.core.SVN_ERR_FS_NOT_DIRECTORY:
+            if num == constants.ERR_FS_NOT_DIRECTORY:
                 raise NoSuchFile(relpath)
             raise
         return dirents.keys()

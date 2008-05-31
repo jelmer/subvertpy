@@ -23,7 +23,6 @@ from bzrlib.plugins.svn import version_info
 import calendar
 import core
 import errors
-from scheme import BranchingScheme, guess_scheme_from_branch_path
 import sha
 import time
 import urllib

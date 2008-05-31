@@ -1,4 +1,5 @@
-# Copyright (C) 2008 Jelmer Vernooij <jelmer@samba.org>
+# Copyright © 2008 Jelmer Vernooij <jelmer@samba.org>
+# -*- coding: utf-8 -*-
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -447,7 +448,7 @@ def version():
     """
     cdef svn_version_t *ver
     ver = svn_ra_version()
-    return (ver.major, ver.minor, ver.minor, ver.tag)
+    return (ver.major, ver.minor, ver.patch, ver.tag)
 
 cdef svn_error_t *py_editor_set_target_revision(void *edit_baton, svn_revnum_t target_revision, apr_pool_t *pool) except *:
     self = <object>edit_baton

@@ -153,7 +153,7 @@ def get_stock_svn_providers():
     if hasattr(ra, 'get_windows_ssl_server_trust_provider'):
         providers.append(ra.get_windows_ssl_server_trust_provider())
 
-    return Auth(providers)
+    return providers
 
 
 def create_auth_baton(url):
@@ -169,17 +169,16 @@ def create_auth_baton(url):
     # rather than prompting the user.
     providers = get_stock_svn_providers()
 
-    if svn.core.SVN_VER_MAJOR == 1 and svn.core.SVN_VER_MINOR >= 5:
+    (major, minor, patch, tag) = ra.version()
+    if major == 1 and minor >= 5:
         providers += auth_config.get_svn_auth_providers()
         providers += [get_ssl_client_cert_pw_provider(1)]
 
-    auth_baton = svn.core.svn_auth_open(providers)
+    auth_baton = Auth(providers)
     if creds is not None:
-        (auth_baton.user, auth_baton.password) = urllib.splitpasswd(creds)
-        if auth_baton.user is not None:
-            svn.core.svn_auth_set_parameter(auth_baton, 
-                svn.core.SVN_AUTH_PARAM_DEFAULT_USERNAME, auth_baton.user)
-        if auth_baton.password is not None:
-            svn.core.svn_auth_set_parameter(auth_baton, 
-                svn.core.SVN_AUTH_PARAM_DEFAULT_PASSWORD, auth_baton.password)
+        (user, password) = urllib.splitpasswd(creds)
+        if user is not None:
+            auth_baton.set_parameter(svn.core.SVN_AUTH_PARAM_DEFAULT_USERNAME, user)
+        if password is not None:
+            auth_baton.set_parameter(svn.core.SVN_AUTH_PARAM_DEFAULT_PASSWORD, password)
     return auth_baton
