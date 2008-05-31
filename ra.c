@@ -1,20 +1,21 @@
-# Copyright © 2008 Jelmer Vernooij <jelmer@samba.org>
-# -*- coding: utf-8 -*-
-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
+/* Copyright © 2008 Jelmer Vernooij <jelmer@samba.org>
+ * -*- coding: utf-8 -*-
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+ 
 from apr cimport apr_pool_t, apr_pool_destroy, apr_palloc
 from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_set
 from apr cimport apr_array_header_t, apr_array_make, apr_array_push
@@ -1064,3 +1065,8 @@ cdef new_editor(svn_delta_editor_t *editor, void *edit_baton, apr_pool_t *pool):
     ret.edit_baton = edit_baton
     ret.pool = pool
     return ret
+
+void initra(void)
+{
+
+}

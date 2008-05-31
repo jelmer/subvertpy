@@ -1,20 +1,22 @@
-# Copyright © 2008 Jelmer Vernooij <jelmer@samba.org>
-# -*- coding: utf-8 -*-
-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
+/*
+ * Copyright © 2008 Jelmer Vernooij <jelmer@samba.org>
+ * -*- coding: utf-8 -*-
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+ 
 from types cimport svn_error_t, svn_node_kind_t, svn_node_dir, svn_node_file, svn_node_unknown, svn_node_none, svn_error_create, svn_log_message_receiver_t, svn_log_changed_path_t
 from apr cimport apr_initialize, apr_status_t, apr_time_t, apr_hash_t, apr_size_t
 from apr cimport apr_pool_t, apr_pool_create, apr_pool_destroy
@@ -234,3 +236,8 @@ cdef prop_hash_to_dict(apr_hash_t *props):
         idx = apr_hash_next(idx)
     apr_pool_destroy(pool)
     return py_props
+
+void initcore(void)
+{
+
+}

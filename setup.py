@@ -4,7 +4,6 @@
 
 from distutils.core import setup
 from distutils.extension import Extension
-from Pyrex.Distutils import build_ext
 import os
 
 def apr_include_dir():
@@ -43,15 +42,14 @@ setup(name='bzr-svn',
                 'bzrlib.plugins.svn.mapping3', 
                 'bzrlib.plugins.svn.tests'],
       ext_modules=[
-          Extension("core", ["core.pyx"], libraries=["svn_subr-1"], 
+          Extension("core", ["core.c"], libraries=["svn_subr-1"], 
                     include_dirs=[apr_include_dir(), svn_include_dir()]), 
-          Extension("client", ["client.pyx"], libraries=["svn_client-1"], 
+          Extension("client", ["client."], libraries=["svn_client-1"], 
                     include_dirs=[apr_include_dir(), svn_include_dir()]), 
-          Extension("ra", ["ra.pyx"], libraries=["svn_ra-1"], 
+          Extension("ra", ["ra.c"], libraries=["svn_ra-1"], 
                     include_dirs=[apr_include_dir(), svn_include_dir()]), 
-          Extension("repos", ["repos.pyx"], libraries=["svn_repos-1"], 
+          Extension("repos", ["repos."], libraries=["svn_repos-1"], 
                     include_dirs=[apr_include_dir(), svn_include_dir()]), 
-          Extension("wc", ["wc.pyx"], libraries=["svn_wc-1"],
+          Extension("wc", ["wc.c"], libraries=["svn_wc-1"],
                      include_dirs=[apr_include_dir(), svn_include_dir()])],
-      cmdclass = {'build_ext': build_ext},
       )
