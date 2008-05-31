@@ -66,13 +66,6 @@ PyTypeObject SubversionExceptionType = {
 	.tp_new = SubversionException_new,
 };
 
-PyObject *wrap_lock(svn_lock_t *lock)
-{
-    return Py_BuildValue("(zzzbzz)", lock->path, lock->token, lock->owner, 
-						 lock->comment, lock->is_dav_comment, 
-						 lock->creation_date, lock->expiration_date);
-}
-
 /** Convert a UNIX timestamp to a Subversion CString. */
 static PyObject *time_to_cstring(PyObject *self, PyObject *args)
 {
@@ -139,74 +132,6 @@ static PyObject *get_config(PyObject *self, PyObject *args)
     return ret;
 }
 
-apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l)
-{
-	int i;
-    apr_array_header_t *ret;
-    if (l == Py_None) {
-        return NULL;
-	}
-    ret = apr_array_make(pool, PyList_Size(l), sizeof(svn_revnum_t));
-	if (ret == NULL) {
-		PyErr_NoMemory();
-		return NULL;
-	}
-    for (i = 0; i < PyList_Size(l); i++) {
-		svn_revnum_t *el = (svn_revnum_t *)apr_array_push(ret);
-        *el = PyLong_AsLong(PyList_GetItem(l, i));
-	}
-    return ret;
-}
-
-static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length)
-{
-    PyObject *self = (PyObject *)baton, *ret;
-    ret = PyObject_CallMethod(self, "read", "i", *length);
-	if (ret == NULL)
-		return py_svn_error();
-	/* FIXME: Handle !PyString_Check(ret) */
-    *length = PyString_Size(ret);
-    memcpy(buffer, PyString_AS_STRING(ret), *length);
-    return NULL;
-}
-
-static svn_error_t *py_stream_write(void *baton, const char *data, apr_size_t *len)
-{
-    PyObject *self = (PyObject *)baton, *ret;
-    ret = PyObject_CallMethod(self, "write", "s#", data, len[0]);
-	if (ret == NULL)
-		return py_svn_error();
-	return NULL;
-}
-
-static svn_error_t *py_stream_close(void *baton)
-{
-    PyObject *self = (PyObject *)baton, *ret;
-    ret = PyObject_CallMethod(self, "close", NULL);
-	if (ret == NULL)
-		return py_svn_error();
-    Py_DECREF(self);
-	return NULL;
-}
-
-svn_stream_t *string_stream(apr_pool_t *pool, PyObject *text)
-{
-    svn_stringbuf_t *buf;
-    buf = svn_stringbuf_ncreate(PyString_AsString(text), 
-								PyString_Size(text), pool);
-    return svn_stream_from_stringbuf(buf, pool);
-}
-
-svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py)
-{
-    svn_stream_t *stream;
-    Py_INCREF(py);
-    stream = svn_stream_create((void *)py, pool);
-    svn_stream_set_read(stream, py_stream_read);
-    svn_stream_set_write(stream, py_stream_write);
-    svn_stream_set_close(stream, py_stream_close);
-    return stream;
-}
 
 static PyMethodDef core_methods[] = {
 	{ "get_config", get_config, METH_VARARGS, NULL },

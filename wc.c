@@ -20,20 +20,17 @@
 #include <apr_general.h>
 #include <svn_wc.h>
 
-from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_index_t, apr_array_header_t, apr_array_pop, apr_hash_make, apr_hash_set, apr_palloc
-from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t, svn_prop_t, svn_lock_t
-from ra cimport svn_ra_reporter2_t, svn_delta_editor_t, new_editor
-
-from core cimport check_error, Pool, py_cancel_func
-
-def version():
-    """Get libsvn_wc version information.
-
-    :return: tuple with major, minor, patch version number and tag.
-    """
-    cdef svn_version_t *ver
-    ver = svn_wc_version()
-    return (ver.major, ver.minor, ver.minor, ver.tag)
+/**
+ * Get libsvn_wc version information.
+ *
+ * :return: tuple with major, minor, patch version number and tag.
+ */
+PyObject *version(PyObject *self)
+{
+    const svn_version_t *ver = svn_wc_version();
+    return Py_BuildValue("(iiii)", ver->major, ver->minor, 
+						 ver->patch, ver->tag);
+}
 
 svn_error_t *py_wc_found_entry(char *path, svn_wc_entry_t *entry, void *walk_baton, apr_pool_t *pool)
 {
@@ -150,7 +147,7 @@ cdef class WorkingCopy:
         apr_pool_destroy(temp_pool);
 	}
 
-    def entries_read(self, int show_hidden=False):
+    def entries_read(self, bool show_hidden=false):
 	{
         apr_hash_t *entries;
         apr_pool_t *temp_pool;
@@ -164,7 +161,7 @@ cdef class WorkingCopy:
         py_entries = PyDict_New();
         idx = apr_hash_first(temp_pool, entries);
         while (idx != NULL) {
-            apr_hash_this(idx, <void **>&key, &klen, <void **>&entry);
+            apr_hash_this(idx, (void **)&key, &klen, (void **)&entry);
             py_entries[key] = py_entry(entry);
             idx = apr_hash_next(idx);
 		}
@@ -177,8 +174,8 @@ cdef class WorkingCopy:
         apr_pool_t *temp_pool;
         temp_pool = Pool(self.pool);
         check_error(svn_wc_walk_entries2(path, self.adm, 
-                    &py_wc_entry_callbacks, <void *>callbacks,
-                    show_hidden, py_cancel_func, <void *>cancel_func,
+                    &py_wc_entry_callbacks, (void *)callbacks,
+                    show_hidden, py_cancel_func, (void *)cancel_func,
                     temp_pool));
         apr_pool_destroy(temp_pool);
 	}
@@ -208,13 +205,14 @@ cdef class WorkingCopy:
         check_error(svn_wc_get_prop_diffs(&propchanges, &original_props, 
                     path, self.adm, temp_pool));
         py_propchanges = PyList_New();
-        for i in range(propchanges.nelts):
-            el = <svn_prop_t *>propchanges.elts[i]
-            py_propchanges.append((el.name, PyString_FromStringAndSize(el.value.data, el.value.len)))
+        for (i = 0; i < propchanges.nelts; i++) {
+            el = (svn_prop_t *)propchanges.elts[i];
+            py_propchanges.append((el.name, PyString_FromStringAndSize(el.value.data, el.value.len)));
+		}
         py_orig_props = PyDict_New();
         idx = apr_hash_first(temp_pool, original_props)
         while (idx != NULL) {
-            apr_hash_this(idx, <void **>&key, &klen, <void **>&string);
+            apr_hash_this(idx, (void **)&key, &klen, (void **)&string);
             py_orig_props[key] = PyString_FromStringAndSize(string.data, string.len);
             idx = apr_hash_next(idx);
 		}
@@ -235,9 +233,9 @@ cdef class WorkingCopy:
 		}
         check_error(svn_wc_add2(path, self.adm, c_copyfrom_url, 
                                 copyfrom_rev, py_cancel_func, 
-                                <void *>cancel_func,
+                                (void *)cancel_func,
                                 py_wc_notify_func, 
-                                <void *>notify_func, 
+                                (void *)notify_func, 
                                 temp_pool));
         apr_pool_destroy(temp_pool);
 	}
@@ -247,8 +245,8 @@ cdef class WorkingCopy:
         apr_pool_t *temp_pool;
         temp_pool = Pool(self.pool);
         check_error(svn_wc_copy2(src, self.adm, dst,
-                                py_cancel_func, <void *>cancel_func,
-                                py_wc_notify_func, <void *>notify_func, 
+                                py_cancel_func, (void *)cancel_func,
+                                py_wc_notify_func, (void *)notify_func, 
                                 temp_pool));
         apr_pool_destroy(temp_pool);
 	}
@@ -258,8 +256,8 @@ cdef class WorkingCopy:
         apr_pool_t *temp_pool;
         temp_pool = Pool(self.pool);
         check_error(svn_wc_delete2(path, self.adm, 
-                                py_cancel_func, <void *>cancel_func,
-                                py_wc_notify_func, <void *>notify_func, 
+                                py_cancel_func, (void *)cancel_func,
+                                py_wc_notify_func, (void *)notify_func, 
                                 temp_pool));
         apr_pool_destroy(temp_pool);
 	}
@@ -273,9 +271,9 @@ cdef class WorkingCopy:
         temp_pool = Pool(self.pool);
         traversal_info = svn_wc_init_traversal_info(temp_pool);
         check_error(svn_wc_crawl_revisions2(path, self.adm, 
-                    &py_ra_reporter, <void *>reporter, 
+                    &py_ra_reporter, (void *)reporter, 
                     restore_files, recurse, use_commit_times, 
-                    py_wc_notify_func, <void *>notify_func,
+                    py_wc_notify_func, (void *)notify_func,
                     traversal_info, temp_pool));
         apr_pool_destroy(temp_pool);
 	}
@@ -295,8 +293,8 @@ cdef class WorkingCopy:
         pool = Pool(NULL);
         latest_revnum = <svn_revnum_t *>apr_palloc(pool, sizeof(svn_revnum_t));
         check_error(svn_wc_get_update_editor2(latest_revnum, self.adm, target, 
-                    use_commit_times, recurse, py_wc_notify_func, <void *>notify_func, 
-                    py_cancel_func, <void *>cancel_func, c_diff3_cmd, &editor, &edit_baton, 
+                    use_commit_times, recurse, py_wc_notify_func, (void *)notify_func, 
+                    py_cancel_func, (void *)cancel_func, c_diff3_cmd, &editor, &edit_baton, 
                     NULL, pool));
         return new_editor(editor, edit_baton, pool);
 	}
@@ -454,32 +452,42 @@ static PyObject *get_default_ignores(PyObject *config)
     return ret;
 }
 
-static PyObject *ensure_adm(char *path, char *uuid, char *url, repos=None, svn_revnum_t rev=-1)
+static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+	char *path, *uuid, *url;
+	char *repos=NULL; 
+	svn_revnum_t rev=-1;
     apr_pool_t *pool;
-    char *c_repos;
+	char *kwnames[] = { "path", "uuid", "url", "repos", "rev", NULL };
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|sl", kwnames, 
+									 &path, &uuid, &url, &repos, &rev))
+		return NULL;
+
     pool = Pool(NULL);
-    if (repos == Py_None) {
-        c_repos = NULL;
-	} else {
-        c_repos = PyString_FromString(repos);
-	}
-    check_error(svn_wc_ensure_adm2(path, uuid, url, c_repos, rev, pool));
+    RUN_SVN_WITH_POOL(pool, 
+					  svn_wc_ensure_adm2(path, uuid, url, repos, rev, pool));
     apr_pool_destroy(pool);
+	return Py_None;
 }
 
-static PyObject *check_wc(char *path)
+static PyObject *check_wc(PyObject *self, PyObject *args)
 {
+	char *path;
     apr_pool_t *pool;
     int wc_format;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
     pool = Pool(NULL);
-    check_error(svn_wc_check_wc(path, &wc_format, pool))
+	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(path, &wc_format, pool));
     apr_pool_destroy(pool);
-    return wc_format;
+    return PyLong_FromLong(wc_format);
 }
 
 static PyMethodDef wc_methods[] = {
-	{ "check_wc", check_wc, METH_KEYWORDS|METH_VARARGS, NULL },
+	{ "check_wc", check_wc, METH_VARARGS, NULL },
 	{ "ensure_adm", ensure_adm, METH_KEYWORDS|METH_VARARGS, NULL },
 	{ "get_default_ignores", get_default_ignores, METH_KEYWORDS|METH_VARARGS, NULL },
 	{ "get_adm_dir", get_adm_dir, METH_KEYWORDS|METH_VARARGS, NULL },

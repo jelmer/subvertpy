@@ -24,14 +24,21 @@ apr_pool_t *Pool(apr_pool_t *parent);
 bool check_error(svn_error_t *error);
 apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, PyObject *l);
 PyObject *prop_hash_to_dict(apr_hash_t *props);
-svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool);
+svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, 
+								long revision, const char *author, 
+								const char *date, const char *message, 
+								apr_pool_t *pool);
 svn_error_t *py_svn_error(void);
 void PyErr_SetSubversionException(svn_error_t *error);
 
-#define RUN_SVN_WITH_POOL(pool, cmd) { \
+#define RUN_SVN_WITH_POOL(pool, cmd)  \
 	if (!check_error((cmd))) { \
 		apr_pool_destroy(pool); \
 		return NULL; \
 	}
+
+PyObject *wrap_lock(svn_lock_t *lock);
+apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l);
+svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py);
 
 #endif /* _BZR_SVN_UTIL_H_ */
