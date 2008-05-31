@@ -16,277 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <Python.h>
+#include <apr_general.h>
+#include <svn_wc.h>
 
 from apr cimport apr_pool_t, apr_initialize, apr_hash_t, apr_pool_destroy, apr_time_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_index_t, apr_array_header_t, apr_array_pop, apr_hash_make, apr_hash_set, apr_palloc
 from types cimport svn_error_t, svn_version_t, svn_boolean_t, svn_cancel_func_t , svn_string_t, svn_string_ncreate, svn_node_kind_t, svn_revnum_t, svn_prop_t, svn_lock_t
 from ra cimport svn_ra_reporter2_t, svn_delta_editor_t, new_editor
 
 from core cimport check_error, Pool, py_cancel_func
-
-apr_initialize()
-
-cdef extern from "Python.h":
-    object PyString_FromStringAndSize(char *, long len)
-
-
-cdef extern from "svn_wc.h":
-    ctypedef struct svn_wc_adm_access_t
-    ctypedef enum svn_wc_schedule_t:
-        svn_wc_schedule_normal
-        svn_wc_schedule_add
-        svn_wc_schedule_delete
-        svn_wc_schedule_replace
-
-    ctypedef struct svn_wc_entry_t:
-        char *name
-        svn_revnum_t revision
-        char *url
-        char *repos
-        char *uuid
-        svn_node_kind_t kind
-        svn_wc_schedule_t schedule
-        svn_boolean_t copied
-        svn_boolean_t deleted
-        svn_boolean_t absent
-        svn_boolean_t incomplete
-        char *copyfrom_url
-        svn_revnum_t copyfrom_rev
-        char *conflict_old
-        char *conflict_new
-        char *conflict_wrk
-        char *prejfile
-        apr_time_t text_time
-        apr_time_t prop_time
-        char *checksum
-        svn_revnum_t cmt_rev
-        apr_time_t cmt_date
-        char *cmt_author
-        char *lock_token
-        char *lock_owner
-        char *lock_comment
-        apr_time_t lock_creation_date
-        svn_boolean_t has_props
-        svn_boolean_t has_prop_mods
-        char *cachable_props
-        char *present_props
-
-    svn_error_t *svn_wc_check_wc(char *path, int *wc_format, apr_pool_t *pool)
-
-    svn_version_t *svn_wc_version()
-    svn_error_t *svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
-                                  svn_wc_adm_access_t *associated,
-                                  char *path,
-                                  svn_boolean_t write_lock,
-                                  int depth,
-                                  svn_cancel_func_t cancel_func,
-                                  cancel_baton,
-                                  apr_pool_t *pool)
-    svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
-    char *svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access)
-    svn_boolean_t svn_wc_adm_locked(svn_wc_adm_access_t *adm_access)
-    svn_error_t *svn_wc_locked(svn_boolean_t *locked, char *path, apr_pool_t *pool)
-    ctypedef struct svn_wc_revision_status_t:
-        long min_rev
-        long max_rev
-        int switched
-        int modified
-    svn_error_t *svn_wc_revision_status(svn_wc_revision_status_t **result_p,
-                       char *wc_path,
-                       char *trail_url,
-                       svn_boolean_t committed,
-                       svn_cancel_func_t cancel_func,
-                       cancel_baton,
-                       apr_pool_t *pool)
-    svn_error_t *svn_wc_prop_get(svn_string_t **value,
-                             char *name,
-                             char *path,
-                             svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool)
-    svn_error_t *svn_wc_entries_read(apr_hash_t **entries,
-                                 svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t show_hidden,
-                                 apr_pool_t *pool)
-    svn_error_t *svn_wc_prop_set2(char *name,
-                              svn_string_t *value,
-                              char *path,
-                              svn_wc_adm_access_t *adm_access,
-                              svn_boolean_t skip_checks,
-                              apr_pool_t *pool)
-    svn_error_t *svn_wc_entry(svn_wc_entry_t **entry,
-                          char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t show_hidden,
-                          apr_pool_t *pool)
-
-    svn_boolean_t svn_wc_is_normal_prop(char *name)
-    svn_boolean_t svn_wc_is_wc_prop(char *name)
-    svn_boolean_t svn_wc_is_entry_prop(char *name)
-
-    svn_error_t *svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
-                                   apr_hash_t **original_props,
-                                   char *path,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool)
-    svn_error_t *svn_wc_get_pristine_copy_path(char *path,
-                                           char **pristine_path,
-                                           apr_pool_t *pool)
-
-    char *svn_wc_get_adm_dir(apr_pool_t *pool)
-
-    ctypedef enum svn_wc_notify_action_t:
-        svn_wc_notify_add
-        svn_wc_notify_copy
-        svn_wc_notify_delete
-        svn_wc_notify_restore
-        svn_wc_notify_revert
-        svn_wc_notify_failed_revert
-        svn_wc_notify_resolved
-        svn_wc_notify_skip
-        svn_wc_notify_update_delete
-        svn_wc_notify_update_add
-        svn_wc_notify_update_update
-        svn_wc_notify_update_completed
-        svn_wc_notify_update_external
-        svn_wc_notify_status_completed
-        svn_wc_notify_status_external
-        svn_wc_notify_commit_modified
-        svn_wc_notify_commit_added
-        svn_wc_notify_commit_deleted
-        svn_wc_notify_commit_replaced
-        svn_wc_notify_commit_postfix_txdelta
-        svn_wc_notify_blame_revision
-        svn_wc_notify_locked
-        svn_wc_notify_unlocked
-        svn_wc_notify_failed_lock
-        svn_wc_notify_failed_unlock
-
-    ctypedef enum svn_wc_notify_state_t:
-        svn_wc_notify_state_inapplicable
-        svn_wc_notify_state_unknown
-        svn_wc_notify_state_unchanged
-        svn_wc_notify_state_missing
-        svn_wc_notify_state_obstructed
-        svn_wc_notify_state_changed
-        svn_wc_notify_state_merged
-        svn_wc_notify_state_conflicted
-
-    ctypedef enum svn_wc_notify_lock_state_t:
-        svn_wc_notify_lock_state_inapplicable
-        svn_wc_notify_lock_state_unknown
-        svn_wc_notify_lock_state_unchanged
-        svn_wc_notify_lock_state_locked
-        svn_wc_notify_lock_state_unlocked
-                
-    ctypedef struct svn_wc_notify_t:
-        char *path
-        svn_wc_notify_action_t action
-        svn_node_kind_t kind
-        char *mime_type
-        svn_lock_t *lock
-        svn_error_t *err
-        svn_wc_notify_state_t content_state
-        svn_wc_notify_state_t prop_state
-        svn_wc_notify_lock_state_t lock_state
-        svn_revnum_t revision
-    ctypedef void svn_wc_notify_func2_t(void *baton, svn_wc_notify_t *notify, apr_pool_t *pool)
-
-    svn_error_t *svn_wc_add2(char *path,
-                         svn_wc_adm_access_t *parent_access,
-                         char *copyfrom_url,
-                         svn_revnum_t copyfrom_rev,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         svn_wc_notify_func2_t notify_func,
-                         void *notify_baton,
-                         apr_pool_t *pool)
-
-    svn_error_t *svn_wc_copy2(char *src,
-                          svn_wc_adm_access_t *dst_parent,
-                          char *dst_basename,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
-                          svn_wc_notify_func2_t notify_func,
-                          void *notify_baton,
-                          apr_pool_t *pool)
-
-    svn_error_t *svn_wc_delete2(char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
-                            apr_pool_t *pool)
-    
-    ctypedef struct svn_wc_traversal_info_t
-
-    svn_error_t *svn_wc_crawl_revisions2(char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        svn_ra_reporter2_t *reporter,
-                        void *report_baton,
-                        svn_boolean_t restore_files,
-                        svn_boolean_t recurse,
-                        svn_boolean_t use_commit_times,
-                        svn_wc_notify_func2_t notify_func,
-                        void *notify_baton,
-                        svn_wc_traversal_info_t *traversal_info,
-                        apr_pool_t *pool)
-
-    svn_wc_traversal_info_t *svn_wc_init_traversal_info(apr_pool_t *pool)
-
-    svn_error_t *svn_wc_get_default_ignores(apr_array_header_t **patterns,
-                                        apr_hash_t *config,
-                                        apr_pool_t *pool)
-
-    svn_error_t *svn_wc_ensure_adm2(char *path, char *uuid, char *url,
-                                char *repos, svn_revnum_t revision,
-                                apr_pool_t *pool)
-
-    svn_error_t *svn_wc_get_update_editor2(svn_revnum_t *target_revision,
-                                       svn_wc_adm_access_t *anchor,
-                                       char *target,
-                                       svn_boolean_t use_commit_times,
-                                       svn_boolean_t recurse,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       char *diff3_cmd,
-                                       svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       svn_wc_traversal_info_t *ti,
-                                       apr_pool_t *pool)
-
-    svn_error_t *svn_wc_transmit_text_deltas2(char **tempfile,
-                                          unsigned char digest[],
-                                          char *path,
-                                          svn_wc_adm_access_t *adm_access,
-                                          svn_boolean_t fulltext,
-                                          svn_delta_editor_t *editor,
-                                          void *file_baton,
-                                          apr_pool_t *pool)
-
-    svn_error_t *svn_wc_transmit_prop_deltas(char *path,
-                                         svn_wc_adm_access_t *adm_access,
-                                         svn_wc_entry_t *entry,
-                                         svn_delta_editor_t *editor,
-                                         void *baton,
-                                         char **tempfile,
-                                         apr_pool_t *pool)
-    ctypedef struct svn_wc_entry_callbacks_t:
-        svn_error_t *(*found_entry)(char *path,
-                              svn_wc_entry_t *entry,
-                              void *walk_baton,
-                              apr_pool_t *pool)
-
-    svn_error_t *svn_wc_walk_entries2(char *path,
-                                  svn_wc_adm_access_t *adm_access,
-                                  svn_wc_entry_callbacks_t 
-                                  *walk_callbacks,
-                                  void *walk_baton,
-                                  svn_boolean_t show_hidden,
-                                  svn_cancel_func_t cancel_func,
-                                  void *cancel_baton,
-                                  apr_pool_t *pool)
 
 def version():
     """Get libsvn_wc version information.
@@ -324,15 +62,18 @@ class Entry:
         self.absent = absent
         self.incomplete = incomplete
 
-cdef py_entry(svn_wc_entry_t *entry):
-    if entry.uuid == NULL:
-        uuid = None
-    else:
-        uuid = entry.uuid
-    if entry.url == NULL:
-        url = None
-    else:
-        url = entry.url
+PyObject *py_entry(svn_wc_entry_t *entry)
+{
+    if (entry.uuid == NULL) {
+        uuid = Py_None;
+	} else {
+        uuid = PyString_FromString(entry.uuid);
+	}
+    if (entry.url == NULL) {
+        url = Py_None;
+	} else {
+        url = PyString_FromString(entry.url);
+	}
     if entry.repos == NULL:
         repos = None
     else:
@@ -346,7 +87,8 @@ cdef py_entry(svn_wc_entry_t *entry):
         ret.copyfrom_url = None
         ret.copyfrom_rev = -1
     # FIXME: entry.conflict_old, entry.conflict_new, entry.conflict_wrk, entry.prejfile, entry.text_time, entry.prop_time, entry.checksum, entry.cmt_date, entry.cmt_author, entry.lock_token, entry.lock_owner, entry.lock_comment, entry.lock_creation_date, entry.has_props, entry.has_prop_mods, entry.cachable_props, entry.present_props)
-    return ret
+    return ret;
+}
 
 cdef class WorkingCopy:
     cdef svn_wc_adm_access_t *adm
@@ -551,8 +293,10 @@ def revision_status(char *wc_path, trail_url=None, int committed=False, cancel_f
     apr_pool_destroy(temp_pool)
     return ret
 
-def is_normal_prop(char *name):
-    return svn_wc_is_normal_prop(name)
+PyObject *is_normal_prop(char *name)
+{
+    return svn_wc_is_normal_prop(name);
+}
 
 def is_wc_prop(char *name):
     return svn_wc_is_wc_prop(name)
@@ -593,29 +337,38 @@ cdef svn_error_t *py_ra_report_set_path(void *baton, char *path, long revision, 
     self.set_path(path, revision, start_empty, py_lock_token)
     return NULL
 
-cdef svn_error_t *py_ra_report_delete_path(void *baton, char *path, apr_pool_t *pool) except *:
-    self = <object>baton
-    self.delete_path(path)
-    return NULL
+svn_error_t *py_ra_report_delete_path(void *baton, char *path, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)baton;
+    self.delete_path(path);
+    return NULL;
+}
 
-cdef svn_error_t *py_ra_report_link_path(void *report_baton, char *path, char *url, long revision, int start_empty, char *lock_token, apr_pool_t *pool) except *:
-    self = <object>report_baton
-    if lock_token == NULL:
-        py_lock_token = None
-    else:
-        py_lock_token = lock_token
-    self.link_path(path, url, revision, start_empty, py_lock_token)
-    return NULL
+svn_error_t *py_ra_report_link_path(void *report_baton, char *path, char *url, long revision, int start_empty, char *lock_token, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)report_baton;
+    if (lock_token == NULL) {
+        py_lock_token = None;
+	} else { 
+        py_lock_token = PyString_FromString(lock_token);
+	}
+    self.link_path(path, url, revision, start_empty, py_lock_token);
+    return NULL;
+}
 
-cdef svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool) except *:
-    self = <object>baton
-    self.finish()
-    return NULL
+svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)baton;
+    self.finish();
+    return NULL;
+}
 
-cdef svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool) except *:
-    self = <object>baton
-    self.abort()
-    return NULL
+svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool)
+{
+    PyObject *self = (PyObject *)baton;
+    self.abort();
+    return NULL;
+}
 
 cdef svn_ra_reporter2_t py_ra_reporter
 py_ra_reporter.finish_report = py_ra_report_finish
@@ -624,24 +377,26 @@ py_ra_reporter.link_path = py_ra_report_link_path
 py_ra_reporter.delete_path = py_ra_report_delete_path
 py_ra_reporter.set_path = py_ra_report_set_path
 
-def get_default_ignores(config):
-    cdef apr_array_header_t *patterns
-    cdef apr_pool_t *pool
-    cdef char **pattern
-    cdef apr_hash_t *hash_config
-    pool = Pool(NULL)
-    hash_config = apr_hash_make(pool)
+PyObject *get_default_ignores(PyObject *config)
+{
+    apr_array_header_t *patterns
+    apr_pool_t *pool
+    char **pattern
+    apr_hash_t *hash_config
+    pool = Pool(NULL);
+    hash_config = apr_hash_make(pool);
     for k, v in config.items():
-        apr_hash_set(hash_config, <char *>k, len(k), <char *>v)
-    check_error(svn_wc_get_default_ignores(&patterns, hash_config, pool))
-    ret = []
-    pattern = <char **>apr_array_pop(patterns)
-    while pattern != NULL:
-        ret.append(pattern[0])
-        pattern = <char **>apr_array_pop(patterns)
-    apr_pool_destroy(pool)
-    return ret
-
+        apr_hash_set(hash_config, <char *>k, len(k), <char *>v);
+    check_error(svn_wc_get_default_ignores(&patterns, hash_config, pool));
+    ret = PyList_New();
+    pattern = <char **>apr_array_pop(patterns);
+    while (pattern != NULL) {
+        ret.append(pattern[0]);
+        pattern = <char **>apr_array_pop(patterns);
+	}
+    apr_pool_destroy(pool);
+    return ret;
+}
 
 def ensure_adm(char *path, char *uuid, char *url, repos=None, svn_revnum_t rev=-1):
     cdef apr_pool_t *pool
@@ -654,10 +409,17 @@ def ensure_adm(char *path, char *uuid, char *url, repos=None, svn_revnum_t rev=-
     check_error(svn_wc_ensure_adm2(path, uuid, url, c_repos, rev, pool))
     apr_pool_destroy(pool)
 
-def check_wc(char *path):
-    cdef apr_pool_t *pool
-    cdef int wc_format
-    pool = Pool(NULL)
+PyObject *check_wc(char *path)
+{
+    apr_pool_t *pool;
+    int wc_format;
+    pool = Pool(NULL);
     check_error(svn_wc_check_wc(path, &wc_format, pool))
-    apr_pool_destroy(pool)
-    return wc_format
+    apr_pool_destroy(pool);
+    return wc_format;
+}
+
+void initwc(void)
+{
+	apr_initialize();
+}

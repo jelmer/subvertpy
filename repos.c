@@ -16,57 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <Python.h>
+#include <apr_general.h>
+#include <svn_fs.h>
+#include <svn_repos.h>
 
 from apr cimport apr_pool_t, apr_hash_t, apr_pool_destroy
 from types cimport svn_error_t, svn_boolean_t, svn_cancel_func_t, svn_stream_t, svn_node_kind_t, svn_revnum_t, svn_filesize_t
 
 from core cimport Pool, check_error, new_py_stream, py_cancel_func
-
-cdef extern from "svn_fs.h":
-    ctypedef struct svn_fs_t
-    ctypedef struct svn_fs_root_t
-    svn_error_t *svn_fs_get_uuid(svn_fs_t *fs, char **uuid, apr_pool_t *pool)
-    svn_error_t *svn_fs_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root, char *path, apr_pool_t *pool)
-    svn_boolean_t svn_fs_is_txn_root(svn_fs_root_t *root)
-    svn_boolean_t svn_fs_is_revision_root(svn_fs_root_t *root)
-    svn_error_t *svn_fs_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
-    svn_error_t *svn_fs_revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
-    svn_error_t *svn_fs_make_dir(svn_fs_root_t *root, char *path, apr_pool_t *pool)
-    svn_error_t *svn_fs_delete(svn_fs_root_t *root, char *path, apr_pool_t *pool)
-    svn_error_t *svn_fs_copy(svn_fs_root_t *from_root, char *from_path, svn_fs_root_t *to_root, char *to_path, apr_pool_t *pool)
-    svn_error_t *svn_fs_file_length(svn_filesize_t *length_p, svn_fs_root_t *root, char *path, apr_pool_t *pool)
-    svn_error_t *svn_fs_file_md5_checksum(unsigned char digest[], svn_fs_root_t *root, char *path, apr_pool_t *pool)
-    svn_error_t *svn_fs_file_contents(svn_stream_t **contents, svn_fs_root_t *root, char *path, apr_pool_t *pool)
-    void svn_fs_close_root(svn_fs_root_t *root)
-
-
-cdef extern from "svn_repos.h":
-    ctypedef struct svn_repos_t
-    enum svn_repos_load_uuid:
-        svn_repos_load_uuid_default,
-        svn_repos_load_uuid_ignore,
-        svn_repos_load_uuid_force
-    svn_error_t *svn_repos_create(svn_repos_t **repos_p, 
-                              char *path,
-                              char *unused_1,
-                              char *unused_2,
-                              apr_hash_t *config,
-                              apr_hash_t *fs_config,
-                              apr_pool_t *pool)
-    svn_error_t *svn_repos_open(svn_repos_t **repos_p,
-                            char *path,
-                            apr_pool_t *pool)
-    svn_error_t *svn_repos_load_fs2(svn_repos_t *repos,
-                                svn_stream_t *dumpstream,
-                                svn_stream_t *feedback_stream,
-                                svn_repos_load_uuid uuid_action,
-                                char *parent_dir,
-                                svn_boolean_t use_pre_commit_hook,
-                                svn_boolean_t use_post_commit_hook,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *pool)
-    svn_fs_t *svn_repos_fs(svn_repos_t *repos)
 
 def create(path, config=None, fs_config=None):
     cdef svn_repos_t *repos
@@ -213,5 +171,5 @@ LOAD_UUID_FORCE = 2
 
 void initrepos(void)
 {
-
+	apr_initialize();
 }

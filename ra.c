@@ -15,6 +15,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <Python.h>
+#include <apr_general.h>
+#include <svn_types.h>
+#include <svn_ra.h>
  
 from apr cimport apr_pool_t, apr_pool_destroy, apr_palloc
 from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_set
@@ -28,213 +32,8 @@ from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
 from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_filesize_t, svn_dirent_t, svn_log_message_receiver_t
 from types cimport svn_stream_t, svn_auth_get_simple_provider, svn_auth_provider_object_t, svn_auth_get_ssl_server_trust_file_provider, svn_auth_get_ssl_client_cert_file_provider, svn_auth_get_ssl_client_cert_pw_file_provider, svn_auth_get_username_provider, svn_auth_get_username_prompt_provider, svn_auth_cred_username_t, svn_auth_get_simple_prompt_provider, svn_auth_cred_simple_t, svn_auth_get_ssl_server_trust_prompt_provider, svn_auth_ssl_server_cert_info_t, svn_auth_cred_ssl_server_trust_t, svn_boolean_t, svn_auth_get_ssl_client_cert_pw_prompt_provider, svn_auth_cred_ssl_client_cert_pw_t 
 
-apr_initialize()
-
-cdef extern from "Python.h":
-    object PyString_FromStringAndSize(char *, unsigned long)
-    void Py_INCREF(object)
-    void Py_DECREF(object)
-
-
-cdef extern from "svn_types.h":
-    ctypedef svn_error_t *(*svn_commit_callback2_t) (svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *
-
 cdef svn_error_t *py_commit_callback(svn_commit_info_t *commit_info, baton, apr_pool_t *pool) except *:
     baton(commit_info.revision, commit_info.date, commit_info.author)
-
-cdef extern from "svn_ra.h":
-    svn_version_t *svn_ra_version()
-
-    ctypedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress, 
-            apr_off_t total, void *baton, apr_pool_t *pool) except *
-
-    ctypedef svn_error_t *(*svn_ra_get_wc_prop_func_t)(void *baton,
-                                                  char *relpath,
-                                                  char *name,
-                                                  svn_string_t **value,
-                                                  apr_pool_t *pool) except *
-
-    ctypedef svn_error_t *(*svn_ra_set_wc_prop_func_t)(void *baton,
-                                                  char *path,
-                                                  char *name,
-                                                  svn_string_t *value,
-                                                  apr_pool_t *pool) except *
-
-    ctypedef svn_error_t *(*svn_ra_push_wc_prop_func_t)(void *baton,
-                                                   char *path,
-                                                   char *name,
-                                                   svn_string_t *value,
-                                                   apr_pool_t *pool) except *
-
-    ctypedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
-                                                          char *path,
-                                                          char *name,
-                                                          apr_pool_t *pool) except *
-
-    ctypedef struct svn_ra_callbacks2_t:
-        svn_error_t *(*open_tmp_file)(apr_file_t **fp, 
-                void *callback_baton, apr_pool_t *pool) except *
-        svn_auth_baton_t *auth_baton
-        svn_ra_get_wc_prop_func_t get_wc_prop
-        svn_ra_set_wc_prop_func_t set_wc_prop
-        svn_ra_push_wc_prop_func_t push_wc_prop
-        svn_ra_invalidate_wc_props_func_t invalidate_wc_props
-        svn_ra_progress_notify_func_t progress_func
-        void *progress_baton
-
-    svn_error_t *svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
-                            apr_pool_t *pool)
-
-    ctypedef struct svn_ra_session_t
-
-    svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
-                          char *repos_URL,
-                          svn_ra_callbacks2_t *callbacks,
-                          callback_baton,
-                          apr_hash_t *config,
-                          apr_pool_t *pool)
-
-    svn_error_t *svn_ra_reparent(svn_ra_session_t *ra_session, char *url, 
-            apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_latest_revnum(svn_ra_session_t *session,
-                                      long *latest_revnum,
-                                      apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_uuid(svn_ra_session_t *session,
-                             char **uuid,
-                             apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_repos_root(svn_ra_session_t *session,
-                             char **root,
-                             apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
-                                apr_array_header_t *paths,
-                                long start,
-                                long end,
-                                int limit,
-                                int discover_changed_paths,
-                                int strict_node_history,
-                                svn_log_message_receiver_t receiver,
-                                receiver_baton,
-                                apr_pool_t *pool)
-
-    svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
-                              svn_ra_reporter2_t **reporter,
-                              void **report_baton,
-                              long revision_to_update_to,
-                              char *update_target,
-                              int recurse,
-                              svn_delta_editor_t *update_editor,
-                              update_baton,
-                              apr_pool_t *pool)
-
-    svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
-                                      svn_ra_reporter2_t **reporter,
-                                      void **report_baton,
-                                      long revision_to_switch_to,
-                                      char *switch_target,
-                                      int recurse,
-                                      char *switch_url,
-                                      svn_delta_editor_t *switch_editor,
-                                      switch_baton,
-                                      apr_pool_t *pool)
-
-    svn_error_t *svn_ra_replay(svn_ra_session_t *session,
-                                   svn_revnum_t revision,
-                                   svn_revnum_t low_water_mark,
-                                   int send_deltas,
-                                   svn_delta_editor_t *editor,
-                                   edit_baton,
-                                   apr_pool_t *pool)
-
-    svn_error_t *svn_ra_rev_proplist(svn_ra_session_t *session,
-                                     svn_revnum_t rev,
-                                     apr_hash_t **props,
-                                     apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
-                                           svn_delta_editor_t **editor,
-                                           void **edit_baton,
-                                           char *log_msg,
-                                           svn_commit_callback2_t callback,
-                                           callback_baton,
-                                           apr_hash_t *lock_tokens,
-                                           int keep_locks,
-                                           apr_pool_t *pool)
-
-    svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
-                                    svn_revnum_t rev,
-                                    char *name,
-                                    svn_string_t *value,
-                                    apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
-                                 apr_hash_t **dirents,
-                                 svn_revnum_t *fetched_rev,
-                                 apr_hash_t **props,
-                                 char *path,
-                                 svn_revnum_t revision,
-                                 long dirent_fields,
-                                 apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_lock(svn_ra_session_t *session,
-                                 svn_lock_t **lock,
-                                 char *path,
-                                 apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_locks(svn_ra_session_t *session,
-                              apr_hash_t **locks,
-                              char *path,
-                              apr_pool_t *pool)
-
-    svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
-                                   char *path,
-                                   long revision,
-                                   svn_node_kind_t *kind,
-                                   apr_pool_t *pool)
-
-    svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
-                          int *has, char *capability, apr_pool_t *pool)
-
-    ctypedef svn_error_t *(*svn_ra_lock_callback_t)(baton, char *path,
-                                               int do_lock,
-                                               svn_lock_t *lock,
-                                               svn_error_t *ra_err,
-                                               apr_pool_t *pool) except *
-
-    svn_error_t * svn_ra_unlock(svn_ra_session_t *session,
-                  apr_hash_t *path_tokens,
-                  int break_lock,
-                  svn_ra_lock_callback_t lock_func,
-                  lock_baton,
-                  apr_pool_t *pool)
-
-    svn_error_t *svn_ra_lock(svn_ra_session_t *session,
-                apr_hash_t *path_revs,
-                char *comment,
-                int steal_lock,
-                svn_ra_lock_callback_t lock_func,
-                lock_baton,
-                apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
-                                  apr_hash_t **locations,
-                                  char *path,
-                                  svn_revnum_t peg_revision,
-                                  apr_array_header_t *location_revisions,
-                                  apr_pool_t *pool)
-
-    ctypedef svn_error_t *(*svn_ra_file_rev_handler_t) (void *baton, char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
-
-    svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
-                                  char *path,
-                                  svn_revnum_t start,
-                                  svn_revnum_t end,
-                                  svn_ra_file_rev_handler_t handler,
-                                  void *handler_baton,
-                                  apr_pool_t *pool)
 
 cdef pyify_lock(svn_lock_t *lock):
     return None # FIXME
@@ -1068,5 +867,5 @@ cdef new_editor(svn_delta_editor_t *editor, void *edit_baton, apr_pool_t *pool):
 
 void initra(void)
 {
-
+	apr_initialize();
 }
