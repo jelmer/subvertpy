@@ -24,6 +24,8 @@
 #include <svn_config.h>
 #include <svn_io.h>
 
+#include "util.h"
+
 PyAPI_DATA(PyTypeObject) SubversionExceptionType;
  
 svn_error_t *py_cancel_func(void *cancel_baton)
@@ -46,7 +48,7 @@ typedef struct {
 
 static PyObject *SubversionException_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-	const char *kwnames[] = { "msg", "num", NULL };
+	char *kwnames[] = { "msg", "num", NULL };
 	SubversionExceptionObject *ret;
 	/* FIXME */
 	ret = PyObject_New(SubversionExceptionObject, &SubversionExceptionType);
@@ -54,11 +56,6 @@ static PyObject *SubversionException_new(PyTypeObject *type, PyObject *args, PyO
 		return NULL;
 
 	return (PyObject *)ret;
-}
-
-void PyErr_SetSubversionException(svn_error_t *error)
-{
-	/* FIXME */
 }
 
 PyTypeObject SubversionExceptionType = {
@@ -69,35 +66,11 @@ PyTypeObject SubversionExceptionType = {
 	.tp_new = SubversionException_new,
 };
 
-static PyObject *wrap_lock(svn_lock_t *lock)
+PyObject *wrap_lock(svn_lock_t *lock)
 {
     return Py_BuildValue("(zzzbzz)", lock->path, lock->token, lock->owner, 
 						 lock->comment, lock->is_dav_comment, 
 						 lock->creation_date, lock->expiration_date);
-}
-
-bool check_error(svn_error_t *error)
-{
-    if (error != NULL) {
-		PyErr_SetSubversionException(error);
-   		return false;
-	}
-	return true;
-}
-
-apr_pool_t *Pool(apr_pool_t *parent)
-{
-    apr_status_t status;
-    apr_pool_t *ret;
-    char errmsg[1024];
-    ret = NULL;
-    status = apr_pool_create(&ret, parent);
-    if (status != 0) {
-        PyErr_SetString(PyExc_Exception, 
-						apr_strerror(status, errmsg, sizeof(errmsg)));
-		return NULL;
-	}
-    return ret;
 }
 
 /** Convert a UNIX timestamp to a Subversion CString. */
@@ -138,9 +111,9 @@ static PyObject *get_config(PyObject *self, PyObject *args)
     apr_hash_t *cfg_hash;
     apr_hash_index_t *idx;
     char *c_config_dir;
-    char *key;
+    const char *key;
     char *val;
-    long klen;
+    apr_ssize_t klen;
 	PyObject *config_dir = Py_None, *ret;
 
 	if (!PyArg_ParseTuple(args, "z", &config_dir))
@@ -159,7 +132,7 @@ static PyObject *get_config(PyObject *self, PyObject *args)
     ret = PyDict_New();
     for (idx = apr_hash_first(pool, cfg_hash); idx != NULL; 
 		 idx = apr_hash_next(idx)) {
-        apr_hash_this(idx, (void **)&key, &klen, (void **)&val);
+        apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
         PyDict_SetItemString(ret, key, PyString_FromString(val));
 	}
     apr_pool_destroy(pool);
@@ -183,60 +156,6 @@ apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l)
         *el = PyLong_AsLong(PyList_GetItem(l, i));
 	}
     return ret;
-}
-
-apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, PyObject *l)
-{
-    apr_array_header_t *ret;
-	int i;
-    if (l == Py_None) {
-        return NULL;
-	}
-    ret = apr_array_make(pool, PyList_Size(l), 4);
-	for (i = 0; i < PyList_Size(l); i++) {
-		char **el = (char **)apr_array_push(ret);
-        *el = PyString_AsString(PyList_GetItem(l, i));
-	}
-    return ret;
-}
-
-svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, long revision, char *author, char *date, char *message, apr_pool_t *pool)
-{
-    apr_hash_index_t *idx;
-    char *key;
-    long klen;
-    svn_log_changed_path_t *val;
-	PyObject *revprops, *py_changed_paths, *ret;
-
-    if (changed_paths == NULL) {
-        py_changed_paths = Py_None;
-	} else {
-        py_changed_paths = PyDict_New();
-        for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
-             idx = apr_hash_next(idx)) {
-            apr_hash_this(idx, (void **)&key, &klen, (void **)&val);
-			PyDict_SetItemString(py_changed_paths, key, 
-					Py_BuildValue("(czi)", val->action, val->copyfrom_path, 
-                                         val->copyfrom_rev));
-		}
-	}
-    revprops = PyDict_New();
-    if (message != NULL) {
-        PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, 
-							 PyString_FromString(message));
-	}
-    if (author != NULL) {
-        PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, 
-							 PyString_FromString(author));
-	}
-    if (date != NULL) {
-        PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, 
-							 PyString_FromString(date));
-	}
-    ret = PyObject_CallFunction((PyObject *)baton, "OiO", py_changed_paths, 
-								 revision, revprops);
-	/* FIXME: Handle ret != NULL */
-	return NULL;
 }
 
 static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length)
@@ -266,7 +185,7 @@ static svn_error_t *py_stream_close(void *baton)
 	return NULL;
 }
 
-static svn_stream_t *string_stream(apr_pool_t *pool, PyObject *text)
+svn_stream_t *string_stream(apr_pool_t *pool, PyObject *text)
 {
     svn_stringbuf_t *buf;
     buf = svn_stringbuf_ncreate(PyString_AsString(text), 
@@ -285,38 +204,19 @@ svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py)
     return stream;
 }
 
-PyObject *prop_hash_to_dict(apr_hash_t *props)
-{
-    char *key;
-    apr_hash_index_t *idx;
-    long klen;
-    svn_string_t *val;
-    apr_pool_t *pool;
-	PyObject *py_props;
-    if (props == NULL) {
-        return Py_None;
-	}
-    pool = Pool(NULL);
-    py_props = PyDict_New();
-    for (idx = apr_hash_first(pool, props); idx != NULL; 
-		 idx = apr_hash_next(idx)) {
-        apr_hash_this(idx, (void **)&key, &klen, (void **)&val);
-        PyDict_SetItemString(py_props, key, 
-							 PyString_FromStringAndSize(val->data, val->len));
-	}
-    apr_pool_destroy(pool);
-    return py_props;
-}
-
 static PyMethodDef core_methods[] = {
 	{ "get_config", get_config, METH_VARARGS, NULL },
 	{ "time_from_cstring", time_from_cstring, METH_VARARGS, NULL },
+	{ "time_to_cstring", time_to_cstring, METH_VARARGS, NULL },
 	{ NULL }
 };
 
 void initcore(void)
 {
 	PyObject *mod;
+
+	if (PyType_Ready(&SubversionExceptionType) < 0)
+		return;
 
 	apr_initialize();
 
@@ -328,4 +228,7 @@ void initcore(void)
 	PyModule_AddObject(mod, "NODE_FILE", PyInt_FromLong(svn_node_file));
 	PyModule_AddObject(mod, "NODE_UNKNOWN", PyInt_FromLong(svn_node_unknown));
 	PyModule_AddObject(mod, "NODE_NONE", PyInt_FromLong(svn_node_none));
+
+	PyModule_AddObject(mod, "SubversionException", (PyObject *)&SubversionExceptionType);
+	Py_INCREF(&SubversionExceptionType);
 }

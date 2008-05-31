@@ -22,6 +22,8 @@
 #include <svn_opt.h>
 #include <svn_client.h>
 
+#include "util.h"
+
 static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 {
     if (PyInt_Check(arg)) {
@@ -49,7 +51,7 @@ static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
     return false;
 }
      
-svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, apr_array_header_t *commit_items, void *baton, apr_pool_t *pool)
+svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const apr_array_header_t *commit_items, void *baton, apr_pool_t *pool)
 {
     PyObject *py_commit_items, *ret, *py_log_msg, *py_tmp_file;
     if (baton == Py_None)
@@ -327,7 +329,7 @@ static PyObject *client_revprop_set(PyObject *self, PyObject *args)
     PyObject *rev = Py_None;
     bool force = false;
     ClientObject *client = (ClientObject *)self;
-    char *propname, *propval, *url;
+    char *propname, *url;
     svn_revnum_t set_rev;
     svn_opt_revision_t c_rev;
     svn_string_t c_val;

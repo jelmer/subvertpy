@@ -20,18 +20,6 @@
 #include <svn_types.h>
 #include <svn_ra.h>
  
-from apr cimport apr_pool_t, apr_pool_destroy, apr_palloc
-from apr cimport apr_hash_t, apr_hash_make, apr_hash_index_t, apr_hash_first, apr_hash_next, apr_hash_this, apr_hash_set
-from apr cimport apr_array_header_t, apr_array_make, apr_array_push
-from apr cimport apr_file_t, apr_off_t, apr_size_t, apr_uint32_t
-from apr cimport apr_initialize, apr_pstrdup
-from core cimport check_error, Pool, wrap_lock, string_list_to_apr_array, py_svn_log_wrapper, new_py_stream, prop_hash_to_dict, py_svn_error, revnum_list_to_apr_array
-from core import SubversionException
-from constants import PROP_REVISION_LOG, PROP_REVISION_AUTHOR, PROP_REVISION_DATE
-from types cimport svn_error_t, svn_revnum_t, svn_string_t, svn_version_t
-from types cimport svn_string_ncreate, svn_lock_t, svn_auth_baton_t, svn_auth_open, svn_auth_set_parameter, svn_auth_get_parameter, svn_node_kind_t, svn_commit_info_t, svn_filesize_t, svn_dirent_t, svn_log_message_receiver_t
-from types cimport svn_stream_t, svn_auth_get_simple_provider, svn_auth_provider_object_t, svn_auth_get_ssl_server_trust_file_provider, svn_auth_get_ssl_client_cert_file_provider, svn_auth_get_ssl_client_cert_pw_file_provider, svn_auth_get_username_provider, svn_auth_get_username_prompt_provider, svn_auth_cred_username_t, svn_auth_get_simple_prompt_provider, svn_auth_cred_simple_t, svn_auth_get_ssl_server_trust_prompt_provider, svn_auth_ssl_server_cert_info_t, svn_auth_cred_ssl_server_trust_t, svn_boolean_t, svn_auth_get_ssl_client_cert_pw_prompt_provider, svn_auth_cred_ssl_client_cert_pw_t 
-
 svn_error_t *py_commit_callback(svn_commit_info_t *commit_info, baton, apr_pool_t *pool)
 {
     baton(commit_info.revision, commit_info.date, commit_info.author);
