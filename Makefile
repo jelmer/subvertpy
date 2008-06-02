@@ -8,7 +8,7 @@ PYLINT ?= pylint
 RST2HTML ?= rst2html
 TESTS ?= 
 
-all:: build README.html FAQ.html AUTHORS.html
+all:: build build-inplace README.html FAQ.html AUTHORS.html
 
 build::
 	$(SETUP) build

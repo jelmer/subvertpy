@@ -83,6 +83,12 @@ def check_rebase_version(min_version):
         raise RebaseNotPresent(e)
 
 
+def check_subversion_version():
+    try:
+        import core
+    except:
+        warning("Unable to load bzr-svn extensions - did you build it?")
+
 register_transport_proto('svn+ssh://', 
     help="Access using the Subversion smart server tunneled over SSH.")
 register_transport_proto('svn+file://', 
@@ -121,6 +127,7 @@ def lazy_check_versions():
         return
     versions_checked = True
     check_bzrlib_version(COMPATIBLE_BZR_VERSIONS)
+    check_subversion_version()
 
 optimizers_registered = False
 def lazy_register_optimizers():
