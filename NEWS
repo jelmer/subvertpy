@@ -1,5 +1,15 @@
 bzr-svn 0.4.11	UNRELEASED
 
+  CHANGES
+
+   * bzr-svn now comes with its own Python bindings for the Subversion 
+     libraries, removing the need for a unreleased version of Subversion and 
+	 improving performance.
+
+	 It does however mean the extensions have to be built. This requires 
+	 the Subversion development libraries and should be possible by 
+	 simply running ``make`` from the plugin directory.
+
   BUG FIXES
 
    * Raise appropriate errors when using annotate.
