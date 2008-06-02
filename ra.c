@@ -186,7 +186,7 @@ static void reporter_dealloc(PyObject *self)
 }
 
 PyTypeObject Reporter_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.Reporter",
 	.tp_methods = reporter_methods,
 	.tp_dealloc = reporter_dealloc,
@@ -225,7 +225,7 @@ typedef struct {
 } TxDeltaWindowHandlerObject;
 
 PyTypeObject TxDeltaWindowHandler_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.TxDeltaWindowHandler",
 	.tp_call = NULL, /* FIXME */
 };
@@ -282,7 +282,7 @@ static PyMethodDef py_file_editor_methods[] = {
 };
 
 PyTypeObject FileEditor_Type = { 
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.FileEditor",
 	.tp_methods = py_file_editor_methods,
 	.tp_dealloc = py_editor_dealloc,
@@ -447,7 +447,7 @@ static PyMethodDef py_dir_editor_methods[] = {
 };
 
 PyTypeObject DirectoryEditor_Type = { 
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.DirEditor",
 	.tp_methods = py_dir_editor_methods,
 	.tp_dealloc = py_editor_dealloc,
@@ -512,7 +512,7 @@ static PyMethodDef py_editor_methods[] = {
 };
 
 PyTypeObject Editor_Type = { 
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.Editor",
 	.tp_methods = py_editor_methods,
 	.tp_dealloc = py_editor_dealloc,
@@ -526,7 +526,7 @@ PyTypeObject Editor_Type = {
 PyObject *version(PyObject *self)
 {
     const svn_version_t *ver = svn_ra_version();
-    return Py_BuildValue("(iiii)", ver->major, ver->minor, 
+    return Py_BuildValue("(iiis)", ver->major, ver->minor, 
 						 ver->patch, ver->tag);
 }
 
@@ -774,7 +774,7 @@ static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnu
 typedef struct {
 	svn_ra_session_t *ra;
     apr_pool_t *pool;
-    PyObject *url;
+    char *url;
     PyObject *progress_func;
 	AuthObject *auth;
 } RemoteAccessObject;
@@ -782,7 +782,7 @@ typedef struct {
 static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	char *kwnames[] = { "url", "progress_cb", "auth", "config", NULL };
-	PyObject *url;
+	char *url;
 	PyObject *progress_cb = Py_None;
 	AuthObject *auth = (AuthObject *)Py_None;
 	PyObject *config = Py_None;
@@ -792,7 +792,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	Py_ssize_t idx = 0;
 	PyObject *key, *value;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOO", kwnames, &url, &progress_cb, (PyObject **)&auth, &config))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOO", kwnames, &url, &progress_cb, (PyObject **)&auth, &config))
 		return NULL;
 
 	ret = PyObject_New(RemoteAccessObject, &RemoteAccess_Type);
@@ -806,10 +806,9 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		Py_INCREF(auth);
 	}
 	
-	ret->url = url;
-	Py_INCREF(url);
     ret->auth = auth;
     ret->pool = Pool(NULL);
+	ret->url = apr_pstrdup(ret->pool, url);
 	if (!check_error(svn_ra_create_callbacks(&callbacks2, ret->pool))) {
 		apr_pool_destroy(ret->pool);
 		PyObject_Del(ret);
@@ -825,7 +824,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		apr_hash_set(config_hash, PyString_AsString(key), 
 					 PyString_Size(key), PyString_AsString(value));
 	}
-	if (!check_error(svn_ra_open2(&ret->ra, PyString_AsString(url), 
+	if (!check_error(svn_ra_open2(&ret->ra, url, 
 								  callbacks2, NULL, config_hash, ret->pool))) {
 		apr_pool_destroy(ret->pool);
 		PyObject_Del(ret);
@@ -1184,7 +1183,7 @@ static PyObject *has_capability(PyObject *self, PyObject *args)
 	char *capability;
 	apr_pool_t *temp_pool;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	int has;
+	int has = 0;
 
 	if (!PyArg_ParseTuple(args, "s", &capability))
 		return NULL;
@@ -1195,6 +1194,7 @@ static PyObject *has_capability(PyObject *self, PyObject *args)
 					  svn_ra_has_capability(ra->ra, &has, capability, temp_pool));
 #else
 	PyErr_SetNone(PyExc_NotImplementedError);
+	return NULL;
 #endif
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(has);
@@ -1361,7 +1361,6 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 static void ra_dealloc(PyObject *self)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	Py_DECREF(ra->url);
 	apr_pool_destroy(ra->pool);
 	Py_DECREF(ra->auth);
 }
@@ -1369,7 +1368,7 @@ static void ra_dealloc(PyObject *self)
 static PyObject *ra_repr(PyObject *self)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	return PyString_FromFormat("RemoteAccess(%s)", PyString_AsString(ra->url));
+	return PyString_FromFormat("RemoteAccess(%s)", ra->url);
 }
 
 static PyMethodDef ra_methods[] = {
@@ -1397,8 +1396,9 @@ static PyMethodDef ra_methods[] = {
 };
 
 PyTypeObject RemoteAccess_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.RemoteAccess",
+	.tp_basicsize = sizeof(RemoteAccessObject),
 	.tp_new = ra_new,
 	.tp_dealloc = ra_dealloc,
 	.tp_repr = ra_repr,
@@ -1418,7 +1418,7 @@ static void auth_provider_dealloc(PyObject *self)
 }
 
 PyTypeObject AuthProvider_Type = { 
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.AuthProvider",
 	.tp_dealloc = auth_provider_dealloc,
 };
@@ -1491,7 +1491,7 @@ static void auth_dealloc(PyObject *self)
 }
 
 PyTypeObject Auth_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_new = auth_init,
 	.tp_dealloc = auth_dealloc,
 	.tp_name = "ra.Auth",
@@ -1693,9 +1693,37 @@ static PyMethodDef ra_module_methods[] = {
 void initra(void)
 {
 	PyObject *mod;
+
+	if (PyType_Ready(&RemoteAccess_Type) < 0)
+		return;
+
+	if (PyType_Ready(&Editor_Type) < 0)
+		return;
+
+	if (PyType_Ready(&FileEditor_Type) < 0)
+		return;
+
+	if (PyType_Ready(&DirectoryEditor_Type) < 0)
+		return;
+
+	if (PyType_Ready(&Reporter_Type) < 0)
+		return;
+
+	if (PyType_Ready(&TxDeltaWindowHandler_Type) < 0)
+		return;
+
+	if (PyType_Ready(&Auth_Type) < 0)
+		return;
+
+	if (PyType_Ready(&AuthProvider_Type) < 0)
+		return;
+
 	apr_initialize();
 
 	mod = Py_InitModule3("ra", ra_module_methods, "Remote Access");
 	if (mod == NULL)
 		return;
+
+	PyModule_AddObject(mod, "RemoteAccess", (PyObject *)&RemoteAccess_Type);
+	Py_INCREF(&RemoteAccess_Type);
 }

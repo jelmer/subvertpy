@@ -47,10 +47,9 @@ static PyObject *SubversionException_new(PyTypeObject *type, PyObject *args, PyO
 }
 
 PyTypeObject SubversionExceptionType = {
-	PyObject_HEAD_INIT(&PyExc_BaseException) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "core.SubversionException",
 	.tp_basicsize = sizeof(SubversionExceptionObject),
-	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
 	.tp_new = SubversionException_new,
 };
 
@@ -145,7 +144,4 @@ void initcore(void)
 	PyModule_AddObject(mod, "NODE_FILE", PyInt_FromLong(svn_node_file));
 	PyModule_AddObject(mod, "NODE_UNKNOWN", PyInt_FromLong(svn_node_unknown));
 	PyModule_AddObject(mod, "NODE_NONE", PyInt_FromLong(svn_node_none));
-
-	PyModule_AddObject(mod, "SubversionException", (PyObject *)&SubversionExceptionType);
-	Py_INCREF(&SubversionExceptionType);
 }

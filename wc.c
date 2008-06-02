@@ -100,7 +100,7 @@ svn_ra_reporter2_t py_ra_reporter = {
 static PyObject *version(PyObject *self)
 {
     const svn_version_t *ver = svn_wc_version();
-    return Py_BuildValue("(iiii)", ver->major, ver->minor, 
+    return Py_BuildValue("(iiis)", ver->major, ver->minor, 
 						 ver->patch, ver->tag);
 }
 
@@ -135,7 +135,7 @@ static void entry_dealloc(PyObject *self)
 }
 
 PyTypeObject Entry_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "wc.Entry",
 	.tp_basicsize = sizeof(EntryObject),
 	.tp_dealloc = entry_dealloc,
@@ -260,7 +260,7 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 		return NULL;
 
 	temp_pool = Pool(admobj->pool);
-	check_error(svn_wc_entries_read(&entries, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entries_read(&entries, admobj->adm, 
 				 show_hidden, temp_pool));
 	py_entries = PyDict_New();
 	idx = apr_hash_first(temp_pool, entries);
@@ -332,11 +332,11 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 		return NULL;
 
 	temp_pool = Pool(admobj->pool);
-	check_error(svn_wc_get_prop_diffs(&propchanges, &original_props, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_prop_diffs(&propchanges, &original_props, 
 				path, admobj->adm, temp_pool));
 	py_propchanges = PyList_New(propchanges->nelts);
 	for (i = 0; i < propchanges->nelts; i++) {
-		el = (svn_prop_t *)propchanges->elts[i];
+		el = (svn_prop_t *)(propchanges->elts + (i * propchanges->elt_size));
 		PyList_SetItem(py_propchanges, i, 
 					   Py_BuildValue("(ss#)", el->name, el->value->data, el->value->len));
 	}
@@ -458,11 +458,14 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 
 	pool = Pool(NULL);
 	latest_revnum = (svn_revnum_t *)apr_palloc(pool, sizeof(svn_revnum_t));
-	check_error(svn_wc_get_update_editor2(latest_revnum, admobj->adm, target, 
+	if (!check_error(svn_wc_get_update_editor2(latest_revnum, admobj->adm, target, 
 				use_commit_times, recurse, py_wc_notify_func, (void *)notify_func, 
 				py_cancel_func, (void *)cancel_func, diff3_cmd, &editor, &edit_baton, 
-				NULL, pool));
-	return new_editor(editor, edit_baton, pool);
+				NULL, pool))) {
+		apr_pool_destroy(pool);
+		return NULL;
+	}
+	return new_editor_object(editor, edit_baton, pool, &Editor_Type);
 }
 
 static PyObject *adm_close(PyObject *self)
@@ -500,7 +503,7 @@ static PyMethodDef adm_methods[] = {
 };
 
 PyTypeObject Adm_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "wc.Adm",
 	.tp_basicsize = sizeof(AdmObject),
 	.tp_new = adm_init,
@@ -528,7 +531,7 @@ static PyObject *revision_status(PyObject *self, PyObject *args, PyObject *kwarg
 		return NULL;
 
     temp_pool = Pool(NULL);
-    check_error(svn_wc_revision_status(&revstatus, wc_path, trail_url,
+    RUN_SVN_WITH_POOL(temp_pool, svn_wc_revision_status(&revstatus, wc_path, trail_url,
                  committed, py_cancel_func, cancel_func, temp_pool));
     ret = Py_BuildValue("(llbb)", revstatus->min_rev, revstatus->max_rev, 
             revstatus->switched, revstatus->modified);
@@ -613,7 +616,7 @@ static PyObject *get_default_ignores(PyObject *self, PyObject *args)
     hash_config = apr_hash_make(pool);
 	while (PyDict_Next(config, &idx, &pyk, &pyv))
         apr_hash_set(hash_config, (char *)PyString_AsString(pyk), PyString_Size(pyk), (char *)PyString_AsString(pyv));
-    check_error(svn_wc_get_default_ignores(&patterns, hash_config, pool));
+    RUN_SVN_WITH_POOL(pool, svn_wc_get_default_ignores(&patterns, hash_config, pool));
     ret = PyList_New(patterns->nelts);
     pattern = (char **)apr_array_pop(patterns);
     while (pattern != NULL) {
@@ -677,6 +680,12 @@ void initwc(void)
 {
 	PyObject *mod;
 
+	if (PyType_Check(&Entry_Type) < 0)
+		return;
+
+	if (PyType_Check(&Adm_Type) < 0)
+		return;
+
 	apr_initialize();
 
 	mod = Py_InitModule3("wc", wc_methods, "Working Copies");
@@ -687,4 +696,7 @@ void initwc(void)
 	PyModule_AddObject(mod, "SCHEDULE_ADD", PyLong_FromLong(1));
 	PyModule_AddObject(mod, "SCHEDULE_DELETE", PyLong_FromLong(2));
 	PyModule_AddObject(mod, "SCHEDULE_REPLACE", PyLong_FromLong(3));
+
+	PyModule_AddObject(mod, "Adm", (PyObject *)&Adm_Type);
+	Py_INCREF(&Adm_Type);
 }

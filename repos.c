@@ -131,7 +131,7 @@ static PyMethodDef repos_methods[] = {
 };
 
 PyTypeObject Repository_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "repos.Repository",
 	.tp_dealloc = repos_dealloc,
 	.tp_methods = repos_methods,
@@ -142,6 +142,9 @@ void initrepos(void)
 {
 	PyObject *mod;
 
+	if (PyType_Ready(&Repository_Type) < 0)
+		return;
+
 	apr_initialize();
 
 	mod = Py_InitModule3("repos", repos_module_methods, "Local repository management");
@@ -151,4 +154,7 @@ void initrepos(void)
 	PyModule_AddObject(mod, "LOAD_UUID_DEFAULT", PyLong_FromLong(0));
 	PyModule_AddObject(mod, "LOAD_UUID_IGNORE", PyLong_FromLong(1));
 	PyModule_AddObject(mod, "LOAD_UUID_FORCE", PyLong_FromLong(2));
+
+	PyModule_AddObject(mod, "Repository", (PyObject *)&Repository_Type);
+	Py_INCREF(&Repository_Type);
 }

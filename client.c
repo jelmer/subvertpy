@@ -24,6 +24,8 @@
 
 #include "util.h"
 
+PyAPI_DATA(PyTypeObject) Client_Type;
+
 static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 {
     if (PyInt_Check(arg)) {
@@ -82,8 +84,6 @@ static PyObject *py_commit_info_tuple(svn_commit_info_t *ci)
         return Py_None;
     return Py_BuildValue("(izz)", ci->revision, ci->date, ci->author);
 }
-
-PyAPI_DATA(PyTypeObject) Client_Type;
 
 typedef struct {
     PyObject_HEAD
@@ -391,7 +391,7 @@ static PyMethodDef client_methods[] = {
 };
 
 PyTypeObject Client_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyObject_HEAD_INIT(&PyType_Type) 0,
     .tp_name = "client.Client",
     .tp_basicsize = sizeof(ClientObject),
     .tp_methods = client_methods,
