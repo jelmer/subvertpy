@@ -41,5 +41,6 @@ PyObject *wrap_lock(svn_lock_t *lock);
 apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l);
 svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py);
 PyObject *PyErr_NewSubversionException(svn_error_t *error);
+svn_error_t *py_cancel_func(void *cancel_baton);
 
 #endif /* _BZR_SVN_UTIL_H_ */

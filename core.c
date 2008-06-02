@@ -28,18 +28,6 @@
 
 PyAPI_DATA(PyTypeObject) SubversionExceptionType;
  
-svn_error_t *py_cancel_func(void *cancel_baton)
-{
-	PyObject *py_fn = (PyObject *)cancel_baton;
-    if (py_fn != Py_None) {
-        PyObject *ret = PyObject_CallFunction(py_fn, NULL);
-		if (PyBool_Check(ret) && ret == Py_True) {
-            return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
-		}
-	}
-    return NULL;
-}
-
 typedef struct {
 	PyObject_HEAD
 	char *msg;

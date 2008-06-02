@@ -214,3 +214,17 @@ svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py)
     svn_stream_set_close(stream, py_stream_close);
     return stream;
 }
+
+svn_error_t *py_cancel_func(void *cancel_baton)
+{
+	PyObject *py_fn = (PyObject *)cancel_baton;
+    if (py_fn != Py_None) {
+        PyObject *ret = PyObject_CallFunction(py_fn, NULL);
+		if (PyBool_Check(ret) && ret == Py_True) {
+            return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+		}
+	}
+    return NULL;
+}
+
+
