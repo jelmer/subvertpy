@@ -16,9 +16,24 @@
 """Subversion ra library tests."""
 
 from bzrlib.tests import TestCase
-import ra
+import wc
 
 class VersionTest(TestCase):
     def test_version_length(self):
-        self.assertEquals(4, len(ra.version()))
+        self.assertEquals(4, len(wc.version()))
 
+class WorkingCopyTests(TestCase):
+    def test_get_adm_dir(self):
+        self.assertEquals(".svn", wc.get_adm_dir())
+
+    def test_is_normal_prop(self):
+        self.assertTrue(wc.is_normal_prop("svn:ignore"))
+
+    def test_is_entry_prop(self):
+        self.assertTrue(wc.is_entry_prop("svn:entry:foo"))
+
+    def test_is_wc_prop(self):
+        self.assertTrue(wc.is_wc_prop("svn:wc:foo"))
+
+    def test_get_default_ignores(self):
+        self.assertIsInstance(wc.get_default_ignores({}), list)
