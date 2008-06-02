@@ -681,22 +681,22 @@ void initwc(void)
 {
 	PyObject *mod;
 
-	if (PyType_Check(&Entry_Type) < 0)
+	if (PyType_Ready(&Entry_Type) < 0)
 		return;
 
-	if (PyType_Check(&Adm_Type) < 0)
+	if (PyType_Ready(&Adm_Type) < 0)
 		return;
 
-	if (PyType_Check(&Editor_Type) < 0)
+	if (PyType_Ready(&Editor_Type) < 0)
 		return;
 
-	if (PyType_Check(&FileEditor_Type) < 0)
+	if (PyType_Ready(&FileEditor_Type) < 0)
 		return;
 
-	if (PyType_Check(&DirectoryEditor_Type) < 0)
+	if (PyType_Ready(&DirectoryEditor_Type) < 0)
 		return;
 
-	if (PyType_Check(&TxDeltaWindowHandler_Type) < 0)
+	if (PyType_Ready(&TxDeltaWindowHandler_Type) < 0)
 		return;
 
 	apr_initialize();

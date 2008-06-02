@@ -78,8 +78,11 @@ static PyObject *get_config(PyObject *self, PyObject *args)
     ret = PyDict_New();
     for (idx = apr_hash_first(pool, cfg_hash); idx != NULL; 
 		 idx = apr_hash_next(idx)) {
+		PyObject *data;
         apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-        PyDict_SetItemString(ret, key, PyString_FromString(val));
+		data = Py_None;	
+		/* FIXME data = PyString_FromString(val); */
+        PyDict_SetItemString(ret, key, data);
 	}
     apr_pool_destroy(pool);
     return ret;

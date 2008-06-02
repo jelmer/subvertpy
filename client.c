@@ -412,14 +412,14 @@ PyTypeObject Client_Type = {
     .tp_methods = client_methods,
     .tp_dealloc = client_dealloc,
     .tp_new = client_new,
-	.tp_getset = client_getset,
+	.tp_getset = client_getset
 };
 
 void initclient(void)
 {
     PyObject *mod;
 
-    if (PyType_Check(&Client_Type) < 0)
+    if (PyType_Ready(&Client_Type) < 0)
         return;
 
 	/* Make sure APR is initialized */
@@ -429,6 +429,6 @@ void initclient(void)
     if (mod == NULL)
         return;
 
-    PyModule_AddObject(mod, "Client", (PyObject *)&Client_Type);
     Py_INCREF(&Client_Type);
+    PyModule_AddObject(mod, "Client", (PyObject *)&Client_Type);
 }

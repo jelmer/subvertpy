@@ -1092,6 +1092,7 @@ static void auth_provider_dealloc(PyObject *self)
 PyTypeObject AuthProvider_Type = { 
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.AuthProvider",
+	.tp_basicsize = sizeof(AuthProviderObject),
 	.tp_dealloc = auth_provider_dealloc,
 };
 
