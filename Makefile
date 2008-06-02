@@ -21,7 +21,7 @@ install::
 
 clean::
 	$(SETUP) clean
-	rm -f *.c *.so
+	rm -f *.so
 
 TMP_PLUGINS_DIR = $(shell pwd)/.plugins
 

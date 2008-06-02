@@ -224,6 +224,12 @@ typedef struct {
 	void *txdelta_baton;
 } TxDeltaWindowHandlerObject;
 
+PyTypeObject TxDeltaWindowHandler_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "ra.TxDeltaWindowHandler",
+	.tp_call = NULL, /* FIXME */
+};
+
 static PyObject *py_file_editor_apply_textdelta(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
@@ -1184,8 +1190,12 @@ static PyObject *has_capability(PyObject *self, PyObject *args)
 		return NULL;
 	
 	temp_pool = Pool(ra->pool);
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_ra_has_capability(ra->ra, &has, capability, temp_pool));
+#else
+	PyErr_SetNone(PyExc_NotImplementedError);
+#endif
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(has);
 }

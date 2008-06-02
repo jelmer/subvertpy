@@ -129,6 +129,18 @@ typedef struct {
 	svn_wc_entry_t *entry;
 } EntryObject;
 
+static void entry_dealloc(PyObject *self)
+{
+	apr_pool_destroy(((EntryObject *)self)->pool);
+}
+
+PyTypeObject Entry_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "wc.Entry",
+	.tp_basicsize = sizeof(EntryObject),
+	.tp_dealloc = entry_dealloc,
+};
+
 static PyObject *py_entry(const svn_wc_entry_t *entry)
 {
 	EntryObject *ret = PyObject_New(EntryObject, &Entry_Type);
