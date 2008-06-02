@@ -22,6 +22,7 @@
 #include <stdbool.h>
 
 #include "util.h"
+#include "editor.h"
 
 PyAPI_DATA(PyTypeObject) Entry_Type;
 PyAPI_DATA(PyTypeObject) Adm_Type;
@@ -684,6 +685,18 @@ void initwc(void)
 		return;
 
 	if (PyType_Check(&Adm_Type) < 0)
+		return;
+
+	if (PyType_Check(&Editor_Type) < 0)
+		return;
+
+	if (PyType_Check(&FileEditor_Type) < 0)
+		return;
+
+	if (PyType_Check(&DirectoryEditor_Type) < 0)
+		return;
+
+	if (PyType_Check(&TxDeltaWindowHandler_Type) < 0)
 		return;
 
 	apr_initialize();

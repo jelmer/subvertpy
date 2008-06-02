@@ -80,7 +80,7 @@ static PyObject *time_from_cstring(PyObject *self, PyObject *args)
 		return NULL;
 
     pool = Pool(NULL);
-    check_error(svn_time_from_cstring(&when, data, pool));
+    RUN_SVN_WITH_POOL(pool, svn_time_from_cstring(&when, data, pool));
     apr_pool_destroy(pool);
     return PyLong_FromLong(when);
 }
@@ -94,17 +94,13 @@ static PyObject *get_config(PyObject *self, PyObject *args)
     const char *key;
     char *val;
     apr_ssize_t klen;
-	PyObject *config_dir = Py_None, *ret;
+	char *config_dir = NULL;
+	PyObject *ret;
 
-	if (!PyArg_ParseTuple(args, "z", &config_dir))
+	if (!PyArg_ParseTuple(args, "|z", &config_dir))
 		return NULL;
 
     pool = Pool(NULL);
-    if (config_dir == Py_None) {
-        c_config_dir = NULL;
-	} else {
-        c_config_dir = PyString_AsString(config_dir);
-	}
     if (check_error(svn_config_get_config(&cfg_hash, c_config_dir, pool))) {
 		apr_pool_destroy(pool);
 		return NULL;
@@ -144,4 +140,7 @@ void initcore(void)
 	PyModule_AddObject(mod, "NODE_FILE", PyInt_FromLong(svn_node_file));
 	PyModule_AddObject(mod, "NODE_UNKNOWN", PyInt_FromLong(svn_node_unknown));
 	PyModule_AddObject(mod, "NODE_NONE", PyInt_FromLong(svn_node_none));
+
+	PyModule_AddObject(mod, "SubversionException", (PyObject *)&SubversionExceptionType);
+	Py_INCREF(&SubversionExceptionType);
 }
