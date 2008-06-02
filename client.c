@@ -56,9 +56,18 @@ static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const apr_array_header_t *commit_items, void *baton, apr_pool_t *pool)
 {
     PyObject *py_commit_items, *ret, *py_log_msg, *py_tmp_file;
+	int i;
     if (baton == Py_None)
         return NULL;
     py_commit_items = PyList_New(commit_items->nelts);
+	if (py_commit_items == NULL)
+		return py_svn_error();
+	for (i = 0; i < commit_items->nelts; i++) {
+		svn_client_commit_item_t *commit_item = 
+			(svn_client_commit_item_t *)(commit_items->elts + i * commit_items->elt_size);
+		if (PyList_SetItem(py_commit_items, i, Py_BuildValue("(sizlzi)", commit_item->path, commit_item->kind, commit_item->url, commit_item->revision, commit_item->copyfrom_url, commit_item->state_flags)) != 0)
+			return py_svn_error();
+	}
     ret = PyObject_CallFunction(baton, "O", py_commit_items);
 	if (ret == NULL)
 		return py_svn_error();
@@ -309,11 +318,12 @@ static PyObject *client_update(PyObject *self, PyObject *args)
             recurse, ignore_externals, client->client, client->pool)))
         return NULL;
     ret = PyList_New(result_revs->nelts);
-    ret_rev = (svn_revnum_t *)apr_array_pop(result_revs);
-    while (ret_rev != NULL) {
-        PyList_SetItem(ret, i, PyLong_FromLong(*ret_rev));
-        i++;
-        ret_rev = (svn_revnum_t *)apr_array_pop(result_revs);
+	if (ret == NULL)
+		return NULL;
+	for (i = 0; i < result_revs->nelts; i++) {
+		ret_rev = (svn_revnum_t *)(result_revs->elts + (i * result_revs->elt_size));
+        if (PyList_SetItem(ret, i, PyLong_FromLong(*ret_rev)) != 0)
+			return NULL;
     }
     return ret;
 }

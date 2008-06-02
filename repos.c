@@ -205,6 +205,7 @@ PyTypeObject Repository_Type = {
 
 void initrepos(void)
 {
+	static apr_pool_t *pool;
 	PyObject *mod;
 
 	if (PyType_Ready(&Repository_Type) < 0)
@@ -214,6 +215,8 @@ void initrepos(void)
 		return;
 
 	apr_initialize();
+	pool = Pool(NULL);
+	svn_fs_initialize(pool);
 
 	mod = Py_InitModule3("repos", repos_module_methods, "Local repository management");
 	if (mod == NULL)

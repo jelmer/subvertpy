@@ -23,6 +23,7 @@
 #include <svn_time.h>
 #include <svn_config.h>
 #include <svn_io.h>
+#include <svn_utf.h>
 
 #include "util.h"
 
@@ -98,9 +99,12 @@ static PyMethodDef core_methods[] = {
 
 void initcore(void)
 {
+	static apr_pool_t *pool;
 	PyObject *mod;
 
 	apr_initialize();
+	pool = Pool(NULL);
+	svn_utf_initialize(pool);
 
 	mod = Py_InitModule3("core", core_methods, "Core functions");
 	if (mod == NULL)

@@ -1368,6 +1368,7 @@ static PyMethodDef ra_module_methods[] = {
 
 void initra(void)
 {
+	static apr_pool_t *pool;
 	PyObject *mod;
 
 	if (PyType_Ready(&RemoteAccess_Type) < 0)
@@ -1395,6 +1396,8 @@ void initra(void)
 		return;
 
 	apr_initialize();
+	pool = Pool(NULL);
+	svn_ra_initialize(pool);
 
 	mod = Py_InitModule3("ra", ra_module_methods, "Remote Access");
 	if (mod == NULL)
