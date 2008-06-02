@@ -25,6 +25,7 @@
 #include "util.h"
 
 PyAPI_DATA(PyTypeObject) Repository_Type;
+PyAPI_DATA(PyTypeObject) FileSystem_Type;
 
 typedef struct { 
 	PyObject_HEAD
@@ -90,6 +91,69 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	return (PyObject *)ret;
 }
 
+typedef struct {
+	PyObject_HEAD
+	RepositoryObject *repos;
+	apr_pool_t *pool;
+	svn_fs_t *fs;
+} FileSystemObject;
+
+static PyObject *repos_fs(PyObject *self)
+{
+	RepositoryObject *reposobj = (RepositoryObject *)self;
+	FileSystemObject *ret;
+	svn_fs_t *fs;
+
+	fs = svn_repos_fs(reposobj->repos);
+
+	ret = PyObject_New(FileSystemObject, &FileSystem_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->fs = fs;
+	ret->repos = reposobj;
+	ret->pool = reposobj->pool;
+	Py_INCREF(reposobj);
+
+	return (PyObject *)ret;
+}
+
+static PyObject *fs_get_uuid(PyObject *self)
+{
+	FileSystemObject *fsobj = (FileSystemObject *)self;
+	const char *uuid;
+	PyObject *ret;
+	apr_pool_t *temp_pool;
+
+	temp_pool = Pool(fsobj->pool);
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_get_uuid(fsobj->fs, &uuid, temp_pool));
+	ret = PyString_FromString(uuid);
+	apr_pool_destroy(temp_pool);
+
+	return ret;
+}
+
+static PyMethodDef fs_methods[] = {
+	{ "get_uuid", (PyCFunction)fs_get_uuid, METH_NOARGS, NULL },
+	{ NULL }
+};
+
+static void fs_dealloc(PyObject *self)
+{
+	FileSystemObject *fsobj = (FileSystemObject *)self;
+
+	Py_DECREF(fsobj->repos);
+	apr_pool_destroy(fsobj->pool);
+}
+
+PyTypeObject FileSystem_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "repos.FileSystem",
+	.tp_basicsize = sizeof(FileSystemObject),
+	.tp_dealloc = fs_dealloc,
+	.tp_methods = fs_methods,
+};
+
 static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	const char *parent_dir = "";
@@ -127,6 +191,7 @@ static PyMethodDef repos_module_methods[] = {
 
 static PyMethodDef repos_methods[] = {
 	{ "load_fs", (PyCFunction)repos_load_fs, METH_VARARGS|METH_KEYWORDS, NULL },
+	{ "fs", (PyCFunction)repos_fs, METH_NOARGS, NULL },
 	{ NULL }
 };
 
@@ -143,6 +208,9 @@ void initrepos(void)
 	PyObject *mod;
 
 	if (PyType_Ready(&Repository_Type) < 0)
+		return;
+
+	if (PyType_Ready(&FileSystem_Type) < 0)
 		return;
 
 	apr_initialize();

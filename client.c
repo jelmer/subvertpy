@@ -112,21 +112,32 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 static void client_dealloc(PyObject *self)
 {
     ClientObject *client = (ClientObject *)self;
+	if (client->client->log_msg_baton2 != NULL) {
+		Py_DECREF((PyObject *)client->client->log_msg_baton2);
+	}
     apr_pool_destroy(client->pool);
     client->pool = NULL;
 }
 
-static PyObject *client_set_log_msg_func(PyObject *self, PyObject *args)
+static PyObject *client_get_log_msg_func(PyObject *self, void *closure)
 {
-    PyObject *func;
     ClientObject *client = (ClientObject *)self;
-    if (!PyArg_ParseTuple(args, "O", &func))
-        return NULL;
-
     client->client->log_msg_func2 = py_log_msg_func2;
+    if (client->client->log_msg_baton2 == NULL)
+		return Py_None;
+	return client->client->log_msg_baton2;
+}
+
+static int client_set_log_msg_func(PyObject *self, PyObject *func, void *closure)
+{
+    ClientObject *client = (ClientObject *)self;
+    client->client->log_msg_func2 = py_log_msg_func2;
+	if (client->client->log_msg_baton2 != NULL) {
+		Py_DECREF((PyObject *)client->client->log_msg_baton2);
+	}
     client->client->log_msg_baton2 = (void *)func;
     Py_INCREF(func);
-    return Py_None;
+    return 0;
 }
 
 static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -374,7 +385,6 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyMethodDef client_methods[] = {
-    { "set_log_msg_func", client_set_log_msg_func, METH_VARARGS, NULL },
     { "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS, NULL },
     { "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS, NULL },
     { "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, NULL },
@@ -390,6 +400,11 @@ static PyMethodDef client_methods[] = {
     { NULL }
 };
 
+static PyGetSetDef client_getset[] = {
+	{ "log_msg_func", client_get_log_msg_func, client_set_log_msg_func, NULL },
+	{ NULL }
+};
+
 PyTypeObject Client_Type = {
     PyObject_HEAD_INIT(&PyType_Type) 0,
     .tp_name = "client.Client",
@@ -397,6 +412,7 @@ PyTypeObject Client_Type = {
     .tp_methods = client_methods,
     .tp_dealloc = client_dealloc,
     .tp_new = client_new,
+	.tp_getset = client_getset,
 };
 
 void initclient(void)

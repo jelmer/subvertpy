@@ -36,7 +36,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
     def setUp(self):
         super(TestCaseWithSubversionRepository, self).setUp()
         self.client_ctx = client.Client()
-        self.client_ctx.set_log_msg_func(self.log_message_func)
+        self.client_ctx.log_msg_func = self.log_message_func
 
     def log_message_func(self, items):
         return (self.next_message, None)

@@ -31,7 +31,7 @@ from errors import convert_svn_error, NoSvnRepositoryPresent
 import urlparse
 import urllib
 
-svn_config = core.get_config(None)
+svn_config = core.get_config()
 
 def get_client_string():
     """Return a string that can be send as part of the User Agent string."""

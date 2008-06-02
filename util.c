@@ -39,12 +39,18 @@ apr_pool_t *Pool(apr_pool_t *parent)
 
 PyObject *PyErr_NewSubversionException(svn_error_t *error)
 {
+
 	return NULL; /* FIXME */
 }
 
 void PyErr_SetSubversionException(svn_error_t *error)
 {
-	/* FIXME */
+	PyObject *excobj = PyImport_ImportModule("core.SubversionException");
+	
+	if (excobj == NULL)
+		abort();
+
+	PyErr_SetObject(excobj, Py_BuildValue("(si)", error->message, error->apr_err));
 }
 
 bool check_error(svn_error_t *error)

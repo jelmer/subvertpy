@@ -26,33 +26,6 @@
 
 #include "util.h"
 
-PyAPI_DATA(PyTypeObject) SubversionExceptionType;
- 
-typedef struct {
-	PyObject_HEAD
-	char *msg;
-	int num;
-} SubversionExceptionObject;
-
-static PyObject *SubversionException_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-	char *kwnames[] = { "msg", "num", NULL };
-	SubversionExceptionObject *ret;
-	/* FIXME */
-	ret = PyObject_New(SubversionExceptionObject, &SubversionExceptionType);
-	if (ret == NULL)
-		return NULL;
-
-	return (PyObject *)ret;
-}
-
-PyTypeObject SubversionExceptionType = {
-	PyObject_HEAD_INIT(&PyType_Type) 0,
-	.tp_name = "core.SubversionException",
-	.tp_basicsize = sizeof(SubversionExceptionObject),
-	.tp_new = SubversionException_new,
-};
-
 /** Convert a UNIX timestamp to a Subversion CString. */
 static PyObject *time_to_cstring(PyObject *self, PyObject *args)
 {
@@ -90,7 +63,6 @@ static PyObject *get_config(PyObject *self, PyObject *args)
     apr_pool_t *pool;
     apr_hash_t *cfg_hash;
     apr_hash_index_t *idx;
-    char *c_config_dir;
     const char *key;
     char *val;
     apr_ssize_t klen;
@@ -101,10 +73,8 @@ static PyObject *get_config(PyObject *self, PyObject *args)
 		return NULL;
 
     pool = Pool(NULL);
-    if (check_error(svn_config_get_config(&cfg_hash, c_config_dir, pool))) {
-		apr_pool_destroy(pool);
-		return NULL;
-	}
+    RUN_SVN_WITH_POOL(pool, 
+					  svn_config_get_config(&cfg_hash, config_dir, pool));
     ret = PyDict_New();
     for (idx = apr_hash_first(pool, cfg_hash); idx != NULL; 
 		 idx = apr_hash_next(idx)) {
@@ -127,9 +97,6 @@ void initcore(void)
 {
 	PyObject *mod;
 
-	if (PyType_Ready(&SubversionExceptionType) < 0)
-		return;
-
 	apr_initialize();
 
 	mod = Py_InitModule3("core", core_methods, "Core functions");
@@ -141,6 +108,6 @@ void initcore(void)
 	PyModule_AddObject(mod, "NODE_UNKNOWN", PyInt_FromLong(svn_node_unknown));
 	PyModule_AddObject(mod, "NODE_NONE", PyInt_FromLong(svn_node_none));
 
-	PyModule_AddObject(mod, "SubversionException", (PyObject *)&SubversionExceptionType);
-	Py_INCREF(&SubversionExceptionType);
+	PyModule_AddObject(mod, "SubversionException", 
+					   PyErr_NewException("core.SubversionException", NULL, NULL));
 }
