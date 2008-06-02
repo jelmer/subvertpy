@@ -32,13 +32,19 @@ $(TMP_PLUGINS_DIR)/svn: $(TMP_PLUGINS_DIR)
 	ln -sf .. $@
 
 check:: build-inplace $(TMP_PLUGINS_DIR)/svn 
-	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(DEBUGGER) $(PYTHON) $(BZR) selftest $(TEST_OPTIONS) --starting-with=bzrlib.plugins.svn $(TESTS)
+	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(DEBUGGER) $(PYTHON) $(PYTHON_OPTIONS) $(BZR) selftest $(TEST_OPTIONS) --starting-with=bzrlib.plugins.svn $(TESTS)
 
 check-verbose::
 	$(MAKE) check TEST_OPTIONS=-v
 
 check-one::
 	$(MAKE) check TEST_OPTIONS=--one
+
+check-random::
+	$(MAKE) check TEST_OPTIONS="--random=now --verbose --one"
+
+valgrind-check:: 
+	$(MAKE) check DEBUGGER="valgrind --suppressions=/usr/lib/valgrind/python.supp $(VALGRIND_OPTIONS)"
 
 show-plugins::
 	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(BZR) plugins
