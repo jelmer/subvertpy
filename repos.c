@@ -21,125 +21,250 @@
 #include <svn_fs.h>
 #include <svn_repos.h>
 
-from apr cimport apr_pool_t, apr_hash_t, apr_pool_destroy
-from types cimport svn_error_t, svn_boolean_t, svn_cancel_func_t, svn_stream_t, svn_node_kind_t, svn_revnum_t, svn_filesize_t
+typedef struct { 
+	PyObject_HEAD
+    apr_pool_t *pool;
+    svn_repos_t *repos;
+} RepositoryObject;
 
-from core cimport Pool, check_error, new_py_stream, py_cancel_func
+static PyObject *repos_create(PyObject *self, PyObject *args)
+{
+	char *path;
+	PyObject *config=Py_None, *fs_config=Py_None;
+    svn_repos_t *repos;
+    apr_pool_t *pool;
+    apr_hash_t *hash_config, *hash_fs_config;
+	RepositoryObject *ret;
 
-def create(path, config=None, fs_config=None):
-    cdef svn_repos_t *repos
-    cdef apr_pool_t *pool
-    cdef apr_hash_t *hash_config, *hash_fs_config
-    pool = Pool(NULL)
-    hash_config = NULL # FIXME
-    hash_fs_config = NULL # FIXME
-    check_error(svn_repos_create(&repos, path, "", "", 
-                hash_config, hash_fs_config, pool))
-    apr_pool_destroy(pool)
-    return Repository(path)
+	if (!PyArg_ParseTuple(args, "s|OO", &path, &config, &fs_config))
+		return NULL;
 
-cdef class Repository:
-    cdef apr_pool_t *pool
-    cdef svn_repos_t *repos
-    def __init__(self, path):
-        self.pool = Pool(NULL)
-        check_error(svn_repos_open(&self.repos, path, self.pool))
+    pool = Pool(NULL);
+    hash_config = NULL; /* FIXME */
+    hash_fs_config = NULL; /* FIXME */
+    RUN_SVN_WITH_POOL(pool, svn_repos_create(&repos, path, "", "", 
+                hash_config, hash_fs_config, pool));
 
-    def __dealloc__(self):
-        apr_pool_destroy(self.pool)
+	ret = PyObject_New(RepositoryObject, &Repository_Type);
+	if (ret == NULL)
+		return NULL;
 
-    def load_fs(self, dumpstream, feedback_stream, uuid_action,
-                parent_dir="", use_pre_commit_hook=False, 
-                use_post_commit_hook=False,
-                cancel_func=None):
-        cdef apr_pool_t *temp_pool
-        temp_pool = Pool(self.pool)
-        check_error(svn_repos_load_fs2(self.repos, 
-                    new_py_stream(temp_pool, dumpstream), 
-                    new_py_stream(temp_pool, feedback_stream),
-                    uuid_action, parent_dir, use_pre_commit_hook, 
-                    use_post_commit_hook, py_cancel_func, <void *>cancel_func,
-                    self.pool))
-        apr_pool_destroy(temp_pool)
+	ret->pool = pool;
+	ret->repos = repos;
 
-    def fs(self):
-        return FileSystem(self)
+    return ret;
+}
 
-cdef class FileSystemRoot:
-    cdef svn_fs_root_t *root
-    cdef apr_pool_t *pool
+static void repos_dealloc(PyObject *self)
+{
+	RepositoryObject *repos = (RepositoryObject *)self;
 
-    def __dealloc__(self):
-        if self.pool != NULL:
-            apr_pool_destroy(self.pool)
+	apr_pool_destroy(repos->pool);
+}
 
-    def check_path(self, char *path):
-        cdef svn_node_kind_t kind
-        cdef apr_pool_t *pool
-        pool = Pool(NULL)
-        check_error(svn_fs_check_path(&kind, self.root, path, pool))
-        apr_pool_destroy(pool)
-        return kind
+static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+	char *path;
+	char *kwnames[] = { "path", NULL };
+	RepositoryObject *ret;
 
-    def make_dir(self, char *path):
-        cdef apr_pool_t *pool
-        pool = Pool(self.pool)
-        check_error(svn_fs_make_dir(self.root, path, pool))
-        apr_pool_destroy(pool)
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwnames, &path))
+		return NULL;
 
-    def delete(self, char *path):
-        cdef apr_pool_t *pool
-        pool = Pool(self.pool)
-        check_error(svn_fs_delete(self.root, path, pool))
-        apr_pool_destroy(pool)
+	ret = PyObject_New(RepositoryObject, &Repository_Type);
+	if (ret == NULL)
+		return NULL;
 
-    def copy(self, char *from_path, FileSystemRoot to_root, char *to_path):
-        cdef apr_pool_t *pool
-        pool = Pool(self.pool)
-        check_error(svn_fs_copy(self.root, from_path, to_root.root, to_path, pool))
-        apr_pool_destroy(pool)
+	ret->pool = Pool(NULL);
+    if (!check_error(svn_repos_open(&self.repos, path, self.pool))) {
+		apr_pool_destroy(ret->pool);
+		PyObject_Del(ret);
+		return NULL;
+	}
+}
 
-    def file_length(self, char *path):
-        cdef apr_pool_t *pool
-        cdef svn_filesize_t length
-        pool = Pool(self.pool)
-        check_error(svn_fs_file_length(&length, self.root, path, pool))
-        apr_pool_destroy(pool)
-        return length
+static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	const char *parent_dir = "";
+	PyObject *dumpstream, *feedback_stream, *cancel_func = Py_None;
+	bool use_pre_commit_hook = false, use_post_commit_hook = false;
+	char *kwnames[] = { "dumpstream", "feedback_stream", "uuid_action",
+		                "parent_dir", "use_pre_commit_hook", 
+						"use_post_commit_hook", "cancel_func", NULL };
+	apr_pool_t *temp_pool;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOi|sbbO", kwnames,
+								&dumpstream, &feedback_stream, &uuid_action,
+								&parent_dir, &use_pre_commit_hook, 
+								&use_post_commit_hook,
+								&cancel_func))
+		return NULL;
 
-    def file_md5_checksum(self, char *path):
-        cdef char digest[64]
-        cdef apr_pool_t *pool
-        pool = Pool(NULL)
-        check_error(svn_fs_file_md5_checksum(<unsigned char*>digest, self.root, path, pool))
-        ret = digest
-        apr_pool_destroy(pool)
-        return ret
+	temp_pool = Pool(self.pool);
+	RUN_SVN_WITH_POOL(temp_pool, svn_repos_load_fs2(self.repos, 
+				new_py_stream(temp_pool, dumpstream), 
+				new_py_stream(temp_pool, feedback_stream),
+				uuid_action, parent_dir, use_pre_commit_hook, 
+				use_post_commit_hook, py_cancel_func, (void *)cancel_func,
+				self.pool));
+	apr_pool_destroy(temp_pool);
+	return Py_None;
+}
 
-    def file_contents(self, char *path):
-        cdef apr_pool_t *pool
-        cdef svn_stream_t *stream
-        pool = Pool(self.pool)
-        check_error(svn_fs_file_contents(&stream, self.root, path, pool))
-        apr_pool_destroy(pool)
-        return None # FIXME
+static PyObject *repos_fs(PyObject *self)
+{
+	FileSystemObject *ret = PyObject_New(FileSystemObject, &FileSystem_Type);
 
-    def is_txn_root(self):
-        return svn_fs_is_txn_root(self.root)
+	if (ret == NULL)
+		return NULL;
 
-    def is_revision_root(self):
-        return svn_fs_is_revision_root(self.root)
+	ret->fs = svn_repos_fs(self->repos);
+    ret->pool = Pool(self->pool);
+	return (PyObject *)ret;
+}
 
-    def close(self):
-        svn_fs_close_root(self.root)
+typedef struct { 
+	PyObject_HEAD
+    svn_fs_root_t *root;
+    apr_pool_t *pool;
+} FileSystemRootObject;
 
+static void fsroot_dealloc(PyObject *obj)
+{
+	FileSystemRootObject *fsroot = (FileSystemRootObject *)obj;
+	apr_pool_destroy(fsroot->pool);
+}
 
-cdef class FileSystem:
-    cdef svn_fs_t *fs
-    cdef apr_pool_t *pool
-    def __init__(self, Repository repos):
-        self.fs = svn_repos_fs(repos.repos)
-        self.pool = Pool(repos.pool)
+static PyObject *repos_check_path(PyObject *self, PyObject *args)
+{
+	char *path;
+	svn_node_kind_t kind;
+	apr_pool_t *pool;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	pool = Pool(NULL);
+	RUN_SVN_WITH_POOL(pool, svn_fs_check_path(&kind, self.root, path, pool));
+	apr_pool_destroy(pool)
+	return kind;
+}
+
+static PyObject *repos_make_dir(PyObject *self, PyObject *args)
+{
+	char *path;
+	apr_pool_t *pool;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	pool = Pool(self.pool);
+	RUN_SVN_WITH_POOL(pool, svn_fs_make_dir(self.root, path, pool));
+	apr_pool_destroy(pool);
+
+	return Py_None;
+}
+
+static PyObject *repos_delete(PyObject *self, PyObject *args)
+{
+	char *path;
+	apr_pool_t *pool
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+    pool = Pool(self.pool);
+   	RUN_SVN_WITH_POOL(pool, svn_fs_delete(self.root, path, pool));
+	apr_pool_destroy(pool);
+
+	return Py_None;
+}
+
+static PyObject *repos_copy(PyObject *self, PyObject *args)
+{
+	char *from_path;
+	PyObject *to_root; 
+	char *to_path;
+    apr_pool_t *pool
+
+	if (!PyArg_ParseTuple(args, "sOs", &from_path, &to_root, &to_path))
+		return NULL;
+
+    pool = Pool(self.pool)
+    RUN_SVN_WITH_POOL(pool, 
+		svn_fs_copy(self.root, from_path, to_root.root, to_path, pool));
+	apr_pool_destroy(pool);
+	
+	return Py_None;
+}
+
+static PyObject *repos_file_length(PyObject *self, PyObject *args)
+{
+	char *path;
+    apr_pool_t *pool;
+	svn_filesize_t length;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	pool = Pool(self.pool);
+	RUN_SVN_WITH_POOL(pool, svn_fs_file_length(&length, self.root, path, pool));
+	apr_pool_destroy(pool);
+	return PyLong_FromLong(length);
+}
+
+static PyObject *repos_file_md5_checksum(PyObject *self, PyObject *args)
+{
+	char *path;
+	char digest[64];
+	apr_pool_t *pool;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	pool = Pool(NULL);
+	RUN_SVN_WITH_POOL(pool, 
+		svn_fs_file_md5_checksum((unsigned char*)digest, self.root, path, pool));
+	ret = PyString_FromStringAndSize(digest, 64);
+	apr_pool_destroy(pool);
+	return ret;
+}
+
+static PyObject *repos_file_contents(PyObject *self, PyObject *args)
+{
+    apr_pool_t *pool;
+    svn_stream_t *stream;
+	char *path;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	pool = Pool(self.pool);
+	RUN_SVN_WITH_POOL(pool, svn_fs_file_contents(&stream, self.root, path, pool));
+    apr_pool_destroy(pool);
+	return Py_None; /* FIXME */
+}
+
+static PyObject *repos_is_txn_root(PyObject *self)
+{
+	return PyBool_FromLong(svn_fs_is_txn_root(self.root));
+}
+
+static PyObject *repos_is_revision_root(PyObject *self)
+{
+	return PyBool_FromLong(svn_fs_is_revision_root(self.root));
+}
+
+static PyObject *repos_close(PyObject *self)
+{
+	return svn_fs_close_root(self.root);
+}
+
+typedef struct {
+	PyObject_HEAD
+    svn_fs_t *fs;
+    apr_pool_t *pool;
+} FileSystemObject;
+
 
     def __dealloc__(self):
         apr_pool_destroy(self.pool)
@@ -164,12 +289,15 @@ cdef class FileSystem:
         check_error(svn_fs_revision_root(&ret.root, self.fs, rev, ret.pool))
         return ret
 
-
-LOAD_UUID_DEFAULT = 0
-LOAD_UUID_IGNORE = 1
-LOAD_UUID_FORCE = 2
-
 void initrepos(void)
 {
 	apr_initialize();
+
+	mod = Py_InitModule3("repos", NULL, "Local repository management");
+	if (mod == NULL)
+		return;
+
+	PyModule_AddObject(mod, "LOAD_UUID_DEFAULT", PyLong_FromLong(0));
+	PyModule_AddObject(mod, "LOAD_UUID_IGNORE", PyLong_FromLong(1));
+	PyModule_AddObject(mod, "LOAD_UUID_FORCE", PyLong_FromLong(2));
 }

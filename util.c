@@ -37,6 +37,11 @@ apr_pool_t *Pool(apr_pool_t *parent)
     return ret;
 }
 
+PyObject *PyErr_NewSubversionException(svn_error_t *error)
+{
+	return NULL; /* FIXME */
+}
+
 void PyErr_SetSubversionException(svn_error_t *error)
 {
 	/* FIXME */

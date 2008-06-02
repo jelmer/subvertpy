@@ -30,6 +30,7 @@ PyAPI_DATA(PyTypeObject) Reporter_Type;
 PyAPI_DATA(PyTypeObject) RemoteAccess_Type;
 PyAPI_DATA(PyTypeObject) Auth_Type;
 PyAPI_DATA(PyTypeObject) AuthProvider_Type;
+PyAPI_DATA(PyTypeObject) TxDeltaWindowHandler_Type;
 
 typedef struct {
 	PyObject_HEAD
@@ -50,18 +51,18 @@ svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, void *bato
 	return NULL;
 }
 
-PyObject *pyify_lock(svn_lock_t *lock)
+PyObject *pyify_lock(const svn_lock_t *lock)
 {
     return Py_None; /* FIXME */
 }
 
 svn_error_t *py_lock_func (void *baton, const char *path, int do_lock, 
-                           svn_lock_t *lock, svn_error_t *ra_err, 
+                           const svn_lock_t *lock, svn_error_t *ra_err, 
                            apr_pool_t *pool)
 {
     PyObject *py_ra_err = Py_None, *ret;
     if (ra_err != NULL) {
-        py_ra_err = SubversionException(ra_err.apr_err, ra_err.message);
+        py_ra_err = PyErr_NewSubversionException(ra_err);
 	}
     ret = PyObject_CallFunction((PyObject *)baton, "zbOO", path, do_lock, 
 						  pyify_lock(lock), py_ra_err);
@@ -138,7 +139,7 @@ static PyObject *reporter_link_path(PyObject *self, PyObject *args)
 	PyObject *lock_token = Py_None;
 	ReporterObject *reporter = (ReporterObject *)self;
 
-	if (!PyArg_ParseTuple(args, "sslb|O", &path, &url, &start_empty, &lock_token))
+	if (!PyArg_ParseTuple(args, "sslb|O", &path, &url, &revision, &start_empty, &lock_token))
 		return NULL;
 
 	if (!check_error(reporter->reporter->link_path(reporter->report_baton, path, url, 
@@ -184,6 +185,13 @@ static void reporter_dealloc(PyObject *self)
 	apr_pool_destroy(reporter->pool);
 }
 
+PyTypeObject Reporter_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "ra.Reporter",
+	.tp_methods = reporter_methods,
+	.tp_dealloc = reporter_dealloc,
+};
+
 typedef struct {
 	PyObject_HEAD
     const svn_delta_editor_t *editor;
@@ -202,22 +210,37 @@ static PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton
 	return (PyObject *)obj;
 }
 
+static void py_editor_dealloc(PyObject *self)
+{
+	EditorObject *editor = (EditorObject *)self;
+	apr_pool_destroy(editor->pool);
+}
+
+
+
+typedef struct {
+	PyObject_HEAD
+	svn_txdelta_window_handler_t txdelta_handler;
+	void *txdelta_baton;
+} TxDeltaWindowHandlerObject;
+
 static PyObject *py_file_editor_apply_textdelta(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
 	char *c_base_checksum = NULL;
 	svn_txdelta_window_handler_t txdelta_handler;
 	void *txdelta_baton;
+	TxDeltaWindowHandlerObject *py_txdelta;
 	if (!PyArg_ParseTuple(args, "|z", &c_base_checksum))
 		return NULL;
 	if (!check_error(editor->editor->apply_textdelta(editor->baton,
 				c_base_checksum, editor->pool, 
 				&txdelta_handler, &txdelta_baton)))
 		return NULL;
-	py_txdelta = TxDeltaWindowHandler()
-	py_txdelta.txdelta = txdelta_handler;
-	py_txdelta.txbaton = txdelta_baton;
-	return py_txdelta;
+	py_txdelta = PyObject_New(TxDeltaWindowHandlerObject, &TxDeltaWindowHandler_Type);
+	py_txdelta->txdelta_handler = txdelta_handler;
+	py_txdelta->txdelta_baton = txdelta_baton;
+	return (PyObject *)py_txdelta;
 }
 
 static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
@@ -250,6 +273,13 @@ static PyMethodDef py_file_editor_methods[] = {
 	{ "close", py_file_editor_close, METH_VARARGS, NULL },
 	{ "apply_textdelta", py_file_editor_apply_textdelta, METH_VARARGS, NULL },
 	{ NULL }
+};
+
+PyTypeObject FileEditor_Type = { 
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "ra.FileEditor",
+	.tp_methods = py_file_editor_methods,
+	.tp_dealloc = py_editor_dealloc,
 };
 
 static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
@@ -312,6 +342,8 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &c_value.len))
 		return NULL;
+
+	p_c_value = &c_value;
 
 	if (!check_error(editor->editor->change_dir_prop(editor->baton, name, 
                     p_c_value, editor->pool)))
@@ -408,6 +440,13 @@ static PyMethodDef py_dir_editor_methods[] = {
 	{ NULL }
 };
 
+PyTypeObject DirectoryEditor_Type = { 
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "ra.DirEditor",
+	.tp_methods = py_dir_editor_methods,
+	.tp_dealloc = py_editor_dealloc,
+};
+
 static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
 {
 	int target_revision;
@@ -466,11 +505,12 @@ static PyMethodDef py_editor_methods[] = {
 	{ NULL }
 };
 
-static void py_editor_dealloc(PyObject *self)
-{
-	EditorObject *editor = (EditorObject *)self;
-	apr_pool_destroy(editor->pool);
-}
+PyTypeObject Editor_Type = { 
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "ra.Editor",
+	.tp_methods = py_editor_methods,
+	.tp_dealloc = py_editor_dealloc,
+};
 
 /**
  * Get libsvn_ra version information.
@@ -1023,7 +1063,7 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
     apr_pool_t *temp_pool;
  	svn_string_t *val_string;
 
-	if (!PyArg_ParseTuple(args, "ss#", &name, &value, &vallen))
+	if (!PyArg_ParseTuple(args, "lss#", &rev, &name, &value, &vallen))
 		return NULL;
 	temp_pool = Pool(ra->pool);
 	val_string = svn_string_ncreate(value, vallen, temp_pool);
@@ -1123,7 +1163,7 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 	svn_node_kind_t kind;
     apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "sl", &path, revision))
+	if (!PyArg_ParseTuple(args, "sl", &path, &revision))
 		return NULL;
 	temp_pool = Pool(ra->pool);
     RUN_SVN_WITH_POOL(temp_pool, 
@@ -1322,6 +1362,39 @@ static PyObject *ra_repr(PyObject *self)
 	return PyString_FromFormat("RemoteAccess(%s)", PyString_AsString(ra->url));
 }
 
+static PyMethodDef ra_methods[] = {
+	{ "get_file_revs", ra_get_file_revs, METH_VARARGS, NULL },
+	{ "get_locations", ra_get_locations, METH_VARARGS, NULL },
+	{ "get_locks", ra_get_locks, METH_VARARGS, NULL },
+	{ "lock", ra_lock, METH_VARARGS, NULL },
+	{ "unlock", ra_unlock, METH_VARARGS, NULL },
+	{ "has_capability", has_capability, METH_VARARGS, NULL },
+	{ "check_path", ra_check_path, METH_VARARGS, NULL },
+	{ "get_lock", ra_get_lock, METH_VARARGS, NULL },
+	{ "get_dir", ra_get_dir, METH_VARARGS, NULL },
+	{ "change_rev_prop", ra_change_rev_prop, METH_VARARGS, NULL },
+	{ "get_commit_editor", (PyCFunction)get_commit_editor, METH_VARARGS|METH_KEYWORDS, NULL },
+	{ "rev_proplist", ra_rev_proplist, METH_VARARGS, NULL },
+	{ "replay", ra_replay, METH_VARARGS, NULL },
+	{ "do_switch", ra_do_switch, METH_VARARGS, NULL },
+	{ "do_update", ra_do_update, METH_VARARGS, NULL },
+	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_VARARGS|METH_NOARGS, NULL },
+	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, NULL },
+	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, NULL },
+	{ "reparent", ra_reparent, METH_VARARGS, NULL },
+	{ "get_uuid", (PyCFunction)ra_get_uuid, METH_NOARGS, NULL },
+	{ NULL }
+};
+
+PyTypeObject RemoteAccess_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "ra.RemoteAccess",
+	.tp_new = ra_new,
+	.tp_dealloc = ra_dealloc,
+	.tp_repr = ra_repr,
+	.tp_methods = ra_methods,
+};
+
 typedef struct { 
 	PyObject_HEAD
     apr_pool_t *pool;
@@ -1334,6 +1407,11 @@ static void auth_provider_dealloc(PyObject *self)
 	apr_pool_destroy(auth_provider->pool);
 }
 
+PyTypeObject AuthProvider_Type = { 
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "ra.AuthProvider",
+	.tp_dealloc = auth_provider_dealloc,
+};
 
 static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
@@ -1402,6 +1480,14 @@ static void auth_dealloc(PyObject *self)
 	Py_DECREF(auth->providers);	
 }
 
+PyTypeObject Auth_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_new = auth_init,
+	.tp_dealloc = auth_dealloc,
+	.tp_name = "ra.Auth",
+	.tp_methods = auth_methods,
+};
+
 static svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *baton, const char *realm, int may_save, apr_pool_t *pool)
 {
     PyObject *fn = (PyObject *)baton, *ret;
@@ -1448,13 +1534,13 @@ static PyObject *get_simple_prompt_provider(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "Oi", &prompt_func, &retry_limit))
 		return NULL;
 
-    auth = AuthProviderObject();
+    auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
     auth->pool = Pool(NULL);
     svn_auth_get_simple_prompt_provider (&auth->provider, py_simple_prompt, (void *)prompt_func, retry_limit, auth->pool);
     return (PyObject *)auth;
 }
 
-static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred, void *baton, const char *realm, apr_uint32_t failures, svn_auth_ssl_server_cert_info_t *cert_info, svn_boolean_t may_save, apr_pool_t *pool)
+static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred, void *baton, const char *realm, apr_uint32_t failures, const svn_auth_ssl_server_cert_info_t *cert_info, svn_boolean_t may_save, apr_pool_t *pool)
 {
     PyObject *fn = (PyObject *)baton;
 	PyObject *ret;
@@ -1568,12 +1654,13 @@ static PyObject *txdelta_send_stream(PyObject *self, PyObject *args)
 {
     unsigned char digest[16];
     apr_pool_t *pool = Pool(NULL);
-	PyObject *stream, *handler;
+	PyObject *stream;
+	TxDeltaWindowHandlerObject *py_txdelta;
 
-	if (!PyArg_ParseTuple(args, "OO", &stream, &handle))
+	if (!PyArg_ParseTuple(args, "OO", &stream, &py_txdelta))
 		return NULL;
 
-    if (!check_error(svn_txdelta_send_stream(new_py_stream(pool, stream), handler.txdelta, handler.txbaton, (unsigned char *)digest, pool))) {
+    if (!check_error(svn_txdelta_send_stream(new_py_stream(pool, stream), py_txdelta->txdelta_handler, py_txdelta->txdelta_baton, (unsigned char *)digest, pool))) {
 		apr_pool_destroy(pool);
 		return NULL;
 	}
@@ -1581,10 +1668,15 @@ static PyObject *txdelta_send_stream(PyObject *self, PyObject *args)
     return PyString_FromStringAndSize((char *)digest, 16);
 }
 
-static PyMethodDef ra_methods[] = {
+static PyMethodDef ra_module_methods[] = {
 	{ "version", (PyCFunction)version, METH_NOARGS, NULL },
+	{ "txdelta_send_stream", (PyCFunction)txdelta_send_stream, METH_VARARGS, NULL },
 	{ "get_ssl_client_cert_pw_file_provider", (PyCFunction)get_ssl_client_cert_pw_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_client_cert_file_provider", (PyCFunction)get_ssl_client_cert_file_provider, METH_NOARGS, NULL },
+	{ "get_ssl_server_trust_file_provider", (PyCFunction)get_ssl_server_trust_file_provider, METH_NOARGS, NULL },
+	{ "get_simple_provider", (PyCFunction)get_simple_provider, METH_NOARGS, NULL },
+	{ "get_username_prompt_provider", (PyCFunction)get_username_prompt_provider, METH_VARARGS, NULL },
+	{ "get_simple_prompt_provider", (PyCFunction)get_simple_prompt_provider, METH_VARARGS, NULL },
 	{ NULL }
 };
 
@@ -1593,7 +1685,7 @@ void initra(void)
 	PyObject *mod;
 	apr_initialize();
 
-	mod = Py_InitModule3("ra", ra_methods, "Remote Access");
+	mod = Py_InitModule3("ra", ra_module_methods, "Remote Access");
 	if (mod == NULL)
 		return;
 }
