@@ -21,6 +21,14 @@
 #include <apr_general.h>
 #include <svn_error.h>
 #include <svn_io.h>
+#include <apr_errno.h>
+#include <svn_error_codes.h>
+
+#include "util.h"
+
+#define BZR_SVN_APR_ERROR_OFFSET (APR_OS_START_USERERR + \
+								  (50 * SVN_ERR_CATEGORY_SIZE))
+
 
 apr_pool_t *Pool(apr_pool_t *parent)
 {
@@ -39,8 +47,7 @@ apr_pool_t *Pool(apr_pool_t *parent)
 
 PyObject *PyErr_NewSubversionException(svn_error_t *error)
 {
-
-	return NULL; /* FIXME */
+	return Py_BuildValue("(si)", error->message, error->apr_err);
 }
 
 void PyErr_SetSubversionException(svn_error_t *error)
@@ -55,11 +62,14 @@ void PyErr_SetSubversionException(svn_error_t *error)
 
 bool check_error(svn_error_t *error)
 {
-    if (error != NULL) {
-		PyErr_SetSubversionException(error);
-   		return false;
-	}
-	return true;
+    if (error == NULL)
+		return true;
+
+	if (error->apr_err == BZR_SVN_APR_ERROR_OFFSET)
+		return false; /* Just let Python deal with it */
+
+	PyErr_SetSubversionException(error);
+	return false;
 }
 
 apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, PyObject *l)
@@ -135,13 +145,14 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, long rev
 	}
     ret = PyObject_CallFunction((PyObject *)baton, "OiO", py_changed_paths, 
 								 revision, revprops);
-	/* FIXME: Handle ret != NULL */
+	if (ret == NULL)
+		return py_svn_error();
 	return NULL;
 }
 
-svn_error_t *py_svn_error(void)
+svn_error_t *py_svn_error()
 {
-	return NULL; /* FIXME */
+	return svn_error_create(BZR_SVN_APR_ERROR_OFFSET, NULL, "Error occured in python bindings");
 }
 
 PyObject *wrap_lock(svn_lock_t *lock)
