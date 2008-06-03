@@ -35,7 +35,7 @@ static PyObject *time_to_cstring(PyObject *self, PyObject *args)
 	apr_time_t when;
 	if (!PyArg_ParseTuple(args, "l", &when))
 		return NULL;
-    pool = Pool(NULL);
+    pool = Pool();
 	if (pool == NULL)
 		return NULL;
     ret = PyString_FromString(svn_time_to_cstring(when, pool));
@@ -53,7 +53,9 @@ static PyObject *time_from_cstring(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &data))
 		return NULL;
 
-    pool = Pool(NULL);
+    pool = Pool();
+	if (pool == NULL)
+		return NULL;
     RUN_SVN_WITH_POOL(pool, svn_time_from_cstring(&when, data, pool));
     apr_pool_destroy(pool);
     return PyLong_FromLong(when);
@@ -73,7 +75,9 @@ static PyObject *get_config(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "|z", &config_dir))
 		return NULL;
 
-    pool = Pool(NULL);
+    pool = Pool();
+	if (pool == NULL)
+		return NULL;
     RUN_SVN_WITH_POOL(pool, 
 					  svn_config_get_config(&cfg_hash, config_dir, pool));
     ret = PyDict_New();
@@ -103,7 +107,9 @@ void initcore(void)
 	PyObject *mod;
 
 	apr_initialize();
-	pool = Pool(NULL);
+	pool = Pool();
+	if (pool == NULL)
+		return;
 	svn_utf_initialize(pool);
 
 	mod = Py_InitModule3("core", core_methods, "Core functions");

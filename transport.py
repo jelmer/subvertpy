@@ -180,14 +180,6 @@ class Connection(object):
     def get_lock(self, path):
         return self._ra.get_lock(path)
 
-    class SvnLock(object):
-        def __init__(self, transport, tokens):
-            self._tokens = tokens
-            self._transport = transport
-
-        def unlock(self):
-            self.transport.unlock(self.locks)
-
     @convert_svn_error
     def unlock(self, locks, break_lock=False):
         def lock_cb(baton, path, do_lock, lock, ra_err):

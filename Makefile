@@ -46,6 +46,9 @@ check-random::
 valgrind-check:: 
 	$(MAKE) check DEBUGGER="valgrind --suppressions=/usr/lib/valgrind/python.supp $(VALGRIND_OPTIONS)"
 
+gdb-check::
+	$(MAKE) check DEBUGGER="gdb --args $(GDB_OPTIONS)"
+
 show-plugins::
 	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(BZR) plugins
 

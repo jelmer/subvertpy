@@ -20,7 +20,7 @@
 #ifndef _BZR_SVN_UTIL_H_
 #define _BZR_SVN_UTIL_H_
 
-apr_pool_t *Pool(apr_pool_t *parent);
+__attribute__((warn_unused_result)) apr_pool_t *Pool(void);
 __attribute__((warn_unused_result)) bool check_error(svn_error_t *error);
 apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, PyObject *l);
 PyObject *prop_hash_to_dict(apr_hash_t *props);

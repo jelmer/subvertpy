@@ -112,7 +112,9 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
     if (ret == NULL)
         return NULL;
 
-    ret->pool = Pool(NULL);
+    ret->pool = Pool();
+	if (ret->pool == NULL)
+		return NULL;
     if (!check_error(svn_client_create_context(&ret->client, ret->pool)))
         return NULL;
     return (PyObject *)ret;

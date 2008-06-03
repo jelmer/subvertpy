@@ -30,13 +30,13 @@
 								  (50 * SVN_ERR_CATEGORY_SIZE))
 
 
-apr_pool_t *Pool(apr_pool_t *parent)
+apr_pool_t *Pool()
 {
     apr_status_t status;
     apr_pool_t *ret;
     char errmsg[1024];
     ret = NULL;
-    status = apr_pool_create(&ret, parent);
+    status = apr_pool_create(&ret, NULL);
     if (status != 0) {
         PyErr_SetString(PyExc_Exception, 
 						apr_strerror(status, errmsg, sizeof(errmsg)));
@@ -98,7 +98,9 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
     if (props == NULL) {
         return Py_None;
 	}
-    pool = Pool(NULL);
+    pool = Pool();
+	if (pool == NULL)
+		return NULL;
     py_props = PyDict_New();
     for (idx = apr_hash_first(pool, props); idx != NULL; 
 		 idx = apr_hash_next(idx)) {
