@@ -93,6 +93,8 @@ char *c_lock_token(PyObject *py_lock_token)
 	}
 }
 
+#define RA_UNBUSY(pool, ra) ra->busy = false;
+
 typedef struct {
 	PyObject_HEAD
     const svn_ra_reporter2_t *reporter;
@@ -467,6 +469,7 @@ typedef struct {
     PyObject *progress_func;
 	AuthObject *auth;
 	bool busy;
+	PyObject *unbusy_handler;
 } RemoteAccessObject;
 
 static bool ra_check_busy(RemoteAccessObject *raobj)
@@ -570,9 +573,8 @@ static PyObject *ra_get_uuid(PyObject *self)
     temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_get_uuid(ra->ra, &uuid, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	ret = PyString_FromString(uuid);
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -594,9 +596,8 @@ static PyObject *ra_reparent(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_reparent(ra->ra, url, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
@@ -616,10 +617,9 @@ static PyObject *ra_get_latest_revnum(PyObject *self)
     temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, 
 				  svn_ra_get_latest_revnum(ra->ra, &latest_revnum, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
     apr_pool_destroy(temp_pool);
     return PyInt_FromLong(latest_revnum);
 }
@@ -658,12 +658,11 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_get_log(ra->ra, 
             apr_paths, start, end, limit,
             discover_changed_paths, strict_node_history, py_svn_log_wrapper, 
             callback, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
     apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
@@ -683,10 +682,9 @@ static PyObject *ra_get_repos_root(PyObject *self)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_ra_get_repos_root(ra->ra, &root, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	apr_pool_destroy(temp_pool);
 	return PyString_FromString(root);
 }
@@ -712,7 +710,6 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_do_update(ra->ra, &reporter, 
 												  &report_baton, 
 												  revision_to_update_to, 
@@ -751,7 +748,6 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_do_switch(
 						ra->ra, &reporter, &report_baton, 
 						revision_to_update_to, update_target, 
@@ -784,13 +780,12 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
     RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_ra_replay(ra->ra, revision, low_water_mark,
 									send_deltas, &py_editor, update_editor, 
 									temp_pool));
 	apr_pool_destroy(temp_pool);
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 
 	Py_RETURN_NONE;
 }
@@ -811,10 +806,9 @@ static PyObject *ra_rev_proplist(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_ra_rev_proplist(ra->ra, rev, &props, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	py_props = prop_hash_to_dict(props);
 	apr_pool_destroy(temp_pool);
 	return py_props;
@@ -859,7 +853,6 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		return NULL;
 	}
 
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_get_commit_editor2(ra->ra, &editor, 
 		&edit_baton, 
 		PyString_AsString(PyDict_GetItemString(revprops, SVN_PROP_REVISION_LOG)), py_commit_callback, 
@@ -887,11 +880,10 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	val_string = svn_string_ncreate(value, vallen, temp_pool);
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_ra_change_rev_prop(ra->ra, rev, name, val_string, 
 											 temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
@@ -925,10 +917,9 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 	if (revision != SVN_INVALID_REVNUM)
 		fetch_rev = revision;
 
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_get_dir2(ra->ra, &dirents, &fetch_rev, &props,
                      path, revision, dirent_fields, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 
 	if (dirents == NULL) {
 		py_dirents = Py_None;
@@ -983,10 +974,9 @@ static PyObject *ra_get_lock(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, 
 				  svn_ra_get_lock(ra->ra, &lock, path, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	apr_pool_destroy(temp_pool);
 	return wrap_lock(lock);
 }
@@ -1007,11 +997,10 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
     RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_ra_check_path(ra->ra, path, revision, &kind, 
                      temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	apr_pool_destroy(temp_pool);
 	return PyInt_FromLong(kind);
 }
@@ -1033,10 +1022,9 @@ static PyObject *ra_has_capability(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_ra_has_capability(ra->ra, &has, capability, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(has);
 #else
@@ -1067,10 +1055,9 @@ static PyObject *ra_unlock(PyObject *self, PyObject *args)
 	while (PyDict_Next(path_tokens, &idx, &k, &v)) {
 		apr_hash_set(hash_path_tokens, PyString_AsString(k), PyString_Size(k), (char *)PyString_AsString(v));
 	}
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_unlock(ra->ra, hash_path_tokens, break_lock,
                      py_lock_func, lock_func, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 
     apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
@@ -1110,10 +1097,9 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 		apr_hash_set(hash_path_revs, PyString_AsString(k), PyString_Size(k), 
 					 PyString_AsString(v));
 	}
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_lock(ra->ra, hash_path_revs, comment, steal_lock,
                      py_lock_func, lock_func, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	apr_pool_destroy(temp_pool);
 	return NULL;
 }
@@ -1139,9 +1125,8 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_get_locks(ra->ra, &hash_locks, path, temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 
     ret = PyDict_New();
 	for (idx = apr_hash_first(temp_pool, hash_locks); idx != NULL;
@@ -1177,12 +1162,11 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
     temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	ra->busy = true;
     RUN_SVN_WITH_POOL(temp_pool, svn_ra_get_locations(ra->ra, &hash_locations,
                     path, peg_revision, 
                     revnum_list_to_apr_array(temp_pool, location_revisions),
                     temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 	ret = PyDict_New();
 
     for (idx = apr_hash_first(temp_pool, hash_locations); idx != NULL; 
@@ -1212,11 +1196,10 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-	ra->busy = true;
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_get_file_revs(ra->ra, path, start, end, 
 				py_file_rev_handler, (void *)file_rev_handler, 
                     temp_pool));
-	ra->busy = false;
+	RA_UNBUSY(temp_pool, ra);
 
 	apr_pool_destroy(temp_pool);
 
@@ -1236,7 +1219,13 @@ static PyObject *ra_repr(PyObject *self)
 	return PyString_FromFormat("RemoteAccess(%s)", ra->url);
 }
 
+static PyObject *ra_set_unbusy_handler(PyObject *self, PyObject *args)
+{
+	Py_RETURN_NONE; /* FIXME */
+}
+
 static PyMethodDef ra_methods[] = {
+	{ "set_unbusy_handler", ra_set_unbusy_handler, METH_VARARGS, NULL },
 	{ "get_file_revs", ra_get_file_revs, METH_VARARGS, NULL },
 	{ "get_locations", ra_get_locations, METH_VARARGS, NULL },
 	{ "get_locks", ra_get_locks, METH_VARARGS, NULL },
