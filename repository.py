@@ -19,7 +19,8 @@ import bzrlib
 from bzrlib import osutils, ui, urlutils, xml5
 from bzrlib.branch import Branch, BranchCheckResult
 from bzrlib.errors import (InvalidRevisionId, NoSuchRevision, NotBranchError, 
-                           UninitializableFormat, UnrelatedBranches)
+                           UninitializableFormat, UnrelatedBranches, 
+                           NotWriteLocked)
 from bzrlib.graph import CachingParentsProvider
 from bzrlib.inventory import Inventory
 from bzrlib.lockable_files import LockableFiles, TransportLock
@@ -782,3 +783,13 @@ class SvnRepository(Repository):
         else:
             assert False
 
+    def abort_write_group(self):
+        self._write_group = None
+
+    def commit_write_group(self):
+        self._write_group = None
+
+    def start_write_group(self):
+        if not self.is_write_locked():
+            raise NotWriteLocked(self)
+        self._write_group = None 

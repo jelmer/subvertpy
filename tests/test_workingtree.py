@@ -335,7 +335,13 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.build_tree({"dc/bl": "data"})
         tree = self.open_checkout("dc")
         self.assertEqual([], tree.pending_merges())
- 
+
+    def test_get_parent_ids(self):
+        self.make_client('a', 'dc')
+        self.build_tree({"dc/bl": "data"})
+        tree = self.open_checkout("dc")
+        self.assertEqual([Branch.open('a').last_revision()], tree.get_parent_ids()) 
+
     def test_delta(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
