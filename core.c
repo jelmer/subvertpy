@@ -33,7 +33,7 @@ static PyObject *time_to_cstring(PyObject *self, PyObject *args)
 	PyObject *ret;
     apr_pool_t *pool;
 	apr_time_t when;
-	if (!PyArg_ParseTuple(args, "l", &when))
+	if (!PyArg_ParseTuple(args, "L", &when))
 		return NULL;
     pool = Pool();
 	if (pool == NULL)
@@ -58,7 +58,7 @@ static PyObject *time_from_cstring(PyObject *self, PyObject *args)
 		return NULL;
     RUN_SVN_WITH_POOL(pool, svn_time_from_cstring(&when, data, pool));
     apr_pool_destroy(pool);
-    return PyLong_FromLong(when);
+    return PyLong_FromLongLong(when);
 }
 
 typedef struct {

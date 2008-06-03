@@ -637,7 +637,7 @@ static PyObject *get_default_ignores(PyObject *self, PyObject *args)
     apr_pool_t *pool;
     char **pattern;
     apr_hash_t *hash_config;
-	apr_ssize_t idx;
+	apr_ssize_t idx = 0;
 	int i = 0;
 	PyObject *pyk, *pyv, *config;
 	PyObject *ret;

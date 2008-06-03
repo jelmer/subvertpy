@@ -243,6 +243,7 @@ def test_suite():
             'test_changes',
             'test_checkout',
             'test_client',
+            'test_core',
             'test_commit',
             'test_config',
             'test_convert',
