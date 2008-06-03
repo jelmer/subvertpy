@@ -84,15 +84,6 @@ void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, apr_pool
 	/* TODO: What to do with exceptions raised here ? */
 }
 
-char *c_lock_token(PyObject *py_lock_token)
-{
-    if (py_lock_token == Py_None) {
-        return NULL;
-    } else {
-        return PyString_AsString(py_lock_token);
-	}
-}
-
 #define RA_UNBUSY(pool, ra) ra->busy = false;
 
 typedef struct {
@@ -108,7 +99,7 @@ static PyObject *reporter_set_path(PyObject *self, PyObject *args)
 	char *path; 
 	svn_revnum_t revision; 
 	bool start_empty; 
-	PyObject *lock_token = Py_None;
+	char *lock_token = NULL;
 	ReporterObject *reporter = (ReporterObject *)self;
 
 	if (!PyArg_ParseTuple(args, "slb|z", &path, &revision, &start_empty, 
@@ -117,7 +108,7 @@ static PyObject *reporter_set_path(PyObject *self, PyObject *args)
 
     if (!check_error(reporter->reporter->set_path(reporter->report_baton, 
 												  path, revision, start_empty, 
-					 c_lock_token(lock_token), reporter->pool)))
+					 lock_token, reporter->pool)))
 		return NULL;
 
 	Py_RETURN_NONE;
@@ -142,14 +133,14 @@ static PyObject *reporter_link_path(PyObject *self, PyObject *args)
 	char *path, *url;
 	svn_revnum_t revision;
 	bool start_empty;
-	PyObject *lock_token = Py_None;
+	char *lock_token = NULL;
 	ReporterObject *reporter = (ReporterObject *)self;
 
-	if (!PyArg_ParseTuple(args, "sslb|O", &path, &url, &revision, &start_empty, &lock_token))
+	if (!PyArg_ParseTuple(args, "sslb|z", &path, &url, &revision, &start_empty, &lock_token))
 		return NULL;
 
 	if (!check_error(reporter->reporter->link_path(reporter->report_baton, path, url, 
-				revision, start_empty, c_lock_token(lock_token), reporter->pool)))
+				revision, start_empty, lock_token, reporter->pool)))
 		return NULL;
 
 	Py_RETURN_NONE;

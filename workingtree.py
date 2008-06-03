@@ -141,6 +141,7 @@ class SvnWorkingTree(WorkingTree):
 
     def _update(self, revnum=None):
         if revnum is None:
+            # FIXME: should be able to use -1 here
             revnum = self.branch.get_revnum()
         adm = self._get_wc()
         # FIXME: honor SVN_CONFIG_SECTION_HELPERS:SVN_CONFIG_OPTION_DIFF3_CMD

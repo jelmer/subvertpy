@@ -391,7 +391,7 @@ class SvnRaTransport(Transport):
         conn = self.get_connection()
         self.mutter('svn revprop-list -r%d' % (revnum,))
         try:
-            return conn.revprop_list(revnum)
+            return conn.rev_proplist(revnum)
         finally:
             self.add_connection(conn)
 

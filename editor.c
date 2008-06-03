@@ -296,7 +296,7 @@ static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
     
 static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 {
-	int base_revision=-1;
+	svn_revnum_t base_revision=-1;
 	void *root_baton;
 	EditorObject *editor = (EditorObject *)self;
 

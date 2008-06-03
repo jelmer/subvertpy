@@ -548,6 +548,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                 it is a candidate to commit.
         """
         self.new_inventory.add(ie)
+        return self._get_delta(ie, parent_invs[0], path), True
 
 
 def replay_delta(builder, old_tree, new_tree):
