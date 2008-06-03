@@ -63,9 +63,23 @@ svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const
 	if (py_commit_items == NULL)
 		return py_svn_error();
 	for (i = 0; i < commit_items->nelts; i++) {
-		svn_client_commit_item_t *commit_item = 
-			(svn_client_commit_item_t *)(commit_items->elts + i * commit_items->elt_size);
-		if (PyList_SetItem(py_commit_items, i, Py_BuildValue("(sizlzi)", commit_item->path, commit_item->kind, commit_item->url, commit_item->revision, commit_item->copyfrom_url, commit_item->state_flags)) != 0)
+		svn_client_commit_item2_t *commit_item = 
+			(svn_client_commit_item2_t *)(commit_items->elts + i * commit_items->elt_size);
+		PyObject *item, *copyfrom;
+
+		if (commit_item->copyfrom_url != NULL)
+			copyfrom = Py_BuildValue("(si)", commit_item->copyfrom_url, 
+									 commit_item->copyfrom_rev);
+		else
+			copyfrom = Py_None;
+
+		item = Py_BuildValue("(szlOi)", 
+							 commit_item->path, 
+							 commit_item->url, commit_item->revision, 
+							 copyfrom,
+							 commit_item->state_flags);
+
+		if (PyList_SetItem(py_commit_items, i, item) != 0)
 			return py_svn_error();
 	}
     ret = PyObject_CallFunction(baton, "O", py_commit_items);
@@ -113,10 +127,14 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
         return NULL;
 
     ret->pool = Pool();
-	if (ret->pool == NULL)
+	if (ret->pool == NULL) {
+		PyObject_Del(ret);
 		return NULL;
+	}
+
     if (!check_error(svn_client_create_context(&ret->client, ret->pool))) {
 		apr_pool_destroy(ret->pool);
+		PyObject_Del(ret);
         return NULL;
 	}
     return (PyObject *)ret;
@@ -125,7 +143,7 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 static void client_dealloc(PyObject *self)
 {
     ClientObject *client = (ClientObject *)self;
-	if (client->client->log_msg_baton2 != NULL) {
+	if (client->client->log_msg_func2 != NULL) {
 		Py_DECREF((PyObject *)client->client->log_msg_baton2);
 	}
     apr_pool_destroy(client->pool);
@@ -135,8 +153,7 @@ static void client_dealloc(PyObject *self)
 static PyObject *client_get_log_msg_func(PyObject *self, void *closure)
 {
     ClientObject *client = (ClientObject *)self;
-    client->client->log_msg_func2 = py_log_msg_func2;
-    if (client->client->log_msg_baton2 == NULL)
+    if (client->client->log_msg_func2 == NULL)
 		return Py_None;
 	return client->client->log_msg_baton2;
 }
@@ -144,11 +161,17 @@ static PyObject *client_get_log_msg_func(PyObject *self, void *closure)
 static int client_set_log_msg_func(PyObject *self, PyObject *func, void *closure)
 {
     ClientObject *client = (ClientObject *)self;
-    client->client->log_msg_func2 = py_log_msg_func2;
+
 	if (client->client->log_msg_baton2 != NULL) {
 		Py_DECREF((PyObject *)client->client->log_msg_baton2);
 	}
-    client->client->log_msg_baton2 = (void *)func;
+	if (func == Py_None) {
+		client->client->log_msg_func2 = NULL;
+		client->client->log_msg_baton2 = Py_None;
+	} else {
+		client->client->log_msg_func2 = py_log_msg_func2;
+		client->client->log_msg_baton2 = (void *)func;
+	}
     Py_INCREF(func);
     return 0;
 }
@@ -497,6 +520,7 @@ PyTypeObject Client_Type = {
     .tp_methods = client_methods,
     .tp_dealloc = client_dealloc,
     .tp_new = client_new,
+	.tp_flags = Py_TPFLAGS_HAVE_GC,
 	.tp_getset = client_getset
 };
 

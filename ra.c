@@ -182,6 +182,7 @@ static void reporter_dealloc(PyObject *self)
 	ReporterObject *reporter = (ReporterObject *)self;
 	/* FIXME: Warn the user if abort_report/finish_report wasn't called? */
 	apr_pool_destroy(reporter->pool);
+	PyObject_Del(self);
 }
 
 PyTypeObject Reporter_Type = {
@@ -189,6 +190,7 @@ PyTypeObject Reporter_Type = {
 	.tp_name = "ra.Reporter",
 	.tp_methods = reporter_methods,
 	.tp_dealloc = reporter_dealloc,
+	.tp_flags = Py_TPFLAGS_HAVE_GC,
 };
 
 /**
@@ -457,8 +459,10 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 									 apr_pool_t *pool)
 {
 	RemoteAccessObject *self = (RemoteAccessObject *)callback;
-	abort(); /* FIXME */
-	return NULL;
+
+	PyErr_SetString(PyExc_NotImplementedError, "open_tmp_file not wrapped yet");
+	
+	return py_svn_error(); /* FIXME */
 }
 
 static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -899,7 +903,7 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 	return PyLong_FromLong(kind);
 }
 
-static PyObject *has_capability(PyObject *self, PyObject *args)
+static PyObject *ra_has_capability(PyObject *self, PyObject *args)
 {
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	char *capability;
@@ -918,7 +922,7 @@ static PyObject *has_capability(PyObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(has);
 #else
-	PyErr_SetNone(PyExc_NotImplementedError);
+	PyErr_SetString(PyExc_NotImplementedError, "has_capability is only supported in Subversion >= 1.5");
 	return NULL;
 #endif
 }
@@ -1110,7 +1114,7 @@ static PyMethodDef ra_methods[] = {
 	{ "get_locks", ra_get_locks, METH_VARARGS, NULL },
 	{ "lock", ra_lock, METH_VARARGS, NULL },
 	{ "unlock", ra_unlock, METH_VARARGS, NULL },
-	{ "has_capability", has_capability, METH_VARARGS, NULL },
+	{ "has_capability", ra_has_capability, METH_VARARGS, NULL },
 	{ "check_path", ra_check_path, METH_VARARGS, NULL },
 	{ "get_lock", ra_get_lock, METH_VARARGS, NULL },
 	{ "get_dir", ra_get_dir, METH_VARARGS, NULL },
@@ -1136,6 +1140,7 @@ PyTypeObject RemoteAccess_Type = {
 	.tp_dealloc = ra_dealloc,
 	.tp_repr = ra_repr,
 	.tp_methods = ra_methods,
+	.tp_flags = Py_TPFLAGS_HAVE_GC,
 };
 
 typedef struct { 
@@ -1148,6 +1153,7 @@ static void auth_provider_dealloc(PyObject *self)
 {
 	AuthProviderObject *auth_provider = (AuthProviderObject *)self;
 	apr_pool_destroy(auth_provider->pool);
+	PyObject_Del(self);
 }
 
 PyTypeObject AuthProvider_Type = { 
@@ -1155,6 +1161,7 @@ PyTypeObject AuthProvider_Type = {
 	.tp_name = "ra.AuthProvider",
 	.tp_basicsize = sizeof(AuthProviderObject),
 	.tp_dealloc = auth_provider_dealloc,
+	.tp_flags = Py_TPFLAGS_HAVE_GC,
 };
 
 static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)

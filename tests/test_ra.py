@@ -44,3 +44,17 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
 
     def test_reparent(self):
         self.ra.reparent(self.repos_url)
+
+    def test_has_capability(self):
+        self.assertRaises(NotImplementedError, self.ra.has_capability, "FOO")
+
+    def test_get_dir(self):
+        ret = self.ra.get_dir("", 0)
+        self.assertIsInstance(ret, tuple)
+
+    def test_change_rev_prop(self):
+        self.build_tree({'dc/foo': None})
+        self.ra.change_rev_prop(1, "foo", "bar")
+
+    def test_rev_proplist(self):
+        self.assertIsInstance(self.ra.rev_proplist(0), dict)

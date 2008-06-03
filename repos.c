@@ -206,6 +206,7 @@ static PyMethodDef repos_methods[] = {
 PyTypeObject Repository_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "repos.Repository",
+	.tp_basicsize = sizeof(RepositoryObject),
 	.tp_dealloc = repos_dealloc,
 	.tp_methods = repos_methods,
 	.tp_new = repos_init,

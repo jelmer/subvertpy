@@ -52,10 +52,19 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 
 void PyErr_SetSubversionException(svn_error_t *error)
 {
-	PyObject *excobj = PyImport_ImportModule("core.SubversionException");
+	PyObject *coremod = PyImport_ImportModule("core"), *excobj;
+
+	if (coremod == NULL) {
+		PyErr_BadInternalCall();
+		return;
+	}
+		
+	excobj = PyObject_GetAttrString(coremod, "SubversionException");
 	
-	if (excobj == NULL)
-		abort();
+	if (excobj == NULL) {
+		PyErr_BadInternalCall();
+		return;
+	}
 
 	PyErr_SetObject(excobj, Py_BuildValue("(si)", error->message, error->apr_err));
 }

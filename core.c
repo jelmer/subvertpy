@@ -61,13 +61,24 @@ static PyObject *time_from_cstring(PyObject *self, PyObject *args)
     return PyLong_FromLong(when);
 }
 
+typedef struct {
+	PyObject_HEAD
+	svn_config_t *item;
+} ConfigObject;
+
+PyTypeObject Config_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	.tp_name = "core.Config",
+	.tp_basicsize = sizeof(ConfigObject),
+};
+
 static PyObject *get_config(PyObject *self, PyObject *args)
 {
     apr_pool_t *pool;
-    apr_hash_t *cfg_hash;
+    apr_hash_t *cfg_hash = NULL;
     apr_hash_index_t *idx;
     const char *key;
-    char *val;
+    svn_config_t *val;
     apr_ssize_t klen;
 	char *config_dir = NULL;
 	PyObject *ret;
@@ -78,16 +89,17 @@ static PyObject *get_config(PyObject *self, PyObject *args)
     pool = Pool();
 	if (pool == NULL)
 		return NULL;
+
     RUN_SVN_WITH_POOL(pool, 
 					  svn_config_get_config(&cfg_hash, config_dir, pool));
     ret = PyDict_New();
     for (idx = apr_hash_first(pool, cfg_hash); idx != NULL; 
 		 idx = apr_hash_next(idx)) {
-		PyObject *data;
+		ConfigObject *data;
         apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-		data = Py_None;	
-		/* FIXME data = PyString_FromString(val); */
-        PyDict_SetItemString(ret, key, data);
+		data = PyObject_New(ConfigObject, &Config_Type);
+		data->item = val;
+        PyDict_SetItemString(ret, key, (PyObject *)data);
 	}
     apr_pool_destroy(pool);
     return ret;
@@ -105,6 +117,9 @@ void initcore(void)
 {
 	static apr_pool_t *pool;
 	PyObject *mod;
+
+	if (PyType_Ready(&Config_Type) < 0)
+		return;
 
 	apr_initialize();
 	pool = Pool();
