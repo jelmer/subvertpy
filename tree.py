@@ -155,11 +155,6 @@ class DirectoryTreeEditor:
         return DirectoryTreeEditor(self.tree, file_id)
 
     def change_prop(self, name, value):
-        from mapping import (SVN_PROP_BZR_ANCESTRY, 
-                        SVN_PROP_BZR_PREFIX, SVN_PROP_BZR_REVISION_INFO, 
-                        SVN_PROP_BZR_FILEIDS, SVN_PROP_BZR_REVISION_ID,
-                        SVN_PROP_BZR_BRANCHING_SCHEME, SVN_PROP_BZR_MERGE)
-
         if name in (constants.PROP_ENTRY_COMMITTED_DATE,
                       constants.PROP_ENTRY_COMMITTED_REV,
                       constants.PROP_ENTRY_LAST_AUTHOR,
