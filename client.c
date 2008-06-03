@@ -119,7 +119,9 @@ static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file
 
 static PyObject *py_commit_info_tuple(svn_commit_info_t *ci)
 {
-    if (ci == NULL)
+	if (ci == NULL)
+		Py_RETURN_NONE;
+    if (ci->revision == SVN_INVALID_REVNUM)
         Py_RETURN_NONE;
     return Py_BuildValue("(izz)", ci->revision, ci->date, ci->author);
 }

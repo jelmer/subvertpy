@@ -28,8 +28,6 @@ import constants
 from cache import CacheTable
 import changes
 
-LOG_CHUNK_LIMIT = 0
-
 class lazy_dict(object):
     def __init__(self, initial, create_fn, *args):
         self.initial = initial
@@ -266,27 +264,31 @@ class CachingLogWalker(CacheTable):
         pb = ui.ui_factory.nested_progress_bar()
 
         try:
+            def update_db(orig_paths, revision, revprops):
+                mutter("update db: %r,%r,%r" % (orig_paths, revision, revprops))
+                assert isinstance(orig_paths, dict) or orig_paths is None
+                assert isinstance(revision, int)
+                assert isinstance(revprops, dict)
+                pb.update('fetching svn revision info', revision, to_revnum)
+                if orig_paths is None:
+                    orig_paths = {}
+                for p in orig_paths:
+                    (action, copyfrom_path, copyfrom_rev) = orig_paths[p]
+
+                    if copyfrom_path:
+                        copyfrom_path = copyfrom_path.strip("/")
+                    self.cachedb.execute(
+                         "replace into changed_path (rev, path, action, copyfrom_path, copyfrom_rev) values (?, ?, ?, ?, ?)", 
+                         (revision, p.strip("/"), action, copyfrom_path, copyfrom_rev))
+
+                self.saved_revnum = revision
+                if self.saved_revnum % 1000 == 0:
+                    self.cachedb.commit()
+
             try:
-                while self.saved_revnum < to_revnum:
-                    assert isinstance(self.saved_revnum, int)
-                    assert isinstance(to_revnum, int)
-                    for (orig_paths, revision, revprops) in self.actual._transport.iter_log(None, self.saved_revnum, to_revnum, self.actual._limit, True, 
-                                             True, []):
-                        pb.update('fetching svn revision info', revision, to_revnum)
-                        if orig_paths is None:
-                            orig_paths = {}
-                        for p in orig_paths:
-                            (action, copyfrom_path, copyfrom_rev) = orig_paths[p]
-
-                            if copyfrom_path:
-                                copyfrom_path = copyfrom_path.strip("/")
-                            self.cachedb.execute(
-                                 "replace into changed_path (rev, path, action, copyfrom_path, copyfrom_rev) values (?, ?, ?, ?, ?)", 
-                                 (revision, p.strip("/"), action, copyfrom_path, copyfrom_rev))
-
-                        self.saved_revnum = revision
-                        if self.saved_revnum % 1000 == 0:
-                            self.cachedb.commit()
+                assert isinstance(self.saved_revnum, int)
+                assert isinstance(to_revnum, int)
+                self.actual._transport.get_log(update_db, None, self.saved_revnum, to_revnum, 0, True, True, [])
             finally:
                 pb.finished()
         except SubversionException, (_, num):
@@ -319,11 +321,6 @@ class LogWalker(object):
         assert isinstance(transport, SvnRaTransport)
 
         self._transport = transport
-
-        if limit is not None:
-            self._limit = limit
-        else:
-            self._limit = LOG_CHUNK_LIMIT
 
     def find_latest_change(self, path, revnum):
         """Find latest revision that touched path.

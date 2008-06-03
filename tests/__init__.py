@@ -131,9 +131,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         """
         olddir = os.path.abspath('.')
         self.next_message = message
-        os.chdir(dir)
-        info = self.client_ctx.commit(["."], recursive, False)
-        os.chdir(olddir)
+        info = self.client_ctx.commit([dir], recursive, False)
         assert info is not None
         return info
 

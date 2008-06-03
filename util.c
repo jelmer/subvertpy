@@ -94,9 +94,8 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 		return false;
 	}
     *ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
-	for (i = 0; i < PyList_Size(l); i++) {
-		char **el = (char **)apr_array_push(*ret);
-        *el = PyString_AsString(PyList_GetItem(l, i));
+	for (i = 0; i < PyList_GET_SIZE(l); i++) {
+		APR_ARRAY_IDX(*ret, i, char *) = apr_pstrdup(pool, PyString_AsString(PyList_GET_ITEM(l, i)));
 	}
     return true;
 }
@@ -191,8 +190,7 @@ apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l)
 		return NULL;
 	}
     for (i = 0; i < PyList_Size(l); i++) {
-		svn_revnum_t *el = (svn_revnum_t *)apr_array_push(ret);
-        *el = PyLong_AsLong(PyList_GetItem(l, i));
+		APR_ARRAY_IDX(ret, i, svn_revnum_t) = PyLong_AsLong(PyList_GetItem(l, i));
 	}
     return ret;
 }

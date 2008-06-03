@@ -22,6 +22,8 @@
 #include <svn_ra.h>
 #include <apr_file_io.h>
 
+#include <structmember.h>
+
 #include "editor.h"
 #include "util.h"
 
@@ -1225,7 +1227,7 @@ static void ra_dealloc(PyObject *self)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_pool_destroy(ra->pool);
-	Py_DECREF(ra->auth);
+	Py_XDECREF(ra->auth);
 }
 
 static PyObject *ra_repr(PyObject *self)
@@ -1258,6 +1260,12 @@ static PyMethodDef ra_methods[] = {
 	{ NULL, }
 };
 
+static PyMemberDef ra_members[] = {
+	{ "busy", T_BYTE, offsetof(RemoteAccessObject, busy), READONLY, NULL },
+	{ "url", T_STRING, offsetof(RemoteAccessObject, url), READONLY, NULL },
+	{ NULL, }
+};
+
 PyTypeObject RemoteAccess_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.RemoteAccess",
@@ -1266,6 +1274,7 @@ PyTypeObject RemoteAccess_Type = {
 	.tp_dealloc = ra_dealloc,
 	.tp_repr = ra_repr,
 	.tp_methods = ra_methods,
+	.tp_members = ra_members,
 	.tp_flags = Py_TPFLAGS_HAVE_GC,
 };
 
@@ -1632,4 +1641,5 @@ void initra(void)
 	Py_INCREF(&Auth_Type);
 
 	busy_exc = PyErr_NewException("ra.BusyException", NULL, NULL);
+	PyModule_AddObject(mod, "BusyException", busy_exc);
 }
