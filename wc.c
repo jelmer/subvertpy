@@ -134,10 +134,17 @@ typedef struct {
 static void entry_dealloc(PyObject *self)
 {
 	apr_pool_destroy(((EntryObject *)self)->pool);
+	PyObject_Del(self);
 }
 
 static PyMemberDef entry_members[] = {
+	{ "copyfrom_url", T_STRING, offsetof(EntryObject, entry.copyfrom_url), READONLY, NULL },
 	{ "url", T_STRING, offsetof(EntryObject, entry.url), READONLY, NULL },
+	{ "repos", T_STRING, offsetof(EntryObject, entry.repos), READONLY, NULL },
+	{ "schedule", T_INT, offsetof(EntryObject, entry.schedule), READONLY, NULL },
+	{ "kind", T_INT, offsetof(EntryObject, entry.kind), READONLY, NULL },
+	{ "revision", T_LONG, offsetof(EntryObject, entry.revision), READONLY, NULL },
+	{ "cmt_rev", T_LONG, offsetof(EntryObject, entry.cmt_rev), READONLY, NULL },
 	{ NULL, }
 };
 
@@ -145,6 +152,7 @@ PyTypeObject Entry_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "wc.Entry",
 	.tp_basicsize = sizeof(EntryObject),
+	.tp_flags = Py_TPFLAGS_HAVE_GC,
 	.tp_dealloc = entry_dealloc,
 	.tp_members = entry_members,
 };
@@ -517,6 +525,7 @@ static PyObject *adm_close(PyObject *self)
 static void adm_dealloc(PyObject *self)
 {
 	apr_pool_destroy(((AdmObject *)self)->pool);
+	PyObject_Del(self);
 }
 
 static PyMethodDef adm_methods[] = { 
@@ -542,6 +551,7 @@ PyTypeObject Adm_Type = {
 	.tp_name = "wc.WorkingCopy",
 	.tp_basicsize = sizeof(AdmObject),
 	.tp_new = adm_init,
+	.tp_flags = Py_TPFLAGS_HAVE_GC,
 	.tp_dealloc = adm_dealloc,
 	.tp_methods = adm_methods,
 };

@@ -136,8 +136,9 @@ typedef struct {
 static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     ClientObject *ret;
-    char *kwnames[] = { NULL };
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwnames))
+	PyObject *config = Py_None;
+    char *kwnames[] = { "config", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwnames, &config))
         return NULL;
 
     ret = PyObject_New(ClientObject, &Client_Type);
@@ -155,6 +156,11 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 		PyObject_Del(ret);
         return NULL;
 	}
+
+	if (config != Py_None) {
+		PyErr_SetString(PyExc_NotImplementedError, "custom config not supported yet");
+	}
+
     return (PyObject *)ret;
 }
 

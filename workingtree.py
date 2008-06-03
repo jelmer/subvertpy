@@ -79,15 +79,14 @@ class SvnWorkingTree(WorkingTree):
         self.bzrdir = bzrdir
         self._branch = branch
         self._get_wc()
-        status = svn.wc.revision_status(self.basedir, None, True, None, None)
-        self.base_revnum = status.max_rev
+        (min_rev, max_rev, switch, modified) = wc.revision_status(self.basedir, None, True, None)
+        self.base_revnum = max_rev
         self.base_tree = SvnBasisTree(self)
         self.base_revid = branch.generate_revision_id(self.base_revnum)
 
         self.read_working_inventory()
 
-        self.controldir = os.path.join(self.basedir, svn.wc.get_adm_dir(), 
-                                       'bzr')
+        self.controldir = os.path.join(self.basedir, wc.get_adm_dir(), 'bzr')
         try:
             os.makedirs(self.controldir)
             os.makedirs(os.path.join(self.controldir, 'lock'))
