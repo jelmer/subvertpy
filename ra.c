@@ -804,7 +804,7 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
     apr_hash_t *dirents;
     apr_hash_index_t *idx;
     apr_hash_t *props;
-    long fetch_rev;
+    svn_revnum_t fetch_rev;
     const char *key;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
     svn_dirent_t *dirent;
@@ -820,6 +820,9 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
     temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
+
+	if (revision != SVN_INVALID_REVNUM)
+		fetch_rev = revision;
 
 	if (!check_error(svn_ra_get_dir2(ra->ra, &dirents, &fetch_rev, &props,
                      path, revision, dirent_fields, temp_pool))) {
@@ -861,7 +864,7 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 
 	py_props = prop_hash_to_dict(props);
 	apr_pool_destroy(temp_pool);
-	return Py_BuildValue("(OiO)", py_dirents, fetch_rev, py_props);
+	return Py_BuildValue("(OlO)", py_dirents, fetch_rev, py_props);
 }
 
 static PyObject *ra_get_lock(PyObject *self, PyObject *args)

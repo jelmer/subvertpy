@@ -13,23 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Subversion rpeository library tests."""
+"""Subversion client library tests."""
 
-import os
-import repos
-from bzrlib.tests import TestCaseInTempDir
+from bzrlib.tests import TestCase
+import client
+from tests import TestCaseWithSubversionRepository
 
-class TestClient(TestCaseInTempDir):
+class TestClient(TestCaseWithSubversionRepository):
     def setUp(self):
         super(TestClient, self).setUp()
+        self.repos_url = self.make_client("d", "dc")
+        self.client = client.Client()
 
-    def test_create(self):
-        repos.create(os.path.join(self.test_dir, "foo"))
-
-    def test_open(self):
-        repos.create(os.path.join(self.test_dir, "foo"))
-        repos.Repository("foo")
-
-    def test_uuid(self):
-        repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertIsInstance(repos.Repository("foo").fs().get_uuid(), str)
+    def test_add(self):
+        self.build_tree({"dc/foo": None})
+        self.client.add("dc/foo")

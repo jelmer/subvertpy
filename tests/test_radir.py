@@ -28,8 +28,6 @@ from transport import SvnRaTransport
 
 class TestRemoteAccess(TestCaseWithSubversionRepository):
     def test_clone(self):
-        import pdb
-        pdb.set_trace()
         repos_url = self.make_client("d", "dc")
         self.build_tree({"dc/foo": None})
         self.client_add("dc/foo")

@@ -62,6 +62,9 @@ svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const
     py_commit_items = PyList_New(commit_items->nelts);
 	if (py_commit_items == NULL)
 		return py_svn_error();
+
+	assert(commit_items->elt_size == sizeof(svn_client_commit_item_2_t *));
+
 	for (i = 0; i < commit_items->nelts; i++) {
 		svn_client_commit_item2_t *commit_item = 
 			(svn_client_commit_item2_t *)(commit_items->elts + i * commit_items->elt_size);
