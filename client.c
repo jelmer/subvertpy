@@ -52,22 +52,21 @@ static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
     PyErr_SetString(PyExc_ValueError, "Unable to parse revision");
     return false;
 }
-     
-svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const apr_array_header_t *commit_items, void *baton, apr_pool_t *pool)
+
+static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
 {
-    PyObject *py_commit_items, *ret, *py_log_msg, *py_tmp_file;
+	PyObject *ret;
 	int i;
-    if (baton == Py_None)
-        return NULL;
-    py_commit_items = PyList_New(commit_items->nelts);
-	if (py_commit_items == NULL)
-		return py_svn_error();
+
+    ret = PyList_New(commit_items->nelts);
+	if (ret == NULL)
+		return NULL;
 
 	assert(commit_items->elt_size == sizeof(svn_client_commit_item_2_t *));
 
 	for (i = 0; i < commit_items->nelts; i++) {
 		svn_client_commit_item2_t *commit_item = 
-			(svn_client_commit_item2_t *)(commit_items->elts + i * commit_items->elt_size);
+			APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
 		PyObject *item, *copyfrom;
 
 		if (commit_item->copyfrom_url != NULL)
@@ -77,14 +76,28 @@ svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const
 			copyfrom = Py_None;
 
 		item = Py_BuildValue("(szlOi)", 
-							 commit_item->path, 
+							 /* commit_item->path */ "foo",
 							 commit_item->url, commit_item->revision, 
 							 copyfrom,
 							 commit_item->state_flags);
 
-		if (PyList_SetItem(py_commit_items, i, item) != 0)
-			return py_svn_error();
+		if (PyList_SetItem(ret, i, item) != 0)
+			return NULL;
 	}
+
+	return ret;
+}
+
+static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const apr_array_header_t *commit_items, void *baton, apr_pool_t *pool)
+{
+    PyObject *py_commit_items, *ret, *py_log_msg, *py_tmp_file;
+    if (baton == Py_None)
+        return NULL;
+
+	py_commit_items = wrap_py_commit_items(commit_items);
+	if (py_commit_items == NULL)
+		return py_svn_error();
+
     ret = PyObject_CallFunction(baton, "O", py_commit_items);
 	if (ret == NULL)
 		return py_svn_error();
@@ -107,7 +120,7 @@ svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const
 static PyObject *py_commit_info_tuple(svn_commit_info_t *ci)
 {
     if (ci == NULL)
-        return Py_None;
+        Py_RETURN_NONE;
     return Py_BuildValue("(izz)", ci->revision, ci->date, ci->author);
 }
 
@@ -157,7 +170,7 @@ static PyObject *client_get_log_msg_func(PyObject *self, void *closure)
 {
     ClientObject *client = (ClientObject *)self;
     if (client->client->log_msg_func2 == NULL)
-		return Py_None;
+		Py_RETURN_NONE;
 	return client->client->log_msg_baton2;
 }
 
@@ -199,7 +212,7 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
 					  svn_client_add3(path, recursive, force, no_ignore, 
                 client->client, temp_pool));
 	apr_pool_destroy(temp_pool);
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -239,14 +252,19 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 	apr_pool_t *temp_pool;
     svn_commit_info_t *commit_info = NULL;
 	PyObject *ret;
+	apr_array_header_t *apr_targets;
     char *kwnames[] = { "targets", "recurse", "keep_locks", NULL };
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bb", kwnames, &targets, &recurse, &keep_locks))
         return NULL;
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
+	if (!string_list_to_apr_array(temp_pool, targets, &apr_targets)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
     RUN_SVN_WITH_POOL(temp_pool, svn_client_commit3(&commit_info, 
-               string_list_to_apr_array(temp_pool, targets),
+				apr_targets,
                recurse, keep_locks, client->client, temp_pool));
     ret = py_commit_info_tuple(commit_info);
 	apr_pool_destroy(temp_pool);
@@ -259,6 +277,7 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args)
     PyObject *paths;
     svn_commit_info_t *commit_info = NULL;
 	apr_pool_t *temp_pool;
+	apr_array_header_t *apr_paths;
     ClientObject *client = (ClientObject *)self;
 	PyObject *ret;
     if (!PyArg_ParseTuple(args, "O", &paths))
@@ -266,8 +285,12 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-    if (!check_error(svn_client_mkdir2(&commit_info, 
-                string_list_to_apr_array(temp_pool, paths), 
+	if (!string_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+    if (!check_error(svn_client_mkdir2(&commit_info, apr_paths,
                 client->client, temp_pool)))
         return NULL;
     ret = py_commit_info_tuple(commit_info);
@@ -283,6 +306,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
     svn_commit_info_t *commit_info = NULL;
 	PyObject *ret;
+	apr_array_header_t *apr_paths;
     ClientObject *client = (ClientObject *)self;
 
     if (!PyArg_ParseTuple(args, "O|b", &paths, &force))
@@ -291,8 +315,13 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
+    if (!string_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
     RUN_SVN_WITH_POOL(temp_pool, svn_client_delete2(&commit_info, 
-                string_list_to_apr_array(temp_pool, paths),
+													apr_paths,
                 force, client->client, temp_pool));
 
     ret = py_commit_info_tuple(commit_info);
@@ -343,7 +372,7 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_propset2(propname, &c_propval,
                 target, recurse, skip_checks, client->client, temp_pool));
 	apr_pool_destroy(temp_pool);
-    return Py_None;
+    Py_RETURN_NONE;
 }
     
 static PyObject *client_propget(PyObject *self, PyObject *args)
@@ -384,9 +413,9 @@ static PyObject *client_update(PyObject *self, PyObject *args)
     bool ignore_externals = false;
 	apr_pool_t *temp_pool;
     PyObject *rev = Py_None, *paths;
-    apr_array_header_t *result_revs;
+    apr_array_header_t *result_revs, *apr_paths;
     svn_opt_revision_t c_rev;
-    svn_revnum_t *ret_rev;
+    svn_revnum_t ret_rev;
     PyObject *ret;
     int i = 0;
     ClientObject *client = (ClientObject *)self;
@@ -399,16 +428,19 @@ static PyObject *client_update(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
+	if (!string_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
     RUN_SVN_WITH_POOL(temp_pool, svn_client_update2(&result_revs, 
-            string_list_to_apr_array(temp_pool, paths), &c_rev, 
+            apr_paths, &c_rev, 
             recurse, ignore_externals, client->client, temp_pool));
-        return NULL;
     ret = PyList_New(result_revs->nelts);
 	if (ret == NULL)
 		return NULL;
 	for (i = 0; i < result_revs->nelts; i++) {
-		ret_rev = (svn_revnum_t *)(result_revs->elts + (i * result_revs->elt_size));
-        if (PyList_SetItem(ret, i, PyLong_FromLong(*ret_rev)) != 0)
+		ret_rev = APR_ARRAY_IDX(result_revs, i, svn_revnum_t);
+        if (PyList_SetItem(ret, i, PyLong_FromLong(ret_rev)) != 0)
 			return NULL;
     }
 	apr_pool_destroy(temp_pool);
@@ -472,6 +504,7 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
     int limit=0; 
     bool discover_changed_paths=true, strict_node_history=true;
     svn_opt_revision_t c_peg_rev, c_start_rev, c_end_rev;
+	apr_array_header_t *apr_paths;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OOOlbb", 
                                      kwnames, &targets, &callback, 
@@ -489,10 +522,14 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_client_log3(string_list_to_apr_array(temp_pool, targets),
+	if (!string_list_to_apr_array(temp_pool, targets, &apr_paths)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_log3(apr_paths,
                 &c_peg_rev, &c_start_rev, &c_end_rev, limit, discover_changed_paths, strict_node_history, py_svn_log_wrapper, callback, client->client, temp_pool));
 	apr_pool_destroy(temp_pool);
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyMethodDef client_methods[] = {
@@ -508,12 +545,12 @@ static PyMethodDef client_methods[] = {
     { "revprop_get", client_revprop_get, METH_VARARGS, NULL },
     { "revprop_set", client_revprop_set, METH_VARARGS, NULL },
     { "log", (PyCFunction)client_log, METH_KEYWORDS|METH_VARARGS, NULL },
-    { NULL }
+    { NULL, }
 };
 
 static PyGetSetDef client_getset[] = {
 	{ "log_msg_func", client_get_log_msg_func, client_set_log_msg_func, NULL },
-	{ NULL }
+	{ NULL, }
 };
 
 PyTypeObject Client_Type = {

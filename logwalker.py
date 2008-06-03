@@ -189,6 +189,7 @@ class CachingLogWalker(CacheTable):
             revprops = lazy_dict({}, self._transport.revprop_list, revnum)
 
             if changes.changes_path(revpaths, path, True):
+                assert isinstance(revnum, int)
                 yield (revpaths, revnum, revprops)
                 i += 1
                 if limit != 0 and i == limit:
@@ -197,7 +198,11 @@ class CachingLogWalker(CacheTable):
             if next is None:
                 break
 
+            assert (ascending and next[1] > revnum) or \
+                   (not ascending and next[1] < revnum)
             (path, revnum) = next
+            assert isinstance(path, str)
+            assert isinstance(revnum, int)
 
     def get_previous(self, path, revnum):
         """Return path,revnum pair specified pair was derived from.
@@ -251,9 +256,11 @@ class CachingLogWalker(CacheTable):
 
         :param to_revnum: End of range to fetch information for
         """
+        assert isinstance(self.saved_revnum, int)
         if to_revnum <= self.saved_revnum:
             return
         latest_revnum = self.actual._transport.get_latest_revnum()
+        assert isinstance(latest_revnum, int)
         to_revnum = max(latest_revnum, to_revnum)
 
         pb = ui.ui_factory.nested_progress_bar()
@@ -261,8 +268,9 @@ class CachingLogWalker(CacheTable):
         try:
             try:
                 while self.saved_revnum < to_revnum:
-                    for (orig_paths, revision, revprops) in self.actual._transport.iter_log(None, self.saved_revnum, 
-                                             to_revnum, self.actual._limit, True, 
+                    assert isinstance(self.saved_revnum, int)
+                    assert isinstance(to_revnum, int)
+                    for (orig_paths, revision, revprops) in self.actual._transport.iter_log(None, self.saved_revnum, to_revnum, self.actual._limit, True, 
                                              True, []):
                         pb.update('fetching svn revision info', revision, to_revnum)
                         if orig_paths is None:

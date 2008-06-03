@@ -22,7 +22,7 @@
 
 __attribute__((warn_unused_result)) apr_pool_t *Pool(void);
 __attribute__((warn_unused_result)) bool check_error(svn_error_t *error);
-apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, PyObject *l);
+bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
 PyObject *prop_hash_to_dict(apr_hash_t *props);
 svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, 
 								long revision, const char *author, 

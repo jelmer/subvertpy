@@ -141,7 +141,7 @@ static PyObject *fs_get_uuid(PyObject *self)
 
 static PyMethodDef fs_methods[] = {
 	{ "get_uuid", (PyCFunction)fs_get_uuid, METH_NOARGS, NULL },
-	{ NULL }
+	{ NULL, }
 };
 
 static void fs_dealloc(PyObject *self)
@@ -189,18 +189,18 @@ static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 				use_post_commit_hook, py_cancel_func, (void *)cancel_func,
 				reposobj->pool));
 	apr_pool_destroy(temp_pool);
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyMethodDef repos_module_methods[] = {
 	{ "create", repos_create, METH_VARARGS, NULL },
-	{ NULL }
+	{ NULL, }
 };
 
 static PyMethodDef repos_methods[] = {
 	{ "load_fs", (PyCFunction)repos_load_fs, METH_VARARGS|METH_KEYWORDS, NULL },
 	{ "fs", (PyCFunction)repos_fs, METH_NOARGS, NULL },
-	{ NULL }
+	{ NULL, }
 };
 
 PyTypeObject Repository_Type = {

@@ -19,6 +19,7 @@
 #include <Python.h>
 #include <apr_general.h>
 #include <svn_wc.h>
+#include <structmember.h>
 #include <stdbool.h>
 
 #include "util.h"
@@ -27,6 +28,7 @@
 PyAPI_DATA(PyTypeObject) Entry_Type;
 PyAPI_DATA(PyTypeObject) Adm_Type;
 
+static PyObject *py_entry(const svn_wc_entry_t *entry);
 
 static svn_error_t *py_ra_report_set_path(void *baton, const char *path, long revision, int start_empty, const char *lock_token, apr_pool_t *pool)
 {
@@ -108,8 +110,7 @@ static PyObject *version(PyObject *self)
 static svn_error_t *py_wc_found_entry(const char *path, const svn_wc_entry_t *entry, void *walk_baton, apr_pool_t *pool)
 {
     PyObject *fn = (PyObject *)walk_baton, *ret;
-    /* FIXME: entry */
-	ret = PyObject_CallFunction(fn, "s", path);
+	ret = PyObject_CallFunction(fn, "sO", path, py_entry(entry));
 	if (ret == NULL)
 		return py_svn_error();
     return NULL;
@@ -127,7 +128,7 @@ static void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_po
 typedef struct {
 	PyObject_HEAD
 	apr_pool_t *pool;
-	svn_wc_entry_t *entry;
+	svn_wc_entry_t entry;
 } EntryObject;
 
 static void entry_dealloc(PyObject *self)
@@ -135,11 +136,17 @@ static void entry_dealloc(PyObject *self)
 	apr_pool_destroy(((EntryObject *)self)->pool);
 }
 
+static PyMemberDef entry_members[] = {
+	{ "url", T_STRING, offsetof(EntryObject, entry.url), READONLY, NULL },
+	{ NULL, }
+};
+
 PyTypeObject Entry_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "wc.Entry",
 	.tp_basicsize = sizeof(EntryObject),
 	.tp_dealloc = entry_dealloc,
+	.tp_members = entry_members,
 };
 
 static PyObject *py_entry(const svn_wc_entry_t *entry)
@@ -151,7 +158,7 @@ static PyObject *py_entry(const svn_wc_entry_t *entry)
 	ret->pool = Pool();
 	if (ret->pool == NULL)
 		return NULL;
-	ret->entry = svn_wc_entry_dup(entry, ret->pool);
+	ret->entry = *svn_wc_entry_dup(entry, ret->pool);
     return (PyObject *)ret;
 }
 
@@ -170,8 +177,9 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 	PyObject *cancel_func=Py_None;
 	svn_wc_adm_access_t *parent_wc;
 	AdmObject *ret;
+	char *kwnames[] = { "associated", "path", "write_lock", "depth", "cancel_func", NULL };
 
-	if (!PyArg_ParseTuple(args, "Os|biO", &associated, &path, &write_lock, &depth, &cancel_func))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|biO", kwnames, &associated, &path, &write_lock, &depth, &cancel_func))
 		return NULL;
 
 	ret = PyObject_New(AdmObject, &Adm_Type);
@@ -250,7 +258,7 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
 				skip_checks, temp_pool));
 	apr_pool_destroy(temp_pool);
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *adm_entries_read(PyObject *self, PyObject *args)
@@ -305,7 +313,7 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 				temp_pool));
 	apr_pool_destroy(temp_pool);
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *adm_entry(PyObject *self, PyObject *args)
@@ -353,7 +361,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 				path, admobj->adm, temp_pool));
 	py_propchanges = PyList_New(propchanges->nelts);
 	for (i = 0; i < propchanges->nelts; i++) {
-		el = (svn_prop_t *)(propchanges->elts + (i * propchanges->elt_size));
+		el = APR_ARRAY_IDX(propchanges, i, svn_prop_t *);
 		PyList_SetItem(py_propchanges, i, 
 					   Py_BuildValue("(ss#)", el->name, el->value->data, el->value->len));
 	}
@@ -391,7 +399,7 @@ static PyObject *adm_add(PyObject *self, PyObject *args)
 							temp_pool));
 	apr_pool_destroy(temp_pool);
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *adm_copy(PyObject *self, PyObject *args)
@@ -413,7 +421,7 @@ static PyObject *adm_copy(PyObject *self, PyObject *args)
 							temp_pool));
 	apr_pool_destroy(temp_pool);
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *adm_delete(PyObject *self, PyObject *args)
@@ -435,7 +443,7 @@ static PyObject *adm_delete(PyObject *self, PyObject *args)
 							temp_pool));
 	apr_pool_destroy(temp_pool);
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args)
@@ -463,7 +471,7 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args)
 				traversal_info, temp_pool));
 	apr_pool_destroy(temp_pool);
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
@@ -492,7 +500,7 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 		apr_pool_destroy(pool);
 		return NULL;
 	}
-	return new_editor_object(editor, edit_baton, pool, &Editor_Type);
+	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL);
 }
 
 static PyObject *adm_close(PyObject *self)
@@ -503,7 +511,7 @@ static PyObject *adm_close(PyObject *self)
 		admobj->adm = NULL;
 	}
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static void adm_dealloc(PyObject *self)
@@ -526,12 +534,12 @@ static PyMethodDef adm_methods[] = {
 	{ "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
 	{ "close", (PyCFunction)adm_close, METH_NOARGS, NULL },
 	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, NULL },
-	{ NULL }
+	{ NULL, }
 };
 
 PyTypeObject Adm_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
-	.tp_name = "wc.Adm",
+	.tp_name = "wc.WorkingCopy",
 	.tp_basicsize = sizeof(AdmObject),
 	.tp_new = adm_init,
 	.tp_dealloc = adm_dealloc,
@@ -635,7 +643,6 @@ static PyObject *get_default_ignores(PyObject *self, PyObject *args)
 {
     apr_array_header_t *patterns;
     apr_pool_t *pool;
-    char **pattern;
     apr_hash_t *hash_config;
 	apr_ssize_t idx = 0;
 	int i = 0;
@@ -653,11 +660,8 @@ static PyObject *get_default_ignores(PyObject *self, PyObject *args)
         apr_hash_set(hash_config, (char *)PyString_AsString(pyk), PyString_Size(pyk), (char *)PyString_AsString(pyv));
     RUN_SVN_WITH_POOL(pool, svn_wc_get_default_ignores(&patterns, hash_config, pool));
     ret = PyList_New(patterns->nelts);
-    pattern = (char **)apr_array_pop(patterns);
-    while (pattern != NULL) {
-		PyList_SetItem(ret, i, PyString_FromString(*pattern));
-		i++;
-        pattern = (char **)apr_array_pop(patterns);
+	for (i = 0; i < patterns->nelts; i++) {
+		PyList_SetItem(ret, i, PyString_FromString(APR_ARRAY_IDX(patterns, i, char *)));
 	}
     apr_pool_destroy(pool);
     return ret;
@@ -681,7 +685,7 @@ static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
     RUN_SVN_WITH_POOL(pool, 
 					  svn_wc_ensure_adm2(path, uuid, url, repos, rev, pool));
     apr_pool_destroy(pool);
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *check_wc(PyObject *self, PyObject *args)
@@ -712,7 +716,7 @@ static PyMethodDef wc_methods[] = {
 	{ "is_wc_prop", is_wc_prop, METH_VARARGS, NULL },
 	{ "revision_status", (PyCFunction)revision_status, METH_KEYWORDS|METH_VARARGS, NULL },
 	{ "version", (PyCFunction)version, METH_NOARGS, NULL },
-	{ NULL }
+	{ NULL, }
 };
 
 void initwc(void)
@@ -748,6 +752,6 @@ void initwc(void)
 	PyModule_AddObject(mod, "SCHEDULE_DELETE", PyLong_FromLong(2));
 	PyModule_AddObject(mod, "SCHEDULE_REPLACE", PyLong_FromLong(3));
 
-	PyModule_AddObject(mod, "Adm", (PyObject *)&Adm_Type);
+	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
 }

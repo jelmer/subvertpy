@@ -172,7 +172,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         self.client_ctx.copy(oldpath, newpath, revnum)
 
     def client_update(self, path):
-        self.client_ctx.update(path, None, True)
+        self.client_ctx.update([path], None, True)
 
     def build_tree(self, files):
         """Create a directory tree.

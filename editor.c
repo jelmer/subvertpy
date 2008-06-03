@@ -29,9 +29,10 @@ typedef struct {
     const svn_delta_editor_t *editor;
     void *baton;
     apr_pool_t *pool;
+	bool *busy_var;
 } EditorObject;
 
-PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type)
+PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, bool *busy_var)
 {
 	EditorObject *obj = PyObject_New(EditorObject, type);
 	if (obj == NULL)
@@ -39,6 +40,7 @@ PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_p
 	obj->editor = editor;
     obj->baton = baton;
 	obj->pool = pool;
+	obj->busy_var = busy_var;
 	return (PyObject *)obj;
 }
 
@@ -84,7 +86,7 @@ static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
 	if (!check_error(editor->editor->change_file_prop(editor->baton, name, 
 				&c_value, editor->pool)))
 		return NULL;
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
@@ -96,7 +98,7 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 	if (!check_error(editor->editor->close_file(editor->baton, c_checksum, 
                     editor->pool)))
 		return NULL;
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyMethodDef py_file_editor_methods[] = {
@@ -126,7 +128,7 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
                                              editor->pool)))
 		return NULL;
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
@@ -145,7 +147,7 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 		return NULL;
 
     return new_editor_object(editor->editor, child_baton, editor->pool, 
-							 &DirectoryEditor_Type);
+							 &DirectoryEditor_Type, NULL);
 }
 
 static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
@@ -162,7 +164,7 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 		return NULL;
 
     return new_editor_object(editor->editor, child_baton, editor->pool, 
-							 &DirectoryEditor_Type);
+							 &DirectoryEditor_Type, NULL);
 }
 
 static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
@@ -180,7 +182,7 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
                     p_c_value, editor->pool)))
 		return NULL;
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *py_dir_editor_close(PyObject *self)
@@ -190,7 +192,7 @@ static PyObject *py_dir_editor_close(PyObject *self)
 													 editor->pool)))
 		return NULL;
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
@@ -205,7 +207,7 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
                     editor->pool)))
 		return NULL;
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
@@ -223,7 +225,7 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, file_baton, editor->pool,
-							 &FileEditor_Type);
+							 &FileEditor_Type, NULL);
 }
 
 static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
@@ -241,7 +243,7 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, file_baton, editor->pool,
-							 &FileEditor_Type);
+							 &FileEditor_Type, NULL);
 }
 
 static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
@@ -254,7 +256,7 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 	if (!check_error(editor->editor->absent_file(path, editor->baton, editor->pool)))
 		return NULL;
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyMethodDef py_dir_editor_methods[] = {
@@ -268,7 +270,7 @@ static PyMethodDef py_dir_editor_methods[] = {
 	{ "close", (PyCFunction)py_dir_editor_close, METH_NOARGS, NULL },
 	{ "change_prop", py_dir_editor_change_prop, METH_VARARGS, NULL },
 
-	{ NULL }
+	{ NULL, }
 };
 
 PyTypeObject DirectoryEditor_Type = { 
@@ -289,7 +291,7 @@ static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
                     target_revision, editor->pool)))
 		return NULL;
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
     
 static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
@@ -306,7 +308,7 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, root_baton, editor->pool,
-							 &DirectoryEditor_Type);
+							 &DirectoryEditor_Type, NULL);
 }
 
 static PyObject *py_editor_close(PyObject *self)
@@ -315,7 +317,10 @@ static PyObject *py_editor_close(PyObject *self)
 	if (!check_error(editor->editor->close_edit(editor->baton, editor->pool)))
 		return NULL;
 
-	return Py_None;
+	if (editor->busy_var != NULL)
+		*editor->busy_var = false;
+
+	Py_RETURN_NONE;
 }
 
 static PyObject *py_editor_abort(PyObject *self)
@@ -325,7 +330,10 @@ static PyObject *py_editor_abort(PyObject *self)
 	if (!check_error(editor->editor->abort_edit(editor->baton, editor->pool)))
 		return NULL;
 
-	return Py_None;
+	if (editor->busy_var != NULL)
+		*editor->busy_var = false;
+
+	Py_RETURN_NONE;
 }
 
 static PyMethodDef py_editor_methods[] = { 
@@ -333,7 +341,7 @@ static PyMethodDef py_editor_methods[] = {
 	{ "close", (PyCFunction)py_editor_close, METH_NOARGS, NULL },
 	{ "open_root", py_editor_open_root, METH_VARARGS, NULL },
 	{ "set_target_revision", py_editor_set_target_revision, METH_VARARGS, NULL },
-	{ NULL }
+	{ NULL, }
 };
 
 PyTypeObject Editor_Type = { 

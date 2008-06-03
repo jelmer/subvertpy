@@ -81,19 +81,24 @@ bool check_error(svn_error_t *error)
 	return false;
 }
 
-apr_array_header_t *string_list_to_apr_array(apr_pool_t *pool, PyObject *l)
+bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **ret)
 {
-    apr_array_header_t *ret;
 	int i;
     if (l == Py_None) {
-        return NULL;
+		*ret = NULL;
+        return true;
 	}
-    ret = apr_array_make(pool, PyList_Size(l), 4);
+	if (!PyList_Check(l)) {
+		PyErr_Format(PyExc_TypeError, "Expected list of paths, got: %s",
+					 l->ob_type->tp_name);
+		return false;
+	}
+    *ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
 	for (i = 0; i < PyList_Size(l); i++) {
-		char **el = (char **)apr_array_push(ret);
+		char **el = (char **)apr_array_push(*ret);
         *el = PyString_AsString(PyList_GetItem(l, i));
 	}
-    return ret;
+    return true;
 }
 
 PyObject *prop_hash_to_dict(apr_hash_t *props)
@@ -105,7 +110,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
     apr_pool_t *pool;
 	PyObject *py_props;
     if (props == NULL) {
-        return Py_None;
+        Py_RETURN_NONE;
 	}
     pool = Pool();
 	if (pool == NULL)

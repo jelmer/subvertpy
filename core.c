@@ -110,7 +110,7 @@ static PyMethodDef core_methods[] = {
 	{ "get_config", get_config, METH_VARARGS, NULL },
 	{ "time_from_cstring", time_from_cstring, METH_VARARGS, NULL },
 	{ "time_to_cstring", time_to_cstring, METH_VARARGS, NULL },
-	{ NULL }
+	{ NULL, }
 };
 
 void initcore(void)

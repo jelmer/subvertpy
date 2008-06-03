@@ -29,12 +29,21 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
         self.repos_url = self.make_client("d", "dc")
         self.ra = ra.RemoteAccess(self.repos_url)
 
+    def do_commit(self):
+        self.build_tree({'dc/foo': None})
+        self.client_add("dc/foo")
+        self.client_commit("dc", "msg")
+
     def test_repr(self):
         self.assertEquals("RemoteAccess(%s)" % self.repos_url,
                           repr(self.ra))
 
     def test_latest_revnum(self):
         self.assertEquals(0, self.ra.get_latest_revnum())
+
+    def test_latest_revnum_one(self):
+        self.do_commit()
+        self.assertEquals(1, self.ra.get_latest_revnum())
 
     def test_get_uuid(self):
         self.assertIsInstance(self.ra.get_uuid(), str)
@@ -53,8 +62,37 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
         self.assertIsInstance(ret, tuple)
 
     def test_change_rev_prop(self):
-        self.build_tree({'dc/foo': None})
+        self.do_commit()
         self.ra.change_rev_prop(1, "foo", "bar")
 
     def test_rev_proplist(self):
         self.assertIsInstance(self.ra.rev_proplist(0), dict)
+
+    def test_get_log(self):
+        returned = []
+        def cb(*args):
+            returned.append(args)
+        self.ra.get_log(cb, [""], 0, 0)
+        self.assertEquals(1, len(returned))
+        self.do_commit()
+        returned = []
+        self.ra.get_log(cb, ["/"], 0, 1, discover_changed_paths=True, 
+                        strict_node_history=False)
+        self.assertEquals(2, len(returned))
+        (paths, revnum, props) = returned[0]
+        self.assertEquals(None, paths)
+        self.assertEquals(revnum, 0)
+        self.assertEquals(["svn:date"], props.keys())
+        (paths, revnum, props) = returned[1]
+        self.assertEquals({'/foo': ('A', None, -1)}, paths)
+        self.assertEquals(revnum, 1)
+        self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
+                          set(props.keys()))
+
+    def test_get_commit_editor(self):
+        def mycb(rev):
+            pass
+        editor = self.ra.get_commit_editor({"svn:log": "foo"}, mycb)
+        self.assertRaises(ra.BusyException, self.ra.get_commit_editor, {"svn:log": "foo"}, mycb)
+        editor.abort()
+
