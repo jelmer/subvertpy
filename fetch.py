@@ -27,18 +27,19 @@ import md5
 
 import constants
 
+from bzrlib.plugins.svn.delta import apply_txdelta_handler
 from bzrlib.plugins.svn.errors import InvalidFileName
-from logwalker import lazy_dict
+from bzrlib.plugins.svn.logwalker import lazy_dict
 from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_MERGE, 
                      SVN_PROP_BZR_PREFIX, SVN_PROP_BZR_REVISION_INFO, 
                      SVN_PROP_BZR_REVISION_ID,
                      SVN_PROP_BZR_FILEIDS, SVN_REVPROP_BZR_SIGNATURE,
                      parse_merge_property,
                      parse_revision_metadata)
-from repository import SvnRepository, SvnRepositoryFormat
-from svk import SVN_PROP_SVK_MERGE
-from delta import apply_txdelta_handler
-from tree import (parse_externals_description, inventory_add_external)
+from bzrlib.plugins.svn.repository import SvnRepository, SvnRepositoryFormat
+from bzrlib.plugins.svn.svk import SVN_PROP_SVK_MERGE
+from bzrlib.plugins.svn.tree import (parse_externals_description, 
+                  inventory_add_external)
 
 
 def _escape_commit_message(message):

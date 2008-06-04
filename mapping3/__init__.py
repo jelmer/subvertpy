@@ -16,14 +16,13 @@
 from bzrlib import osutils, ui
 from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
-from bzrlib.plugins.svn import mapping
-from layout import RepositoryLayout
-from mapping3.scheme import (BranchingScheme, guess_scheme_from_branch_path, 
+from bzrlib.plugins.svn import core, constants, mapping
+from bzrlib.plugins.svn.layout import RepositoryLayout
+from bzrlib.plugins.svn.mapping3.scheme import (BranchingScheme, guess_scheme_from_branch_path, 
                              guess_scheme_from_history, ListBranchingScheme, 
                              parse_list_scheme_text, NoBranchingScheme,
                              TrunkBranchingScheme, ListBranchingScheme)
-import sha, core
-import constants
+import sha
 
 SVN_PROP_BZR_BRANCHING_SCHEME = 'bzr:branching-scheme'
 

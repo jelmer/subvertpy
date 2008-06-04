@@ -19,11 +19,11 @@ from bzrlib.errors import (ConnectionError, ConnectionReset, LockError,
                            UnexpectedEndOfContainerError)
 from bzrlib.tests import TestCase
 
-from errors import (convert_svn_error, convert_error, InvalidPropertyValue, 
+from bzrlib.plugins.svn import constants
+from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.errors import (convert_svn_error, convert_error, InvalidPropertyValue, 
                     InvalidSvnBranchPath, NotSvnBranchPath)
-import constants
 
-from core import SubversionException
 
 class TestConvertError(TestCase):
     def test_decorator_unknown(self):

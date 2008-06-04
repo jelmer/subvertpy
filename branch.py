@@ -19,21 +19,19 @@ from bzrlib import ui
 from bzrlib.branch import Branch, BranchFormat, BranchCheckResult, PullResult
 from bzrlib.bzrdir import BzrDir
 from bzrlib.errors import (NoSuchFile, DivergedBranches, NoSuchRevision, 
-                           NotBranchError)
+                           NotBranchError, UnstackableBranchFormat)
 from bzrlib.inventory import (Inventory)
 from bzrlib.revision import is_null, ensure_null, NULL_REVISION
 from bzrlib.workingtree import WorkingTree
 
-import core
-from core import SubversionException
-import constants
-
-from commit import push
-from config import BranchConfig
-from errors import NotSvnBranchPath
-from format import get_rich_root_format
-from repository import SvnRepository
-from transport import bzr_to_svn_url
+from bzrlib.plugins.svn import constants, core
+from bzrlib.plugins.svn.commit import push
+from bzrlib.plugins.svn.config import BranchConfig
+from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.errors import NotSvnBranchPath
+from bzrlib.plugins.svn.format import get_rich_root_format
+from bzrlib.plugins.svn.repository import SvnRepository
+from bzrlib.plugins.svn.transport import bzr_to_svn_url
 
 
 class FakeControlFiles(object):
@@ -421,6 +419,9 @@ class SvnBranch(Branch):
         result = to_bzrdir.create_branch()
         self.copy_content_into(result, revision_id=revision_id)
         return result
+
+    def get_stacked_on(self):
+        raise UnstackableBranchFormat(self._format, self.base)
 
     def __str__(self):
         return '%s(%r)' % (self.__class__.__name__, self.base)

@@ -19,14 +19,10 @@ from bzrlib import osutils, registry
 from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
 
-from bzrlib.plugins.svn import version_info
+from bzrlib.plugins.svn import core, constants, version_info, constants, errors
 import calendar
-import core
-import errors
 import sha
-import time
 import urllib
-import constants
 
 MAPPING_VERSION = 3
 

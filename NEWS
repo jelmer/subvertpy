@@ -10,6 +10,8 @@ bzr-svn 0.4.11	UNRELEASED
 	 the Subversion development libraries and should be possible by 
 	 simply running ``make`` from the plugin directory.
 
+   * Now uses absolute imports and no longer adds plugin directory to the system path.
+
   BUG FIXES
 
    * Raise appropriate errors when using annotate.

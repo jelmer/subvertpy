@@ -22,9 +22,9 @@ from bzrlib.bzrdir import BzrDir, format_registry
 from bzrlib.errors import (NoRepositoryPresent, NotBranchError, NotLocalUrl,
                            NoWorkingTree, AlreadyBranchError)
 
-from format import SvnRemoteFormat
-from tests import TestCaseWithSubversionRepository
-from transport import SvnRaTransport
+from bzrlib.plugins.svn.format import SvnRemoteFormat
+from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.transport import SvnRaTransport
 
 class TestRemoteAccess(TestCaseWithSubversionRepository):
     def test_clone(self):

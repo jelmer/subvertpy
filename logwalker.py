@@ -25,8 +25,8 @@ from transport import SvnRaTransport
 import core
 import constants
 
-from cache import CacheTable
-import changes
+from bzrlib.plugins.svn.cache import CacheTable
+from bzrlib.plugins.svn import changes
 
 class lazy_dict(object):
     def __init__(self, initial, create_fn, *args):
