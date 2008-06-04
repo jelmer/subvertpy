@@ -16,8 +16,8 @@
 """Subversion ra library tests."""
 
 from bzrlib.tests import TestCase
-import ra
-from tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn import ra
+from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
 
 class VersionTest(TestCase):
     def test_version_length(self):

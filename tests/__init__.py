@@ -25,8 +25,7 @@ from bzrlib.tests import TestCaseInTempDir, TestSkipped
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
-import constants
-import repos, wc, client, ra
+from bzrlib.plugins.svn import constants, repos, wc, client, ra
 
 class TestCaseWithSubversionRepository(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion 

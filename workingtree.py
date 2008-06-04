@@ -35,7 +35,7 @@ from bzrlib.plugins.svn import constants
 from bzrlib.plugins.svn.branch import SvnBranch
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.convert import SvnConverter
-from bzrlib.plugins.svn.errors import LocalCommitsUnsupported, NoSvnRepositoryPresent
+from bzrlib.plugins.svn.errors import NoSvnRepositoryPresent
 from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_FILEIDS, 
                      SVN_PROP_BZR_REVISION_ID, SVN_PROP_BZR_REVISION_INFO,
                      generate_revision_metadata)

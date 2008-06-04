@@ -32,7 +32,7 @@ import os
 from bzrlib.plugins.svn.transport import SvnRaTransport
 from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
 
-from core import time_to_cstring
+from bzrlib.plugins.svn.core import time_to_cstring
 
 class TestNativeCommit(TestCaseWithSubversionRepository):
     def test_simple_commit(self):

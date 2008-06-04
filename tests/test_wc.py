@@ -16,7 +16,7 @@
 """Subversion ra library tests."""
 
 from bzrlib.tests import TestCase
-import wc
+from bzrlib.plugins.svn import wc
 
 class VersionTest(TestCase):
     def test_version_length(self):

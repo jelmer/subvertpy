@@ -16,7 +16,7 @@
 """Subversion core library tests."""
 
 from bzrlib.tests import TestCase
-import core
+from bzrlib.plugins.svn import core
 
 class TestCore(TestCase):
     def setUp(self):

@@ -16,7 +16,7 @@
 """Subversion rpeository library tests."""
 
 import os
-import repos
+from bzrlib.plugins.svn import repos
 from bzrlib.tests import TestCaseInTempDir
 
 class TestClient(TestCaseInTempDir):

@@ -31,7 +31,7 @@ from bzrlib.plugins.svn.mapping3 import set_branching_scheme
 from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme, NoBranchingScheme
 from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
 
-import repos
+from bzrlib.plugins.svn import repos
 
 class TestLoadDumpfile(TestCaseInTempDir):
     def test_loaddumpfile(self):

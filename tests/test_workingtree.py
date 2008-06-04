@@ -25,7 +25,7 @@ from bzrlib.tests import KnownFailure, TestCase
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
-import core, wc
+from bzrlib.plugins.svn import core, wc
 
 import os, sys
 

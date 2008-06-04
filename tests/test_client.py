@@ -16,8 +16,8 @@
 """Subversion client library tests."""
 
 from bzrlib.tests import TestCase
-import client
-from tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn import client
+from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
 
 class TestClient(TestCaseWithSubversionRepository):
     def setUp(self):
