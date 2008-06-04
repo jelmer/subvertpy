@@ -91,14 +91,24 @@ static void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, a
 	Py_DECREF(ret);
 }
 
-#define RA_UNBUSY(pool, ra) ra->busy = false;
+#define RA_UNBUSY(pool, ra) \
+	ra->busy = false; \
+	if (ra->unbusy_cb != Py_None) { \
+		PyObject *ret = PyObject_CallFunction(ra->unbusy_cb, ""); \
+		if (ret == NULL) { \
+			apr_pool_destroy(pool); \
+			return NULL; \
+		} \
+	} 
+
 
 typedef struct {
 	PyObject_HEAD
     const svn_ra_reporter2_t *reporter;
     void *report_baton;
     apr_pool_t *pool;
-	bool *busy_var;
+	PyObject *(*done_cb)(void *baton);
+	void *done_baton;
 } ReporterObject;
 
 static PyObject *reporter_set_path(PyObject *self, PyObject *args)
@@ -160,8 +170,8 @@ static PyObject *reporter_finish(PyObject *self)
 													  reporter->pool)))
 		return NULL;
 
-	if (reporter->busy_var != NULL)
-		*reporter->busy_var = false;
+	if (reporter->done_cb != NULL)
+		reporter->done_cb(reporter->done_baton);
 
 	Py_RETURN_NONE;
 }
@@ -173,8 +183,8 @@ static PyObject *reporter_abort(PyObject *self)
 													 reporter->pool)))
 		return NULL;
 
-	if (reporter->busy_var != NULL)
-		*reporter->busy_var = false;
+	if (reporter->done_cb != NULL)
+		reporter->done_cb(reporter->done_baton);
 
 	Py_RETURN_NONE;
 }
@@ -199,6 +209,7 @@ static void reporter_dealloc(PyObject *self)
 PyTypeObject Reporter_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	.tp_name = "ra.Reporter",
+	.tp_basicsize = sizeof(ReporterObject),
 	.tp_methods = reporter_methods,
 	.tp_dealloc = reporter_dealloc,
 };
@@ -480,8 +491,17 @@ typedef struct {
     PyObject *progress_func;
 	AuthObject *auth;
 	bool busy;
-	PyObject *unbusy_handler;
+	PyObject *unbusy_cb;
 } RemoteAccessObject;
+
+static PyObject *ra_done_handler(void *_ra)
+{
+	RemoteAccessObject *ra = (RemoteAccessObject *)_ra;
+
+	RA_UNBUSY(NULL, ra);
+
+	Py_RETURN_NONE;
+}
 
 static bool ra_check_busy(RemoteAccessObject *raobj)
 {
@@ -533,6 +553,9 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		ret->auth = auth;
 		auth_baton = ret->auth->auth_baton;
 	}
+
+	ret->unbusy_cb = Py_None;
+	Py_INCREF(ret->unbusy_cb);
 	
     ret->pool = Pool();
 	if (ret->pool == NULL)
@@ -724,6 +747,8 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
+
+	Py_INCREF(update_editor);
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_do_update(ra->ra, &reporter, 
 												  &report_baton, 
 												  revision_to_update_to, 
@@ -736,7 +761,8 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	ret->reporter = reporter;
 	ret->report_baton = report_baton;
 	ret->pool = temp_pool;
-	ret->busy_var = &ra->busy;
+	ret->done_cb = ra_done_handler;
+	ret->done_baton = ra;
 	return (PyObject *)ret;
 }
 
@@ -762,6 +788,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
+	Py_INCREF(update_editor);
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_do_switch(
 						ra->ra, &reporter, &report_baton, 
 						revision_to_update_to, update_target, 
@@ -773,7 +800,8 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	ret->reporter = reporter;
 	ret->report_baton = report_baton;
 	ret->pool = temp_pool;
-	ret->busy_var = &ra->busy;
+	ret->done_cb = ra_done_handler;
+	ret->done_baton = ra;
 	return (PyObject *)ret;
 }
 
@@ -794,6 +822,7 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
+	Py_INCREF(update_editor);
     RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_ra_replay(ra->ra, revision, low_water_mark,
 									send_deltas, &py_editor, update_editor, 
@@ -875,7 +904,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		commit_callback, hash_lock_tokens, keep_locks, pool));
 	apr_pool_destroy(temp_pool);
 	return new_editor_object(editor, edit_baton, pool, 
-								  &Editor_Type, &ra->busy);
+								  &Editor_Type, ra_done_handler, ra);
 }
 
 static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
@@ -1226,8 +1255,10 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 static void ra_dealloc(PyObject *self)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+	Py_XDECREF(ra->unbusy_cb);
 	apr_pool_destroy(ra->pool);
 	Py_XDECREF(ra->auth);
+	PyObject_Del(self);
 }
 
 static PyObject *ra_repr(PyObject *self)
@@ -1238,7 +1269,18 @@ static PyObject *ra_repr(PyObject *self)
 
 static PyObject *ra_set_unbusy_handler(PyObject *self, PyObject *args)
 {
-	Py_RETURN_NONE; /* FIXME */
+	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+	PyObject *unbusy_func;
+
+	if (!PyArg_ParseTuple(args, "O", &unbusy_func))
+		return NULL;
+
+	Py_DECREF (ra->unbusy_cb);
+
+	ra->unbusy_cb = unbusy_func;
+	Py_INCREF(ra->unbusy_cb);
+
+	Py_RETURN_NONE;
 }
 
 static PyMethodDef ra_methods[] = {

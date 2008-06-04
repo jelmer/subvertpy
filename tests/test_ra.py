@@ -23,6 +23,7 @@ class VersionTest(TestCase):
     def test_version_length(self):
         self.assertEquals(4, len(ra.version()))
 
+
 class TestRemoteAccess(TestCaseWithSubversionRepository):
     def setUp(self):
         super(TestRemoteAccess, self).setUp()
@@ -89,10 +90,20 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
         self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
                           set(props.keys()))
 
-    def test_get_commit_editor(self):
+    def test_get_commit_editor_busy(self):
         def mycb(rev):
             pass
         editor = self.ra.get_commit_editor({"svn:log": "foo"}, mycb)
         self.assertRaises(ra.BusyException, self.ra.get_commit_editor, {"svn:log": "foo"}, mycb)
         editor.abort()
+
+    def test_get_commit_editor(self):
+        def mycb(paths, rev, revprops):
+            pass
+        editor = self.ra.get_commit_editor({"svn:log": "foo"}, mycb)
+        dir = editor.open_root(0)
+        subdir = dir.add_directory("foo")
+        subdir.close()
+        dir.close()
+        editor.close()
 

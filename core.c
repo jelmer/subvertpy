@@ -70,6 +70,7 @@ PyTypeObject Config_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	.tp_name = "core.Config",
 	.tp_basicsize = sizeof(ConfigObject),
+	.tp_dealloc = (destructor)PyObject_Del,
 };
 
 static PyObject *get_config(PyObject *self, PyObject *args)

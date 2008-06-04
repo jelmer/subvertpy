@@ -29,10 +29,11 @@ typedef struct {
     const svn_delta_editor_t *editor;
     void *baton;
     apr_pool_t *pool;
-	bool *busy_var;
+	PyObject *(*done_cb) (void *baton);
+	void *done_baton;
 } EditorObject;
 
-PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, bool *busy_var)
+PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, PyObject *(*done_cb) (void *), void *done_baton)
 {
 	EditorObject *obj = PyObject_New(EditorObject, type);
 	if (obj == NULL)
@@ -40,7 +41,8 @@ PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_p
 	obj->editor = editor;
     obj->baton = baton;
 	obj->pool = pool;
-	obj->busy_var = busy_var;
+	obj->done_cb = done_cb;
+	obj->done_baton = done_baton;
 	return (PyObject *)obj;
 }
 
@@ -54,6 +56,7 @@ static void py_editor_dealloc(PyObject *self)
 
 PyTypeObject TxDeltaWindowHandler_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
+	.tp_basicsize = sizeof(TxDeltaWindowHandlerObject),
 	.tp_name = "ra.TxDeltaWindowHandler",
 	.tp_call = NULL, /* FIXME */
 	.tp_dealloc = (destructor)PyObject_Del
@@ -131,6 +134,7 @@ static PyMethodDef py_file_editor_methods[] = {
 PyTypeObject FileEditor_Type = { 
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.FileEditor",
+	.tp_basicsize = sizeof(EditorObject),
 	.tp_methods = py_file_editor_methods,
 	.tp_dealloc = (destructor)PyObject_Del,
 };
@@ -177,7 +181,7 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 		return NULL;
 
     return new_editor_object(editor->editor, child_baton, editor->pool, 
-							 &DirectoryEditor_Type, NULL);
+							 &DirectoryEditor_Type, NULL, NULL);
 }
 
 static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
@@ -200,7 +204,7 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 		return NULL;
 
     return new_editor_object(editor->editor, child_baton, editor->pool, 
-							 &DirectoryEditor_Type, NULL);
+							 &DirectoryEditor_Type, NULL, NULL);
 }
 
 static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
@@ -283,7 +287,7 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, file_baton, editor->pool,
-							 &FileEditor_Type, NULL);
+							 &FileEditor_Type, NULL, NULL);
 }
 
 static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
@@ -306,7 +310,7 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, file_baton, editor->pool,
-							 &FileEditor_Type, NULL);
+							 &FileEditor_Type, NULL, NULL);
 }
 
 static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
@@ -345,6 +349,7 @@ static PyMethodDef py_dir_editor_methods[] = {
 PyTypeObject DirectoryEditor_Type = { 
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.DirEditor",
+	.tp_basicsize = sizeof(EditorObject),
 	.tp_methods = py_dir_editor_methods,
 	.tp_dealloc = (destructor)PyObject_Del,
 };
@@ -388,7 +393,7 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, root_baton, editor->pool,
-							 &DirectoryEditor_Type, NULL);
+							 &DirectoryEditor_Type, NULL, NULL);
 }
 
 static PyObject *py_editor_close(PyObject *self)
@@ -403,8 +408,8 @@ static PyObject *py_editor_close(PyObject *self)
 	if (!check_error(editor->editor->close_edit(editor->baton, editor->pool)))
 		return NULL;
 
-	if (editor->busy_var != NULL)
-		*editor->busy_var = false;
+	if (editor->done_cb != NULL)
+		editor->done_cb(editor->done_baton);
 
 	Py_RETURN_NONE;
 }
@@ -421,9 +426,9 @@ static PyObject *py_editor_abort(PyObject *self)
 	if (!check_error(editor->editor->abort_edit(editor->baton, editor->pool)))
 		return NULL;
 
-	if (editor->busy_var != NULL)
-		*editor->busy_var = false;
-
+	if (editor->done_cb != NULL)
+		editor->done_cb(editor->done_baton);
+	
 	Py_RETURN_NONE;
 }
 
@@ -438,6 +443,7 @@ static PyMethodDef py_editor_methods[] = {
 PyTypeObject Editor_Type = { 
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.Editor",
+	.tp_basicsize = sizeof(EditorObject),
 	.tp_methods = py_editor_methods,
 	.tp_dealloc = py_editor_dealloc,
 };

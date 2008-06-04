@@ -497,7 +497,7 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 		apr_pool_destroy(pool);
 		return NULL;
 	}
-	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL);
+	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL, NULL);
 }
 
 static PyObject *adm_close(PyObject *self)
