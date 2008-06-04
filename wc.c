@@ -85,7 +85,7 @@ static svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool)
     return NULL;
 }
 
-svn_ra_reporter2_t py_ra_reporter = {
+static const svn_ra_reporter2_t py_ra_reporter = {
 	.finish_report = py_ra_report_finish,
 	.abort_report = py_ra_report_abort,
 	.link_path = py_ra_report_link_path,
@@ -152,7 +152,6 @@ PyTypeObject Entry_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "wc.Entry",
 	.tp_basicsize = sizeof(EntryObject),
-	.tp_flags = Py_TPFLAGS_HAVE_GC,
 	.tp_dealloc = entry_dealloc,
 	.tp_members = entry_members,
 };
@@ -551,7 +550,6 @@ PyTypeObject Adm_Type = {
 	.tp_name = "wc.WorkingCopy",
 	.tp_basicsize = sizeof(AdmObject),
 	.tp_new = adm_init,
-	.tp_flags = Py_TPFLAGS_HAVE_GC,
 	.tp_dealloc = adm_dealloc,
 	.tp_methods = adm_methods,
 };

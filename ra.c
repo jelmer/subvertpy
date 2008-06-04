@@ -42,7 +42,7 @@ typedef struct {
     PyObject *providers;
 } AuthObject;
 
-svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, void *baton, apr_pool_t *pool)
+static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, void *baton, apr_pool_t *pool)
 {
 	PyObject *fn = (PyObject *)baton, *ret;
 
@@ -51,37 +51,44 @@ svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, void *bato
 								commit_info->author);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
 	return NULL;
 }
 
-PyObject *pyify_lock(const svn_lock_t *lock)
+static PyObject *pyify_lock(const svn_lock_t *lock)
 {
     Py_RETURN_NONE; /* FIXME */
 }
 
-svn_error_t *py_lock_func (void *baton, const char *path, int do_lock, 
+static svn_error_t *py_lock_func (void *baton, const char *path, int do_lock, 
                            const svn_lock_t *lock, svn_error_t *ra_err, 
                            apr_pool_t *pool)
 {
-    PyObject *py_ra_err = Py_None, *ret;
+    PyObject *py_ra_err = Py_None, *ret, *py_lock;
     if (ra_err != NULL) {
         py_ra_err = PyErr_NewSubversionException(ra_err);
 	}
+	py_lock = pyify_lock(lock);
     ret = PyObject_CallFunction((PyObject *)baton, "zbOO", path, do_lock, 
-						  pyify_lock(lock), py_ra_err);
+						  py_lock, py_ra_err);
+	Py_DECREF(py_lock);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
 	return NULL;
 }
 
-void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, apr_pool_t *pool)
+static void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, apr_pool_t *pool)
 {
-    PyObject *fn = (PyObject *)baton;
+    PyObject *fn = (PyObject *)baton, *ret;
     if (fn == Py_None) {
         return;
 	}
-	PyObject_CallFunction(fn, "ll", progress, total);
+	ret = PyObject_CallFunction(fn, "ll", progress, total);
 	/* TODO: What to do with exceptions raised here ? */
+	if (ret == NULL)
+		return;
+	Py_DECREF(ret);
 }
 
 #define RA_UNBUSY(pool, ra) ra->busy = false;
@@ -194,7 +201,6 @@ PyTypeObject Reporter_Type = {
 	.tp_name = "ra.Reporter",
 	.tp_methods = reporter_methods,
 	.tp_dealloc = reporter_dealloc,
-	.tp_flags = Py_TPFLAGS_HAVE_GC,
 };
 
 /**
@@ -202,7 +208,7 @@ PyTypeObject Reporter_Type = {
  *
  * :return: tuple with major, minor, patch version number and tag.
  */
-PyObject *version(PyObject *self)
+static PyObject *version(PyObject *self)
 {
     const svn_version_t *ver = svn_ra_version();
     return Py_BuildValue("(iiis)", ver->major, ver->minor, 
@@ -216,6 +222,7 @@ static svn_error_t *py_cb_editor_set_target_revision(void *edit_baton, svn_revnu
 	ret = PyObject_CallMethod(self, "set_target_revision", "l", target_revision);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -226,7 +233,6 @@ static svn_error_t *py_cb_editor_open_root(void *edit_baton, svn_revnum_t base_r
     ret = PyObject_CallMethod(self, "open_root", "l", base_revision);
 	if (ret == NULL)
 		return py_svn_error();
-    Py_INCREF(ret);
     *root_baton = (void *)ret;
     return NULL;
 }
@@ -237,6 +243,7 @@ static svn_error_t *py_cb_editor_delete_entry(const char *path, long revision, v
 	ret = PyObject_CallMethod(self, "delete_entry", "sl", path, revision);
 	if (ret == NULL)
 		return py_svn_error();
+    Py_DECREF(ret);
     return NULL;
 }
 
@@ -251,19 +258,17 @@ static svn_error_t *py_cb_editor_add_directory(const char *path, void *parent_ba
 	}
 	if (ret == NULL)
 		return py_svn_error();
-    Py_INCREF(ret);
     *child_baton = (void *)ret;
     return NULL;
 }
 
-svn_error_t *py_cb_editor_open_directory(const char *path, void *parent_baton, long base_revision, apr_pool_t *pool, void **child_baton)
+static svn_error_t *py_cb_editor_open_directory(const char *path, void *parent_baton, long base_revision, apr_pool_t *pool, void **child_baton)
 {
     PyObject *self = (PyObject *)parent_baton, *ret;
     *child_baton = NULL;
     ret = PyObject_CallMethod(self, "open_directory", "sl", path, base_revision);
 	if (ret == NULL)
 		return py_svn_error();
-    Py_INCREF(ret);
     *child_baton = (void *)ret;
     return NULL;
 }
@@ -274,6 +279,7 @@ static svn_error_t *py_cb_editor_change_dir_prop(void *dir_baton, const char *na
 	ret = PyObject_CallMethod(self, "change_prop", "sz#", name, value->data, value->len);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -281,9 +287,10 @@ static svn_error_t *py_cb_editor_close_directory(void *dir_baton, apr_pool_t *po
 {
     PyObject *self = (PyObject *)dir_baton, *ret;
     ret = PyObject_CallMethod(self, "close", "");
+    Py_DECREF(self);
 	if (ret == NULL)
 		return py_svn_error();
-    Py_DECREF(self);
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -293,6 +300,7 @@ static svn_error_t *py_cb_editor_absent_directory(const char *path, void *parent
 	ret = PyObject_CallMethod(self, "absent_directory", "s", path);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -307,7 +315,6 @@ static svn_error_t *py_cb_editor_add_file(const char *path, void *parent_baton, 
 	}
 	if (ret == NULL)
 		return py_svn_error();
-    Py_INCREF(ret);
     *file_baton = (void *)ret;
     return NULL;
 }
@@ -318,7 +325,6 @@ static svn_error_t *py_cb_editor_open_file(const char *path, void *parent_baton,
     ret = PyObject_CallMethod(self, "open_file", "sl", path, base_revision);
 	if (ret == NULL)
 		return py_svn_error();
-    Py_INCREF(ret);
     *file_baton = (void *)ret;
     return NULL;
 }
@@ -351,8 +357,10 @@ static svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void
 	py_window = Py_BuildValue("((LIIiOO))", window->sview_offset, window->sview_len, window->tview_len, 
 								window->src_ops, ops, py_new_data);
 	ret = PyObject_CallFunction(fn, "O", py_window);
+	Py_DECREF(py_window);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -363,7 +371,6 @@ static svn_error_t *py_cb_editor_apply_textdelta(void *file_baton, const char *b
 	ret = PyObject_CallMethod(self, "apply_textdelta", "z", base_checksum);
 	if (ret == NULL)
 		return py_svn_error();
-    Py_INCREF(ret);
     *handler_baton = (void *)ret;
     *handler = py_txdelta_window_handler;
     return NULL;
@@ -376,6 +383,7 @@ static svn_error_t *py_cb_editor_change_file_prop(void *file_baton, const char *
 							  value->data, value->len);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -388,9 +396,10 @@ static svn_error_t *py_cb_editor_close_file(void *file_baton,
 	} else {
 		ret = PyObject_CallMethod(self, "close", "s", text_checksum);
 	}
+    Py_DECREF(self);
 	if (ret == NULL)
 		return py_svn_error();
-    Py_DECREF(self);
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -400,6 +409,7 @@ static svn_error_t *py_cb_editor_absent_file(const char *path, void *parent_bato
 	ret = PyObject_CallMethod(self, "absent_file", "s", path);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -407,8 +417,10 @@ static svn_error_t *py_cb_editor_close_edit(void *edit_baton, apr_pool_t *pool)
 {
     PyObject *self = (PyObject *)edit_baton, *ret;
 	ret = PyObject_CallMethod(self, "close", "");
+	Py_DECREF(self);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -416,12 +428,14 @@ static svn_error_t *py_cb_editor_abort_edit(void *edit_baton, apr_pool_t *pool)
 {
     PyObject *self = (PyObject *)edit_baton, *ret;
 	ret = PyObject_CallMethod(self, "abort", "");
+	Py_DECREF(self);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
     return NULL;
 }
 
-svn_delta_editor_t py_editor = {
+static const svn_delta_editor_t py_editor = {
 	.set_target_revision = py_cb_editor_set_target_revision,
 	.open_root = py_cb_editor_open_root,
 	.delete_entry = py_cb_editor_delete_entry,
@@ -442,14 +456,18 @@ svn_delta_editor_t py_editor = {
 
 static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
 {
-    PyObject *fn = (PyObject *)baton, *ret;
+    PyObject *fn = (PyObject *)baton, *ret, *py_rev_props;
 
+	py_rev_props = prop_hash_to_dict(rev_props);
+	if (py_rev_props == NULL)
+		return py_svn_error();
 
 	/* FIXME: delta handler */
-	ret = PyObject_CallFunction(fn, "slO", path, rev, 
-								prop_hash_to_dict(rev_props));
+	ret = PyObject_CallFunction(fn, "slO", path, rev, py_rev_props);
+	Py_DECREF(py_rev_props);
 	if (ret == NULL)
 		return py_svn_error();
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -533,14 +551,16 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	config_hash = apr_hash_make(ret->pool);
 	if (PyDict_Check(config)) {
 		while (PyDict_Next(config, &idx, &key, &value)) {
-			apr_hash_set(config_hash, PyString_AsString(key), 
-						 PyString_Size(key), PyString_AsString(value));
+			apr_hash_set(config_hash, apr_pstrdup(ret->pool, PyString_AsString(key)), 
+						 PyString_Size(key), apr_pstrdup(ret->pool, PyString_AsString(value)));
 		}
 	} else if (config != Py_None) {
 		PyErr_SetString(PyExc_TypeError, "Expected dictionary for config");
+		apr_pool_destroy(ret->pool);
+		PyObject_Del(ret);
 		return NULL;
 	}
-	if (!check_error(svn_ra_open2(&ret->ra, url, 
+	if (!check_error(svn_ra_open2(&ret->ra, apr_pstrdup(ret->pool, url), 
 								  callbacks2, ret, config_hash, ret->pool))) {
 		apr_pool_destroy(ret->pool);
 		PyObject_Del(ret);
@@ -1257,7 +1277,6 @@ PyTypeObject RemoteAccess_Type = {
 	.tp_repr = ra_repr,
 	.tp_methods = ra_methods,
 	.tp_members = ra_members,
-	.tp_flags = Py_TPFLAGS_HAVE_GC,
 };
 
 typedef struct { 
@@ -1278,7 +1297,6 @@ PyTypeObject AuthProvider_Type = {
 	.tp_name = "ra.AuthProvider",
 	.tp_basicsize = sizeof(AuthProviderObject),
 	.tp_dealloc = auth_provider_dealloc,
-	.tp_flags = Py_TPFLAGS_HAVE_GC,
 };
 
 static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)

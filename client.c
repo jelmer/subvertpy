@@ -99,6 +99,7 @@ static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file
 		return py_svn_error();
 
     ret = PyObject_CallFunction(baton, "O", py_commit_items);
+	Py_DECREF(py_commit_items);
 	if (ret == NULL)
 		return py_svn_error();
     if (PyTuple_Check(ret)) {
@@ -114,6 +115,7 @@ static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file
     if (py_tmp_file != Py_None) {
         *tmp_file = PyString_AsString(py_tmp_file);
     }
+	Py_DECREF(ret);
     return NULL;
 }
 
@@ -568,7 +570,6 @@ PyTypeObject Client_Type = {
     .tp_methods = client_methods,
     .tp_dealloc = client_dealloc,
     .tp_new = client_new,
-	.tp_flags = Py_TPFLAGS_HAVE_GC,
 	.tp_getset = client_getset
 };
 

@@ -48,6 +48,7 @@ static void py_editor_dealloc(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_destroy(editor->pool);
+	PyObject_Del(self);
 }
 
 
@@ -112,7 +113,7 @@ PyTypeObject FileEditor_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.FileEditor",
 	.tp_methods = py_file_editor_methods,
-	.tp_dealloc = py_editor_dealloc,
+	.tp_dealloc = PyObject_Del,
 };
 
 static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
@@ -277,7 +278,7 @@ PyTypeObject DirectoryEditor_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.DirEditor",
 	.tp_methods = py_dir_editor_methods,
-	.tp_dealloc = py_editor_dealloc,
+	.tp_dealloc = PyObject_Del,
 };
 
 static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)

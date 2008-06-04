@@ -227,14 +227,6 @@ static svn_error_t *py_stream_close(void *baton)
 	return NULL;
 }
 
-svn_stream_t *string_stream(apr_pool_t *pool, PyObject *text)
-{
-    svn_stringbuf_t *buf;
-    buf = svn_stringbuf_ncreate(PyString_AsString(text), 
-								PyString_Size(text), pool);
-    return svn_stream_from_stringbuf(buf, pool);
-}
-
 svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py)
 {
     svn_stream_t *stream;
