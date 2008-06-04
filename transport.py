@@ -225,7 +225,6 @@ class SvnRaTransport(Transport):
     def do_switch(self, switch_rev, recurse, switch_url, editor):
         conn = self._open_real_transport()
         self.mutter('svn do-switch -r%d %s' % (switch_rev, switch_url))
-        conn.set_unbusy_handler(lambda: self.add_connection(conn))
         return conn.do_switch(switch_rev, "", recurse, switch_url, editor)
 
     def iter_log(self, paths, from_revnum, to_revnum, limit, discover_changed_paths, 
@@ -377,7 +376,6 @@ class SvnRaTransport(Transport):
     def do_update(self, revnum, recurse, editor):
         conn = self._open_real_transport()
         self.mutter('svn do-update -r%d' % (revnum,))
-        conn.set_unbusy_handler(lambda: self.add_connection(conn))
         return conn.do_update(revnum, "", recurse, editor)
 
     def has_capability(self, cap):
@@ -399,7 +397,6 @@ class SvnRaTransport(Transport):
     def get_commit_editor(self, revprops, done_cb, lock_token, keep_locks):
         conn = self._open_real_transport()
         self.mutter('svn get-commit-editor %r' % (revprops,))
-        conn.set_unbusy_handler(lambda: self.add_connection(conn))
         return conn.get_commit_editor(revprops, done_cb,
                                      lock_token, keep_locks)
 

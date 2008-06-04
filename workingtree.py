@@ -150,9 +150,13 @@ class SvnWorkingTree(WorkingTree):
         try:
             editor = adm.get_update_editor(self.basedir, use_commit_times=False, recurse=True)
             assert editor is not None
-            reporter = self.branch.repository.transport.do_update(revnum, True, editor)
-            adm.crawl_revisions(self.basedir, reporter, restore_files=False, recurse=True, 
-                                use_commit_times=False)
+            conn = self.branch.repository.transport.get_connection()
+            try:
+                reporter = conn.do_update(revnum, True, editor)
+                adm.crawl_revisions(self.basedir, reporter, restore_files=False, recurse=True, 
+                                    use_commit_times=False)
+            finally:
+                self.branch.repository.transport.add_connection(conn)
             # FIXME: handle externals
         finally:
             adm.close()

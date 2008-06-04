@@ -107,11 +107,15 @@ class SvnRevisionTree(RevisionTree):
         editor = TreeBuildEditor(self)
         self.file_data = {}
         root_repos = repository.transport.get_svn_repos_root()
-        reporter = repository.transport.do_switch(
+        conn = repository.transport.get_connection()
+        reporter = conn.do_switch(
                 self.revnum, True, 
                 urlutils.join(root_repos, self.branch_path), editor)
-        reporter.set_path("", 0, True)
-        reporter.finish()
+        try:
+            reporter.set_path("", 0, True)
+            reporter.finish()
+        finally:
+            repository.transport.add_connection(conn)
 
     def get_file_lines(self, file_id):
         return osutils.split_lines(self.file_data[file_id])
