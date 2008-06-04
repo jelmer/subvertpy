@@ -349,7 +349,7 @@ static svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void
 					window->ops[i].offset, 
 					window->ops[i].length));
 	}
-	if (window->new_data != NULL) {
+	if (window->new_data != NULL && window->new_data->data != NULL) {
 		py_new_data = PyString_FromStringAndSize(window->new_data->data, window->new_data->len);
 	} else {
 		py_new_data = Py_None;
@@ -489,6 +489,7 @@ static bool ra_check_busy(RemoteAccessObject *raobj)
 		PyErr_SetString(busy_exc, "Remote access object already in use");
 		return true;
 	}
+	raobj->busy = true;
 	return false;
 }
 
@@ -833,7 +834,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		NULL };
 	PyObject *revprops, *commit_callback, *lock_tokens = Py_None;
 	bool keep_locks = false;
-	apr_pool_t *temp_pool;
+	apr_pool_t *temp_pool, *pool;
 	const svn_delta_editor_t *editor;
 	void *edit_baton;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
@@ -866,11 +867,14 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		return NULL;
 	}
 
+	pool = Pool();
+
 	RUN_SVN_WITH_POOL(temp_pool, svn_ra_get_commit_editor2(ra->ra, &editor, 
 		&edit_baton, 
 		PyString_AsString(PyDict_GetItemString(revprops, SVN_PROP_REVISION_LOG)), py_commit_callback, 
-		commit_callback, hash_lock_tokens, keep_locks, temp_pool));
-	return new_editor_object(editor, edit_baton, temp_pool, 
+		commit_callback, hash_lock_tokens, keep_locks, pool));
+	apr_pool_destroy(temp_pool);
+	return new_editor_object(editor, edit_baton, pool, 
 								  &Editor_Type, &ra->busy);
 }
 

@@ -131,10 +131,10 @@ void initcore(void)
 	if (mod == NULL)
 		return;
 
-	PyModule_AddObject(mod, "NODE_DIR", PyInt_FromLong(svn_node_dir));
-	PyModule_AddObject(mod, "NODE_FILE", PyInt_FromLong(svn_node_file));
-	PyModule_AddObject(mod, "NODE_UNKNOWN", PyInt_FromLong(svn_node_unknown));
-	PyModule_AddObject(mod, "NODE_NONE", PyInt_FromLong(svn_node_none));
+	PyModule_AddIntConstant(mod, "NODE_DIR", svn_node_dir);
+	PyModule_AddIntConstant(mod, "NODE_FILE", svn_node_file);
+	PyModule_AddIntConstant(mod, "NODE_UNKNOWN", svn_node_unknown);
+	PyModule_AddIntConstant(mod, "NODE_NONE", svn_node_none);
 
 	PyModule_AddObject(mod, "SubversionException", 
 					   PyErr_NewException("core.SubversionException", NULL, NULL));

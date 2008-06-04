@@ -236,7 +236,7 @@ static PyObject *adm_prop_get(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_get(&value, name, path, admobj->adm, temp_pool));
-	if (value == NULL) {
+	if (value == NULL || value->data == NULL) {
 		ret = Py_None;
 	} else {
 		ret = PyString_FromStringAndSize(value->data, value->len);
@@ -350,10 +350,6 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	apr_array_header_t *propchanges;
 	apr_hash_t *original_props;
 	AdmObject *admobj = (AdmObject *)self;
-	apr_hash_index_t *idx;
-	svn_string_t *string;
-	const char *key;
-	apr_ssize_t klen;
 	svn_prop_t *el;
 	int i;
 	PyObject *py_propchanges, *py_orig_props;
@@ -372,13 +368,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 		PyList_SetItem(py_propchanges, i, 
 					   Py_BuildValue("(ss#)", el->name, el->value->data, el->value->len));
 	}
-	py_orig_props = PyDict_New();
-	idx = apr_hash_first(temp_pool, original_props);
-	while (idx != NULL) {
-		apr_hash_this(idx, (const void **)&key, &klen, (void **)&string);
-		PyDict_SetItemString(py_orig_props, key, PyString_FromStringAndSize(string->data, string->len));
-		idx = apr_hash_next(idx);
-	}
+	py_orig_props = prop_hash_to_dict(original_props);
 	apr_pool_destroy(temp_pool);
 	return Py_BuildValue("(OO)", py_propchanges, py_orig_props);
 }
@@ -755,10 +745,10 @@ void initwc(void)
 	if (mod == NULL)
 		return;
 
-	PyModule_AddObject(mod, "SCHEDULE_NORMAL", PyLong_FromLong(0));
-	PyModule_AddObject(mod, "SCHEDULE_ADD", PyLong_FromLong(1));
-	PyModule_AddObject(mod, "SCHEDULE_DELETE", PyLong_FromLong(2));
-	PyModule_AddObject(mod, "SCHEDULE_REPLACE", PyLong_FromLong(3));
+	PyModule_AddIntConstant(mod, "SCHEDULE_NORMAL", 0);
+	PyModule_AddIntConstant(mod, "SCHEDULE_ADD", 1);
+	PyModule_AddIntConstant(mod, "SCHEDULE_DELETE", 2);
+	PyModule_AddIntConstant(mod, "SCHEDULE_REPLACE", 3);
 
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);

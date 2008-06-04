@@ -56,6 +56,7 @@ PyTypeObject TxDeltaWindowHandler_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.TxDeltaWindowHandler",
 	.tp_call = NULL, /* FIXME */
+	.tp_dealloc = (destructor)PyObject_Del
 };
 
 static PyObject *py_file_editor_apply_textdelta(PyObject *self, PyObject *args)
@@ -65,6 +66,12 @@ static PyObject *py_file_editor_apply_textdelta(PyObject *self, PyObject *args)
 	svn_txdelta_window_handler_t txdelta_handler;
 	void *txdelta_baton;
 	TxDeltaWindowHandlerObject *py_txdelta;
+
+	if (!FileEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "|z", &c_base_checksum))
 		return NULL;
 	if (!check_error(editor->editor->apply_textdelta(editor->baton,
@@ -82,6 +89,12 @@ static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	char *name;
    	svn_string_t c_value;
+
+	if (!FileEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &c_value.len))
 		return NULL;
 	if (!check_error(editor->editor->change_file_prop(editor->baton, name, 
@@ -94,6 +107,12 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
 	char *c_checksum = NULL;
+
+	if (!FileEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "|z", &c_checksum))
 		return NULL;
 	if (!check_error(editor->editor->close_file(editor->baton, c_checksum, 
@@ -113,7 +132,7 @@ PyTypeObject FileEditor_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.FileEditor",
 	.tp_methods = py_file_editor_methods,
-	.tp_dealloc = PyObject_Del,
+	.tp_dealloc = (destructor)PyObject_Del,
 };
 
 static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
@@ -121,6 +140,11 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	char *path; 
 	svn_revnum_t revision = -1;
+
+	if (!DirectoryEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
 
 	if (!PyArg_ParseTuple(args, "s|l", &path, &revision))
 		return NULL;
@@ -140,6 +164,11 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
    	void *child_baton;
 	EditorObject *editor = (EditorObject *)self;
 
+	if (!DirectoryEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copyfrom_path, &copyfrom_rev))
 		return NULL;
 
@@ -157,6 +186,12 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	int base_revision=-1;
 	void *child_baton;
+
+	if (!DirectoryEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
 
@@ -174,6 +209,11 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 	svn_string_t c_value, *p_c_value;
 	EditorObject *editor = (EditorObject *)self;
 
+	if (!DirectoryEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &c_value.len))
 		return NULL;
 
@@ -189,6 +229,12 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 static PyObject *py_dir_editor_close(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
+
+	if (!DirectoryEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
     if (!check_error(editor->editor->close_directory(editor->baton, 
 													 editor->pool)))
 		return NULL;
@@ -200,6 +246,12 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 {
 	char *path;
 	EditorObject *editor = (EditorObject *)self;
+
+	if (!Editor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
@@ -217,6 +269,11 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 	int copy_rev=-1;
 	void *file_baton;
 	EditorObject *editor = (EditorObject *)self;
+
+	if (!DirectoryEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
 
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copy_path, &copy_rev))
 		return NULL;
@@ -236,6 +293,11 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 	void *file_baton;
 	EditorObject *editor = (EditorObject *)self;
 
+	if (!DirectoryEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
 
@@ -251,6 +313,12 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 {
 	char *path;
 	EditorObject *editor = (EditorObject *)self;
+
+	if (!DirectoryEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
@@ -278,13 +346,19 @@ PyTypeObject DirectoryEditor_Type = {
 	PyObject_HEAD_INIT(&PyType_Type) 0,
 	.tp_name = "ra.DirEditor",
 	.tp_methods = py_dir_editor_methods,
-	.tp_dealloc = PyObject_Del,
+	.tp_dealloc = (destructor)PyObject_Del,
 };
 
 static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
 {
 	int target_revision;
 	EditorObject *editor = (EditorObject *)self;
+
+	if (!Editor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "i", &target_revision))
 		return NULL;
 
@@ -301,6 +375,11 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 	void *root_baton;
 	EditorObject *editor = (EditorObject *)self;
 
+	if (!Editor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!PyArg_ParseTuple(args, "|i", &base_revision))
 		return NULL;
 
@@ -315,6 +394,12 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 static PyObject *py_editor_close(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
+
+	if (!Editor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
 	if (!check_error(editor->editor->close_edit(editor->baton, editor->pool)))
 		return NULL;
 
@@ -327,6 +412,11 @@ static PyObject *py_editor_close(PyObject *self)
 static PyObject *py_editor_abort(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
+
+	if (!Editor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
 
 	if (!check_error(editor->editor->abort_edit(editor->baton, editor->pool)))
 		return NULL;
