@@ -237,10 +237,11 @@ class SvnRaTransport(Transport):
         from threading import Thread, Semaphore
 
         class logfetcher(Thread):
-            def __init__(self, transport, **kwargs):
+            def __init__(self, transport, *args, **kwargs):
                 Thread.__init__(self)
                 self.setDaemon(True)
                 self.transport = transport
+                self.args = args
                 self.kwargs = kwargs
                 self.pending = []
                 self.conn = None
@@ -263,7 +264,7 @@ class SvnRaTransport(Transport):
                     self.semaphore.release()
                 self.conn = self.transport.get_connection()
                 try:
-                    self.conn.get_log(rcvr, **self.kwargs)
+                    self.conn.get_log(callback=rcvr, *self.args, **self.kwargs)
                     self.pending.append(None)
                 except Exception, e:
                     self.pending.append(e)
@@ -274,7 +275,7 @@ class SvnRaTransport(Transport):
         else:
             newpaths = [self._request_path(path) for path in paths]
         
-        fetcher = logfetcher(self, paths=newpaths, from_revnum=from_revnum, to_revnum=to_revnum, limit=limit, discover_changed_paths=discover_changed_paths, strict_node_history=strict_node_history, revprops=revprops)
+        fetcher = logfetcher(self, paths=newpaths, start=from_revnum, end=to_revnum, limit=limit, discover_changed_paths=discover_changed_paths, strict_node_history=strict_node_history, revprops=revprops)
         fetcher.start()
         return iter(fetcher.next, None)
 

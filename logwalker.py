@@ -265,7 +265,6 @@ class CachingLogWalker(CacheTable):
 
         try:
             def update_db(orig_paths, revision, revprops):
-                mutter("update db: %r,%r,%r" % (orig_paths, revision, revprops))
                 assert isinstance(orig_paths, dict) or orig_paths is None
                 assert isinstance(revision, int)
                 assert isinstance(revprops, dict)
@@ -302,12 +301,12 @@ class CachingLogWalker(CacheTable):
 def struct_revpaths_to_tuples(changed_paths):
     assert isinstance(changed_paths, dict)
     revpaths = {}
-    for k,v in changed_paths.items():
-        if v.copyfrom_path is None:
+    for k,(action, copyfrom_path, copyfrom_rev) in changed_paths.items():
+        if copyfrom_path is None:
             copyfrom_path = None
         else:
-            copyfrom_path = v.copyfrom_path.strip("/")
-        revpaths[k.strip("/")] = (v.action, copyfrom_path, v.copyfrom_rev)
+            copyfrom_path = copyfrom_path.strip("/")
+        revpaths[k.strip("/")] = (action, copyfrom_path, copyfrom_rev)
     return revpaths
 
 
@@ -364,7 +363,7 @@ class LogWalker(object):
                 revprops = lazy_dict(known_revprops, self._transport.revprop_list, revnum)
                 yield (revpaths, revnum, revprops)
         except SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % from_revnum)
             raise
@@ -400,9 +399,9 @@ class LogWalker(object):
         conn = self._transport.connections.get(self._transport.get_svn_repos_root())
         try:
             ft = conn.check_path(path, revnum)
-            if ft == svn.core.svn_node_file:
+            if ft == core.NODE_FILE:
                 return []
-            assert ft == svn.core.svn_node_dir
+            assert ft == core.NODE_DIR
         finally:
             self._transport.connections.add(conn)
 

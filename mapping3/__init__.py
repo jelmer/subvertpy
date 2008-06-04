@@ -22,8 +22,8 @@ from mapping3.scheme import (BranchingScheme, guess_scheme_from_branch_path,
                              guess_scheme_from_history, ListBranchingScheme, 
                              parse_list_scheme_text, NoBranchingScheme,
                              TrunkBranchingScheme, ListBranchingScheme)
-import sha, svn
-from svn.core import SubversionException
+import sha, core
+import constants
 
 SVN_PROP_BZR_BRANCHING_SCHEME = 'bzr:branching-scheme'
 
@@ -66,14 +66,15 @@ class SchemeDerivedLayout(RepositoryLayout):
 
     def get_branches(self, revnum, project=""):
         def check_path(path):
-            return self.repository.transport.check_path(path, revnum) == svn.core.svn_node_dir
+            return self.repository.transport.check_path(path, revnum) == core.NODE_DIR
         def find_children(path):
             try:
+                assert not path.startswith("/")
                 dirents = self.repository.transport.get_dir(path, revnum)[0]
-            except SubversionException, (msg, num):
-                if num == svn.core.SVN_ERR_FS_NOT_DIRECTORY:
+            except core.SubversionException, (msg, num):
+                if num == constants.ERR_FS_NOT_DIRECTORY:
                     return None
-                if num == svn.core.SVN_ERR_FS_NOT_FOUND:
+                if num == constants.ERR_FS_NOT_FOUND:
                     return None
                 raise
             return dirents.keys()
@@ -121,7 +122,7 @@ def set_property_scheme(repository, scheme):
     def done(revmetadata, pool):
         pass
     editor = repository.transport.get_commit_editor(
-            {svn.core.SVN_PROP_REVISION_LOG: "Updating branching scheme for Bazaar."},
+            {constants.PROP_REVISION_LOG: "Updating branching scheme for Bazaar."},
             done, None, False)
     root = editor.open_root(-1)
     editor.change_dir_prop(root, SVN_PROP_BZR_BRANCHING_SCHEME, 

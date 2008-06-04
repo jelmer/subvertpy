@@ -19,15 +19,14 @@
 import os
 import sys
 import bzrlib
-from bzrlib import osutils
+from bzrlib import osutils, urlutils
 from bzrlib.bzrdir import BzrDir
 from bzrlib.tests import TestCaseInTempDir, TestSkipped
 from bzrlib.trace import mutter
-from bzrlib.urlutils import local_path_to_url
 from bzrlib.workingtree import WorkingTree
 
 import constants
-import repos, wc, client
+import repos, wc, client, ra
 
 class TestCaseWithSubversionRepository(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion 
@@ -59,7 +58,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
                 open(revprop_hook, 'w').write("#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
-        return local_path_to_url(abspath)
+        return urlutils.local_path_to_url(abspath)
 
     def make_remote_bzrdir(self, relpath):
         """Create a repository."""
@@ -171,6 +170,32 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
 
     def client_update(self, path):
         self.client_ctx.update([path], None, True)
+
+    def commit_tree(self, repos_url, changes, revprops={"svn:log": "test commit"}):
+        ret_revnum = None
+        def callback(revmeta):
+            ret_revnum = revmeta.revision
+        x = ra.RemoteAccess(repos_url)
+        editor = x.get_commit_editor(revprops, callback)
+        root = editor.open_root()
+        def process(changes, dir_editor, path):
+            for f, v in changes.items():
+                p = urlutils.join(path, f)
+                if v is None:
+                    dir_editor.delete_entry(p) 
+                elif isinstance(v, dict):
+                    child_editor = dir_editor.add_directory(p)
+                    process(v, child_editor)
+                    child_editor.close()
+                elif isinstance(f, str):
+                    file_editor = dir_editor.add_file(p)
+                    # FIXME: send delta
+                    file_editor.close()
+                else:
+                    raise TypeError("Invalid type for %s" % f)
+        process(changes, root)
+        root.close()
+        return ret_revnum
 
     def build_tree(self, files):
         """Create a directory tree.

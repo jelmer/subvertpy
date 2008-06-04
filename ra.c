@@ -190,7 +190,7 @@ static void reporter_dealloc(PyObject *self)
 }
 
 PyTypeObject Reporter_Type = {
-	PyObject_HEAD_INIT(&PyType_Type) 0,
+	PyObject_HEAD_INIT(NULL) 0,
 	.tp_name = "ra.Reporter",
 	.tp_methods = reporter_methods,
 	.tp_dealloc = reporter_dealloc,
@@ -280,7 +280,7 @@ static svn_error_t *py_cb_editor_change_dir_prop(void *dir_baton, const char *na
 static svn_error_t *py_cb_editor_close_directory(void *dir_baton, apr_pool_t *pool)
 {
     PyObject *self = (PyObject *)dir_baton, *ret;
-    ret = PyObject_CallMethod(self, "close", NULL);
+    ret = PyObject_CallMethod(self, "close", "");
 	if (ret == NULL)
 		return py_svn_error();
     Py_DECREF(self);
@@ -327,7 +327,7 @@ static svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void
 {
 	int i;
 	PyObject *ops, *ret;
-    PyObject *fn = (PyObject *)baton;
+    PyObject *fn = (PyObject *)baton, *py_new_data, *py_window;
     if (window == NULL) {
         /* Signals all delta windows have been received */
         Py_DECREF(fn);
@@ -339,16 +339,18 @@ static svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void
 	}
     ops = PyList_New(window->num_ops);
 	for (i = 0; i < window->num_ops; i++) {
-		PyList_SetItem(ops, i, Py_BuildValue("(ill)", window->ops[i].action_code, 
+		PyList_SetItem(ops, i, Py_BuildValue("(iII)", window->ops[i].action_code, 
 					window->ops[i].offset, 
 					window->ops[i].length));
 	}
-	ret = PyObject_CallFunction(fn, "(llllOs#)", 
-								window->sview_offset, 
-								window->sview_len, 
-								window->tview_len, 
-								window->src_ops, ops, 
-								window->new_data->data, window->new_data->len);
+	if (window->new_data != NULL) {
+		py_new_data = PyString_FromStringAndSize(window->new_data->data, window->new_data->len);
+	} else {
+		py_new_data = Py_None;
+	}
+	py_window = Py_BuildValue("((LIIiOO))", window->sview_offset, window->sview_len, window->tview_len, 
+								window->src_ops, ops, py_new_data);
+	ret = PyObject_CallFunction(fn, "O", py_window);
 	if (ret == NULL)
 		return py_svn_error();
     return NULL;
@@ -382,7 +384,7 @@ static svn_error_t *py_cb_editor_close_file(void *file_baton,
 {
     PyObject *self = (PyObject *)file_baton, *ret;
     if (text_checksum != NULL) {
-		ret = PyObject_CallMethod(self, "close", NULL);
+		ret = PyObject_CallMethod(self, "close", "");
 	} else {
 		ret = PyObject_CallMethod(self, "close", "s", text_checksum);
 	}
@@ -404,7 +406,7 @@ static svn_error_t *py_cb_editor_absent_file(const char *path, void *parent_bato
 static svn_error_t *py_cb_editor_close_edit(void *edit_baton, apr_pool_t *pool)
 {
     PyObject *self = (PyObject *)edit_baton, *ret;
-	ret = PyObject_CallMethod(self, "close", NULL);
+	ret = PyObject_CallMethod(self, "close", "");
 	if (ret == NULL)
 		return py_svn_error();
     return NULL;
@@ -413,7 +415,7 @@ static svn_error_t *py_cb_editor_close_edit(void *edit_baton, apr_pool_t *pool)
 static svn_error_t *py_cb_editor_abort_edit(void *edit_baton, apr_pool_t *pool)
 {
     PyObject *self = (PyObject *)edit_baton, *ret;
-	ret = PyObject_CallMethod(self, "abort", NULL);
+	ret = PyObject_CallMethod(self, "abort", "");
 	if (ret == NULL)
 		return py_svn_error();
     return NULL;
@@ -628,7 +630,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
     apr_pool_t *temp_pool;
 	apr_array_header_t *apr_paths;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOll|ibbO", kwnames, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOll|ibbO:get_log", kwnames, 
 						 &callback, &paths, &start, &end, &limit,
 						 &discover_changed_paths, &strict_node_history,
 						 &revprops))
@@ -644,7 +646,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		/* FIXME: The subversion libraries don't behave as expected, 
 		 * so tweak our own parameters a bit. */
 		apr_paths = apr_array_make(temp_pool, 1, sizeof(char *));
-		APR_ARRAY_IDX(apr_paths, 0, char *) = apr_pstrdup(temp_pool, "/");
+		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(temp_pool, "/");
 	} else if (!string_list_to_apr_array(temp_pool, paths, &apr_paths)) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
