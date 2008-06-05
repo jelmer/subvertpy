@@ -97,7 +97,7 @@ typedef struct {
     const svn_ra_reporter2_t *reporter;
     void *report_baton;
     apr_pool_t *pool;
-	PyObject *(*done_cb)(void *baton);
+	void (*done_cb)(void *baton);
 	void *done_baton;
 } ReporterObject;
 
@@ -478,13 +478,11 @@ typedef struct {
 	bool busy;
 } RemoteAccessObject;
 
-static PyObject *ra_done_handler(void *_ra)
+static void ra_done_handler(void *_ra)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)_ra;
 
 	ra->busy = false;
-
-	Py_RETURN_NONE;
 }
 
 #define RUN_RA_WITH_POOL(pool, ra, cmd)  \

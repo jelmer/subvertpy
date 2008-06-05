@@ -29,11 +29,11 @@ typedef struct {
     const svn_delta_editor_t *editor;
     void *baton;
     apr_pool_t *pool;
-	PyObject *(*done_cb) (void *baton);
+	void (*done_cb) (void *baton);
 	void *done_baton;
 } EditorObject;
 
-PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, PyObject *(*done_cb) (void *), void *done_baton)
+PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, void (*done_cb) (void *), void *done_baton)
 {
 	EditorObject *obj = PyObject_New(EditorObject, type);
 	if (obj == NULL)
