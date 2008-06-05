@@ -22,6 +22,7 @@ from bzrlib.trace import mutter
 from bzrlib.plugins.svn import core, constants, version_info, constants, errors
 import calendar
 import sha
+import time
 import urllib
 
 MAPPING_VERSION = 3

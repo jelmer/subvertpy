@@ -46,6 +46,9 @@ static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, voi
 {
 	PyObject *fn = (PyObject *)baton, *ret;
 
+	if (fn == Py_None)
+		return NULL;
+
 	ret = PyObject_CallFunction(fn, "izz", 
 								commit_info->revision, commit_info->date, 
 								commit_info->author);
@@ -720,7 +723,7 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	ReporterObject *ret;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 
-	if (!PyArg_ParseTuple(args, "lsbO", &revision_to_update_to, &update_target, &recurse, &update_editor))
+	if (!PyArg_ParseTuple(args, "lsbO:do_update", &revision_to_update_to, &update_target, &recurse, &update_editor))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -765,7 +768,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	ReporterObject *ret;
 
-	if (!PyArg_ParseTuple(args, "lsbsO", &revision_to_update_to, &update_target, 
+	if (!PyArg_ParseTuple(args, "lsbsO:do_switch", &revision_to_update_to, &update_target, 
 						  &recurse, &switch_url, &update_editor))
 		return NULL;
 	if (ra_check_busy(ra))
@@ -849,7 +852,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 {
 	char *kwnames[] = { "revprops", "callback", "lock_tokens", "keep_locks", 
 		NULL };
-	PyObject *revprops, *commit_callback, *lock_tokens = Py_None;
+	PyObject *revprops, *commit_callback = Py_None, *lock_tokens = Py_None;
 	bool keep_locks = false;
 	apr_pool_t *temp_pool, *pool;
 	const svn_delta_editor_t *editor;
@@ -857,7 +860,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_hash_t *hash_lock_tokens;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|Ob", kwnames, &revprops, &commit_callback, &lock_tokens, &keep_locks))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOb", kwnames, &revprops, &commit_callback, &lock_tokens, &keep_locks))
 		return NULL;
 
 	temp_pool = Pool();
