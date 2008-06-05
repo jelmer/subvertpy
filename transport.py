@@ -25,7 +25,7 @@ from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.auth import create_auth_baton
 
 from bzrlib.plugins.svn import core, properties, ra
-from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_FOUND
+from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY
 import urlparse
 import urllib
 

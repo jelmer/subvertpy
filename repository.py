@@ -378,7 +378,7 @@ class SvnRepository(Repository):
         try:
             return (core.NODE_DIR == self.transport.check_path(path, revnum))
         except SubversionException, (_, num):
-            if num == ERR_FS_NO_SUCH_REVISION:
+            if num == errors.ERR_FS_NO_SUCH_REVISION:
                 return False
             raise
 
