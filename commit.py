@@ -28,7 +28,7 @@ from bzrlib.repository import RootCommitBuilder, InterRepository
 from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter, warning
 
-from bzrlib.plugins.svn import util
+from bzrlib.plugins.svn import properties
 
 from cStringIO import StringIO
 
@@ -280,18 +280,18 @@ class SvnCommitBuilder(RootCommitBuilder):
             if child_editor is not None:
                 if old_executable != child_ie.executable:
                     if child_ie.executable:
-                        value = constants.PROP_EXECUTABLE_VALUE
+                        value = properties.PROP_EXECUTABLE_VALUE
                     else:
                         value = None
-                    child_editor.change_prop(constants.PROP_EXECUTABLE, value)
+                    child_editor.change_prop(properties.PROP_EXECUTABLE, value)
 
                 if old_special != (child_ie.kind == 'symlink'):
                     if child_ie.kind == 'symlink':
-                        value = constants.PROP_SPECIAL_VALUE
+                        value = properties.PROP_SPECIAL_VALUE
                     else:
                         value = None
 
-                    child_editor.change_prop(constants.PROP_SPECIAL, value)
+                    child_editor.change_prop(properties.PROP_SPECIAL, value)
 
             # handle the file
             if child_ie.file_id in self.modified_files:
@@ -445,13 +445,13 @@ class SvnCommitBuilder(RootCommitBuilder):
         if self._config.get_log_strip_trailing_newline():
             self.base_mapping.export_message(message, self._svn_revprops, self._svnprops)
             message = message.rstrip("\n")
-        self._svn_revprops[constants.PROP_REVISION_LOG] = message.encode("utf-8")
+        self._svn_revprops[properties.PROP_REVISION_LOG] = message.encode("utf-8")
 
         try:
             existing_bp_parts = _check_dirs_exist(self.repository.transport, 
                                               bp_parts, -1)
             for prop in self._svn_revprops:
-                if not util.is_valid_property_name(prop):
+                if not properties.is_valid_property_name(prop):
                     warning("Setting property %r with invalid characters in name" % prop)
             conn = self.repository.transport.get_connection()
             try:
@@ -464,9 +464,9 @@ class SvnCommitBuilder(RootCommitBuilder):
                         raise
                     # Try without bzr: revprops
                     self.editor = conn.get_commit_editor({
-                        constants.PROP_REVISION_LOG: self._svn_revprops[constants.PROP_REVISION_LOG]},
+                        properties.PROP_REVISION_LOG: self._svn_revprops[properties.PROP_REVISION_LOG]},
                         done, None, False)
-                    del self._svn_revprops[constants.PROP_REVISION_LOG]
+                    del self._svn_revprops[properties.PROP_REVISION_LOG]
 
                 root = self.editor.open_root(self.base_revnum)
 
@@ -523,10 +523,10 @@ class SvnCommitBuilder(RootCommitBuilder):
         override_svn_revprops = self._config.get_override_svn_revprops()
         if override_svn_revprops is not None:
             new_revprops = {}
-            if constants.PROP_REVISION_AUTHOR in override_svn_revprops:
-                new_revprops[constants.PROP_REVISION_AUTHOR] = self._committer.encode("utf-8")
-            if constants.PROP_REVISION_DATE in override_svn_revprops:
-                new_revprops[constants.PROP_REVISION_DATE] = time_to_cstring(1000000*self._timestamp)
+            if properties.PROP_REVISION_AUTHOR in override_svn_revprops:
+                new_revprops[properties.PROP_REVISION_AUTHOR] = self._committer.encode("utf-8")
+            if properties.PROP_REVISION_DATE in override_svn_revprops:
+                new_revprops[properties.PROP_REVISION_DATE] = time_to_cstring(1000000*self._timestamp)
             set_svn_revprops(self.repository.transport, self.revision_metadata.revision, new_revprops)
 
         try:

@@ -27,6 +27,7 @@ import ra
 import core
 import constants
 
+from bzrlib.plugins.svn import properties
 from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent
 import urlparse
 import urllib

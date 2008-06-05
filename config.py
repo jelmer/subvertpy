@@ -22,6 +22,8 @@ from bzrlib.plugins.svn.core import SubversionException
 
 import os
 
+from bzrlib.plugins.svn import properties
+
 # Settings are stored by UUID. 
 # Data stored includes default branching scheme and locations the repository 
 # was seen at.
@@ -120,7 +122,7 @@ class SvnRepositoryConfig(IniBasedConfig):
         def get_list(parser, section):
             try:
                 if parser.get_bool(section, "override-svn-revprops"):
-                    return [constants.PROP_REVISION_DATE, constants.PROP_REVISION_AUTHOR]
+                    return [properties.PROP_REVISION_DATE, properties.PROP_REVISION_AUTHOR]
                 return []
             except ValueError:
                 val = parser.get_value(section, "override-svn-revprops")

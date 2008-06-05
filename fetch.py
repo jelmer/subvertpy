@@ -28,6 +28,7 @@ import md5
 import constants
 
 from bzrlib.plugins.svn.delta import apply_txdelta_handler
+from bzrlib.plugins.svn import properties
 from bzrlib.plugins.svn.errors import InvalidFileName
 from bzrlib.plugins.svn.logwalker import lazy_dict
 from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_MERGE, 
@@ -281,16 +282,16 @@ class DirectoryBuildEditor:
                 self.editor.revmeta.fileprops = {}
             self.editor.revmeta.fileprops[name] = value
 
-        if name in (constants.PROP_ENTRY_COMMITTED_DATE,
-                    constants.PROP_ENTRY_COMMITTED_REV,
-                    constants.PROP_ENTRY_LAST_AUTHOR,
-                    constants.PROP_ENTRY_LOCK_TOKEN,
-                    constants.PROP_ENTRY_UUID,
-                    constants.PROP_EXECUTABLE):
+        if name in (properties.PROP_ENTRY_COMMITTED_DATE,
+                    properties.PROP_ENTRY_COMMITTED_REV,
+                    properties.PROP_ENTRY_LAST_AUTHOR,
+                    properties.PROP_ENTRY_LOCK_TOKEN,
+                    properties.PROP_ENTRY_UUID,
+                    properties.PROP_EXECUTABLE):
             pass
-        elif (name.startswith(constants.PROP_WC_PREFIX)):
+        elif (name.startswith(properties.PROP_WC_PREFIX)):
             pass
-        elif name.startswith(constants.PROP_PREFIX):
+        elif name.startswith(properties.PROP_PREFIX):
             mutter('unsupported dir property %r' % name)
 
     def add_file(self, path, copyfrom_path=None, copyfrom_revnum=-1):
@@ -368,21 +369,21 @@ class FileBuildEditor:
             # how SVN behaves. It appears to consider the presence 
             # of the property sufficient to mark it executable.
             self.is_executable = (value != None)
-        elif (name == constants.PROP_SPECIAL):
+        elif (name == properties.PROP_SPECIAL):
             self.is_symlink = (value != None)
-        elif name == constants.PROP_ENTRY_COMMITTED_REV:
+        elif name == properties.PROP_ENTRY_COMMITTED_REV:
             self.last_file_rev = int(value)
-        elif name in (constants.PROP_ENTRY_COMMITTED_DATE,
-                      constants.PROP_ENTRY_LAST_AUTHOR,
-                      constants.PROP_ENTRY_LOCK_TOKEN,
-                      constants.PROP_ENTRY_UUID,
-                      constants.PROP_MIME_TYPE):
+        elif name in (properties.PROP_ENTRY_COMMITTED_DATE,
+                      properties.PROP_ENTRY_LAST_AUTHOR,
+                      properties.PROP_ENTRY_LOCK_TOKEN,
+                      properties.PROP_ENTRY_UUID,
+                      properties.PROP_MIME_TYPE):
             pass
-        elif name.startswith(constants.PROP_WC_PREFIX):
+        elif name.startswith(properties.PROP_WC_PREFIX):
             pass
-        elif name == constants.PROP_EXTERNALS:
+        elif name == properties.PROP_EXTERNALS:
             mutter('svn:externals property on file!')
-        elif (name.startswith(constants.PROP_PREFIX) or
+        elif (name.startswith(properties.PROP_PREFIX) or
               name.startswith(SVN_PROP_BZR_PREFIX)):
             mutter('unsupported file property %r' % name)
 

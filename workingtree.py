@@ -31,7 +31,7 @@ from bzrlib.revisiontree import RevisionTree
 from bzrlib.transport.local import LocalTransport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
-from bzrlib.plugins.svn import constants
+from bzrlib.plugins.svn import constants, properties
 from bzrlib.plugins.svn.branch import SvnBranch
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.convert import SvnConverter
@@ -101,7 +101,7 @@ class SvnWorkingTree(WorkingTree):
         ignore_globs.update(ignores.get_user_ignores())
 
         def dir_add(adm, prefix, patprefix):
-            ignorestr = adm.prop_get(constants.PROP_IGNORE, 
+            ignorestr = adm.prop_get(properties.PROP_IGNORE, 
                                     self.abspath(prefix).rstrip("/"))
             if ignorestr is not None:
                 for pat in ignorestr.splitlines():
