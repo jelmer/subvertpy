@@ -73,22 +73,28 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
         returned = []
         def cb(*args):
             returned.append(args)
+        def check_results(returned):
+            self.assertEquals(2, len(returned))
+            (paths, revnum, props) = returned[0]
+            self.assertEquals(None, paths)
+            self.assertEquals(revnum, 0)
+            self.assertEquals(["svn:date"], props.keys())
+            (paths, revnum, props) = returned[1]
+            self.assertEquals({'/foo': ('A', None, -1)}, paths)
+            self.assertEquals(revnum, 1)
+            self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
+                              set(props.keys()))
         self.ra.get_log(cb, [""], 0, 0)
         self.assertEquals(1, len(returned))
         self.do_commit()
         returned = []
         self.ra.get_log(cb, ["/"], 0, 1, discover_changed_paths=True, 
                         strict_node_history=False)
-        self.assertEquals(2, len(returned))
-        (paths, revnum, props) = returned[0]
-        self.assertEquals(None, paths)
-        self.assertEquals(revnum, 0)
-        self.assertEquals(["svn:date"], props.keys())
-        (paths, revnum, props) = returned[1]
-        self.assertEquals({'/foo': ('A', None, -1)}, paths)
-        self.assertEquals(revnum, 1)
-        self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
-                          set(props.keys()))
+        check_results(returned)
+        returned = []
+        self.ra.get_log(cb, None, 0, 1, discover_changed_paths=True, 
+                        strict_node_history=False)
+        check_results(returned)
 
     def test_get_commit_editor_busy(self):
         def mycb(rev):

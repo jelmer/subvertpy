@@ -402,7 +402,7 @@ class LogWalker(object):
         try:
             while len(unchecked_dirs) > 0:
                 nextp = unchecked_dirs.pop()
-                (dirents, fetch_rev, props) = conn.get_dir(nextp, revnum, DIRENT_KIND)
+                dirents = conn.get_dir(nextp, revnum, DIRENT_KIND)[0]
                 for k,v in dirents.items():
                     childp = urlutils.join(nextp, k)
                     if v['kind'] == core.NODE_DIR:
