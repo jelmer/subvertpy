@@ -24,8 +24,8 @@ from bzrlib.revision import ensure_null
 from bzrlib.transport import get_transport
 
 from bzrlib.plugins.svn.format import get_rich_root_format
-
-import core, repos, constants
+from bzrlib.plugins.svn import core, repos, constants
+from bzrlib.plugins.svn.core import SubversionException
 
 def transport_makedirs(transport, location_url):
     """Create missing directories.
@@ -72,7 +72,7 @@ def load_dumpfile(dumpfile, outputdir):
         file = open(dumpfile)
     try:
         r.load_fs(file, StringIO(), repos.LOAD_UUID_DEFAULT)
-    except core.SubversionException, (_, num):
+    except SubversionException, (_, num):
         if num == constants.ERR_STREAM_MALFORMED_DATA:
             raise NotDumpFile(dumpfile)
         raise
