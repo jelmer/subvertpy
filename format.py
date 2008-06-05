@@ -23,7 +23,7 @@ from bzrlib.lockable_files import TransportLock
 import os
 
 lazy_import(globals(), """
-from bzrlib.plugins.svn import constants, errors, remote
+from bzrlib.plugins.svn import errors, remote
 
 from bzrlib import errors as bzr_errors
 """)
@@ -51,25 +51,25 @@ class SvnRemoteFormat(BzrDirFormat):
     @classmethod
     def probe_transport(klass, transport):
         from transport import get_svn_ra_transport
-        import core
+        from bzrlib.plugins.svn.core import SubversionException
         format = klass()
 
         try:
             transport = get_svn_ra_transport(transport)
-        except core.SubversionException, (_, num):
-            if num in (constants.ERR_RA_ILLEGAL_URL, \
-                       constants.ERR_RA_LOCAL_REPOS_OPEN_FAILED, \
-                       constants.ERR_BAD_URL):
+        except SubversionException, (_, num):
+            if num in (errors.ERR_RA_ILLEGAL_URL, \
+                       errors.ERR_RA_LOCAL_REPOS_OPEN_FAILED, \
+                       errors.ERR_BAD_URL):
                 raise bzr_errors.NotBranchError(path=transport.base)
 
         return format
 
     def _open(self, transport):
-        import core
+        from bzrlib.plugins.svn.core import SubversionException
         try: 
             return remote.SvnRemoteAccess(transport, self)
-        except core.SubversionException, (_, num):
-            if num == constants.ERR_RA_DAV_REQUEST_FAILED:
+        except SubversionException, (_, num):
+            if num == errors.ERR_RA_DAV_REQUEST_FAILED:
                 raise bzr_errors.NotBranchError(transport.base)
             raise
 
@@ -125,12 +125,12 @@ class SvnWorkingTreeDirFormat(BzrDirFormat):
         raise bzr_errors.NotBranchError(path=transport.base)
 
     def _open(self, transport):
-        import core
+        from bzrlib.plugins.svn.core import SubversionException
         from workingtree import SvnCheckout
         try:
             return SvnCheckout(transport, self)
-        except core.SubversionException, (_, num):
-            if num in (constants.ERR_RA_LOCAL_REPOS_OPEN_FAILED,):
+        except SubversionException, (_, num):
+            if num in (errors.ERR_RA_LOCAL_REPOS_OPEN_FAILED,):
                 raise errors.NoSvnRepositoryPresent(transport.base)
             raise
 

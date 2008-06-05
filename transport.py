@@ -21,14 +21,11 @@ from bzrlib.errors import (NoSuchFile, NotBranchError, TransportNotPossible,
 from bzrlib.trace import mutter
 from bzrlib.transport import Transport
 
-from core import SubversionException
-from auth import create_auth_baton
-import ra
-import core
-import constants
+from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.auth import create_auth_baton
 
-from bzrlib.plugins.svn import properties
-from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent
+from bzrlib.plugins.svn import core, properties, ra
+from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_FOUND
 import urlparse
 import urllib
 
@@ -100,9 +97,9 @@ def Connection(url):
                 auth=create_auth_baton(url))
         # FIXME: Callbacks
     except SubversionException, (_, num):
-        if num in (constants.ERR_RA_SVN_REPOS_NOT_FOUND,):
+        if num in (ERR_RA_SVN_REPOS_NOT_FOUND,):
             raise NoSvnRepositoryPresent(url=url)
-        if num == constants.ERR_BAD_URL:
+        if num == ERR_BAD_URL:
             raise InvalidURL(url)
         raise
 
@@ -343,7 +340,7 @@ class SvnRaTransport(Transport):
         try:
             (dirents, _, _) = self.get_dir(relpath, self.get_latest_revnum())
         except SubversionException, (msg, num):
-            if num == constants.ERR_FS_NOT_DIRECTORY:
+            if num == ERR_FS_NOT_DIRECTORY:
                 raise NoSuchFile(relpath)
             raise
         return dirents.keys()

@@ -24,11 +24,11 @@ from bzrlib.inventory import (Inventory)
 from bzrlib.revision import is_null, ensure_null, NULL_REVISION
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn import constants, core
+from bzrlib.plugins.svn import core
 from bzrlib.plugins.svn.commit import push
 from bzrlib.plugins.svn.config import BranchConfig
 from bzrlib.plugins.svn.core import SubversionException
-from bzrlib.plugins.svn.errors import NotSvnBranchPath
+from bzrlib.plugins.svn.errors import NotSvnBranchPath, ERR_FS_NO_SUCH_REVISION
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.repository import SvnRepository
 from bzrlib.plugins.svn.transport import bzr_to_svn_url
@@ -80,7 +80,7 @@ class SvnBranch(Branch):
                 revnum) != core.NODE_DIR:
                 raise NotBranchError(self.base)
         except SubversionException, (_, num):
-            if num == constants.ERR_FS_NO_SUCH_REVISION:
+            if num == ERR_FS_NO_SUCH_REVISION:
                 raise NotBranchError(self.base)
             raise
         if not self.mapping.is_branch(branch_path):

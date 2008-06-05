@@ -30,20 +30,16 @@ from bzrlib.revision import Revision, NULL_REVISION, ensure_null
 from bzrlib.transport import Transport, get_transport
 from bzrlib.trace import info, mutter
 
-from core import SubversionException
-import core
-import constants
 
 import os
 
+from bzrlib.plugins.svn import changes, core, errors, logwalker
 from bzrlib.plugins.svn.branchprops import PathPropertyProvider
 from bzrlib.plugins.svn.cache import create_cache_dir, sqlite3
-from bzrlib.plugins.svn import changes
+from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.changes import changes_path, find_prev_location
 from bzrlib.plugins.svn.config import SvnRepositoryConfig
 from bzrlib.plugins.svn.parents import SqliteCachingParentsProvider
-from bzrlib.plugins.svn import errors
-from bzrlib.plugins.svn import logwalker
 from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_REVISION_ID, SVN_REVPROP_BZR_SIGNATURE,
                      parse_revision_metadata, parse_revid_property, 
                      parse_merge_property, BzrSvnMapping,
@@ -382,7 +378,7 @@ class SvnRepository(Repository):
         try:
             return (core.NODE_DIR == self.transport.check_path(path, revnum))
         except SubversionException, (_, num):
-            if num == constants.ERR_FS_NO_SUCH_REVISION:
+            if num == ERR_FS_NO_SUCH_REVISION:
                 return False
             raise
 
@@ -735,7 +731,7 @@ class SvnRepository(Repository):
                                         elif (layout.is_branch_parent(n) or 
                                               layout.is_tag_parent(n)):
                                             parents.append(n)
-                                except SubversionException, (_, constants.ERR_FS_NOT_DIRECTORY):
+                                except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
                                     pass
         finally:
             pb.finished()

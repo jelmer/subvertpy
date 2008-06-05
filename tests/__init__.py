@@ -29,7 +29,7 @@ from bzrlib.tests import TestCaseInTempDir, TestSkipped
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn import constants, repos, wc, client, ra
+from bzrlib.plugins.svn import repos, wc, client, ra, properties
 
 class TestCaseWithSubversionRepository(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion 
@@ -149,9 +149,9 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         ret = {}
         def rcvr(orig_paths, rev, revprops):
             ret[rev] = (orig_paths, 
-                        revprops.get(constants.PROP_REVISION_AUTHOR),
-                        revprops.get(constants.PROP_REVISION_DATE),
-                        revprops.get(constants.PROP_REVISION_LOG))
+                        revprops.get(properties.PROP_REVISION_AUTHOR),
+                        revprops.get(properties.PROP_REVISION_DATE),
+                        revprops.get(properties.PROP_REVISION_LOG))
         if stop_revnum == -1:
             stop_revnum = ra.get_latest_revnum()
         ra.get_log(rcvr, None, start_revnum, stop_revnum, 0, True, True)

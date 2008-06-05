@@ -25,8 +25,6 @@ from bzrlib.trace import mutter
 from cStringIO import StringIO
 import md5
 
-import constants
-
 from bzrlib.plugins.svn.delta import apply_txdelta_handler
 from bzrlib.plugins.svn import properties
 from bzrlib.plugins.svn.errors import InvalidFileName
@@ -363,7 +361,7 @@ class FileBuildEditor:
         return apply_txdelta_handler(self.file_data, self.file_stream)
 
     def change_prop(self, name, value):
-        if name == constants.PROP_EXECUTABLE: 
+        if name == properties.PROP_EXECUTABLE: 
             # You'd expect executable to match 
             # constants.PROP_EXECUTABLE_VALUE, but that's not 
             # how SVN behaves. It appears to consider the presence 

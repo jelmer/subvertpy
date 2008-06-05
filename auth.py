@@ -27,7 +27,7 @@ from bzrlib.plugins.svn.ra import (get_username_prompt_provider,
                 get_ssl_server_trust_file_provider,
                 Auth
                 )
-from bzrlib.plugins.svn import constants, ra
+from bzrlib.plugins.svn import ra
 import urlparse
 import urllib
 
@@ -81,11 +81,11 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
             credentials.has_key("verify_certificates") and 
             credentials["verify_certificates"] == False):
             accepted_failures = (
-                    constants.AUTH_SSL_NOTYETVALID + 
-                    constants.AUTH_SSL_EXPIRED +
-                    constants.AUTH_SSL_CNMISMATCH +
-                    constants.AUTH_SSL_UNKNOWNCA +
-                    constants.AUTH_SSL_OTHER)
+                    AUTH_SSL_NOTYETVALID + 
+                    AUTH_SSL_EXPIRED +
+                    AUTH_SSL_CNMISMATCH +
+                    AUTH_SSL_UNKNOWNCA +
+                    AUTH_SSL_OTHER)
         else:
             accepted_failures = 0
         return (accepted_failures, False)
@@ -177,7 +177,7 @@ def create_auth_baton(url):
     if creds is not None:
         (user, password) = urllib.splitpasswd(creds)
         if user is not None:
-            auth_baton.set_parameter(constants.AUTH_PARAM_DEFAULT_USERNAME, user)
+            auth_baton.set_parameter(AUTH_PARAM_DEFAULT_USERNAME, user)
         if password is not None:
-            auth_baton.set_parameter(constants.AUTH_PARAM_DEFAULT_PASSWORD, password)
+            auth_baton.set_parameter(AUTH_PARAM_DEFAULT_PASSWORD, password)
     return auth_baton

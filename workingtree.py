@@ -31,11 +31,11 @@ from bzrlib.revisiontree import RevisionTree
 from bzrlib.transport.local import LocalTransport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
-from bzrlib.plugins.svn import constants, properties
+from bzrlib.plugins.svn import properties
 from bzrlib.plugins.svn.branch import SvnBranch
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.convert import SvnConverter
-from bzrlib.plugins.svn.errors import NoSvnRepositoryPresent
+from bzrlib.plugins.svn.errors import NoSvnRepositoryPresent, ERR_FS_TXN_OUT_OF_DATE, ERR_ENTRY_EXISTS, ERR_WC_PATH_NOT_FOUND, ERR_WC_NOT_DIRECTORY, ERR_WC_UNSUPPORTED_FORMAT
 from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_FILEIDS, 
                      SVN_PROP_BZR_REVISION_ID, SVN_PROP_BZR_REVISION_INFO,
                      generate_revision_metadata)
@@ -474,9 +474,9 @@ class SvnWorkingTree(WorkingTree):
                     if ids is not None:
                         self._change_fileid_mapping(ids.next(), f, adm)
                 except SubversionException, (_, num):
-                    if num == constants.ERR_ENTRY_EXISTS:
+                    if num == ERR_ENTRY_EXISTS:
                         continue
-                    elif num == constants.ERR_WC_PATH_NOT_FOUND:
+                    elif num == ERR_WC_PATH_NOT_FOUND:
                         raise NoSuchFile(path=f)
                     raise
             finally:
@@ -697,7 +697,7 @@ class SvnCheckout(BzrDir):
         # Open related remote repository + branch
         try:
             adm = wc.WorkingCopy(None, self.local_path)
-        except SubversionException, (msg, constants.ERR_WC_UNSUPPORTED_FORMAT):
+        except SubversionException, (msg, ERR_WC_UNSUPPORTED_FORMAT):
             raise UnsupportedFormatError(msg, kind='workingtree')
         try:
             self.svn_url = adm.entry(self.local_path, True).url
@@ -763,7 +763,7 @@ class SvnCheckout(BzrDir):
             branch = SvnBranch(self.remote_transport.base, repos, 
                                self.remote_bzrdir.branch_path)
         except SubversionException, (_, num):
-            if num == constants.ERR_WC_NOT_DIRECTORY:
+            if num == ERR_WC_NOT_DIRECTORY:
                 raise NotBranchError(path=self.base)
             raise
 

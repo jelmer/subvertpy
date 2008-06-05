@@ -22,9 +22,10 @@ import bzrlib.ui as ui
 
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.transport import SvnRaTransport
-from bzrlib.plugins.svn import core, constants
+from bzrlib.plugins.svn import core
 
 from bzrlib.plugins.svn.cache import CacheTable
+from bzrlib.plugins.svn.errors import ERR_FS_NO_SUCH_REVISION, ERR_FS_NOT_FOUND
 from bzrlib.plugins.svn import changes
 from bzrlib.plugins.svn.ra import DIRENT_KIND
 
@@ -291,7 +292,7 @@ class CachingLogWalker(CacheTable):
             finally:
                 pb.finished()
         except SubversionException, (_, num):
-            if num == constants.ERR_FS_NO_SUCH_REVISION:
+            if num == ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % to_revnum)
             raise
@@ -333,10 +334,10 @@ class LogWalker(object):
         try:
             return self._transport.iter_log([path], revnum, 0, 2, True, False, []).next()[1]
         except SubversionException, (_, num):
-            if num == constants.ERR_FS_NO_SUCH_REVISION:
+            if num == ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % revnum)
-            if num == constants.ERR_FS_NOT_FOUND:
+            if num == ERR_FS_NOT_FOUND:
                 return None
             raise
 
@@ -363,7 +364,7 @@ class LogWalker(object):
                 revprops = lazy_dict(known_revprops, self._transport.revprop_list, revnum)
                 yield (revpaths, revnum, revprops)
         except SubversionException, (_, num):
-            if num == constants.ERR_FS_NO_SUCH_REVISION:
+            if num == ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % from_revnum)
             raise
@@ -383,7 +384,7 @@ class LogWalker(object):
             return struct_revpaths_to_tuples(
                 self._transport.iter_log(None, revnum, revnum, 1, True, True, []).next()[0])
         except SubversionException, (_, num):
-            if num == constants.ERR_FS_NO_SUCH_REVISION:
+            if num == ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % revnum)
             raise
@@ -425,7 +426,7 @@ class LogWalker(object):
         try:
             paths = struct_revpaths_to_tuples(self._transport.iter_log([path], revnum, revnum, 1, True, False, []).next()[0])
         except SubversionException, (_, num):
-            if num == constants.ERR_FS_NO_SUCH_REVISION:
+            if num == ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % revnum)
             raise
