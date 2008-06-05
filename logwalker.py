@@ -425,7 +425,7 @@ class LogWalker(object):
         try:
             paths = struct_revpaths_to_tuples(self._transport.iter_log([path], revnum, revnum, 1, True, False, []).next()[0])
         except SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % revnum)
             raise

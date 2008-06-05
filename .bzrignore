@@ -4,13 +4,6 @@ test????.tmp
 tags
 apidocs
 .plugins
-ra.c
-wc.c
-core.c
-ra.h
-core.h
-client.c
-repos.c
 FAQ.html
 README.html
 AUTHORS.html

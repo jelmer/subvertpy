@@ -19,8 +19,8 @@
 from bzrlib.errors import NoSuchRevision
 from bzrlib.trace import mutter
 
-import constants
-from core import SubversionException
+from bzrlib.plugins.svn import constants
+from bzrlib.plugins.svn.core import SubversionException
 
 
 class PathPropertyProvider(object):

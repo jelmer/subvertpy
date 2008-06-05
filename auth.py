@@ -17,7 +17,7 @@
 
 from bzrlib.config import AuthenticationConfig
 from bzrlib.ui import ui_factory
-from ra import (get_username_prompt_provider,
+from bzrlib.plugins.svn.ra import (get_username_prompt_provider,
                 get_simple_prompt_provider,
                 get_ssl_server_trust_prompt_provider,
                 get_ssl_client_cert_pw_prompt_provider,
@@ -27,8 +27,7 @@ from ra import (get_username_prompt_provider,
                 get_ssl_server_trust_file_provider,
                 Auth
                 )
-import ra
-import constants
+from bzrlib.plugins.svn import constants, ra
 import urlparse
 import urllib
 
@@ -178,7 +177,7 @@ def create_auth_baton(url):
     if creds is not None:
         (user, password) = urllib.splitpasswd(creds)
         if user is not None:
-            auth_baton.set_parameter(svn.core.SVN_AUTH_PARAM_DEFAULT_USERNAME, user)
+            auth_baton.set_parameter(constants.AUTH_PARAM_DEFAULT_USERNAME, user)
         if password is not None:
-            auth_baton.set_parameter(svn.core.SVN_AUTH_PARAM_DEFAULT_PASSWORD, password)
+            auth_baton.set_parameter(constants.AUTH_PARAM_DEFAULT_PASSWORD, password)
     return auth_baton

@@ -18,9 +18,9 @@
 from bzrlib import osutils, urlutils, trace
 from bzrlib.config import IniBasedConfig, config_dir, ensure_config_dir_exists, GlobalConfig, LocationConfig, Config, STORE_BRANCH, STORE_GLOBAL, STORE_LOCATION
 
-import os
+from bzrlib.plugins.svn.core import SubversionException
 
-import svn.core
+import os
 
 # Settings are stored by UUID. 
 # Data stored includes default branching scheme and locations the repository 
@@ -120,7 +120,7 @@ class SvnRepositoryConfig(IniBasedConfig):
         def get_list(parser, section):
             try:
                 if parser.get_bool(section, "override-svn-revprops"):
-                    return [svn.core.SVN_PROP_REVISION_DATE, svn.core.SVN_PROP_REVISION_AUTHOR]
+                    return [constants.PROP_REVISION_DATE, constants.PROP_REVISION_AUTHOR]
                 return []
             except ValueError:
                 val = parser.get_value(section, "override-svn-revprops")
@@ -228,7 +228,7 @@ class BranchConfig(Config):
                     return "True"
                 else:
                     return "False"
-            except svn.core.SubversionException:
+            except SubversionException:
                 return None
         return None
 

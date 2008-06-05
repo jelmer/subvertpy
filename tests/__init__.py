@@ -224,9 +224,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
 
         :return: FS.
         """
-        repos = svn.repos.open(relpath)
-
-        return svn.repos.fs(repos)
+        return repos.Repository(relpath).fs()
 
     def commit_editor(self, url, message="Test commit"):
         ra = RemoteAccess(url.encode('utf8'))

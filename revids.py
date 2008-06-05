@@ -20,8 +20,7 @@ from bzrlib import debug
 from bzrlib.errors import (InvalidRevisionId, NoSuchRevision)
 from bzrlib.trace import mutter
 
-import svn.core
-
+from bzrlib.plugins.svn import core
 from bzrlib.plugins.svn.cache import CacheTable
 from bzrlib.plugins.svn.errors import InvalidPropertyValue
 from bzrlib.plugins.svn.mapping import (parse_revision_id, BzrSvnMapping, 
@@ -37,8 +36,8 @@ class RevidMap(object):
         # See if there is a bzr:revision-id revprop set
         try:
             (bzr_revno, revid) = mapping.get_revision_id(path, revprops, fileprops)
-        except svn.core.SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
+        except SubversionException, (_, num):
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(path, revnum)
             raise
 
@@ -85,7 +84,7 @@ class RevidMap(object):
                             revids.add((parse_revid_property(line), scheme))
                         except InvalidPropertyValue, ie:
                             mutter(str(ie))
-            except svn.core.SubversionException, (_, svn.core.SVN_ERR_FS_NOT_DIRECTORY):
+            except SubversionException, (_, constants.ERR_FS_NOT_DIRECTORY):
                     continue
 
             # If there are any new entries that are not yet in the cache, 

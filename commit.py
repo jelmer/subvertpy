@@ -280,18 +280,18 @@ class SvnCommitBuilder(RootCommitBuilder):
             if child_editor is not None:
                 if old_executable != child_ie.executable:
                     if child_ie.executable:
-                        value = core.SVN_PROP_EXECUTABLE_VALUE
+                        value = constants.PROP_EXECUTABLE_VALUE
                     else:
                         value = None
-                    child_editor.change_prop(core.SVN_PROP_EXECUTABLE, value)
+                    child_editor.change_prop(constants.PROP_EXECUTABLE, value)
 
                 if old_special != (child_ie.kind == 'symlink'):
                     if child_ie.kind == 'symlink':
-                        value = core.SVN_PROP_SPECIAL_VALUE
+                        value = constants.PROP_SPECIAL_VALUE
                     else:
                         value = None
 
-                    child_editor.change_prop(core.SVN_PROP_SPECIAL, value)
+                    child_editor.change_prop(constants.PROP_SPECIAL, value)
 
             # handle the file
             if child_ie.file_id in self.modified_files:
@@ -691,7 +691,7 @@ def push_revision_tree(target, config, source_repo, base_revid, revision_id,
     try:
         builder.commit(rev.message)
     except SubversionException, (_, num):
-        if num == svn.core.SVN_ERR_FS_TXN_OUT_OF_DATE:
+        if num == constants.ERR_FS_TXN_OUT_OF_DATE:
             raise DivergedBranches(source, target)
         raise
     except ChangesRootLHSHistory:
