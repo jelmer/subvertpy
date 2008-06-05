@@ -1317,9 +1317,7 @@ Node-copyfrom-path: x
         self.client_add("dc/old-trunk")
         self.client_commit("dc", "trunk data")
 
-        self.build_tree({'dc/trunk': None})
-        self.client_add("dc/trunk")
-        self.client_copy("dc/old-trunk/lib", "dc/trunk")
+        self.client_copy("dc/old-trunk", "dc/trunk")
         self.client_commit("dc", "revive old trunk")
 
         oldrepos = Repository.open(repos_url)

@@ -401,11 +401,12 @@ class SvnCommitBuilder(RootCommitBuilder):
             """Callback that is called by the Subversion commit editor 
             once the commit finishes.
             """
-
-            self.revision_metadata = object()
-            self.revision_metadata.revision = revision
-            self.revision_metadata.author = author
-            self.revision_metadata.date = date
+            class CommitResult:
+                def __init__(self, revision, author, date):
+                    self.revision = revision
+                    self.author = author
+                    self.date = date
+            self.revision_metadata = CommitResult(revision, author, date)
 
         bp_parts = self.branch.get_branch_path().split("/")
         repository_latest_revnum = self.repository.get_latest_revnum()
@@ -525,7 +526,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             if constants.PROP_REVISION_AUTHOR in override_svn_revprops:
                 new_revprops[constants.PROP_REVISION_AUTHOR] = self._committer.encode("utf-8")
             if constants.PROP_REVISION_DATE in override_svn_revprops:
-                new_revprops[constants.PROP_REVISION_DATE] = svn_time_to_cstring(1000000*self._timestamp)
+                new_revprops[constants.PROP_REVISION_DATE] = time_to_cstring(1000000*self._timestamp)
             set_svn_revprops(self.repository.transport, self.revision_metadata.revision, new_revprops)
 
         try:

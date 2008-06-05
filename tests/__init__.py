@@ -124,7 +124,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         return self.client_ctx.revprop_get(name, url, revnum)[0]
 
     def client_set_revprop(self, url, revnum, name, value):
-        return self.client_ctx.revprop_set(name, url, renum, value)
+        return self.client_ctx.revprop_set(name, value, url, revnum)
         
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.
@@ -144,16 +144,17 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         """
         self.client_ctx.add(relpath, recursive, False, False)
 
-    def client_log(self, path, start_revnum=0, stop_revnum="HEAD"):
-        assert isinstance(path, str)
+    def client_log(self, url, start_revnum=0, stop_revnum=-1):
+        ra = RemoteAccess(url.encode("utf-8"))
         ret = {}
         def rcvr(orig_paths, rev, revprops):
             ret[rev] = (orig_paths, 
                         revprops.get(constants.PROP_REVISION_AUTHOR),
                         revprops.get(constants.PROP_REVISION_DATE),
                         revprops.get(constants.PROP_REVISION_LOG))
-        self.client_ctx.log([path], rcvr, None, start_revnum, stop_revnum, 
-                            True, True)
+        if stop_revnum == -1:
+            stop_revnum = ra.get_latest_revnum()
+        ra.get_log(rcvr, None, start_revnum, stop_revnum, 0, True, True)
         return ret
 
     def client_delete(self, relpath):

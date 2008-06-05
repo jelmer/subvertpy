@@ -677,7 +677,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		/* FIXME: The subversion libraries don't behave as expected, 
 		 * so tweak our own parameters a bit. */
 		apr_paths = apr_array_make(temp_pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(temp_pool, "/");
+		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(temp_pool, "");
 	} else if (!string_list_to_apr_array(temp_pool, paths, &apr_paths)) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
@@ -1658,4 +1658,12 @@ void initra(void)
 
 	busy_exc = PyErr_NewException("ra.BusyException", NULL, NULL);
 	PyModule_AddObject(mod, "BusyException", busy_exc);
+
+    PyModule_AddIntConstant(mod, "DIRENT_KIND", SVN_DIRENT_KIND);
+    PyModule_AddIntConstant(mod, "DIRENT_SIZE", SVN_DIRENT_SIZE);
+    PyModule_AddIntConstant(mod, "DIRENT_HAS_PROPS", SVN_DIRENT_HAS_PROPS);
+    PyModule_AddIntConstant(mod, "DIRENT_CREATED_REV", SVN_DIRENT_CREATED_REV);
+    PyModule_AddIntConstant(mod, "DIRENT_TIME", SVN_DIRENT_TIME);
+    PyModule_AddIntConstant(mod, "DIRENT_LAST_AUTHOR", SVN_DIRENT_LAST_AUTHOR);
+    PyModule_AddIntConstant(mod, "DIRENT_ALL", SVN_DIRENT_ALL);
 }

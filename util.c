@@ -52,10 +52,9 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 
 void PyErr_SetSubversionException(svn_error_t *error)
 {
-	PyObject *coremod = PyImport_ImportModule("core"), *excobj;
+	PyObject *coremod = PyImport_ImportModule("bzrlib.plugins.svn.core"), *excobj;
 
 	if (coremod == NULL) {
-		PyErr_BadInternalCall();
 		return;
 	}
 		
@@ -89,13 +88,18 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
         return true;
 	}
 	if (!PyList_Check(l)) {
-		PyErr_Format(PyExc_TypeError, "Expected list of paths, got: %s",
+		PyErr_Format(PyExc_TypeError, "Expected list of strings, got: %s",
 					 l->ob_type->tp_name);
 		return false;
 	}
     *ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
 	for (i = 0; i < PyList_GET_SIZE(l); i++) {
-		APR_ARRAY_PUSH(*ret, char *) = apr_pstrdup(pool, PyString_AsString(PyList_GET_ITEM(l, i)));
+		PyObject *item = PyList_GET_ITEM(l, i);
+		if (!PyString_Check(item)) {
+			PyErr_SetString(PyExc_TypeError, "Expected list of strings");
+			return false;
+		}
+		APR_ARRAY_PUSH(*ret, char *) = apr_pstrdup(pool, PyString_AsString(item));
 	}
     return true;
 }

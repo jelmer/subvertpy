@@ -118,8 +118,7 @@ class SvnWorkingTree(WorkingTree):
 
                 subprefix = os.path.join(prefix, entry)
 
-                subwc = wc.WorkingCopy(adm, self.abspath(subprefix), False, 
-                                         0, None)
+                subwc = wc.WorkingCopy(adm, self.abspath(subprefix))
                 try:
                     dir_add(subwc, subprefix, urlutils.joinpath(patprefix, entry))
                 finally:
@@ -186,8 +185,7 @@ class SvnWorkingTree(WorkingTree):
         self.read_working_inventory()
 
     def _get_wc(self, relpath="", write_lock=False):
-        return wc.WorkingCopy(None, self.abspath(relpath).rstrip("/"), 
-                                write_lock, 0, None)
+        return wc.WorkingCopy(None, self.abspath(relpath).rstrip("/"), write_lock)
 
     def _get_rel_wc(self, relpath, write_lock=False):
         dir = os.path.dirname(relpath)
@@ -348,8 +346,7 @@ class SvnWorkingTree(WorkingTree):
                 assert entry
                 
                 if entry.kind == core.NODE_DIR:
-                    subwc = wc.WorkingCopy(adm, self.abspath(subrelpath), 
-                                             False, 0, None)
+                    subwc = wc.WorkingCopy(adm, self.abspath(subrelpath))
                     try:
                         add_dir_to_inv(subrelpath, subwc, id)
                     finally:
@@ -395,8 +392,8 @@ class SvnWorkingTree(WorkingTree):
 
             adm.process_committed(self.abspath(path).rstrip("/"), 
                           False, revnum, 
-                          svn_time_to_cstring(newrev.timestamp), 
-                          newrev.committer, None, False)
+                          time_to_cstring(newrev.timestamp), 
+                          newrev.committer)
 
             if newrevtree.inventory[id].kind != 'directory':
                 return
@@ -406,7 +403,7 @@ class SvnWorkingTree(WorkingTree):
                 if entry == "":
                     continue
 
-                subwc = wc.WorkingCopy(adm, os.path.join(self.basedir, path, entry), False, 0, None)
+                subwc = wc.WorkingCopy(adm, os.path.join(self.basedir, path, entry), write_lock=True)
                 try:
                     update_settings(subwc, os.path.join(path, entry))
                 finally:
@@ -699,7 +696,7 @@ class SvnCheckout(BzrDir):
         
         # Open related remote repository + branch
         try:
-            adm = wc.WorkingCopy(None, self.local_path, False, 0, None)
+            adm = wc.WorkingCopy(None, self.local_path)
         except SubversionException, (msg, constants.ERR_WC_UNSUPPORTED_FORMAT):
             raise UnsupportedFormatError(msg, kind='workingtree')
         try:

@@ -500,6 +500,74 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL, NULL);
 }
 
+static bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_array_header_t **ret)
+{
+	PyObject *key, *val;
+	Py_ssize_t idx;
+
+	if (dict == Py_None) {
+		*ret = NULL;
+		return true;
+	}
+
+	if (!PyDict_Check(dict)) {
+		PyErr_SetString(PyExc_TypeError, "Expected dictionary with property changes");
+		return false;
+	}
+
+	*ret = apr_array_make(pool, PyDict_Size(dict), sizeof(char *));
+
+	while (PyDict_Next(dict, &idx, &key, &val)) {
+		   svn_prop_t *prop = apr_palloc(pool, sizeof(svn_prop_t));
+		   prop->name = PyString_AsString(key);
+		   if (val == Py_None) {
+			   prop->value = NULL;
+		   } else {
+		       prop->value = svn_string_ncreate(PyString_AsString(val), PyString_Size(val), pool);
+		   }
+		   APR_ARRAY_PUSH(*ret, svn_prop_t *) = prop;
+	}
+
+	return true;
+}
+
+static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	char *path, *rev_date, *rev_author;
+	bool recurse, remove_lock = false;
+	unsigned char *digest = NULL;
+	svn_revnum_t new_revnum;
+	PyObject *py_wcprop_changes = Py_None;
+	apr_array_header_t *wcprop_changes;
+	AdmObject *admobj = (AdmObject *)self;
+	apr_pool_t *temp_pool;
+	char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author", 
+		                "wcprop_changes", "remove_lock", "digest", NULL };
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblss|Obs", kwnames, 
+									 &path, &recurse, &new_revnum, &rev_date,
+									 &rev_author, &py_wcprop_changes, 
+									 &remove_lock, &digest))
+		return NULL;
+
+	temp_pool = Pool();
+	if (temp_pool == NULL)
+		return NULL;
+
+	if (!py_dict_to_wcprop_changes(py_wcprop_changes, temp_pool, &wcprop_changes)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(path, admobj->adm, recurse, new_revnum, 
+														   rev_date, rev_author, wcprop_changes, 
+														   remove_lock, digest, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	return Py_None;
+}
+
 static PyObject *adm_close(PyObject *self)
 {
 	AdmObject *admobj = (AdmObject *)self;
@@ -532,6 +600,7 @@ static PyMethodDef adm_methods[] = {
 	{ "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
 	{ "close", (PyCFunction)adm_close, METH_NOARGS, NULL },
 	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, NULL },
+	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, NULL },
 	{ NULL, }
 };
 

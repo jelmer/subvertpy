@@ -20,13 +20,13 @@ from bzrlib.errors import NoSuchRevision
 from bzrlib.trace import mutter
 import bzrlib.ui as ui
 
-from core import SubversionException
-from transport import SvnRaTransport
-import core
-import constants
+from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.transport import SvnRaTransport
+from bzrlib.plugins.svn import core, constants
 
 from bzrlib.plugins.svn.cache import CacheTable
 from bzrlib.plugins.svn import changes
+from bzrlib.plugins.svn.ra import DIRENT_KIND
 
 class lazy_dict(object):
     def __init__(self, initial, create_fn, *args):
@@ -333,10 +333,10 @@ class LogWalker(object):
         try:
             return self._transport.iter_log([path], revnum, 0, 2, True, False, []).next()[1]
         except SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % revnum)
-            if num == svn.core.SVN_ERR_FS_NOT_FOUND:
+            if num == constants.ERR_FS_NOT_FOUND:
                 return None
             raise
 
@@ -383,7 +383,7 @@ class LogWalker(object):
             return struct_revpaths_to_tuples(
                 self._transport.iter_log(None, revnum, revnum, 1, True, True, []).next()[0])
         except SubversionException, (_, num):
-            if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
+            if num == constants.ERR_FS_NO_SUCH_REVISION:
                 raise NoSuchRevision(branch=self, 
                     revision="Revision number %d" % revnum)
             raise
@@ -397,66 +397,20 @@ class LogWalker(object):
         assert isinstance(path, str), "invalid path"
         path = path.strip("/")
         conn = self._transport.connections.get(self._transport.get_svn_repos_root())
+        results = []
+        unchecked_dirs = set([path])
         try:
-            ft = conn.check_path(path, revnum)
-            if ft == core.NODE_FILE:
-                return []
-            assert ft == core.NODE_DIR
+            while len(unchecked_dirs) > 0:
+                nextp = unchecked_dirs.pop()
+                (dirents, fetch_rev, props) = conn.get_dir(nextp, revnum, DIRENT_KIND)
+                for k,v in dirents.items():
+                    childp = urlutils.join(nextp, k)
+                    if v['kind'] == core.NODE_DIR:
+                        unchecked_dirs.add(childp)
+                    results.append(childp)
         finally:
             self._transport.connections.add(conn)
-
-        class TreeLister(svn.delta.Editor):
-            def __init__(self, base):
-                self.files = []
-                self.base = base
-
-            def set_target_revision(self, revnum):
-                """See Editor.set_target_revision()."""
-                pass
-
-            def open_root(self, revnum):
-                """See Editor.open_root()."""
-                return path
-
-            def add_directory(self, path, parent_baton, copyfrom_path, copyfrom_revnum, pool):
-                """See Editor.add_directory()."""
-                self.files.append(urlutils.join(self.base, path))
-                return path
-
-            def change_dir_prop(self, id, name, value, pool):
-                pass
-
-            def change_file_prop(self, id, name, value, pool):
-                pass
-
-            def add_file(self, path, parent_id, copyfrom_path, copyfrom_revnum, baton):
-                self.files.append(urlutils.join(self.base, path))
-                return path
-
-            def close_dir(self, id):
-                pass
-
-            def close_file(self, path, checksum):
-                pass
-
-            def close_edit(self):
-                pass
-
-            def abort_edit(self):
-                pass
-
-            def apply_textdelta(self, file_id, base_checksum):
-                pass
-
-        editor = TreeLister(path)
-        try:
-            conn = self._transport.connections.get(urlutils.join(self._transport.get_svn_repos_root(), path))
-            reporter = conn.do_update(revnum, True, editor, pool)
-            reporter.set_path("", revnum, True, None, pool)
-            reporter.finish_report(pool)
-        finally:
-            self._transport.connections.add(conn)
-        return editor.files
+        return results
 
     def get_previous(self, path, revnum):
         """Return path,revnum pair specified pair was derived from.
