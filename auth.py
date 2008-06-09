@@ -31,6 +31,9 @@ from bzrlib.plugins.svn import ra
 import urlparse
 import urllib
 
+AUTH_PARAM_DEFAULT_USERNAME = 'svn:auth:username'
+AUTH_PARAM_DEFAULT_PASSWORD = 'svn:auth:password'
+
 class SubversionAuthenticationConfig(AuthenticationConfig):
     """Simple extended version of AuthenticationConfig that can provide 
     the information Subversion requires.
