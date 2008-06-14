@@ -457,6 +457,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                     self.editor = conn.get_commit_editor(
                             self._svn_revprops, done, None, False)
                     self._svn_revprops = {}
+                    self.editor_active = True
                 except NotImplementedError:
                     if set_revprops:
                         raise
@@ -490,7 +491,7 @@ class SvnCommitBuilder(RootCommitBuilder):
 
                 # Set all the revprops
                 for prop, value in self._svnprops.items():
-                    if not util.is_valid_property_name(prop):
+                    if not properties.is_valid_property_name(prop):
                         warning("Setting property %r with invalid characters in name" % prop)
                     if value is not None:
                         value = value.encode('utf-8')
@@ -501,7 +502,10 @@ class SvnCommitBuilder(RootCommitBuilder):
                     dir_editor.close()
 
                 self.editor.close()
+                self.editor_active = False
             finally:
+                if self.editor_active:
+                    self.editor.abort()
                 self.repository.transport.add_connection(conn)
         finally:
             lock.unlock()

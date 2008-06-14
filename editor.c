@@ -385,7 +385,7 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (!PyArg_ParseTuple(args, "|i", &base_revision))
+	if (!PyArg_ParseTuple(args, "|l:open_root", &base_revision))
 		return NULL;
 
     if (!check_error(editor->editor->open_root(editor->baton, base_revision,

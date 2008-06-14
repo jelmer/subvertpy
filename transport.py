@@ -354,11 +354,21 @@ class SvnRaTransport(Transport):
         finally:
             self.add_connection(conn)
 
-    def mkdir(self, relpath, mode=None):
+    def mkdir(self, relpath, message="Creating directory"):
         conn = self.get_connection()
         self.mutter('svn mkdir %s' % (relpath,))
         try:
-            return conn.mkdir(relpath, mode)
+            ce = conn.get_commit_editor({"svn:log": message})
+            node = ce.open_root(-1)
+            batons = relpath.split("/")
+            toclose = [node]
+            for i in range(len(batons)):
+                node = node.open_directory("/".join(batons[:i]), -1)
+                toclose.append(node)
+            toclose.append(node.add_directory(relpath, None, -1))
+            for c in reversed(toclose):
+                c.close()
+            ce.close()
         finally:
             self.add_connection(conn)
 
@@ -392,11 +402,11 @@ class SvnRaTransport(Transport):
         finally:
             self.add_connection(conn)
 
-    def get_commit_editor(self, revprops, done_cb, lock_token, keep_locks):
+    def get_commit_editor(self, revprops, done_cb=None, 
+                          lock_token=None, keep_locks=False):
         conn = self._open_real_transport()
         self.mutter('svn get-commit-editor %r' % (revprops,))
-        return conn.get_commit_editor(revprops, done_cb,
-                                     lock_token, keep_locks)
+        return conn.get_commit_editor(revprops, done_cb, lock_token, keep_locks)
 
     def listable(self):
         """See Transport.listable().
