@@ -24,9 +24,9 @@ from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.transport import SvnRaTransport
 from bzrlib.plugins.svn import core
 
+from bzrlib.plugins.svn import changes, core
 from bzrlib.plugins.svn.cache import CacheTable
 from bzrlib.plugins.svn.errors import ERR_FS_NO_SUCH_REVISION, ERR_FS_NOT_FOUND
-from bzrlib.plugins.svn import changes
 from bzrlib.plugins.svn.ra import DIRENT_KIND
 
 class lazy_dict(object):

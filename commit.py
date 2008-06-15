@@ -27,7 +27,7 @@ from bzrlib.repository import RootCommitBuilder, InterRepository
 from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter, warning
 
-from bzrlib.plugins.svn import properties
+from bzrlib.plugins.svn import core, properties
 
 from cStringIO import StringIO
 

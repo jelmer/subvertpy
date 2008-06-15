@@ -29,7 +29,7 @@ from cStringIO import StringIO
 import urllib
 
 from bzrlib.plugins.svn.delta import apply_txdelta_handler
-from bzrlib.plugins.svn import core, errors, wc, properties
+from bzrlib.plugins.svn import core, errors, properties, wc
 
 def parse_externals_description(base_url, val):
     """Parse an svn:externals property value.

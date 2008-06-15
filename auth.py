@@ -17,16 +17,16 @@
 
 from bzrlib.config import AuthenticationConfig
 from bzrlib.ui import ui_factory
-from bzrlib.plugins.svn.ra import (get_username_prompt_provider,
-                get_simple_prompt_provider,
-                get_ssl_server_trust_prompt_provider,
-                get_ssl_client_cert_pw_prompt_provider,
-                get_simple_provider, get_username_provider, 
-                get_ssl_client_cert_file_provider, 
-                get_ssl_client_cert_pw_file_provider,
-                get_ssl_server_trust_file_provider,
-                Auth
-                )
+from bzrlib.plugins.svn.ra import (get_username_prompt_provider, 
+                                   get_simple_prompt_provider,
+                                   get_ssl_server_trust_prompt_provider,
+                                   get_ssl_client_cert_pw_prompt_provider)
+                                   get_simple_provider, get_username_provider, 
+                                   get_ssl_client_cert_file_provider, 
+                                   get_ssl_client_cert_pw_file_provider,
+                                   get_ssl_server_trust_file_provider,
+                                   Auth
+                                   )
 from bzrlib.plugins.svn import ra
 import urlparse
 import urllib

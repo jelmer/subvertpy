@@ -25,6 +25,7 @@ from bzrlib.transport.local import LocalTransport
 from core import SubversionException
 import core 
 
+from bzrlib.plugins.svn import core
 from bzrlib.plugins.svn.errors import NoSvnRepositoryPresent
 from bzrlib.plugins.svn.format import get_rich_root_format, SvnRemoteFormat
 from bzrlib.plugins.svn.repository import SvnRepository

@@ -31,7 +31,7 @@ from bzrlib.revisiontree import RevisionTree
 from bzrlib.transport.local import LocalTransport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
-from bzrlib.plugins.svn import properties
+from bzrlib.plugins.svn import core, properties
 from bzrlib.plugins.svn.branch import SvnBranch
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.convert import SvnConverter
