@@ -24,12 +24,12 @@ from cStringIO import StringIO
 
 from bzrlib import osutils, urlutils
 from bzrlib.bzrdir import BzrDir
-from bzrlib.plugins.svn.ra import RemoteAccess, txdelta_send_stream
 from bzrlib.tests import TestCaseInTempDir, TestSkipped
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
 from bzrlib.plugins.svn import repos, wc, client, ra, properties
+from bzrlib.plugins.svn.ra import RemoteAccess, txdelta_send_stream
 
 class TestCaseWithSubversionRepository(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion 

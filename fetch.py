@@ -25,8 +25,8 @@ from bzrlib.trace import mutter
 from cStringIO import StringIO
 import md5
 
-from bzrlib.plugins.svn.delta import apply_txdelta_handler
 from bzrlib.plugins.svn import properties
+from bzrlib.plugins.svn.delta import apply_txdelta_handler
 from bzrlib.plugins.svn.errors import InvalidFileName
 from bzrlib.plugins.svn.logwalker import lazy_dict
 from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_MERGE, 

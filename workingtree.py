@@ -31,28 +31,24 @@ from bzrlib.revisiontree import RevisionTree
 from bzrlib.transport.local import LocalTransport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
-from bzrlib.plugins.svn import core, properties
+from bzrlib.plugins.svn import core, properties, wc
 from bzrlib.plugins.svn.branch import SvnBranch
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.convert import SvnConverter
+from bzrlib.plugins.svn.core import SubversionException, time_to_cstring
 from bzrlib.plugins.svn.errors import NoSvnRepositoryPresent, ERR_FS_TXN_OUT_OF_DATE, ERR_ENTRY_EXISTS, ERR_WC_PATH_NOT_FOUND, ERR_WC_NOT_DIRECTORY, ERR_WC_UNSUPPORTED_FORMAT
+from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_FILEIDS, 
                      SVN_PROP_BZR_REVISION_ID, SVN_PROP_BZR_REVISION_INFO,
-                     generate_revision_metadata)
+                     escape_svn_path, generate_revision_metadata)
 from bzrlib.plugins.svn.remote import SvnRemoteAccess
 from bzrlib.plugins.svn.repository import SvnRepository
 from bzrlib.plugins.svn.svk import SVN_PROP_SVK_MERGE, parse_svk_features, serialize_svk_features
-from bzrlib.plugins.svn.mapping import escape_svn_path
 from bzrlib.plugins.svn.transport import (SvnRaTransport, bzr_to_svn_url, svn_config) 
 from bzrlib.plugins.svn.tree import SvnBasisTree
 
 import os
 import urllib
-
-import core, wc
-from core import SubversionException, time_to_cstring
-
-from bzrlib.plugins.svn.format import get_rich_root_format
 
 def generate_ignore_list(ignore_map):
     """Create a list of ignores, ordered by directory.

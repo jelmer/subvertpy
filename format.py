@@ -51,12 +51,12 @@ class SvnRemoteFormat(BzrDirFormat):
     @classmethod
     def probe_transport(klass, transport):
         from transport import get_svn_ra_transport
-        from bzrlib.plugins.svn.core import SubversionException
+        from bzrlib.plugins.svn import core
         format = klass()
 
         try:
             transport = get_svn_ra_transport(transport)
-        except SubversionException, (_, num):
+        except core.SubversionException, (_, num):
             if num in (errors.ERR_RA_ILLEGAL_URL, \
                        errors.ERR_RA_LOCAL_REPOS_OPEN_FAILED, \
                        errors.ERR_BAD_URL):
@@ -65,10 +65,10 @@ class SvnRemoteFormat(BzrDirFormat):
         return format
 
     def _open(self, transport):
-        from bzrlib.plugins.svn.core import SubversionException
+        from bzrlib.plugins.svn import core
         try: 
             return remote.SvnRemoteAccess(transport, self)
-        except SubversionException, (_, num):
+        except core.SubversionException, (_, num):
             if num == errors.ERR_RA_DAV_REQUEST_FAILED:
                 raise bzr_errors.NotBranchError(transport.base)
             raise

@@ -28,8 +28,8 @@ import md5
 from cStringIO import StringIO
 import urllib
 
-from bzrlib.plugins.svn.delta import apply_txdelta_handler
 from bzrlib.plugins.svn import core, errors, properties, wc
+from bzrlib.plugins.svn.delta import apply_txdelta_handler
 
 def parse_externals_description(base_url, val):
     """Parse an svn:externals property value.

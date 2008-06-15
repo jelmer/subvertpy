@@ -17,8 +17,8 @@ from bzrlib import osutils, ui
 from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
 
-from bzrlib.plugins.svn import core, mapping, properties
-from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn import mapping, properties
+from bzrlib.plugins.svn.core import SubversionException, NODE_DIR
 from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND
 from bzrlib.plugins.svn.layout import RepositoryLayout
 from bzrlib.plugins.svn.mapping3.scheme import (BranchingScheme, guess_scheme_from_branch_path, 
@@ -68,7 +68,7 @@ class SchemeDerivedLayout(RepositoryLayout):
 
     def get_branches(self, revnum, project=""):
         def check_path(path):
-            return self.repository.transport.check_path(path, revnum) == core.NODE_DIR
+            return self.repository.transport.check_path(path, revnum) == NODE_DIR
         def find_children(path):
             try:
                 assert not path.startswith("/")

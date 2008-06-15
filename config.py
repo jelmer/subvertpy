@@ -18,11 +18,10 @@
 from bzrlib import osutils, urlutils, trace
 from bzrlib.config import IniBasedConfig, config_dir, ensure_config_dir_exists, GlobalConfig, LocationConfig, Config, STORE_BRANCH, STORE_GLOBAL, STORE_LOCATION
 
-from bzrlib.plugins.svn.core import SubversionException
-
 import os
 
 from bzrlib.plugins.svn import properties
+from bzrlib.plugins.svn.core import SubversionException
 
 # Settings are stored by UUID. 
 # Data stored includes default branching scheme and locations the repository 
