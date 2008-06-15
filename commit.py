@@ -315,7 +315,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             # copy if they existed at different location
             elif self.old_inv.id2path(child_ie.file_id) != new_child_path:
                 old_child_path = self.old_inv.id2path(child_ie.file_id)
-                self.mutter('copy dir %r -> %r',  old_child_path, new_child_path)
+                self.mutter('copy dir %r -> %r', old_child_path, new_child_path)
                 child_editor = dir_editor.add_directory(
                     urlutils.join(self.branch.get_branch_path(), new_child_path),
                     urlutils.join(self.repository.transport.svn_url, self.base_path, old_child_path), self.base_revnum)
