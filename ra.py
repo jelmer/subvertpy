@@ -19,3 +19,19 @@ get_username_prompt_provider = svn.core.svn_auth_get_username_prompt_provider
 get_simple_prompt_provider = svn.core.svn_auth_get_simple_prompt_provider
 get_ssl_client_cert_pw_prompt_provider = svn.core.svn_auth_get_ssl_client_cert_pw_prompt_provider
 get_ssl_server_trust_prompt_provider = svn.core.svn_auth_get_ssl_server_trust_prompt_provider
+
+DIRENT_KIND = 0x0001
+
+class Auth:
+    def __init__(self, providers=[]):
+        self.providers = providers
+        self.auth_baton = svn.core.svn_auth_open(self.providers)
+        self.parameters = {}
+        self.auth_baton._base = self.auth_baton # evil hack
+
+    def set_parameter(self, name, value):
+        self.parameters[name] = value
+        svn.core.svn_auth_set_parameter(self.auth_baton, name, value)
+
+    def get_parameter(self, name):
+        return svn.core.svn_auth_get_parameter(self.auth_baton, name)

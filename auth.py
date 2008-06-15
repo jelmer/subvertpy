@@ -20,7 +20,7 @@ from bzrlib.ui import ui_factory
 from bzrlib.plugins.svn.ra import (get_username_prompt_provider, 
                                    get_simple_prompt_provider,
                                    get_ssl_server_trust_prompt_provider,
-                                   get_ssl_client_cert_pw_prompt_provider)
+                                   get_ssl_client_cert_pw_prompt_provider,
                                    get_simple_provider, get_username_provider, 
                                    get_ssl_client_cert_file_provider, 
                                    get_ssl_client_cert_pw_file_provider,
@@ -33,6 +33,12 @@ import urllib
 
 AUTH_PARAM_DEFAULT_USERNAME = 'svn:auth:username'
 AUTH_PARAM_DEFAULT_PASSWORD = 'svn:auth:password'
+
+SSL_NOTYETVALID = 0x00000001
+SSL_EXPIRED     = 0x00000002
+SSL_CNMISMATCH  = 0x00000004
+SSL_UNKNOWNCA   = 0x00000008
+SSL_OTHER       = 0x40000000
 
 class SubversionAuthenticationConfig(AuthenticationConfig):
     """Simple extended version of AuthenticationConfig that can provide 
@@ -84,11 +90,11 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
             credentials.has_key("verify_certificates") and 
             credentials["verify_certificates"] == False):
             accepted_failures = (
-                    AUTH_SSL_NOTYETVALID + 
-                    AUTH_SSL_EXPIRED +
-                    AUTH_SSL_CNMISMATCH +
-                    AUTH_SSL_UNKNOWNCA +
-                    AUTH_SSL_OTHER)
+                    SSL_NOTYETVALID + 
+                    SSL_EXPIRED +
+                    SSL_CNMISMATCH +
+                    SSL_UNKNOWNCA +
+                    SSL_OTHER)
         else:
             accepted_failures = 0
         return (accepted_failures, False)
