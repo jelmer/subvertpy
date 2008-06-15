@@ -162,9 +162,9 @@ class SvnCommitBuilder(RootCommitBuilder):
             if old_svk_features != svk_features:
                 self._svnprops[SVN_PROP_SVK_MERGE] = serialize_svk_features(svk_features)
 
-    def mutter(self, text):
+    def mutter(self, text, *args):
         if 'commit' in debug.debug_flags:
-            mutter(text)
+            mutter(text, *args)
 
     def _generate_revision_if_needed(self):
         """See CommitBuilder._generate_revision_if_needed()."""
@@ -224,7 +224,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                     child_ie.parent_id != self.new_inventory[child_ie.file_id].parent_id or
                     # ... name changed
                     self.new_inventory[child_ie.file_id].name != child_name):
-                    self.mutter('removing %r(%r)' % (child_name, child_ie.file_id))
+                    self.mutter('removing %r(%r)', child_name, child_ie.file_id)
                     dir_editor.delete_entry(
                         urlutils.join(self.branch.get_branch_path(), path, child_name), 
                         self.base_revnum)
@@ -242,16 +242,15 @@ class SvnCommitBuilder(RootCommitBuilder):
                                   new_child_path)
             # add them if they didn't exist in old_inv 
             if not child_ie.file_id in self.old_inv:
-                self.mutter('adding %s %r' % (child_ie.kind, new_child_path))
+                self.mutter('adding %s %r', child_ie.kind, new_child_path)
                 child_editor = dir_editor.add_file(full_new_child_path)
-
 
             # copy if they existed at different location
             elif (self.old_inv.id2path(child_ie.file_id) != new_child_path or
                     self.old_inv[child_ie.file_id].parent_id != child_ie.parent_id):
-                self.mutter('copy %s %r -> %r' % (child_ie.kind, 
+                self.mutter('copy %s %r -> %r', child_ie.kind, 
                                   self.old_inv.id2path(child_ie.file_id), 
-                                  new_child_path))
+                                  new_child_path)
                 child_editor = dir_editor.add_file(
                         full_new_child_path, 
                     urlutils.join(self.repository.transport.svn_url, self.base_path, self.old_inv.id2path(child_ie.file_id)),
@@ -259,7 +258,7 @@ class SvnCommitBuilder(RootCommitBuilder):
 
             # open if they existed at the same location
             elif child_ie.revision is None:
-                self.mutter('open %s %r' % (child_ie.kind, new_child_path))
+                self.mutter('open %s %r', child_ie.kind, new_child_path)
 
                 child_editor = dir_editor.open_file(full_new_child_path, self.base_revnum)
 
@@ -308,7 +307,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             new_child_path = self.new_inventory.id2path(child_ie.file_id)
             # add them if they didn't exist in old_inv 
             if not child_ie.file_id in self.old_inv:
-                self.mutter('adding dir %r' % child_ie.name)
+                self.mutter('adding dir %r', child_ie.name)
                 child_editor = dir_editor.add_directory(
                     urlutils.join(self.branch.get_branch_path(), 
                                   new_child_path))
@@ -316,7 +315,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             # copy if they existed at different location
             elif self.old_inv.id2path(child_ie.file_id) != new_child_path:
                 old_child_path = self.old_inv.id2path(child_ie.file_id)
-                self.mutter('copy dir %r -> %r' % (old_child_path, new_child_path))
+                self.mutter('copy dir %r -> %r',  old_child_path, new_child_path)
                 child_editor = dir_editor.add_directory(
                     urlutils.join(self.branch.get_branch_path(), new_child_path),
                     urlutils.join(self.repository.transport.svn_url, self.base_path, old_child_path), self.base_revnum)
@@ -324,7 +323,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             # open if they existed at the same location and 
             # the directory was touched
             elif self.new_inventory[child_ie.file_id].revision is None:
-                self.mutter('open dir %r' % new_child_path)
+                self.mutter('open dir %r', new_child_path)
 
                 child_editor = dir_editor.open_directory(
                         urlutils.join(self.branch.get_branch_path(), new_child_path), 
@@ -352,8 +351,8 @@ class SvnCommitBuilder(RootCommitBuilder):
         """
         ret = [root]
 
-        self.mutter('opening branch %r (base %r:%r)' % (elements, base_path, 
-                                                   base_rev))
+        self.mutter('opening branch %r (base %r:%r)', elements, base_path, 
+                                                   base_rev)
 
         # Open paths leading up to branch
         for i in range(0, len(elements)-1):
@@ -379,13 +378,13 @@ class SvnCommitBuilder(RootCommitBuilder):
             if replace_existing:
                 if name == "":
                     raise ChangesRootLHSHistory()
-                self.mutter("removing branch dir %r" % name)
+                self.mutter("removing branch dir %r", name)
                 ret[-1].delete_entry(name, -1)
             if base_path is not None:
                 base_url = urlutils.join(self.repository.transport.svn_url, base_path)
             else:
                 base_url = None
-            self.mutter("adding branch dir %r" % name)
+            self.mutter("adding branch dir %r", name)
             ret.append(ret[-1].add_directory(
                 name, base_url, base_rev))
 
@@ -450,7 +449,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                                               bp_parts, -1)
             for prop in self._svn_revprops:
                 if not properties.is_valid_property_name(prop):
-                    warning("Setting property %r with invalid characters in name" % prop)
+                    warning("Setting property %r with invalid characters in name", prop)
             conn = self.repository.transport.get_connection()
             try:
                 try:
@@ -492,11 +491,11 @@ class SvnCommitBuilder(RootCommitBuilder):
                 # Set all the revprops
                 for prop, value in self._svnprops.items():
                     if not properties.is_valid_property_name(prop):
-                        warning("Setting property %r with invalid characters in name" % prop)
+                        warning("Setting property %r with invalid characters in name", prop)
                     if value is not None:
                         value = value.encode('utf-8')
                     branch_editors[-1].change_prop(prop, value)
-                    self.mutter("Setting root file property %r -> %r" % (prop, value))
+                    self.mutter("Setting root file property %r -> %r", prop, value)
 
                 for dir_editor in reversed(branch_editors):
                     dir_editor.close()
@@ -518,9 +517,9 @@ class SvnCommitBuilder(RootCommitBuilder):
 
         assert self._new_revision_id is None or self._new_revision_id == revid
 
-        self.mutter('commit %d finished. author: %r, date: %r, revid: %r' % 
-               (self.revision_metadata.revision, self.revision_metadata.author, 
-                   self.revision_metadata.date, revid))
+        self.mutter('commit %d finished. author: %r, date: %r, revid: %r',
+               self.revision_metadata.revision, self.revision_metadata.author, 
+                   self.revision_metadata.date, revid)
 
         override_svn_revprops = self._config.get_override_svn_revprops()
         if override_svn_revprops is not None:
@@ -714,7 +713,7 @@ def push(target, source, revision_id):
     """
     assert isinstance(source, Branch)
     rev = source.repository.get_revision(revision_id)
-    mutter('pushing %r (%r)' % (revision_id, rev.parent_ids))
+    mutter('pushing %r (%r)', revision_id, rev.parent_ids)
 
     # revision on top of which to commit
     if rev.parent_ids == []:
@@ -769,14 +768,14 @@ class InterToSvnRepository(InterRepository):
             if todo == []:
                 # Nothing to do
                 return
-            mutter("pushing %r into svn" % todo)
+            mutter("pushing %r into svn", todo)
             target_branch = None
             for revision_id in todo:
                 if pb is not None:
                     pb.update("pushing revisions", todo.index(revision_id), len(todo))
                 rev = self.source.get_revision(revision_id)
 
-                mutter('pushing %r' % (revision_id))
+                mutter('pushing %r', revision_id)
 
                 parent_revid = rev.parent_ids[0]
 

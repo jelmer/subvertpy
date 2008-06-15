@@ -14,6 +14,8 @@ bzr-svn 0.4.11	UNRELEASED
 
   BUG FIXES
 
+   * More efficient use of mutter.
+
    * Remember parent branch correctly during sprout. (#237174)
 
    * Raise appropriate errors when using annotate.
@@ -39,6 +41,8 @@ bzr-svn 0.4.11	UNRELEASED
    * Cope with kind changes better. (#191576)
 
    * Fix dealing with strange remove during replace operation. (#232196)
+
+   * Deal with missing branches/tags directories when using webdav. (#235301)
 
 bzr-svn 0.4.10  2008-05-12
 

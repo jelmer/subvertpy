@@ -319,9 +319,9 @@ class SvnRaTransport(Transport):
         finally:
             self.add_connection(conn)
 
-    def mutter(self, text):
+    def mutter(self, text, *args):
         if 'transport' in debug.debug_flags:
-            mutter(text)
+            mutter(text, *args)
 
     def _request_path(self, relpath):
         if self._backing_url == self.svn_url:
@@ -330,7 +330,7 @@ class SvnRaTransport(Transport):
         if newsvnurl == self._backing_url:
             return ""
         newrelpath = urlutils.relative_url(self._backing_url+"/", newsvnurl+"/").strip("/")
-        self.mutter('request path %r -> %r' % (relpath, newrelpath))
+        self.mutter('request path %r -> %r', relpath, newrelpath)
         return newrelpath
 
     def list_dir(self, relpath):

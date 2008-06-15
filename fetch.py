@@ -234,7 +234,7 @@ class DirectoryBuildEditor:
             if copyfrom_path is None:
                 # This should ideally never happen!
                 copyfrom_path = self.editor.old_inventory.id2path(file_id)
-                mutter('no copyfrom path set, assuming %r' % copyfrom_path)
+                mutter('no copyfrom path set, assuming %r', copyfrom_path)
             assert copyfrom_path == self.editor.old_inventory.id2path(file_id)
             assert copyfrom_path not in self.editor._premature_deletes
             self.editor._premature_deletes.add(copyfrom_path)
@@ -290,7 +290,7 @@ class DirectoryBuildEditor:
         elif (name.startswith(properties.PROP_WC_PREFIX)):
             pass
         elif name.startswith(properties.PROP_PREFIX):
-            mutter('unsupported dir property %r' % name)
+            mutter('unsupported dir property %r', name)
 
     def add_file(self, path, copyfrom_path=None, copyfrom_revnum=-1):
         assert isinstance(path, str)
@@ -383,7 +383,7 @@ class FileBuildEditor:
             mutter('svn:externals property on file!')
         elif (name.startswith(properties.PROP_PREFIX) or
               name.startswith(SVN_PROP_BZR_PREFIX)):
-            mutter('unsupported file property %r' % name)
+            mutter('unsupported file property %r', name)
 
     def close(self, checksum=None):
         assert isinstance(self.path, unicode)

@@ -125,7 +125,7 @@ class CachingLogWalker(CacheTable):
         assert isinstance(revnum, int) and revnum >= 0
         self.fetch_revisions(revnum)
 
-        self.mutter("latest change: %r:%r" % (path, revnum))
+        self.mutter("latest change: %r:%r", path, revnum)
 
         extra = ""
         if path == "":
@@ -161,7 +161,7 @@ class CachingLogWalker(CacheTable):
 
         revnum = from_revnum
 
-        self.mutter("iter changes %r->%r (%r)" % (from_revnum, to_revnum, paths))
+        self.mutter("iter changes %r->%r (%r)", from_revnum, to_revnum, paths)
 
         if paths is None:
             path = ""
@@ -211,7 +211,7 @@ class CachingLogWalker(CacheTable):
         """
         assert revnum >= 0
         self.fetch_revisions(revnum)
-        self.mutter("get previous %r:%r" % (path, revnum))
+        self.mutter("get previous %r:%r", path, revnum)
         if revnum == 0:
             return (None, -1)
         row = self.cachedb.execute("select action, copyfrom_path, copyfrom_rev from changed_path where path='%s' and rev=%d" % (path, revnum)).fetchone()
@@ -245,7 +245,7 @@ class CachingLogWalker(CacheTable):
         :returns: dictionary with paths as keys and 
                   (action, copyfrom_path, copyfrom_rev) as values.
         """
-        self.mutter("revision paths: %r" % revnum)
+        self.mutter("revision paths: %r", revnum)
 
         return self._get_revision_paths(revnum)
 

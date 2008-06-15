@@ -39,7 +39,7 @@ else:
     version_string = '%d.%d.%d%s%d' % version_info
 __version__ = version_string
 
-COMPATIBLE_BZR_VERSIONS = [(1, 4), (1, 5)]
+COMPATIBLE_BZR_VERSIONS = [(1, 4), (1, 5), (1, 6)]
 
 def check_bzrlib_version(desired):
     """Check that bzrlib is compatible.
@@ -59,8 +59,8 @@ def check_bzrlib_version(desired):
         raise BzrError('Installed bzr version %s is too old to be used with bzr-svn, at least %s.%s required' % (bzrlib.__version__, desired[0][0], desired[0][1]))
     else:
         warning('bzr-svn is not up to date with installed bzr version %s.'
-                ' \nThere should be a newer version of bzr-svn available.' 
-                % (bzrlib.__version__))
+                ' \nThere should be a newer version of bzr-svn available.',
+                bzrlib.__version__)
         if not (bzrlib_version[0], bzrlib_version[1]-1) in desired:
             raise BzrError('Version mismatch')
 

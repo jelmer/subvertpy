@@ -168,7 +168,7 @@ class DirectoryTreeEditor:
         elif name.startswith(properties.PROP_WC_PREFIX):
             pass
         elif name.startswith(properties.PROP_PREFIX):
-            mutter('unsupported dir property %r' % name)
+            mutter('unsupported dir property %r', name)
 
     def add_file(self, path, copyfrom_path=None, copyfrom_revnum=-1):
         path = path.decode("utf-8")
@@ -194,7 +194,7 @@ class FileTreeEditor:
         elif name == properties.PROP_SPECIAL:
             self.is_symlink = (value != None)
         elif name == properties.PROP_EXTERNALS:
-            mutter('%r property on file!' % name)
+            mutter('%r property on file!', name)
         elif name == properties.PROP_ENTRY_COMMITTED_REV:
             self.last_file_rev = int(value)
         elif name in (properties.PROP_ENTRY_COMMITTED_DATE,
@@ -205,8 +205,8 @@ class FileTreeEditor:
             pass
         elif name.startswith(properties.PROP_WC_PREFIX):
             pass
-        elif name.startswith(properties.SVN_PROP_PREFIX):
-            mutter('unsupported file property %r' % name)
+        elif name.startswith(properties.PROP_PREFIX):
+            mutter('unsupported file property %r', name)
 
     def close(self, checksum=None):
         file_id, revision_id = self.tree.id_map[self.path]

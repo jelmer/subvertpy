@@ -326,7 +326,7 @@ class SvnWorkingTree(WorkingTree):
                     "%r is not a string" % parent_id
             (id, revid) = find_ids(entry, rootwc)
             if id is None:
-                mutter('no id for %r' % entry.url)
+                mutter('no id for %r', entry.url)
                 return
             assert revid is None or isinstance(revid, str), "%r is not a string" % revid
             assert isinstance(id, str), "%r is not a string" % id
@@ -356,7 +356,7 @@ class SvnWorkingTree(WorkingTree):
                     if subid:
                         add_file_to_inv(subrelpath, subid, subrevid, id)
                     else:
-                        mutter('no id for %r' % entry.url)
+                        mutter('no id for %r', entry.url)
 
         rootwc = self._get_wc() 
         try:
@@ -368,7 +368,7 @@ class SvnWorkingTree(WorkingTree):
         return inv
 
     def set_last_revision(self, revid):
-        mutter('setting last revision to %r' % revid)
+        mutter('setting last revision to %r', revid)
         if revid is None or revid == NULL_REVISION:
             self.base_revid = revid
             self.base_revnum = 0
@@ -386,7 +386,7 @@ class SvnWorkingTree(WorkingTree):
 
         def update_settings(adm, path):
             id = newrevtree.inventory.path2id(path)
-            mutter("Updating settings for %r" % id)
+            mutter("Updating settings for %r", id)
             revnum = self.branch.lookup_revision_id(
                     newrevtree.inventory[id].revision)
 
@@ -436,7 +436,7 @@ class SvnWorkingTree(WorkingTree):
             try:
                 if not self.inventory.has_filename(f):
                     if save:
-                        mutter('adding %r' % file_path)
+                        mutter('adding %r', file_path)
                         adm.add(file_path, None, 0, None, None, None)
                     added.append(file_path)
                 if recurse and osutils.file_kind(file_path) == 'directory':
