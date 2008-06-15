@@ -26,12 +26,11 @@ from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
 from bzrlib.plugins.svn import core, wc
-
-import os, sys
-
 from bzrlib.plugins.svn.transport import svn_config
 from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
 from bzrlib.plugins.svn.workingtree import generate_ignore_list
+
+import os, sys
 
 class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_add_duplicate(self):
