@@ -18,10 +18,11 @@
 from bzrlib import osutils, urlutils
 from bzrlib.branch import Branch
 from bzrlib.inventory import Inventory, InventoryDirectory, TreeReference
-
 from bzrlib.revision import CURRENT_REVISION
 from bzrlib.trace import mutter
 from bzrlib.revisiontree import RevisionTree
+
+from bzrlib.plugins.svn.delta import apply_txdelta_handler
 
 import os
 import md5
@@ -158,12 +159,12 @@ class DirectoryTreeEditor:
 
     def change_prop(self, name, value):
         if name in (properties.PROP_ENTRY_COMMITTED_DATE,
-                      properties.PROP_ENTRY_COMMITTED_REV,
-                      properties.PROP_ENTRY_LAST_AUTHOR,
-                      properties.PROP_ENTRY_LOCK_TOKEN,
-                      properties.PROP_ENTRY_UUID,
-                      properties.PROP_EXECUTABLE,
-                      properties.PROP_IGNORE):
+                    properties.PROP_ENTRY_LAST_AUTHOR,
+                    properties.PROP_ENTRY_LOCK_TOKEN,
+                    properties.PROP_ENTRY_COMMITTED_REV,
+                    properties.PROP_ENTRY_UUID,
+                    properties.PROP_IGNORE,
+                    properties.PROP_EXECUTABLE):
             pass
         elif name.startswith(properties.PROP_WC_PREFIX):
             pass
