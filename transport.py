@@ -24,18 +24,19 @@ from bzrlib.transport import Transport
 from bzrlib.plugins.svn import core, properties, ra
 from bzrlib.plugins.svn import properties
 from bzrlib.plugins.svn.auth import create_auth_baton
-from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.core import SubversionException, get_config
 from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY
-from bzrlib.plugins.svn.ra import DIRENT_KIND
+from bzrlib.plugins.svn.ra import DIRENT_KIND, RemoteAccess
 import urlparse
 import urllib
 
-svn_config = core.get_config()
+svn_config = get_config()
 
 def get_client_string():
     """Return a string that can be send as part of the User Agent string."""
     return "bzr%s+bzr-svn%s" % (bzrlib.__version__, bzrlib.plugins.svn.__version__)
 
+ 
 # Don't run any tests on SvnTransport as it is not intended to be 
 # a full implementation of Transport
 def get_test_permutations():
@@ -76,21 +77,6 @@ def bzr_to_svn_url(url):
     return url
 
 
-def needs_busy(unbound):
-    """Decorator that marks a connection as busy before running a methd on it.
-    """
-    def convert(self, *args, **kwargs):
-        self._mark_busy()
-        try:
-            return unbound(self, *args, **kwargs)
-        finally:
-            self._unmark_busy()
-
-    convert.__doc__ = unbound.__doc__
-    convert.__name__ = unbound.__name__
-    return convert
-
-
 def Connection(url):
     try:
         mutter('opening SVN RA connection to %r' % url)
@@ -124,14 +110,14 @@ class ConnectionPool(object):
                 return c
         # Nothing available? Just pick an existing one and reparent:
         if len(self.connections) == 0:
-            return Connection(url)
+            return RemoteAccess(url)
         c = self.connections.pop()
         try:
             c.reparent(url)
             return c
         except NotImplementedError:
             self.connections.add(c)
-            return Connection(url)
+            return RemoteAccess(url)
         except:
             self.connections.add(c)
             raise

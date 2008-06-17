@@ -17,6 +17,7 @@
 
 """Working tree tests."""
 
+from bzrlib.branch import Branch
 from bzrlib.bzrdir import BzrDir
 from bzrlib.errors import NoSuchFile, OutOfDateTree
 from bzrlib.inventory import Inventory
@@ -329,18 +330,12 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.assertFalse(inv.has_filename("bl"))
         self.assertFalse(basis_inv.has_filename("dir/bl"))
 
-    def test_pending_merges_empty(self):
-        self.make_client('a', 'dc')
+    def test_get_parent_ids_no_merges(self):
+        repos_url = self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
         tree = self.open_checkout("dc")
-        self.assertEqual([], tree.pending_merges())
-
-    def test_get_parent_ids(self):
-        self.make_client('a', 'dc')
-        self.build_tree({"dc/bl": "data"})
-        tree = self.open_checkout("dc")
-        self.assertEqual([Branch.open('a').last_revision()], tree.get_parent_ids()) 
-
+        self.assertEqual([Branch.open(repos_url).last_revision()], tree.get_parent_ids())
+ 
     def test_delta(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
@@ -447,15 +442,17 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.assertEqual('symlink', inv[inv.path2id("bla")].kind)
         self.assertEqual("target", inv[inv.path2id("bla")].symlink_target)
 
-    def test_pending_merges(self):
-        self.make_client('a', 'dc')
+    def test_get_parent_ids(self):
+        repos_url = self.make_client('a', 'dc')
         self.build_tree({"dc/bl": None})
+
+        lhs_parent_id = Branch.open(repos_url).last_revision()
 
         tree = self.open_checkout("dc")
         tree.set_pending_merges(["a", "c"])
-        self.assertEqual(["a", "c"], tree.pending_merges())
+        self.assertEqual([lhs_parent_id, "a", "c"], tree.get_parent_ids())
         tree.set_pending_merges([])
-        self.assertEqual([], tree.pending_merges())
+        self.assertEqual([lhs_parent_id], tree.get_parent_ids())
 
     def test_set_pending_merges_prop(self):
         self.make_client('a', 'dc')
