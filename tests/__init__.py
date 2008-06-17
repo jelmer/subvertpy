@@ -229,11 +229,11 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
     def commit_editor(self, url, message="Test commit"):
         ra = RemoteAccess(url.encode('utf8'))
         class CommitEditor:
-            def __init__(self, ra, edit_baton, base_revnum, base_url):
+            def __init__(self, ra, editor, base_revnum, base_url):
                 self._used = False
                 self.ra = ra
                 self.base_revnum = base_revnum
-                self.edit_baton = edit_baton
+                self.editor = editor
                 self.data = {}
                 self.create = set()
                 self.props = {}
@@ -311,31 +311,31 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
                         if subpath in self.create:
                             child_baton = dir_baton.add_file(subpath, None, -1)
                         else:
-                            child_baton = dir_baton.open_file(subpath, -1)
+                            child_baton = dir_baton.open_file(subpath)
                         if isinstance(contents, str):
                             txdelta = child_baton.apply_textdelta(None)
                             txdelta_send_stream(StringIO(contents), txdelta)
                         if subpath in self.props:
                             for k, v in self.props[subpath].items():
                                 child_baton.change_prop(k, v)
-                        child_baton.close(None)
+                        child_baton.close()
 
             def done(self):
                 assert self._used == False
                 self._used = True
-                root_baton = self.edit_baton.open_root(self.base_revnum)
+                root_baton = self.editor.open_root(self.base_revnum)
                 self._process_dir(root_baton, self.data, "")
                 root_baton.close()
-                self.edit_baton.close()
+                self.editor.close()
 
-                my_revnum = self.ra.get_latest_revnum()
+                my_revnum = ra.get_latest_revnum()
                 assert my_revnum > self.base_revnum
 
                 return my_revnum
 
         base_revnum = ra.get_latest_revnum()
-        edit_baton = ra.get_commit_editor({"svn:log": message})
-        return CommitEditor(ra, edit_baton, base_revnum, url)
+        editor = ra.get_commit_editor({"svn:log": message})
+        return CommitEditor(ra, editor, base_revnum, url)
 
 
 def test_suite():

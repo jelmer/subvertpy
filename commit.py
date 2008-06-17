@@ -190,7 +190,7 @@ class SvnCommitBuilder(RootCommitBuilder):
 
         :param file_id: Id of the file to modify.
         :param contents: Contents of the file.
-        :param file_editor: Editor for this file
+        :param file_editor: Subversion FileEditor object.
         """
         assert file_editor is not None
         txdelta = file_editor.apply_textdelta(None)
@@ -204,7 +204,7 @@ class SvnCommitBuilder(RootCommitBuilder):
 
         :param path: Path (from repository root) to the directory.
         :param file_id: File id of the directory
-        :param dir_editor: Editor for the directory.
+        :param dir_editor: Subversion DirEditor object.
         """
         assert dir_editor is not None
         # Loop over entries of file_id in self.old_inv
@@ -221,7 +221,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                     child_ie.parent_id != self.new_inventory[child_ie.file_id].parent_id or
                     # ... name changed
                     self.new_inventory[child_ie.file_id].name != child_name):
-                    self.mutter('removing %r(%r)', child_name, child_ie.file_id)
+                    self.mutter('removing %r(%r)', (child_name, child_ie.file_id))
                     dir_editor.delete_entry(
                         urlutils.join(self.branch.get_branch_path(), path, child_name), 
                         self.base_revnum)
@@ -240,7 +240,9 @@ class SvnCommitBuilder(RootCommitBuilder):
             # add them if they didn't exist in old_inv 
             if not child_ie.file_id in self.old_inv:
                 self.mutter('adding %s %r', child_ie.kind, new_child_path)
-                child_editor = dir_editor.add_file(full_new_child_path)
+                child_editor = dir_editor.add_file(
+                    full_new_child_path, None, -1)
+
 
             # copy if they existed at different location
             elif (self.old_inv.id2path(child_ie.file_id) != new_child_path or
@@ -257,7 +259,8 @@ class SvnCommitBuilder(RootCommitBuilder):
             elif child_ie.revision is None:
                 self.mutter('open %s %r', child_ie.kind, new_child_path)
 
-                child_editor = dir_editor.open_file(full_new_child_path, self.base_revnum)
+                child_editor = dir_editor.open_file(
+                        full_new_child_path, self.base_revnum)
 
             else:
                 # Old copy of the file was retained. No need to send changes
@@ -277,7 +280,8 @@ class SvnCommitBuilder(RootCommitBuilder):
                         value = properties.PROP_EXECUTABLE_VALUE
                     else:
                         value = None
-                    child_editor.change_prop(properties.PROP_EXECUTABLE, value)
+                    child_editor.change_prop(
+                            properties.PROP_EXECUTABLE, value)
 
                 if old_special != (child_ie.kind == 'symlink'):
                     if child_ie.kind == 'symlink':
@@ -285,7 +289,8 @@ class SvnCommitBuilder(RootCommitBuilder):
                     else:
                         value = None
 
-                    child_editor.change_prop(properties.PROP_SPECIAL, value)
+                    child_editor.change_prop(
+                            properties.PROP_SPECIAL, value)
 
             # handle the file
             if child_ie.file_id in self.modified_files:
@@ -293,7 +298,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                     self.modified_files[child_ie.file_id], child_editor)
 
             if child_editor is not None:
-                child_editor.close()
+                child_editor.close(None)
 
         # Loop over subdirectories of file_id in self.new_inventory
         for child_name in self.new_inventory[file_id].children:
@@ -307,7 +312,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                 self.mutter('adding dir %r', child_ie.name)
                 child_editor = dir_editor.add_directory(
                     urlutils.join(self.branch.get_branch_path(), 
-                                  new_child_path))
+                                  new_child_path), None, -1)
 
             # copy if they existed at different location
             elif self.old_inv.id2path(child_ie.file_id) != new_child_path:
@@ -354,7 +359,8 @@ class SvnCommitBuilder(RootCommitBuilder):
         # Open paths leading up to branch
         for i in range(0, len(elements)-1):
             # Does directory already exist?
-            ret.append(ret[-1].open_directory("/".join(existing_elements[0:i+1]), -1))
+            ret.append(ret[-1].open_directory(
+                "/".join(existing_elements[0:i+1]), -1))
 
         if (len(existing_elements) != len(elements) and
             len(existing_elements)+1 != len(elements)):
