@@ -671,7 +671,8 @@ class InterFromSvnRepository(InterRepository):
                         reporter.finish()
                     finally:
                         if conn is not None:
-                            self.source.transport.add_connection(conn)
+                            if not conn.is_busy():
+                                self.source.transport.add_connection(conn)
                 except:
                     editor.abort()
                     raise
