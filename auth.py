@@ -61,14 +61,13 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
         username = self.get_user(self.scheme, host=self.host, path=self.path, realm=realm)
         return (username, False)
 
-    def get_svn_simple(self, realm, username, may_save, pool):
+    def get_svn_simple(self, realm, username, may_save):
         """Look up a Subversion user name+password combination in the Bazaar 
         authentication cache.
 
         :param realm: Authentication realm (optional)
         :param username: Username, if it is already known, or None.
         :param may_save: Whether or not the username should be saved.
-        :param pool: Allocation pool, is ignored.
         """
         username = self.get_user(self.scheme, 
                 host=self.host, path=self.path, realm=realm) or username
@@ -77,8 +76,7 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
             realm=realm, prompt="%s %s password" % (realm, simple_cred.username))
         return (username, password, False)
 
-    def get_svn_ssl_server_trust(self, realm, failures, cert_info, may_save, 
-                                     pool):
+    def get_svn_ssl_server_trust(self, realm, failures, cert_info, may_save):
         """Return a Subversion auth provider that verifies SSL server trust.
 
         :param realm: Realm name (optional)
@@ -130,7 +128,7 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
                 self.get_svn_simple_prompt_provider(1),
                 self.get_svn_ssl_server_trust_prompt_provider()]
 
-def get_ssl_client_cert_pw(realm, may_save, pool):
+def get_ssl_client_cert_pw(realm, may_save):
     """Simple SSL client certificate password prompter.
 
     :param realm: Realm, optional.
