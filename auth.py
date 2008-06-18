@@ -17,18 +17,9 @@
 
 from bzrlib.config import AuthenticationConfig
 from bzrlib.ui import ui_factory
-from bzrlib.plugins.svn.ra import (get_username_prompt_provider, 
-                                   get_simple_prompt_provider,
-                                   get_ssl_server_trust_prompt_provider,
-                                   get_ssl_client_cert_pw_prompt_provider,
-                                   get_simple_provider,
-                                   get_username_provider,
-                                   get_ssl_client_cert_file_provider,
-                                   get_ssl_client_cert_pw_file_provider,
-                                   get_ssl_server_trust_file_provider,
-                                   Auth
-                                   )
+
 from bzrlib.plugins.svn import ra
+
 import urlparse
 import urllib
 
@@ -104,7 +95,7 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
         
         :param retries: Number of allowed retries.
         """
-        return get_username_prompt_provider(self.get_svn_username, 
+        return ra.get_username_prompt_provider(self.get_svn_username, 
                                                      retries)
 
     def get_svn_simple_prompt_provider(self, retries):
@@ -113,13 +104,12 @@ class SubversionAuthenticationConfig(AuthenticationConfig):
         
         :param retries: Number of allowed retries.
         """
-        return get_simple_prompt_provider(self.get_svn_simple, retries)
+        return ra.get_simple_prompt_provider(self.get_svn_simple, retries)
 
     def get_svn_ssl_server_trust_prompt_provider(self):
         """Return a Subversion auth provider for checking 
         whether a SSL server is trusted."""
-        return get_ssl_server_trust_prompt_provider(
-                    self.get_svn_ssl_server_trust)
+        return ra.get_ssl_server_trust_prompt_provider(self.get_svn_ssl_server_trust)
 
     def get_svn_auth_providers(self):
         """Return a list of auth providers for this authentication file.
@@ -140,15 +130,15 @@ def get_ssl_client_cert_pw(realm, may_save):
 
 
 def get_ssl_client_cert_pw_provider(tries):
-    return get_ssl_client_cert_pw_prompt_provider(
+    return ra.get_ssl_client_cert_pw_prompt_provider(
                 get_ssl_client_cert_pw, tries)
 
 def get_stock_svn_providers():
-    providers = [get_simple_provider(),
-            get_username_provider(),
-            get_ssl_client_cert_file_provider(),
-            get_ssl_client_cert_pw_file_provider(),
-            get_ssl_server_trust_file_provider(),
+    providers = [ra.get_simple_provider(),
+            ra.get_username_provider(),
+            ra.get_ssl_client_cert_file_provider(),
+            ra.get_ssl_client_cert_pw_file_provider(),
+            ra.get_ssl_server_trust_file_provider(),
             ]
 
     if hasattr(ra, 'get_windows_simple_provider'):
@@ -181,7 +171,7 @@ def create_auth_baton(url):
         providers += auth_config.get_svn_auth_providers()
         providers += [get_ssl_client_cert_pw_provider(1)]
 
-    auth_baton = Auth(providers)
+    auth_baton = ra.Auth(providers)
     if creds is not None:
         (user, password) = urllib.splitpasswd(creds)
         if user is not None:

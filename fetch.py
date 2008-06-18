@@ -40,6 +40,7 @@ from bzrlib.plugins.svn.svk import SVN_PROP_SVK_MERGE
 from bzrlib.plugins.svn.tree import (parse_externals_description, 
                   inventory_add_external)
 
+import svn.delta
 
 def _escape_commit_message(message):
     """Replace xml-incompatible control characters."""
@@ -93,8 +94,8 @@ class RevisionBuildEditor:
         self.source = source
         self.transact = target.get_transaction()
 
-    def set_target_revision(self, target_revision):
-        pass
+    def set_target_revision(self, revnum):
+        assert self.revnum == revnum
 
     def start_revision(self, revid, prev_inventory, revmeta):
         self.revid = revid
