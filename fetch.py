@@ -208,6 +208,7 @@ class RevisionBuildEditor:
             return
         self.inventory.rename(file_id, parent_id, urlutils.basename(path))
 
+
 class DirectoryBuildEditor:
     def __init__(self, editor, old_id, new_id, parent_revids=[]):
         self.editor = editor
@@ -217,6 +218,8 @@ class DirectoryBuildEditor:
 
     def close(self):
         self.editor.inventory[self.new_id].revision = self.editor.revid
+
+        # Only record root if the target repository supports it
         self.editor._store_directory(self.new_id, self.parent_revids)
 
         if self.new_id == self.editor.inventory.root.file_id:
@@ -252,7 +255,7 @@ class DirectoryBuildEditor:
     def open_directory(self, path, base_revnum):
         assert isinstance(path, str)
         path = path.decode("utf-8")
-        assert isinstance(base_revnum, int)
+        assert base_revnum >= 0
         base_file_id = self.editor._get_old_id(self.old_id, path)
         base_revid = self.editor.old_inventory[base_file_id].revision
         file_id = self.editor._get_existing_id(self.old_id, self.new_id, path)
@@ -304,7 +307,7 @@ class DirectoryBuildEditor:
             if copyfrom_path is None:
                 # This should ideally never happen
                 copyfrom_path = self.editor.old_inventory.id2path(file_id)
-                mutter('no copyfrom path set, assuming %r' % copyfrom_path)
+                mutter('no copyfrom path set, assuming %r', copyfrom_path)
             assert copyfrom_path == self.editor.old_inventory.id2path(file_id)
             assert copyfrom_path not in self.editor._premature_deletes
             self.editor._premature_deletes.add(copyfrom_path)
@@ -340,6 +343,7 @@ class DirectoryBuildEditor:
                     self.editor._premature_deletes.remove(p)
         else:
             self.editor.inventory.remove_recursive_id(self.editor._get_old_id(self.old_id, path))
+
 
 class FileBuildEditor:
     def __init__(self, editor, path, file_id, file_parents=[], data="", 
@@ -501,7 +505,7 @@ def get_revision_build_editor(repository):
     :param repository: Repository to obtain the buildeditor for.
     :return: Class object of class descending from RevisionBuildEditor
     """
-    if hasattr(repository, '_packs'):
+    if getattr(repository, '_packs', None):
         return PackRevisionBuildEditor
     return WeaveRevisionBuildEditor
 

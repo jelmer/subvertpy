@@ -24,6 +24,7 @@ def apply_txdelta_handler(sbuf, target_stream):
         target_stream.write(tview)
     return apply_window
 
+
 def txdelta_apply_ops(src_ops, ops, new_data, sview):
     tview = ""
     for (action, offset, length) in ops:

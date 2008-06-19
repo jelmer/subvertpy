@@ -145,6 +145,7 @@ class TreeBuildEditor:
     def abort(self):
         pass
 
+
 class DirectoryTreeEditor:
     def __init__(self, tree, file_id):
         self.tree = tree
@@ -173,6 +174,8 @@ class DirectoryTreeEditor:
 
     def add_file(self, path, copyfrom_path=None, copyfrom_revnum=-1):
         path = path.decode("utf-8")
+        self.is_symlink = False
+        self.is_executable = False
         return FileTreeEditor(self.tree, path)
 
     def close(self):
@@ -188,8 +191,6 @@ class FileTreeEditor:
         self.last_file_rev = None
 
     def change_prop(self, name, value):
-        from mapping import SVN_PROP_BZR_PREFIX
-
         if name == properties.PROP_EXECUTABLE:
             self.is_executable = (value != None)
         elif name == properties.PROP_SPECIAL:
@@ -241,7 +242,7 @@ class FileTreeEditor:
 
         self.file_stream = None
 
-    def apply_textdelta(self, base_checksum=None):
+    def apply_textdelta(self, base_checksum):
         self.file_stream = StringIO()
         return apply_txdelta_handler("", self.file_stream)
 
