@@ -31,7 +31,7 @@ from bzrlib.revisiontree import RevisionTree
 from bzrlib.transport.local import LocalTransport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
-from bzrlib.plugins.svn import core, properties, wc
+from bzrlib.plugins.svn import core, properties
 from bzrlib.plugins.svn.branch import SvnBranch
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.convert import SvnConverter
@@ -47,6 +47,7 @@ from bzrlib.plugins.svn.svk import SVN_PROP_SVK_MERGE, parse_svk_features, seria
 from bzrlib.plugins.svn.transport import (SvnRaTransport, bzr_to_svn_url, 
                        svn_config) 
 from bzrlib.plugins.svn.tree import SvnBasisTree
+from bzrlib.plugins.svn.wc import *
 
 import os
 import urllib
@@ -80,14 +81,14 @@ def generate_ignore_list(ignore_map):
 class SvnWorkingTree(WorkingTree):
     """WorkingTree implementation that uses a Subversion Working Copy for storage."""
     def __init__(self, bzrdir, local_path, branch):
-        version = wc.check_wc(local_path)
+        version = check_wc(local_path)
         self._format = SvnWorkingTreeFormat(version)
         self.basedir = local_path
         assert isinstance(self.basedir, unicode)
         self.bzrdir = bzrdir
         self._branch = branch
         self._get_wc()
-        (min_rev, max_rev, switch, modified) = wc.revision_status(self.basedir, None, True, None)
+        (min_rev, max_rev, switch, modified) = revision_status(self.basedir, None, True, None)
         assert min_rev >= 0 and max_rev >= 0, "min rev: (%d, %d)" % (min_rev, max_rev)
         self.base_revnum = max_rev
         self.base_tree = SvnBasisTree(self)
@@ -95,29 +96,30 @@ class SvnWorkingTree(WorkingTree):
 
         self.read_working_inventory()
 
-        self.controldir = os.path.join(self.basedir, wc.get_adm_dir(), 'bzr')
+        self.controldir = os.path.join(self.basedir, get_adm_dir(), 
+                                       'bzr')
         try:
             os.makedirs(self.controldir)
             os.makedirs(os.path.join(self.controldir, 'lock'))
         except OSError:
             pass
         control_transport = bzrdir.transport.clone(urlutils.join(
-                                                   wc.get_adm_dir(), 'bzr'))
+                                                   get_adm_dir(), 'bzr'))
         self._control_files = LockableFiles(control_transport, 'lock', LockDir)
 
     def get_ignore_list(self):
-        ignore_globs = set([wc.get_adm_dir()])
+        ignore_globs = set([get_adm_dir()])
         ignore_globs.update(ignores.get_runtime_ignores())
         ignore_globs.update(ignores.get_user_ignores())
 
-        def dir_add(adm, prefix, patprefix):
-            ignorestr = adm.prop_get(properties.PROP_IGNORE, 
+        def dir_add(wc, prefix, patprefix):
+            ignorestr = wc.prop_get(properties.PROP_IGNORE, 
                                     self.abspath(prefix).rstrip("/"))
             if ignorestr is not None:
                 for pat in ignorestr.splitlines():
                     ignore_globs.add(urlutils.joinpath(patprefix, pat))
 
-            entries = adm.entries_read(False)
+            entries = wc.entries_read(False)
             for entry in entries:
                 if entry == "":
                     continue
@@ -128,7 +130,7 @@ class SvnWorkingTree(WorkingTree):
 
                 subprefix = os.path.join(prefix, entry)
 
-                subwc = wc.WorkingCopy(adm, self.abspath(subprefix))
+                subwc = WorkingCopy(wc, self.abspath(subprefix))
                 try:
                     dir_add(subwc, subprefix, urlutils.joinpath(patprefix, entry))
                 finally:
@@ -138,12 +140,12 @@ class SvnWorkingTree(WorkingTree):
         try:
             dir_add(adm, "", ".")
         finally:
-            adm.close()
+            wc.close()
 
         return ignore_globs
 
     def is_control_filename(self, path):
-        return wc.is_adm_dir(path)
+        return is_adm_dir(path)
 
     def apply_inventory_delta(self, changes):
         raise NotImplementedError(self.apply_inventory_delta)
@@ -175,19 +177,20 @@ class SvnWorkingTree(WorkingTree):
         # FIXME: Use to_file argument
         # FIXME: Use verbose argument
         assert isinstance(files, list)
-        adm = self._get_wc(write_lock=True)
+        wc = self._get_wc(write_lock=True)
         try:
             for file in files:
-                adm.delete(self.abspath(file))
+                wc.delete(self.abspath(file))
         finally:
-            adm.close()
+            wc.close()
 
         for file in files:
             self._change_fileid_mapping(None, file)
         self.read_working_inventory()
 
     def _get_wc(self, relpath="", write_lock=False):
-        return wc.WorkingCopy(None, self.abspath(relpath).rstrip("/"), write_lock)
+        return WorkingCopy(None, self.abspath(relpath).rstrip("/"), 
+                                write_lock)
 
     def _get_rel_wc(self, relpath, write_lock=False):
         dir = os.path.dirname(relpath)
@@ -200,8 +203,7 @@ class SvnWorkingTree(WorkingTree):
         for entry in from_paths:
             try:
                 to_wc = self._get_wc(to_dir, write_lock=True)
-                to_wc.copy(self.abspath(entry), 
-                            os.path.basename(entry), None, None)
+                to_wc.copy(self.abspath(entry), os.path.basename(entry))
             finally:
                 to_wc.close()
             try:
@@ -278,36 +280,36 @@ class SvnWorkingTree(WorkingTree):
                     pass
 
         def find_copies(url, relpath=""):
-            adm = self._get_wc(relpath)
-            entries = adm.entries_read(False)
+            wc = self._get_wc(relpath)
+            entries = wc.entries_read(False)
             for entry in entries.values():
                 subrelpath = os.path.join(relpath, entry.name)
                 if entry.name == "" or entry.kind != 'directory':
                     if ((entry.copyfrom_url == url or entry.url == url) and 
-                        not (entry.schedule in (wc.SCHEDULE_DELETE,
-                                                wc.SCHEDULE_REPLACE))):
+                        not (entry.schedule in (SCHEDULE_DELETE,
+                                                SCHEDULE_REPLACE))):
                         yield os.path.join(
                                 self.branch.get_branch_path().strip("/"), 
                                 subrelpath)
                 else:
                     find_copies(subrelpath)
-            adm.close()
+            wc.close()
 
         def find_ids(entry, rootwc):
             relpath = urllib.unquote(entry.url[len(entry.repos):].strip("/"))
-            assert entry.schedule in (wc.SCHEDULE_NORMAL, 
-                                      wc.SCHEDULE_DELETE,
-                                      wc.SCHEDULE_ADD,
-                                      wc.SCHEDULE_REPLACE)
-            if entry.schedule == wc.SCHEDULE_NORMAL:
+            assert entry.schedule in (SCHEDULE_NORMAL, 
+                                      SCHEDULE_DELETE,
+                                      SCHEDULE_ADD,
+                                      SCHEDULE_REPLACE)
+            if entry.schedule == SCHEDULE_NORMAL:
                 assert entry.revision >= 0
                 # Keep old id
                 return self.path_to_file_id(entry.cmt_rev, entry.revision, 
                         relpath)
-            elif entry.schedule == wc.SCHEDULE_DELETE:
+            elif entry.schedule == SCHEDULE_DELETE:
                 return (None, None)
-            elif (entry.schedule == wc.SCHEDULE_ADD or 
-                  entry.schedule == wc.SCHEDULE_REPLACE):
+            elif (entry.schedule == SCHEDULE_ADD or 
+                  entry.schedule == SCHEDULE_REPLACE):
                 # See if the file this file was copied from disappeared
                 # and has no other copies -> in that case, take id of other file
                 if (entry.copyfrom_url and 
@@ -322,7 +324,7 @@ class SvnWorkingTree(WorkingTree):
 
         def add_dir_to_inv(relpath, adm, parent_id):
             assert isinstance(relpath, unicode)
-            entries = adm.entries_read(False)
+            entries = wc.entries_read(False)
             entry = entries[""]
             assert parent_id is None or isinstance(parent_id, str), \
                     "%r is not a string" % parent_id
@@ -348,7 +350,7 @@ class SvnWorkingTree(WorkingTree):
                 assert entry
                 
                 if entry.kind == core.NODE_DIR:
-                    subwc = wc.WorkingCopy(adm, self.abspath(subrelpath))
+                    subwc = WorkingCopy(wc, self.abspath(subrelpath))
                     try:
                         add_dir_to_inv(subrelpath, subwc, id)
                     finally:
@@ -392,7 +394,7 @@ class SvnWorkingTree(WorkingTree):
             revnum = self.branch.lookup_revision_id(
                     newrevtree.inventory[id].revision)
 
-            adm.process_committed(self.abspath(path).rstrip("/"), 
+            wc.process_committed(self.abspath(path).rstrip("/"), 
                           False, revnum, 
                           time_to_cstring(newrev.timestamp), 
                           newrev.committer)
@@ -400,23 +402,23 @@ class SvnWorkingTree(WorkingTree):
             if newrevtree.inventory[id].kind != 'directory':
                 return
 
-            entries = adm.entries_read(True)
+            entries = wc.entries_read(True)
             for entry in entries:
                 if entry == "":
                     continue
 
-                subwc = wc.WorkingCopy(adm, os.path.join(self.basedir, path, entry), write_lock=True)
+                subwc = WorkingCopy(wc, os.path.join(self.basedir, path, entry))
                 try:
                     update_settings(subwc, os.path.join(path, entry))
                 finally:
                     subwc.close()
 
         # Set proper version for all files in the wc
-        adm = self._get_wc(write_lock=True)
+        wc = self._get_wc(write_lock=True)
         try:
-            update_settings(adm, "")
+            update_settings(wc, "")
         finally:
-            adm.close()
+            wc.close()
         self.base_revid = revid
 
     def smart_add(self, file_list, recurse=True, action=None, save=True):
@@ -439,7 +441,7 @@ class SvnWorkingTree(WorkingTree):
                 if not self.inventory.has_filename(f):
                     if save:
                         mutter('adding %r', file_path)
-                        adm.add(file_path, None, 0, None, None, None)
+                        wc.add(file_path)
                     added.append(file_path)
                 if recurse and osutils.file_kind(file_path) == 'directory':
                     # Filter out ignored files and update ignored
@@ -452,7 +454,7 @@ class SvnWorkingTree(WorkingTree):
                             ignored.setdefault(ignore_glob, []).append(c_path)
                         todo.append(c_path)
             finally:
-                adm.close()
+                wc.close()
             if todo != []:
                 cadded, cignored = self.smart_add(todo, recurse, action, save)
                 added.extend(cadded)
@@ -472,7 +474,7 @@ class SvnWorkingTree(WorkingTree):
             adm = self._get_wc(os.path.dirname(f), write_lock=True)
             try:
                 try:
-                    adm.add(os.path.join(self.basedir, f))
+                    wc.add(os.path.join(self.basedir, f))
                     if ids is not None:
                         self._change_fileid_mapping(ids.next(), f, adm)
                 except SubversionException, (_, num):
@@ -482,7 +484,7 @@ class SvnWorkingTree(WorkingTree):
                         raise NoSuchFile(path=f)
                     raise
             finally:
-                adm.close()
+                wc.close()
         self.read_working_inventory()
 
     def basis_tree(self):
@@ -536,7 +538,7 @@ class SvnWorkingTree(WorkingTree):
         existing = "".join(map(lambda (path, id): "%s\t%s\n" % (path, id), new_entries.items()))
         if existing != "":
             subwc.prop_set(SVN_PROP_BZR_FILEIDS, existing.encode("utf-8"), self.basedir)
-        if adm is None:
+        if wc is None:
             subwc.close()
 
     def _get_base_branch_props(self):
@@ -545,7 +547,7 @@ class SvnWorkingTree(WorkingTree):
 
     def _get_new_file_ids(self, adm):
         committed = self._get_base_branch_props().get(SVN_PROP_BZR_FILEIDS, "")
-        existing = adm.prop_get(SVN_PROP_BZR_FILEIDS, self.basedir)
+        existing = wc.prop_get(SVN_PROP_BZR_FILEIDS, self.basedir)
         if existing is None or committed == existing:
             return {}
         return dict(map(lambda x: str(x).split("\t"), 
@@ -570,7 +572,7 @@ class SvnWorkingTree(WorkingTree):
             else:
                 bzr_merge = ""
 
-            adm.prop_set(SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), 
+            wc.prop_set(SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), 
                                  self._get_bzr_merges(self._get_base_branch_props()) + bzr_merge, 
                                  self.basedir)
             
@@ -583,11 +585,10 @@ class SvnWorkingTree(WorkingTree):
                 except InvalidRevisionId:
                     pass
 
-            adm.prop_set(SVN_PROP_SVK_MERGE, 
-                             serialize_svk_features(svk_merges), self.basedir, 
-                             False)
+            wc.prop_set(SVN_PROP_SVK_MERGE, 
+                             serialize_svk_features(svk_merges), self.basedir)
         finally:
-            adm.close()
+            wc.close()
 
     def add_pending_merge(self, revid):
         merges = self.pending_merges()
@@ -601,14 +602,14 @@ class SvnWorkingTree(WorkingTree):
         merged = self._get_bzr_merges(self._get_base_branch_props()).splitlines()
         adm = self._get_wc()
         try:
-            merged_data = adm.prop_get(
+            merged_data = wc.prop_get(
                 SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), self.basedir)
             if merged_data is None:
                 set_merged = []
             else:
                 set_merged = merged_data.splitlines()
         finally:
-            adm.close()
+            wc.close()
 
         assert (len(merged) == len(set_merged) or 
                len(merged)+1 == len(set_merged))
@@ -698,13 +699,13 @@ class SvnCheckout(BzrDir):
         
         # Open related remote repository + branch
         try:
-            adm = wc.WorkingCopy(None, self.local_path)
+            wc = WorkingCopy(None, self.local_path)
         except SubversionException, (msg, ERR_WC_UNSUPPORTED_FORMAT):
             raise UnsupportedFormatError(msg, kind='workingtree')
         try:
             self.svn_url = adm.entry(self.local_path, True).url
         finally:
-            adm.close()
+            wc.close()
 
         self.remote_transport = SvnRaTransport(self.svn_url)
         self.remote_bzrdir = SvnRemoteAccess(self.remote_transport)

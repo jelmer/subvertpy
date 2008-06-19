@@ -70,7 +70,7 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 static svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool)
 {
     PyObject *self = (PyObject *)baton, *ret;
-	ret = PyObject_CallFunction(self, "finish", "");
+	ret = PyObject_CallFunction(self, "finish", NULL);
 	if (ret == NULL)
 		return py_svn_error();
     return NULL;
@@ -79,7 +79,7 @@ static svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool)
 static svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool)
 {
     PyObject *self = (PyObject *)baton, *ret;
-	ret = PyObject_CallFunction(self, "abort", "");
+	ret = PyObject_CallFunction(self, "abort", NULL);
 	if (ret == NULL)
 		return py_svn_error();
     return NULL;
@@ -138,7 +138,9 @@ static void entry_dealloc(PyObject *self)
 }
 
 static PyMemberDef entry_members[] = {
+	{ "name", T_STRING, offsetof(EntryObject, entry.name), READONLY, NULL },
 	{ "copyfrom_url", T_STRING, offsetof(EntryObject, entry.copyfrom_url), READONLY, NULL },
+	{ "copyfrom_rev", T_LONG, offsetof(EntryObject, entry.copyfrom_rev), READONLY, NULL },
 	{ "url", T_STRING, offsetof(EntryObject, entry.url), READONLY, NULL },
 	{ "repos", T_STRING, offsetof(EntryObject, entry.repos), READONLY, NULL },
 	{ "schedule", T_INT, offsetof(EntryObject, entry.schedule), READONLY, NULL },
@@ -350,7 +352,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	apr_array_header_t *propchanges;
 	apr_hash_t *original_props;
 	AdmObject *admobj = (AdmObject *)self;
-	svn_prop_t *el;
+	svn_prop_t el;
 	int i;
 	PyObject *py_propchanges, *py_orig_props;
 
@@ -364,9 +366,9 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 				path, admobj->adm, temp_pool));
 	py_propchanges = PyList_New(propchanges->nelts);
 	for (i = 0; i < propchanges->nelts; i++) {
-		el = APR_ARRAY_IDX(propchanges, i, svn_prop_t *);
+		el = APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 		PyList_SetItem(py_propchanges, i, 
-					   Py_BuildValue("(ss#)", el->name, el->value->data, el->value->len));
+		   Py_BuildValue("(ss#)", el.name, el.value->data, el.value->len));
 	}
 	py_orig_props = prop_hash_to_dict(original_props);
 	apr_pool_destroy(temp_pool);
@@ -443,7 +445,7 @@ static PyObject *adm_delete(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args)
 {
 	char *path;
 	PyObject *reporter;
@@ -452,22 +454,15 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 	apr_pool_t *temp_pool;
 	AdmObject *admobj = (AdmObject *)self;
 	svn_wc_traversal_info_t *traversal_info;
-	char *kwnames[] = { "path", "reporter", "restore_files", "recurse", "use_commit_times", "notify_func", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO|bbbO", kwnames, &path, 
-									 &reporter, &restore_files, &recurse, 
-									 &use_commit_times, &notify_func))
+	if (!PyArg_ParseTuple(args, "sO|bbbO", &path, &reporter, &restore_files, &recurse, &use_commit_times,
+						  &notify_func))
 		return NULL;
 
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
 	traversal_info = svn_wc_init_traversal_info(temp_pool);
-	if (traversal_info == NULL) {
-		PyErr_NoMemory();
-		return NULL;
-	}
-
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(path, admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse, use_commit_times, 
@@ -603,7 +598,7 @@ static PyMethodDef adm_methods[] = {
 	{ "add", adm_add, METH_VARARGS, NULL },
 	{ "copy", adm_copy, METH_VARARGS, NULL },
 	{ "delete", adm_delete, METH_VARARGS, NULL },
-	{ "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS, NULL },
+	{ "crawl_revisions", adm_crawl_revisions, METH_VARARGS, NULL },
 	{ "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
 	{ "close", (PyCFunction)adm_close, METH_NOARGS, NULL },
 	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, NULL },
@@ -658,6 +653,26 @@ static PyObject *is_normal_prop(PyObject *self, PyObject *args)
 		return NULL;
 
     return PyBool_FromLong(svn_wc_is_normal_prop(name));
+}
+
+static PyObject *is_adm_dir(PyObject *self, PyObject *args)
+{
+	char *name;
+	apr_pool_t *pool;
+	svn_boolean_t ret;
+
+	if (!PyArg_ParseTuple(args, "s", &name))
+		return NULL;
+
+	pool = Pool();
+	if (pool == NULL)
+		return NULL;
+
+	ret = svn_wc_is_adm_dir(name, pool);
+
+	apr_pool_destroy(pool);
+
+    return PyBool_FromLong(ret);
 }
 
 static PyObject *is_wc_prop(PyObject *self, PyObject *args)
@@ -785,6 +800,7 @@ static PyMethodDef wc_methods[] = {
 	{ "get_default_ignores", get_default_ignores, METH_VARARGS, NULL },
 	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS, NULL },
 	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS, NULL },
+	{ "is_adm_dir", is_adm_dir, METH_VARARGS, NULL },
 	{ "is_normal_prop", is_normal_prop, METH_VARARGS, NULL },
 	{ "is_entry_prop", is_entry_prop, METH_VARARGS, NULL },
 	{ "is_wc_prop", is_wc_prop, METH_VARARGS, NULL },

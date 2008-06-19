@@ -261,7 +261,7 @@ class SvnBasisTree(RevisionTree):
         self._repository = workingtree.branch.repository
 
         def add_file_to_inv(relpath, id, revid, adm):
-            (delta_props, props) = adm.get_prop_diffs(self.workingtree.abspath(relpath))
+            (propchanges, props) = adm.get_prop_diffs(self.workingtree.abspath(relpath).encode("utf-8"))
             if props.has_key(properties.PROP_SPECIAL):
                 ie = self._inventory.add_path(relpath, 'symlink', id)
                 ie.symlink_target = open(self._abspath(relpath)).read()[len("link "):]
@@ -313,8 +313,7 @@ class SvnBasisTree(RevisionTree):
                 
                 if entry.kind == core.NODE_DIR:
                     subwc = wc.WorkingCopy(adm, 
-                            self.workingtree.abspath(subrelpath), 
-                                             False, 0, None)
+                            self.workingtree.abspath(subrelpath))
                     try:
                         add_dir_to_inv(subrelpath, subwc, id)
                     finally:

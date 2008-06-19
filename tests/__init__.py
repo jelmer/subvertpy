@@ -84,7 +84,6 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
 
         return self.open_local_bzrdir(repos_url, relpath)
 
-
     def make_checkout(self, repos_url, relpath):
         self.client_ctx.checkout(repos_url, relpath, "HEAD", "HEAD", 
                                  True, False)
