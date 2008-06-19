@@ -51,6 +51,18 @@ from bzrlib.plugins.svn.tree import SvnBasisTree
 import os
 import urllib
 
+def update_wc(adm, basedir, conn, revnum):
+    # FIXME: honor SVN_CONFIG_SECTION_HELPERS:SVN_CONFIG_OPTION_DIFF3_CMD
+    # FIXME: honor SVN_CONFIG_SECTION_MISCELLANY:SVN_CONFIG_OPTION_USE_COMMIT_TIMES
+    # FIXME: honor SVN_CONFIG_SECTION_MISCELLANY:SVN_CONFIG_OPTION_PRESERVED_CF_EXTS
+    editor = adm.get_update_editor(basedir, False, True)
+    assert editor is not None
+    reporter = conn.do_update(revnum, "", True, editor)
+    adm.crawl_revisions(basedir, reporter, restore_files=False, 
+                        recurse=True, use_commit_times=False)
+    # FIXME: handle externals
+
+
 def generate_ignore_list(ignore_map):
     """Create a list of ignores, ordered by directory.
     
@@ -68,7 +80,7 @@ def generate_ignore_list(ignore_map):
 class SvnWorkingTree(WorkingTree):
     """WorkingTree implementation that uses a Subversion Working Copy for storage."""
     def __init__(self, bzrdir, local_path, branch):
-        version = svn.wc.check_wc(local_path)
+        version = wc.check_wc(local_path)
         self._format = SvnWorkingTreeFormat(version)
         self.basedir = local_path
         assert isinstance(self.basedir, unicode)
@@ -76,6 +88,7 @@ class SvnWorkingTree(WorkingTree):
         self._branch = branch
         self._get_wc()
         (min_rev, max_rev, switch, modified) = wc.revision_status(self.basedir, None, True, None)
+        assert min_rev >= 0 and max_rev >= 0, "min rev: (%d, %d)" % (min_rev, max_rev)
         self.base_revnum = max_rev
         self.base_tree = SvnBasisTree(self)
         self.base_revid = branch.generate_revision_id(self.base_revnum)
@@ -140,20 +153,12 @@ class SvnWorkingTree(WorkingTree):
             # FIXME: should be able to use -1 here
             revnum = self.branch.get_revnum()
         adm = self._get_wc()
-        # FIXME: honor SVN_CONFIG_SECTION_HELPERS:SVN_CONFIG_OPTION_DIFF3_CMD
-        # FIXME: honor SVN_CONFIG_SECTION_MISCELLANY:SVN_CONFIG_OPTION_USE_COMMIT_TIMES
-        # FIXME: honor SVN_CONFIG_SECTION_MISCELLANY:SVN_CONFIG_OPTION_PRESERVED_CF_EXTS
         try:
-            editor = adm.get_update_editor(self.basedir, use_commit_times=False, recurse=True)
-            assert editor is not None
             conn = self.branch.repository.transport.get_connection()
             try:
-                reporter = conn.do_update(revnum, True, editor)
-                adm.crawl_revisions(self.basedir, reporter, restore_files=False, recurse=True, 
-                                    use_commit_times=False)
+                update_wc(adm, self.basedir, conn, revnum)
             finally:
                 self.branch.repository.transport.add_connection(conn)
-            # FIXME: handle externals
         finally:
             adm.close()
         return revnum

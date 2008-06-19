@@ -133,6 +133,7 @@ def get_ssl_client_cert_pw_provider(tries):
     return ra.get_ssl_client_cert_pw_prompt_provider(
                 get_ssl_client_cert_pw, tries)
 
+
 def get_stock_svn_providers():
     providers = [ra.get_simple_provider(),
             ra.get_username_provider(),

@@ -24,7 +24,7 @@ from bzrlib.inventory import (Inventory)
 from bzrlib.revision import is_null, ensure_null, NULL_REVISION
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn import core
+from bzrlib.plugins.svn import core, wc
 from bzrlib.plugins.svn.commit import push
 from bzrlib.plugins.svn.config import BranchConfig
 from bzrlib.plugins.svn.core import SubversionException
@@ -33,6 +33,7 @@ from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.repository import SvnRepository
 from bzrlib.plugins.svn.transport import bzr_to_svn_url
 
+import os
 
 class FakeControlFiles(object):
     """Dummy implementation of ControlFiles.
@@ -173,7 +174,7 @@ class SvnBranch(Branch):
         :param revision_id: Tip of the checkout.
         :return: WorkingTree object of the checkout.
         """
-        import os, wc
+        from bzrlib.plugins.svn.workingtree import update_wc
         if revision_id is not None:
             revnum = self.lookup_revision_id(revision_id)
         else:
@@ -183,8 +184,14 @@ class SvnBranch(Branch):
         svn_url = bzr_to_svn_url(self.base)
         wc.ensure_adm(to_location, self.repository.uuid, bzr_to_svn_url(self.base),
                       svn_url, revnum)
+        adm = wc.WorkingCopy(None, to_location)
+        conn = self.repository.transport.get_connection()
+        try:
+            update_wc(adm, to_location, conn, revnum)
+        finally:
+            if not conn.busy:
+                self.repository.transport.add_connection(conn)
         wt = WorkingTree.open(to_location)
-        wt.update(["."], revnum=revnum)
         return wt
 
     def create_checkout(self, to_location, revision_id=None, lightweight=False,

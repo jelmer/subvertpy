@@ -70,7 +70,7 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 static svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool)
 {
     PyObject *self = (PyObject *)baton, *ret;
-	ret = PyObject_CallFunction(self, "finish", NULL);
+	ret = PyObject_CallFunction(self, "finish", "");
 	if (ret == NULL)
 		return py_svn_error();
     return NULL;
@@ -79,7 +79,7 @@ static svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool)
 static svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool)
 {
     PyObject *self = (PyObject *)baton, *ret;
-	ret = PyObject_CallFunction(self, "abort", NULL);
+	ret = PyObject_CallFunction(self, "abort", "");
 	if (ret == NULL)
 		return py_svn_error();
     return NULL;
@@ -443,7 +443,7 @@ static PyObject *adm_delete(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args)
+static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	char *path;
 	PyObject *reporter;
@@ -452,15 +452,22 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	AdmObject *admobj = (AdmObject *)self;
 	svn_wc_traversal_info_t *traversal_info;
+	char *kwnames[] = { "path", "reporter", "restore_files", "recurse", "use_commit_times", "notify_func", NULL };
 
-	if (!PyArg_ParseTuple(args, "sO|bbbO", &path, &reporter, &restore_files, &recurse, &use_commit_times,
-						  &notify_func))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO|bbbO", kwnames, &path, 
+									 &reporter, &restore_files, &recurse, 
+									 &use_commit_times, &notify_func))
 		return NULL;
 
 	temp_pool = Pool();
 	if (temp_pool == NULL)
 		return NULL;
 	traversal_info = svn_wc_init_traversal_info(temp_pool);
+	if (traversal_info == NULL) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(path, admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse, use_commit_times, 
@@ -596,7 +603,7 @@ static PyMethodDef adm_methods[] = {
 	{ "add", adm_add, METH_VARARGS, NULL },
 	{ "copy", adm_copy, METH_VARARGS, NULL },
 	{ "delete", adm_delete, METH_VARARGS, NULL },
-	{ "crawl_revisions", adm_crawl_revisions, METH_VARARGS, NULL },
+	{ "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS, NULL },
 	{ "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
 	{ "close", (PyCFunction)adm_close, METH_NOARGS, NULL },
 	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, NULL },
