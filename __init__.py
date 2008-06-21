@@ -85,7 +85,7 @@ def check_rebase_version(min_version):
 
 def check_subversion_version():
     try:
-        import core
+        from bzrlib.plugins.svn import core
     except:
         warning("Unable to load bzr-svn extensions - did you build it?")
 

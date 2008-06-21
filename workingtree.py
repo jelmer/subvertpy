@@ -108,16 +108,16 @@ class SvnWorkingTree(WorkingTree):
         self._control_files = LockableFiles(control_transport, 'lock', LockDir)
 
     def get_ignore_list(self):
-        ignore_globs = set([get_adm_dir()])
-        ignore_globs.update(ignores.get_runtime_ignores())
-        ignore_globs.update(ignores.get_user_ignores())
+        ignores = set([get_adm_dir()])
+        ignores.update(get_runtime_ignores())
+        ignores.update(get_user_ignores())
 
         def dir_add(wc, prefix, patprefix):
             ignorestr = wc.prop_get(properties.PROP_IGNORE, 
                                     self.abspath(prefix).rstrip("/"))
             if ignorestr is not None:
                 for pat in ignorestr.splitlines():
-                    ignore_globs.add(urlutils.joinpath(patprefix, pat))
+                    ignores.add(urlutils.joinpath(patprefix, pat))
 
             entries = wc.entries_read(False)
             for entry in entries:
@@ -136,13 +136,13 @@ class SvnWorkingTree(WorkingTree):
                 finally:
                     subwc.close()
 
-        adm = self._get_wc()
+        wc = self._get_wc()
         try:
-            dir_add(adm, "", ".")
+            dir_add(wc, "", ".")
         finally:
             wc.close()
 
-        return ignore_globs
+        return ignores
 
     def is_control_filename(self, path):
         return is_adm_dir(path)
@@ -322,7 +322,7 @@ class SvnWorkingTree(WorkingTree):
                 # FIXME: Generate more random file ids
                 return ("NEW-" + escape_svn_path(entry.url[len(entry.repos):].strip("/")), None)
 
-        def add_dir_to_inv(relpath, adm, parent_id):
+        def add_dir_to_inv(relpath, wc, parent_id):
             assert isinstance(relpath, unicode)
             entries = wc.entries_read(False)
             entry = entries[""]
@@ -388,7 +388,7 @@ class SvnWorkingTree(WorkingTree):
         newrev = self.branch.repository.get_revision(revid)
         newrevtree = self.branch.repository.revision_tree(revid)
 
-        def update_settings(adm, path):
+        def update_settings(wc, path):
             id = newrevtree.inventory.path2id(path)
             mutter("Updating settings for %r", id)
             revnum = self.branch.lookup_revision_id(
@@ -407,7 +407,8 @@ class SvnWorkingTree(WorkingTree):
                 if entry == "":
                     continue
 
-                subwc = WorkingCopy(wc, os.path.join(self.basedir, path, entry))
+                subwc = WorkingCopy(wc, os.path.join(self.basedir, path, entry), 
+                                   write_lock=True)
                 try:
                     update_settings(subwc, os.path.join(path, entry))
                 finally:
@@ -436,7 +437,7 @@ class SvnWorkingTree(WorkingTree):
             todo = []
             file_path = os.path.abspath(file_path)
             f = self.relpath(file_path)
-            adm = self._get_wc(os.path.dirname(f), write_lock=True)
+            wc = self._get_wc(os.path.dirname(f), write_lock=True)
             try:
                 if not self.inventory.has_filename(f):
                     if save:
@@ -471,7 +472,7 @@ class SvnWorkingTree(WorkingTree):
             ids = iter(ids)
         assert isinstance(files, list)
         for f in files:
-            adm = self._get_wc(os.path.dirname(f), write_lock=True)
+            wc = self._get_wc(os.path.dirname(f), write_lock=True)
             try:
                 try:
                     wc.add(os.path.join(self.basedir, f))
@@ -523,11 +524,11 @@ class SvnWorkingTree(WorkingTree):
             path = self._inventory.id2path(file_id)
         return osutils.fingerprint_file(open(self.abspath(path)))['sha1']
 
-    def _change_fileid_mapping(self, id, path, adm=None):
-        if adm is None:
+    def _change_fileid_mapping(self, id, path, wc=None):
+        if wc is None:
             subwc = self._get_wc(write_lock=True)
         else:
-            subwc = adm 
+            subwc = wc
         new_entries = self._get_new_file_ids(subwc)
         if id is None:
             if new_entries.has_key(path):
@@ -545,7 +546,7 @@ class SvnWorkingTree(WorkingTree):
         return self.branch.repository.branchprop_list.get_properties(
                 self.branch.get_branch_path(self.base_revnum), self.base_revnum)
 
-    def _get_new_file_ids(self, adm):
+    def _get_new_file_ids(self, wc):
         committed = self._get_base_branch_props().get(SVN_PROP_BZR_FILEIDS, "")
         existing = wc.prop_get(SVN_PROP_BZR_FILEIDS, self.basedir)
         if existing is None or committed == existing:
@@ -564,7 +565,7 @@ class SvnWorkingTree(WorkingTree):
 
     def set_pending_merges(self, merges):
         """See MutableTree.set_pending_merges()."""
-        adm = self._get_wc(write_lock=True)
+        wc = self._get_wc(write_lock=True)
         try:
             # Set bzr:merge
             if len(merges) > 0:
@@ -600,7 +601,7 @@ class SvnWorkingTree(WorkingTree):
 
     def pending_merges(self):
         merged = self._get_bzr_merges(self._get_base_branch_props()).splitlines()
-        adm = self._get_wc()
+        wc = self._get_wc()
         try:
             merged_data = wc.prop_get(
                 SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), self.basedir)
@@ -703,7 +704,7 @@ class SvnCheckout(BzrDir):
         except SubversionException, (msg, ERR_WC_UNSUPPORTED_FORMAT):
             raise UnsupportedFormatError(msg, kind='workingtree')
         try:
-            self.svn_url = adm.entry(self.local_path, True).url
+            self.svn_url = wc.entry(self.local_path, True).url
         finally:
             wc.close()
 

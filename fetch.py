@@ -368,7 +368,7 @@ class FileBuildEditor:
     def change_prop(self, name, value):
         if name == properties.PROP_EXECUTABLE: 
             # You'd expect executable to match 
-            # constants.PROP_EXECUTABLE_VALUE, but that's not 
+            # properties.PROP_EXECUTABLE_VALUE, but that's not 
             # how SVN behaves. It appears to consider the presence 
             # of the property sufficient to mark it executable.
             self.is_executable = (value != None)
@@ -376,6 +376,8 @@ class FileBuildEditor:
             self.is_symlink = (value != None)
         elif name == properties.PROP_ENTRY_COMMITTED_REV:
             self.last_file_rev = int(value)
+        elif name == properties.PROP_EXTERNALS:
+            mutter('svn:externals property on file!')
         elif name in (properties.PROP_ENTRY_COMMITTED_DATE,
                       properties.PROP_ENTRY_LAST_AUTHOR,
                       properties.PROP_ENTRY_LOCK_TOKEN,
@@ -384,8 +386,6 @@ class FileBuildEditor:
             pass
         elif name.startswith(properties.PROP_WC_PREFIX):
             pass
-        elif name == properties.PROP_EXTERNALS:
-            mutter('svn:externals property on file!')
         elif (name.startswith(properties.PROP_PREFIX) or
               name.startswith(SVN_PROP_BZR_PREFIX)):
             mutter('unsupported file property %r', name)
