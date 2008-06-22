@@ -19,7 +19,7 @@ from bzrlib import osutils, registry
 from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
 
-from bzrlib.plugins.svn import core, constants, version_info, errors, properties
+from bzrlib.plugins.svn import core, errors, properties, version_info
 import calendar
 import sha
 import time

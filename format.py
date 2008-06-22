@@ -125,11 +125,11 @@ class SvnWorkingTreeDirFormat(BzrDirFormat):
         raise bzr_errors.NotBranchError(path=transport.base)
 
     def _open(self, transport):
-        from bzrlib.plugins.svn.core import SubversionException
         from workingtree import SvnCheckout
+        from bzrlib.plugins.svn import core
         try:
             return SvnCheckout(transport, self)
-        except SubversionException, (_, num):
+        except core.SubversionException, (_, num):
             if num in (errors.ERR_RA_LOCAL_REPOS_OPEN_FAILED,):
                 raise errors.NoSvnRepositoryPresent(transport.base)
             raise

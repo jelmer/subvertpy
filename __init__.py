@@ -64,24 +64,6 @@ def check_bzrlib_version(desired):
         if not (bzrlib_version[0], bzrlib_version[1]-1) in desired:
             raise BzrError('Version mismatch')
 
-def check_rebase_version(min_version):
-    """Check what version of bzr-rebase is installed.
-
-    Raises an exception when the version installed is older than 
-    min_version.
-
-    :raises RebaseNotPresent: Raised if bzr-rebase is not installed or too old.
-    """
-    from bzrlib.plugins.svn.errors import RebaseNotPresent
-    try:
-        from bzrlib.plugins.rebase import version_info as rebase_version_info
-        if rebase_version_info[:2] < min_version:
-            raise RebaseNotPresent("Version %r present, at least %r required" 
-                                   % (rebase_version_info, min_version))
-    except ImportError, e:
-        raise RebaseNotPresent(e)
-
-
 def check_subversion_version():
     """Check that Subversion is compatible.
 
@@ -98,6 +80,22 @@ def check_subversion_version():
     mutter("bzr-svn: using Subversion %d.%d.%d (%s)" % ra_version)
 
 
+def check_rebase_version(min_version):
+    """Check what version of bzr-rebase is installed.
+
+    Raises an exception when the version installed is older than 
+    min_version.
+
+    :raises RebaseNotPresent: Raised if bzr-rebase is not installed or too old.
+    """
+    from bzrlib.plugins.svn.errors import RebaseNotPresent
+    try:
+        from bzrlib.plugins.rebase import version_info as rebase_version_info
+        if rebase_version_info[:2] < min_version:
+            raise RebaseNotPresent("Version %r present, at least %r required" 
+                                   % (rebase_version_info, min_version))
+    except ImportError, e:
+        raise RebaseNotPresent(e)
 
 
 register_transport_proto('svn+ssh://', 
