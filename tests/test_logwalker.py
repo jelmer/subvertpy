@@ -16,7 +16,6 @@
 
 """Log walker tests."""
 
-from bzrlib import debug
 from bzrlib.errors import NoSuchRevision
 
 import os

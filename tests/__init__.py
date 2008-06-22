@@ -26,6 +26,7 @@ from bzrlib import osutils, urlutils
 from bzrlib.bzrdir import BzrDir
 from bzrlib.tests import TestCaseInTempDir, TestSkipped
 from bzrlib.trace import mutter
+from bzrlib.urlutils import local_path_to_url
 from bzrlib.workingtree import WorkingTree
 
 from bzrlib.plugins.svn import properties, ra, repos
@@ -68,7 +69,7 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
                 open(revprop_hook, 'w').write("#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
-        return urlutils.local_path_to_url(abspath)
+        return local_path_to_url(abspath)
 
     def make_remote_bzrdir(self, relpath):
         """Create a repository."""
@@ -371,10 +372,10 @@ def test_suite():
             'test_changes',
             'test_checkout',
             'test_client',
-            'test_core',
             'test_commit',
             'test_config',
             'test_convert',
+            'test_core',
             'test_errors',
             'test_fetch',
             'test_fileids', 

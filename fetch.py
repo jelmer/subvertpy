@@ -600,6 +600,14 @@ class InterFromSvnRepository(InterRepository):
         """See InterRepository.copy_content."""
         self.fetch(revision_id, pb, find_ghosts=False)
 
+    def _fetch_replay(self, revids, pb=None):
+        """Copy a set of related revisions using svn.ra.replay.
+
+        :param revids: Revision ids to copy.
+        :param pb: Optional progress bar
+        """
+        raise NotImplementedError(self._copy_revisions_replay)
+
     def _fetch_switch(self, repos_root, revids, pb=None):
         """Copy a set of related revisions using svn.ra.switch.
 
@@ -693,8 +701,6 @@ class InterFromSvnRepository(InterRepository):
         """Fetch revisions. """
         if revision_id == NULL_REVISION:
             return
-
-        self._supports_replay = True # assume replay supported by default
         # Dictionary with paths as keys, revnums as values
 
         if pb:
