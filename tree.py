@@ -22,8 +22,6 @@ from bzrlib.revision import CURRENT_REVISION
 from bzrlib.trace import mutter
 from bzrlib.revisiontree import RevisionTree
 
-from bzrlib.plugins.svn.delta import apply_txdelta_handler
-
 import os
 import md5
 from cStringIO import StringIO
@@ -31,6 +29,7 @@ import urllib
 
 from bzrlib.plugins.svn import core, errors, properties, wc
 from bzrlib.plugins.svn.delta import apply_txdelta_handler
+
 
 def parse_externals_description(base_url, val):
     """Parse an svn:externals property value.
@@ -122,7 +121,7 @@ class SvnRevisionTree(RevisionTree):
         return osutils.split_lines(self.file_data[file_id])
 
 
-class TreeBuildEditor:
+class TreeBuildEditor(object):
     """Builds a tree given Subversion tree transform calls."""
     def __init__(self, tree):
         self.tree = tree
@@ -146,7 +145,7 @@ class TreeBuildEditor:
         pass
 
 
-class DirectoryTreeEditor:
+class DirectoryTreeEditor(object):
     def __init__(self, tree, file_id):
         self.tree = tree
         self.file_id = file_id
@@ -182,7 +181,7 @@ class DirectoryTreeEditor:
         pass
 
 
-class FileTreeEditor:
+class FileTreeEditor(object):
     def __init__(self, tree, path):
         self.tree = tree
         self.path = path

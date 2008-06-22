@@ -32,7 +32,9 @@ from bzrlib.transport.local import LocalTransport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
 from bzrlib.plugins.svn import core, properties
+from bzrlib.plugins.svn.auth import create_auth_baton
 from bzrlib.plugins.svn.branch import SvnBranch
+from bzrlib.plugins.svn.client import Client
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.convert import SvnConverter
 from bzrlib.plugins.svn.core import SubversionException, time_to_cstring

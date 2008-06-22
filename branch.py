@@ -25,6 +25,8 @@ from bzrlib.revision import is_null, ensure_null, NULL_REVISION
 from bzrlib.workingtree import WorkingTree
 
 from bzrlib.plugins.svn import core, wc
+from bzrlib.plugins.svn.auth import create_auth_baton
+from bzrlib.plugins.svn.client import Client, get_config
 from bzrlib.plugins.svn.commit import push
 from bzrlib.plugins.svn.config import BranchConfig
 from bzrlib.plugins.svn.core import SubversionException

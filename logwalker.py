@@ -27,7 +27,6 @@ from bzrlib.plugins.svn.errors import ERR_FS_NO_SUCH_REVISION, ERR_FS_NOT_FOUND
 from bzrlib.plugins.svn.ra import DIRENT_KIND
 from bzrlib.plugins.svn.transport import SvnRaTransport
 
-
 class lazy_dict(object):
     def __init__(self, initial, create_fn, *args):
         self.initial = initial
@@ -264,30 +263,24 @@ class CachingLogWalker(CacheTable):
         pb = ui.ui_factory.nested_progress_bar()
 
         try:
-            def update_db(orig_paths, revision, revprops):
-                assert isinstance(orig_paths, dict) or orig_paths is None
-                assert isinstance(revision, int)
-                assert isinstance(revprops, dict)
-                pb.update('fetching svn revision info', revision, to_revnum)
-                if orig_paths is None:
-                    orig_paths = {}
-                for p in orig_paths:
-                    (action, copyfrom_path, copyfrom_rev) = orig_paths[p]
-
-                    if copyfrom_path:
-                        copyfrom_path = copyfrom_path.strip("/")
-                    self.cachedb.execute(
-                         "replace into changed_path (rev, path, action, copyfrom_path, copyfrom_rev) values (?, ?, ?, ?, ?)", 
-                         (revision, p.strip("/"), action, copyfrom_path, copyfrom_rev))
-
-                self.saved_revnum = revision
-                if self.saved_revnum % 1000 == 0:
-                    self.cachedb.commit()
-
             try:
-                assert isinstance(self.saved_revnum, int)
-                assert isinstance(to_revnum, int)
-                self.actual._transport.get_log(update_db, None, self.saved_revnum, to_revnum, 0, True, True, [])
+                for (orig_paths, revision, revprops) in self.actual._transport.iter_log(None, self.saved_revnum, 
+                                         to_revnum, 0, True, 
+                                         True, []):
+                    pb.update('fetching svn revision info', revision, to_revnum)
+                    if orig_paths is None:
+                        orig_paths = {}
+                    for p in orig_paths:
+                        copyfrom_path = orig_paths[p][1]
+                        if copyfrom_path is not None:
+                            copyfrom_path = copyfrom_path.strip("/")
+
+                        self.cachedb.execute(
+                             "replace into changed_path (rev, path, action, copyfrom_path, copyfrom_rev) values (?, ?, ?, ?, ?)", 
+                             (revision, p.strip("/"), orig_paths[p][0], copyfrom_path, orig_paths[p][2]))
+                    self.saved_revnum = revision
+                    if self.saved_revnum % 1000 == 0:
+                        self.cachedb.commit()
             finally:
                 pb.finished()
         except SubversionException, (_, num):

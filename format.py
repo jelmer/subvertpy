@@ -83,7 +83,7 @@ class SvnRemoteFormat(BzrDirFormat):
         """See BzrDir.initialize_on_transport()."""
         from transport import get_svn_ra_transport
         from bzrlib.transport.local import LocalTransport
-        import repos
+        from bzrlib.plugins.svn import repos
 
         if not isinstance(transport, LocalTransport):
             raise NotImplementedError(self.initialize, 

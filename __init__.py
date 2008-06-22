@@ -64,7 +64,6 @@ def check_bzrlib_version(desired):
         if not (bzrlib_version[0], bzrlib_version[1]-1) in desired:
             raise BzrError('Version mismatch')
 
-
 def check_rebase_version(min_version):
     """Check what version of bzr-rebase is installed.
 
@@ -84,10 +83,22 @@ def check_rebase_version(min_version):
 
 
 def check_subversion_version():
+    """Check that Subversion is compatible.
+
+    """
     try:
         from bzrlib.plugins.svn import core
     except:
         warning("Unable to load bzr-svn extensions - did you build it?")
+    from bzrlib.plugins.svn.ra import version
+    ra_version = version()
+    if (ra_version[0] >= 5 and getattr(ra, 'SVN_REVISION', None) and 27729 <= ra.SVN_REVISION < 31470):
+        warning('Installed Subversion has buggy svn.ra.get_log() implementation, please install newer.')
+
+    mutter("bzr-svn: using Subversion %d.%d.%d (%s)" % ra_version)
+
+
+
 
 register_transport_proto('svn+ssh://', 
     help="Access using the Subversion smart server tunneled over SSH.")
