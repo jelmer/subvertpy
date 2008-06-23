@@ -15,17 +15,20 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Simple transport for accessing Subversion smart servers."""
 
+import bzrlib
 from bzrlib import debug, urlutils
-from bzrlib.errors import (NoSuchFile, NotBranchError, TransportNotPossible, 
+from bzrlib.errors import (NoSuchFile, TransportNotPossible, 
                            FileExists, NotLocalUrl, InvalidURL)
 from bzrlib.trace import mutter
 from bzrlib.transport import Transport
 
+import bzrlib.plugins.svn
 from bzrlib.plugins.svn import core, properties, ra
 from bzrlib.plugins.svn import properties
 from bzrlib.plugins.svn.auth import create_auth_baton
-from bzrlib.plugins.svn.core import SubversionException, get_config
-from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY
+from bzrlib.plugins.svn.client import get_config
+from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY, ERR_RA_DAV_RELOCATED
 from bzrlib.plugins.svn.ra import DIRENT_KIND, RemoteAccess
 import urlparse
 import urllib
@@ -48,7 +51,12 @@ def get_svn_ra_transport(bzr_transport):
     if isinstance(bzr_transport, SvnRaTransport):
         return bzr_transport
 
-    return SvnRaTransport(bzr_transport.base)
+    try:
+        return SvnRaTransport(bzr_transport.base)
+    except SubversionException, (msg, num):
+        if num == ERR_RA_DAV_RELOCATED:
+            raise RedirectRequested(url, msg.split("'")[1], is_permanent=True)
+        raise
 
 
 def _url_unescape_uri(url):
@@ -84,7 +92,7 @@ def Connection(url):
                 auth=create_auth_baton(url),
                 client_string_func=get_client_string)
         # FIXME: Callbacks
-    except SubversionException, (_, num):
+    except SubversionException, (msg, num):
         if num in (ERR_RA_SVN_REPOS_NOT_FOUND,):
             raise NoSvnRepositoryPresent(url=url)
         if num == ERR_BAD_URL:
@@ -152,6 +160,8 @@ class SvnRaTransport(Transport):
         else:
             self.connections = pool
 
+        self.capabilities = {}
+
         from bzrlib.plugins.svn import lazy_check_versions
         lazy_check_versions()
 
@@ -208,13 +218,8 @@ class SvnRaTransport(Transport):
         finally:
             self.add_connection(conn)
 
-    def do_switch(self, switch_rev, path, recurse, switch_url, editor):
-        conn = self._open_real_transport()
-        self.mutter('svn do-switch -r%d %s' % (switch_rev, switch_url))
-        return conn.do_switch(switch_rev, path, recurse, switch_url, editor)
-
     def iter_log(self, paths, from_revnum, to_revnum, limit, discover_changed_paths, 
-                 strict_node_history, revprops):
+                 strict_node_history, include_merged_revisions, revprops):
         assert paths is None or isinstance(paths, list)
         assert paths is None or all([isinstance(x, str) for x in paths])
         assert isinstance(from_revnum, int) and isinstance(to_revnum, int)
@@ -260,12 +265,12 @@ class SvnRaTransport(Transport):
         else:
             newpaths = [self._request_path(path) for path in paths]
         
-        fetcher = logfetcher(self, paths=newpaths, start=from_revnum, end=to_revnum, limit=limit, discover_changed_paths=discover_changed_paths, strict_node_history=strict_node_history, revprops=revprops)
+        fetcher = logfetcher(self, paths=newpaths, start=from_revnum, end=to_revnum, limit=limit, discover_changed_paths=discover_changed_paths, strict_node_history=strict_node_history, include_merged_revisions=include_merged_revisions,revprops=revprops)
         fetcher.start()
         return iter(fetcher.next, None)
 
     def get_log(self, rcvr, paths, from_revnum, to_revnum, limit, discover_changed_paths, 
-                strict_node_history, revprops):
+                strict_node_history, include_merged_revisions, revprops):
         assert paths is None or isinstance(paths, list), "Invalid paths"
         assert paths is None or all([isinstance(x, str) for x in paths])
 
@@ -281,6 +286,7 @@ class SvnRaTransport(Transport):
             return conn.get_log(rcvr, newpaths, 
                     from_revnum, to_revnum,
                     limit, discover_changed_paths, strict_node_history, 
+                    include_merged_revisions,
                     revprops)
         finally:
             self.add_connection(conn)
@@ -368,25 +374,17 @@ class SvnRaTransport(Transport):
         finally:
             self.add_connection(conn)
 
-    def replay(self, revision, low_water_mark, send_deltas, editor):
-        conn = self._open_real_transport()
-        self.mutter('svn replay -r%d:%d' % (low_water_mark,revision))
-        try:
-            return conn.replay(revision, low_water_mark, 
-                                             send_deltas, editor)
-        finally:
-            self.add_connection(conn)
-
-    def do_update(self, revnum, path, recurse, editor):
-        conn = self._open_real_transport()
-        self.mutter('svn do-update -r%d' % (revnum,))
-        return conn.do_update(revnum, path, recurse, editor)
-
     def has_capability(self, cap):
+        if cap in self.capabilities:
+            return self.capabilities[cap]
         conn = self.get_connection()
         self.mutter('svn has-capability %s' % (cap,))
         try:
-            return conn.has_capability(cap)
+            try:
+                self.capabilities[cap] = conn.has_capability(cap)
+            except NotImplementedError:
+                self.capabilities[cap] = False # Assume the worst
+            return self.capabilities[cap]
         finally:
             self.add_connection(conn)
 

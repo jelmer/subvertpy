@@ -18,7 +18,8 @@
 from bzrlib.errors import (BzrError, ConnectionError, ConnectionReset, 
                            LockError, NotBranchError, PermissionDenied, 
                            DependencyNotPresent, NoRepositoryPresent,
-                           TransportError, UnexpectedEndOfContainerError)
+                           TransportError, UnexpectedEndOfContainerError,
+                           RedirectRequested)
 
 import urllib
 from bzrlib.plugins.svn import core
@@ -54,6 +55,9 @@ ERR_ENTRY_EXISTS = 150002
 ERR_WC_PATH_NOT_FOUND = 155010
 ERR_CANCELLED = 200015
 ERR_WC_UNSUPPORTED_FORMAT = 155021
+ERR_UNKNOWN_CAPABILITY = 200026
+ERR_AUTHN_NO_PROVIDER = 215001
+ERR_RA_DAV_RELOCATED = 175011
 
 
 class NotSvnBranchPath(NotBranchError):

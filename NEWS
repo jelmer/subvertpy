@@ -8,7 +8,13 @@ bzr-svn 0.4.11    UNRELEASED
 
      It does however mean the extensions have to be built. This requires 
      the Subversion development libraries and should be possible by 
-     simply running ``make`` from the plugin directory.
+     simply running ``make`` from the plugin directory. 
+
+	 This fixes some existing bzr-svn related bugs caused by Python-Subversion:
+
+     * KeyboardInterrupts are now no longer swallowed.  (#242217)
+
+     * Crash bug trying to access sites that use self-signed certificates. (#238529)
 
    * Now uses absolute imports and no longer adds plugin directory to the system path.
 
@@ -43,6 +49,14 @@ bzr-svn 0.4.11    UNRELEASED
    * Fix dealing with strange remove during replace operation. (#232196)
 
    * Deal with missing branches/tags directories when using webdav. (#235301)
+
+   * Remove endless loop in logwalker. (#235776)
+
+   * Convert redirect requests received from Subversion. (#229848)
+
+   * New function for finding path children that's faster and more correct. (#240954)
+
+   * Support cloning bzr-svn branches (will clone to rich-root-pack). (#229819)
 
 bzr-svn 0.4.10  2008-05-12
 

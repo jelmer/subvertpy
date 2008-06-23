@@ -15,8 +15,8 @@
 
 """Subversion ra library tests."""
 
-from bzrlib.tests import TestCase
-from bzrlib.plugins.svn import ra
+from bzrlib.tests import TestCase, TestSkipped
+from bzrlib.plugins.svn import core, ra
 from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
 
 class VersionTest(TestCase):
@@ -56,7 +56,11 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
         self.ra.reparent(self.repos_url)
 
     def test_has_capability(self):
-        self.assertRaises(NotImplementedError, self.ra.has_capability, "FOO")
+        try:
+            self.assertRaises(core.SubversionException, self.ra.has_capability, "FOO")
+        except NotImplementedError:
+            # svn < 1.5
+            raise TestSkipped
 
     def test_get_dir(self):
         ret = self.ra.get_dir("", 0)
@@ -75,25 +79,21 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
             returned.append(args)
         def check_results(returned):
             self.assertEquals(2, len(returned))
-            (paths, revnum, props) = returned[0]
+            (paths, revnum, props, has_children) = returned[0]
             self.assertEquals(None, paths)
             self.assertEquals(revnum, 0)
             self.assertEquals(["svn:date"], props.keys())
-            (paths, revnum, props) = returned[1]
+            (paths, revnum, props, has_children) = returned[1]
             self.assertEquals({'/foo': ('A', None, -1)}, paths)
             self.assertEquals(revnum, 1)
             self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
                               set(props.keys()))
-        self.ra.get_log(cb, [""], 0, 0)
+        self.ra.get_log(cb, [""], 0, 0, revprops=["svn:date", "svn:author", "svn:log"])
         self.assertEquals(1, len(returned))
         self.do_commit()
         returned = []
-        self.ra.get_log(cb, ["/"], 0, 1, discover_changed_paths=True, 
-                        strict_node_history=False)
-        check_results(returned)
-        returned = []
         self.ra.get_log(cb, None, 0, 1, discover_changed_paths=True, 
-                        strict_node_history=False)
+                        strict_node_history=False, revprops=["svn:date", "svn:author", "svn:log"])
         check_results(returned)
 
     def test_get_commit_editor_busy(self):
@@ -113,3 +113,61 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
         dir.close()
         editor.close()
 
+
+class AuthTests(TestCase):
+    def test_not_registered(self):
+        auth = ra.Auth([])
+        self.assertRaises(core.SubversionException, auth.credentials, "svn.simple", "MyRealm")
+
+    def test_simple(self):
+        auth = ra.Auth([ra.get_simple_prompt_provider(lambda realm, uname, may_save: ('foo', "geheim", 0), 0)])
+        creds = auth.credentials("svn.simple", "MyRealm")
+        self.assertEquals(("foo", "geheim", 0), creds.next())
+        self.assertRaises(StopIteration, creds.next)
+
+    def test_username(self):
+        auth = ra.Auth([ra.get_username_prompt_provider(lambda realm, may_save: ("somebody", 0), 0)])
+        creds = auth.credentials("svn.username", "MyRealm")
+        self.assertEquals(("somebody", 0), creds.next())
+        self.assertRaises(StopIteration, creds.next)
+
+    def test_client_cert(self):
+        auth = ra.Auth([ra.get_ssl_client_cert_prompt_provider(lambda realm, may_save: ("filename", 0), 0)])
+        creds = auth.credentials("svn.ssl.client-cert", "MyRealm")
+        self.assertEquals(("filename", 0), creds.next())
+        self.assertRaises(StopIteration, creds.next)
+
+    def test_client_cert_pw(self):
+        auth = ra.Auth([ra.get_ssl_client_cert_pw_prompt_provider(lambda realm, may_save: ("supergeheim", 0), 0)])
+        creds = auth.credentials("svn.ssl.client-passphrase", "MyRealm")
+        self.assertEquals(("supergeheim", 0), creds.next())
+        self.assertRaises(StopIteration, creds.next)
+
+    def test_server_trust(self):
+        auth = ra.Auth([ra.get_ssl_server_trust_prompt_provider(lambda realm, failures, certinfo, may_save: (42, 0))])
+        auth.set_parameter("svn:auth:ssl:failures", 23)
+        creds = auth.credentials("svn.ssl.server", "MyRealm")
+        self.assertEquals((42, 0), creds.next())
+        self.assertRaises(StopIteration, creds.next)
+
+    def test_retry(self):
+        self.i = 0
+        def inc_foo(realm, may_save):
+            self.i += 1
+            return ("somebody%d" % self.i, 0)
+        auth = ra.Auth([ra.get_username_prompt_provider(inc_foo, 2)])
+        creds = auth.credentials("svn.username", "MyRealm")
+        self.assertEquals(("somebody1", 0), creds.next())
+        self.assertEquals(("somebody2", 0), creds.next())
+        self.assertEquals(("somebody3", 0), creds.next())
+        self.assertRaises(StopIteration, creds.next)
+
+    def test_set_default_username(self):
+        a = ra.Auth([])
+        a.set_parameter("svn:auth:username", "foo")
+        self.assertEquals("foo", a.get_parameter("svn:auth:username"))
+
+    def test_set_default_password(self):
+        a = ra.Auth([])
+        a.set_parameter("svn:auth:password", "bar")
+        self.assertEquals("bar", a.get_parameter("svn:auth:password"))

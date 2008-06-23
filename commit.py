@@ -27,7 +27,7 @@ from bzrlib.trace import mutter, warning
 from cStringIO import StringIO
 
 from bzrlib.plugins.svn import core, properties
-from bzrlib.plugins.svn.core import SubversionException, time_to_cstring
+from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import ChangesRootLHSHistory, MissingPrefix, RevpropChangeFailed, ERR_FS_TXN_OUT_OF_DATE, ERR_REPOS_DISABLED_FEATURE
 from bzrlib.plugins.svn.svk import (generate_svk_feature, serialize_svk_features, 
                  parse_svk_features, SVN_PROP_SVK_MERGE)
@@ -446,62 +446,54 @@ class SvnCommitBuilder(RootCommitBuilder):
             for prop in self._svn_revprops:
                 if not properties.is_valid_property_name(prop):
                     warning("Setting property %r with invalid characters in name", prop)
-            conn = self.repository.transport.get_connection()
-            try:
-                try:
-                    self.editor = conn.get_commit_editor(
-                            self._svn_revprops, done, None, False)
-                    self._svn_revprops = {}
-                    self.editor_active = True
-                except NotImplementedError:
-                    if set_revprops:
-                        raise
-                    # Try without bzr: revprops
-                    self.editor = conn.get_commit_editor({
-                        properties.PROP_REVISION_LOG: self._svn_revprops[properties.PROP_REVISION_LOG]},
-                        done, None, False)
-                    del self._svn_revprops[properties.PROP_REVISION_LOG]
+            if self.repository.transport.has_capability("commit-revprops"):
+                self.editor = self.repository.transport.get_commit_editor(
+                        self._svn_revprops, done, None, False)
+                self._svn_revprops = {}
+            else:
+                if set_revprops:
+                    raise
+                # Try without bzr: revprops
+                self.editor = self.repository.transport.get_commit_editor({
+                    properties.PROP_REVISION_LOG: self._svn_revprops[properties.PROP_REVISION_LOG]},
+                    done, None, False)
+                del self._svn_revprops[properties.PROP_REVISION_LOG]
 
-                root = self.editor.open_root(self.base_revnum)
+            root = self.editor.open_root(self.base_revnum)
 
-                replace_existing = False
-                # See whether the base of the commit matches the lhs parent
-                # if not, we need to replace the existing directory
-                if len(bp_parts) == len(existing_bp_parts):
-                    if self.base_path.strip("/") != "/".join(bp_parts).strip("/"):
-                        replace_existing = True
-                    elif self.base_revnum < self.repository._log.find_latest_change(self.branch.get_branch_path(), repository_latest_revnum):
-                        replace_existing = True
+            replace_existing = False
+            # See whether the base of the commit matches the lhs parent
+            # if not, we need to replace the existing directory
+            if len(bp_parts) == len(existing_bp_parts):
+                if self.base_path.strip("/") != "/".join(bp_parts).strip("/"):
+                    replace_existing = True
+                elif self.base_revnum < self.repository._log.find_latest_change(self.branch.get_branch_path(), repository_latest_revnum):
+                    replace_existing = True
 
-                if replace_existing and self.branch._get_append_revisions_only():
-                    raise AppendRevisionsOnlyViolation(self.branch.base)
+            if replace_existing and self.branch._get_append_revisions_only():
+                raise AppendRevisionsOnlyViolation(self.branch.base)
 
-                # TODO: Accept create_prefix argument (#118787)
-                branch_editors = self.open_branch_editors(root, bp_parts,
-                    existing_bp_parts, self.base_path, self.base_revnum, 
-                    replace_existing)
+            # TODO: Accept create_prefix argument (#118787)
+            branch_editors = self.open_branch_editors(root, bp_parts,
+                existing_bp_parts, self.base_path, self.base_revnum, 
+                replace_existing)
 
-                self._dir_process("", self.new_inventory.root.file_id, 
-                    branch_editors[-1])
+            self._dir_process("", self.new_inventory.root.file_id, 
+                branch_editors[-1])
 
-                # Set all the revprops
-                for prop, value in self._svnprops.items():
-                    if not properties.is_valid_property_name(prop):
-                        warning("Setting property %r with invalid characters in name", prop)
-                    if value is not None:
-                        value = value.encode('utf-8')
-                    branch_editors[-1].change_prop(prop, value)
-                    self.mutter("Setting root file property %r -> %r", prop, value)
+            # Set all the revprops
+            for prop, value in self._svnprops.items():
+                if not properties.is_valid_property_name(prop):
+                    warning("Setting property %r with invalid characters in name", prop)
+                if value is not None:
+                    value = value.encode('utf-8')
+                branch_editors[-1].change_prop(prop, value)
+                self.mutter("Setting root file property %r -> %r", prop, value)
 
-                for dir_editor in reversed(branch_editors):
-                    dir_editor.close()
+            for dir_editor in reversed(branch_editors):
+                dir_editor.close()
 
-                self.editor.close()
-                self.editor_active = False
-            finally:
-                if self.editor_active:
-                    self.editor.abort()
-                self.repository.transport.add_connection(conn)
+            self.editor.close()
         finally:
             lock.unlock()
 
@@ -525,7 +517,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             if properties.PROP_REVISION_AUTHOR in override_svn_revprops:
                 new_revprops[properties.PROP_REVISION_AUTHOR] = self._committer.encode("utf-8")
             if properties.PROP_REVISION_DATE in override_svn_revprops:
-                new_revprops[properties.PROP_REVISION_DATE] = time_to_cstring(1000000*self._timestamp)
+                new_revprops[properties.PROP_REVISION_DATE] = properties.time_to_cstring(1000000*self._timestamp)
             set_svn_revprops(self.repository.transport, result_revision, new_revprops)
 
         try:

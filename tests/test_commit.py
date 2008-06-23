@@ -28,9 +28,9 @@ from bzrlib.workingtree import WorkingTree
 from copy import copy
 import os
 
-from bzrlib.plugins.svn.core import time_to_cstring
 from bzrlib.plugins.svn.commit import set_svn_revprops, _revision_id_to_svk_feature
 from bzrlib.plugins.svn.errors import RevpropChangeFailed
+from bzrlib.plugins.svn.properties import time_to_cstring
 from bzrlib.plugins.svn.transport import SvnRaTransport
 from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
 
@@ -579,9 +579,9 @@ class RevpropTests(TestCaseWithSubversionRepository):
     def test_change_revprops(self):
         repos_url = self.make_repository("d", allow_revprop_changes=True)
 
-        dc = self.commit_editor(repos_url, message="My commit")
-        dc.add_file("foo.txt")
-        dc.done()
+        dc = self.get_commit_editor(repos_url, message="My commit")
+        dc.add_file("foo.txt").modify()
+        dc.close()
 
         transport = SvnRaTransport(repos_url)
         set_svn_revprops(transport, 1, {"svn:author": "Somebody", 
@@ -595,9 +595,9 @@ class RevpropTests(TestCaseWithSubversionRepository):
     def test_change_revprops_disallowed(self):
         repos_url = self.make_repository("d", allow_revprop_changes=False)
 
-        dc = self.commit_editor(repos_url)
-        dc.add_file("foo.txt")
-        dc.done()
+        dc = self.get_commit_editor(repos_url)
+        dc.add_file("foo.txt").modify()
+        dc.close()
 
         transport = SvnRaTransport(repos_url)
         self.assertRaises(RevpropChangeFailed, 
