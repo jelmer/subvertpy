@@ -156,9 +156,9 @@ class SvnWorkingTree(WorkingTree):
         if revnum is None:
             # FIXME: should be able to use -1 here
             revnum = self.branch.get_revnum()
-        adm = self._get_wc()
+        adm = self._get_wc(write_lock=True)
         try:
-            conn = self.branch.repository.transport.get_connection()
+            conn = self.branch.repository.transport.connections.get(bzr_to_svn_url(self.branch.base))
             try:
                 update_wc(adm, self.basedir, conn, revnum)
             finally:
@@ -479,7 +479,7 @@ class SvnWorkingTree(WorkingTree):
                 try:
                     wc.add(os.path.join(self.basedir, f))
                     if ids is not None:
-                        self._change_fileid_mapping(ids.next(), f, adm)
+                        self._change_fileid_mapping(ids.next(), f, wc)
                 except SubversionException, (_, num):
                     if num == ERR_ENTRY_EXISTS:
                         continue
