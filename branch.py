@@ -178,7 +178,8 @@ class SvnBranch(Branch):
 
         :param relpath: path from the repository root.
         """
-        assert relpath.startswith(self.get_branch_path())
+        assert relpath.startswith(self.get_branch_path()), \
+                "expected %s prefix, got %s" % (self.get_branch_path(), relpath)
         return relpath[len(self.get_branch_path()):].strip("/")
 
     def get_branch_path(self, revnum=None):
@@ -262,17 +263,20 @@ class SvnBranch(Branch):
         else:
             revnum = self.get_revnum()
 
-        os.mkdir(to_location)
         svn_url = bzr_to_svn_url(self.base)
-        wc.ensure_adm(to_location, self.repository.uuid, bzr_to_svn_url(self.base),
-                      svn_url, revnum)
-        adm = wc.WorkingCopy(None, to_location)
-        conn = self.repository.transport.get_connection()
+        os.mkdir(to_location)
+        wc.ensure_adm(to_location, self.repository.uuid, svn_url,
+                      bzr_to_svn_url(self.repository.base), revnum)
+        adm = wc.WorkingCopy(None, to_location, write_lock=True)
         try:
-            update_wc(adm, to_location, conn, revnum)
+            conn = self.repository.transport.connections.get(svn_url)
+            try:
+                update_wc(adm, to_location, conn, revnum)
+            finally:
+                if not conn.busy:
+                    self.repository.transport.add_connection(conn)
         finally:
-            if not conn.busy:
-                self.repository.transport.add_connection(conn)
+            adm.close()
         wt = WorkingTree.open(to_location)
         return wt
 
