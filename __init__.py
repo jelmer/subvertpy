@@ -151,7 +151,6 @@ def lazy_check_versions():
         return
     versions_checked = True
     check_bzrlib_version(COMPATIBLE_BZR_VERSIONS)
-    check_subversion_version()
 
 optimizers_registered = False
 def lazy_register_optimizers():
