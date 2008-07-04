@@ -31,36 +31,6 @@ from bzrlib.plugins.svn import core, errors, properties, wc
 from bzrlib.plugins.svn.delta import apply_txdelta_handler
 
 
-def parse_externals_description(base_url, val):
-    """Parse an svn:externals property value.
-
-    :param base_url: URL on which the property is set. Used for 
-        relative externals.
-
-    :returns: dictionary with local names as keys, (revnum, url)
-              as value. revnum is the revision number and is 
-              set to None if not applicable.
-    """
-    ret = {}
-    for l in val.splitlines():
-        if l == "" or l[0] == "#":
-            continue
-        pts = l.rsplit(None, 2) 
-        if len(pts) == 3:
-            if not pts[1].startswith("-r"):
-                raise errors.InvalidExternalsDescription()
-            ret[pts[0]] = (int(pts[1][2:]), urlutils.join(base_url, pts[2]))
-        elif len(pts) == 2:
-            if pts[1].startswith("//"):
-                raise NotImplementedError("Relative to the scheme externals not yet supported")
-            if pts[1].startswith("^/"):
-                raise NotImplementedError("Relative to the repository root externals not yet supported")
-            ret[pts[0]] = (None, urlutils.join(base_url, pts[1]))
-        else:
-            raise errors.InvalidExternalsDescription()
-    return ret
-
-
 def inventory_add_external(inv, parent_id, path, revid, ref_revnum, url):
     """Add an svn:externals entry to an inventory as a tree-reference.
     
@@ -108,18 +78,20 @@ class SvnRevisionTree(RevisionTree):
         self.file_data = {}
         root_repos = repository.transport.get_svn_repos_root()
         conn = repository.transport.get_connection()
-        reporter = conn.do_switch(
+        try:
+            reporter = conn.do_switch(
                 self.revnum, "", True, 
                 urlutils.join(root_repos, self.branch_path), editor)
-        try:
-            reporter.set_path("", 0, True)
+            reporter.set_path("", 0, True, None)
             reporter.finish()
         finally:
             repository.transport.add_connection(conn)
 
     def get_file_lines(self, file_id):
-        return osutils.split_lines(self.file_data[file_id])
+        return osutils.split_lines(self.get_file_text(file_id))
 
+    def get_file_text(self, file_id):
+        return self.file_data[file_id]
 
 class TreeBuildEditor(object):
     """Builds a tree given Subversion tree transform calls."""
@@ -312,7 +284,7 @@ class SvnBasisTree(RevisionTree):
                 
                 if entry.kind == core.NODE_DIR:
                     subwc = wc.WorkingCopy(adm, 
-                            self.workingtree.abspath(subrelpath))
+                            self.workingtree.abspath(subrelpath).encode("utf-8"))
                     try:
                         add_dir_to_inv(subrelpath, subwc, id)
                     finally:

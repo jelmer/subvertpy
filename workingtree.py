@@ -249,7 +249,7 @@ class SvnWorkingTree(WorkingTree):
         assert isinstance(path, str)
 
         rp = self.branch.unprefix(path)
-        entry = self.basis_tree().id_map[rp]
+        entry = self.basis_tree().id_map[rp.decode("utf-8")]
         assert entry[0] is not None
         assert isinstance(entry[0], str), "fileid %r for %r is not a string" % (entry[0], path)
         return entry
@@ -766,8 +766,7 @@ class SvnCheckout(BzrDir):
         repos = self._find_repository()
 
         try:
-            branch = SvnBranch(self.remote_transport.base, repos, 
-                               self.remote_bzrdir.branch_path)
+            branch = SvnBranch(repos, self.remote_bzrdir.branch_path)
         except SubversionException, (_, num):
             if num == ERR_WC_NOT_DIRECTORY:
                 raise NotBranchError(path=self.base)
@@ -776,6 +775,3 @@ class SvnCheckout(BzrDir):
         branch.bzrdir = self.remote_bzrdir
  
         return branch
-
-
-

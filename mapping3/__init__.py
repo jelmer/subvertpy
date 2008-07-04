@@ -55,12 +55,17 @@ def expand_branch_pattern(begin, todo, check_path, get_children):
     if children is None:
         return []
     ret = []
-    for c in children:
-        if len(todo) == 1:
-            # Last path element, so return directly
-            ret.append("/".join(begin+[c]))
-        else:
-            ret += expand_branch_pattern(begin+[c], todo[1:], check_path, get_children)
+    pb = ui.ui_factory.nested_progress_bar()
+    try:
+        for idx, c in enumerate(children):
+            pb.update("browsing branches", idx, len(children))
+            if len(todo) == 1:
+                # Last path element, so return directly
+                ret.append("/".join(begin+[c]))
+            else:
+                ret += expand_branch_pattern(begin+[c], todo[1:], check_path, get_children)
+    finally:
+        pb.finished()
     return ret
 
 
@@ -77,7 +82,7 @@ class SchemeDerivedLayout(RepositoryLayout):
             type = "branch"
         return (type, "", bp, rp)
 
-    def get_branches(self, revnum, project=""):
+    def _get_root_paths(self, revnum, verify_fn, project="", pb=None):
         def check_path(path):
             return self.repository.transport.check_path(path, revnum) == NODE_DIR
         def find_children(path):
@@ -90,10 +95,22 @@ class SchemeDerivedLayout(RepositoryLayout):
                 raise
             return dirents.keys()
 
-        for pattern in self.scheme.branch_list:
+        for idx, pattern in enumerate(self.scheme.branch_list):
+            if pb is not None:
+                pb.update("finding branches", idx, len(self.scheme.branch_list))
             for bp in expand_branch_pattern([], pattern.split("/"), check_path,
                     find_children):
-                yield "", bp, bp.split("/")[-1]
+                if verify_fn(bp):
+                    yield "", bp, bp.split("/")[-1]
+
+    def get_branches(self, revnum, project="", pb=None):
+        return self._get_root_paths(revnum, self.scheme.is_branch, project, pb)
+
+    def get_tags(self, revnum, project="", pb=None):
+        return self._get_root_paths(revnum, self.scheme.is_tag, project, pb)
+
+    def get_tag_path(self, name, project=""):
+        return self.scheme.get_tag_path(name)
 
     def is_branch_parent(self, path):
         # Na, na, na...
@@ -130,14 +147,18 @@ def get_property_scheme(repository, revnum=None):
 
 
 def set_property_scheme(repository, scheme):
-    editor = repository.transport.get_commit_editor(
+    conn = repository.transport.get_connection()
+    try:
+        editor = conn.get_commit_editor(
             {properties.PROP_REVISION_LOG: "Updating branching scheme for Bazaar."},
             None, None, False)
-    root = editor.open_root()
-    root.change_prop(SVN_PROP_BZR_BRANCHING_SCHEME, 
-            "".join(map(lambda x: x+"\n", scheme.branch_list)).encode("utf-8"))
-    root.close()
-    editor.close()
+        root = editor.open_root()
+        root.change_prop(SVN_PROP_BZR_BRANCHING_SCHEME, 
+                "".join(map(lambda x: x+"\n", scheme.branch_list)).encode("utf-8"))
+        root.close()
+        editor.close()
+    finally:
+        repository.transport.add_connection(conn)
 
 
 def repository_guess_scheme(repository, last_revnum, branch_path=None):

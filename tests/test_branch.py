@@ -16,9 +16,10 @@
 
 """Branch tests."""
 
+from bzrlib import urlutils
 from bzrlib.branch import Branch
 from bzrlib.bzrdir import BzrDir
-from bzrlib.errors import NoSuchFile, NoSuchRevision, NotBranchError
+from bzrlib.errors import NoSuchFile, NoSuchRevision, NotBranchError, NoSuchTag
 from bzrlib.repository import Repository
 from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter
@@ -26,6 +27,7 @@ from bzrlib.trace import mutter
 import os
 from unittest import TestCase
 
+from bzrlib.plugins.svn import core
 from bzrlib.plugins.svn.branch import FakeControlFiles, SvnBranchFormat
 from bzrlib.plugins.svn.convert import load_dumpfile
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID
@@ -44,6 +46,99 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
         repos_url = self.make_repository("a")
         branch = Branch.open(repos_url)
         self.assertEqual("", branch.get_branch_path())
+
+    def test_tags_dict(self):
+        repos_url = self.make_repository("a")
+       
+        dc = self.get_commit_editor(repos_url)
+        tags = dc.add_dir("tags")
+        tags.add_dir("tags/foo")
+        dc.add_dir("trunk")
+        dc.close()
+
+        b = Branch.open(repos_url + "/trunk")
+        self.assertEquals(["foo"], b.tags.get_tag_dict().keys())
+
+    def test_tag_set(self):
+        repos_url = self.make_repository('a')
+
+        dc = self.get_commit_editor(repos_url)
+        dc.add_dir("trunk")
+        dc.add_dir("tags")
+        dc.close()
+
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.open_dir("trunk")
+        trunk.add_file("trunk/bla").modify()
+        dc.close()
+
+        b = Branch.open(repos_url + "/trunk")
+        b.tags.set_tag("mytag", b.repository.generate_revision_id(1, "trunk", b.repository.get_mapping()))
+
+        self.assertEquals(core.NODE_DIR, 
+                b.repository.transport.check_path("tags/mytag", 3))
+
+    def test_tags_delete(self):
+        repos_url = self.make_repository("a")
+       
+        dc = self.get_commit_editor(repos_url)
+        tags = dc.add_dir("tags")
+        tags.add_dir("tags/foo")
+        dc.add_dir("trunk")
+        dc.close()
+
+        b = Branch.open(repos_url + "/trunk")
+        self.assertEquals(["foo"], b.tags.get_tag_dict().keys())
+        b.tags.delete_tag("foo")
+        b = Branch.open(repos_url + "/trunk")
+        self.assertEquals([], b.tags.get_tag_dict().keys())
+
+    def test_tag_lookup(self):
+        repos_url = self.make_repository("a")
+       
+        dc = self.get_commit_editor(repos_url)
+        tags = dc.add_dir("tags")
+        tags.add_dir("tags/foo")
+        dc.add_dir("trunk")
+        dc.close()
+
+        b = Branch.open(repos_url + "/trunk")
+        self.assertEquals(b.repository.generate_revision_id(1, "tags/foo", b.repository.get_mapping()), b.tags.lookup_tag("foo"))
+
+    def test_tag_lookup_nonexistant(self):
+        repos_url = self.make_repository("a")
+
+        dc = self.get_commit_editor(repos_url)
+        dc.add_dir("trunk")
+        dc.close()
+       
+        b = Branch.open(repos_url + "/trunk")
+        self.assertRaises(NoSuchTag, b.tags.lookup_tag, "foo")
+
+    def test_tags_delete_nonexistent(self):
+        repos_url = self.make_repository("a")
+
+        dc = self.get_commit_editor(repos_url)
+        dc.add_dir("trunk")
+        dc.close()
+       
+        b = Branch.open(repos_url + "/trunk")
+        self.assertRaises(NoSuchTag, b.tags.delete_tag, "foo")
+
+    def test_get_branch_path_old(self):
+        repos_url = self.make_repository("a")
+
+        dc = self.get_commit_editor(repos_url)
+        dc.add_dir("trunk")
+        dc.close()
+
+        dc = self.get_commit_editor(repos_url)
+        dc.add_dir("trunk2", "trunk", 1)
+        dc.close()
+
+        branch = Branch.open(urlutils.join(repos_url, "trunk2"))
+        self.assertEqual("trunk2", branch.get_branch_path(2))
+        self.assertEqual("trunk", branch.get_branch_path(1))
 
     def test_get_branch_path_subdir(self):
         repos_url = self.make_repository("a")
@@ -127,8 +222,8 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
 
     def test_repr(self):
         repos_url = self.make_repository('a')
-        branch = Branch.open("svn+"+repos_url)
-        self.assertEqual("SvnBranch('svn+%s')" % repos_url, branch.__repr__())
+        branch = Branch.open(repos_url)
+        self.assertEqual("SvnBranch('%s')" % repos_url, branch.__repr__())
 
     def test_get_physical_lock_status(self):
         repos_url = self.make_repository('a')
@@ -509,14 +604,12 @@ foohosts""")
         newbranch.lock_read()
         tree = newbranch.repository.revision_tree(oldbranch.generate_revision_id(7))
 
-        weave = newbranch.repository.weave_store.get_weave(
-            tree.inventory.path2id("hosts"),
-            newbranch.repository.get_transaction())
+        host_fileid = tree.inventory.path2id("hosts")
 
-        self.assertEqual(set([
+        self.assertVersionsPresentEquals(newbranch.repository.texts, 
+                                        host_fileid, [
             oldbranch.generate_revision_id(6),
-            oldbranch.generate_revision_id(7)]),
-                          set(weave.versions()))
+            oldbranch.generate_revision_id(7)])
         newbranch.unlock()
  
 
@@ -568,16 +661,19 @@ foohosts""")
              oldbranch.generate_revision_id(6))
         transaction = newbranch.repository.get_transaction()
         newbranch.repository.lock_read()
-        weave = newbranch.repository.weave_store.get_weave(
-                tree.inventory.path2id("hosts"), transaction)
+        texts = newbranch.repository.texts
+        host_fileid = tree.inventory.path2id("hosts")
         mapping = BzrSvnMappingv3FileProps(TrunkBranchingScheme())
-        self.assertEqual(set([
+        self.assertVersionsPresentEquals(texts, host_fileid, [
             mapping.generate_revision_id(uuid, 1, "trunk"),
             mapping.generate_revision_id(uuid, 2, "trunk"),
             mapping.generate_revision_id(uuid, 3, "trunk"),
-            oldbranch.generate_revision_id(6)]),
-                          set(weave.versions()))
+            oldbranch.generate_revision_id(6)])
         newbranch.repository.unlock()
+
+    def assertVersionsPresentEquals(self, texts, fileid, versions):
+        self.assertEqual(set([(fileid, v) for v in versions]),
+            set(filter(lambda (fid, rid): fid == fileid, texts.keys())))
 
     def test_check(self):
         self.make_repository('d')
@@ -607,7 +703,7 @@ foohosts""")
         url = "svn+"+repos_url+"/trunk"
         oldbranch = Branch.open(url)
 
-        newtree = self.create_checkout(oldbranch, "e")
+        newtree = oldbranch.create_checkout("e")
         self.assertTrue(newtree.branch.repository.has_revision(
            oldbranch.generate_revision_id(1)))
 
@@ -622,10 +718,8 @@ foohosts""")
         trunk.add_file("trunk/hosts")
         dc.close()
 
-        url = "svn+"+repos_url+"/trunk"
-        oldbranch = Branch.open(url)
-
-        newtree = self.create_checkout(oldbranch, "e", lightweight=True)
+        oldbranch = Branch.open(repos_url+"/trunk")
+        newtree = oldbranch.create_checkout("e", lightweight=True)
         self.assertEqual(oldbranch.generate_revision_id(1), newtree.base_revid)
         self.assertTrue(os.path.exists("e/.svn"))
         self.assertFalse(os.path.exists("e/.bzr"))
@@ -646,7 +740,7 @@ foohosts""")
         url = "svn+"+repos_url+"/trunk"
         oldbranch = Branch.open(url)
 
-        newtree = self.create_checkout(oldbranch, "e", revision_id=
+        newtree = oldbranch.create_checkout("e", revision_id=
            oldbranch.generate_revision_id(1), lightweight=True)
         self.assertEqual(oldbranch.generate_revision_id(1),
            newtree.base_revid)

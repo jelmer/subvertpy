@@ -32,65 +32,65 @@ static PyObject *py_entry(const svn_wc_entry_t *entry);
 
 static svn_error_t *py_ra_report_set_path(void *baton, const char *path, long revision, int start_empty, const char *lock_token, apr_pool_t *pool)
 {
-    PyObject *self = (PyObject *)baton, *py_lock_token, *ret;
-    if (lock_token == NULL) {
-        py_lock_token = Py_None;
+	PyObject *self = (PyObject *)baton, *py_lock_token, *ret;
+	if (lock_token == NULL) {
+		py_lock_token = Py_None;
 	} else {
-        py_lock_token = PyString_FromString(lock_token);
+		py_lock_token = PyString_FromString(lock_token);
 	}
 	ret = PyObject_CallFunction(self, "set_path", "slbO", path, revision, start_empty, py_lock_token);
 	if (ret == NULL)
 		return py_svn_error();
-    return NULL;
+	return NULL;
 }
 
 static svn_error_t *py_ra_report_delete_path(void *baton, const char *path, apr_pool_t *pool)
 {
-    PyObject *self = (PyObject *)baton, *ret;
+	PyObject *self = (PyObject *)baton, *ret;
 	ret = PyObject_CallFunction(self, "delete_path", "s", path);
 	if (ret == NULL)
 		return py_svn_error();
-    return NULL;
+	return NULL;
 }
 
 static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path, const char *url, long revision, int start_empty, const char *lock_token, apr_pool_t *pool)
 {
-    PyObject *self = (PyObject *)report_baton, *ret, *py_lock_token;
-    if (lock_token == NULL) {
-        py_lock_token = Py_None;
+	PyObject *self = (PyObject *)report_baton, *ret, *py_lock_token;
+	if (lock_token == NULL) {
+		py_lock_token = Py_None;
 	} else { 
-        py_lock_token = PyString_FromString(lock_token);
+		py_lock_token = PyString_FromString(lock_token);
 	}
 	ret = PyObject_CallFunction(self, "link_path", "sslbO", path, url, revision, start_empty, py_lock_token);
 	if (ret == NULL)
 		return py_svn_error();
-    return NULL;
+	return NULL;
 }
 
 static svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool)
 {
-    PyObject *self = (PyObject *)baton, *ret;
+	PyObject *self = (PyObject *)baton, *ret;
 	ret = PyObject_CallFunction(self, "finish", NULL);
 	if (ret == NULL)
 		return py_svn_error();
-    return NULL;
+	return NULL;
 }
 
 static svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool)
 {
-    PyObject *self = (PyObject *)baton, *ret;
+	PyObject *self = (PyObject *)baton, *ret;
 	ret = PyObject_CallFunction(self, "abort", NULL);
 	if (ret == NULL)
 		return py_svn_error();
-    return NULL;
+	return NULL;
 }
 
 static const svn_ra_reporter2_t py_ra_reporter = {
-	.finish_report = py_ra_report_finish,
-	.abort_report = py_ra_report_abort,
-	.link_path = py_ra_report_link_path,
-	.delete_path = py_ra_report_delete_path,
-	.set_path = py_ra_report_set_path,
+	py_ra_report_set_path,
+	py_ra_report_delete_path,
+	py_ra_report_link_path,
+	py_ra_report_finish,
+	py_ra_report_abort,
 };
 
 
@@ -102,22 +102,22 @@ static const svn_ra_reporter2_t py_ra_reporter = {
  */
 static PyObject *version(PyObject *self)
 {
-    const svn_version_t *ver = svn_wc_version();
-    return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+	const svn_version_t *ver = svn_wc_version();
+	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
 						 ver->patch, ver->tag);
 }
 
 static svn_error_t *py_wc_found_entry(const char *path, const svn_wc_entry_t *entry, void *walk_baton, apr_pool_t *pool)
 {
-    PyObject *fn = (PyObject *)walk_baton, *ret;
+	PyObject *fn = (PyObject *)walk_baton, *ret;
 	ret = PyObject_CallFunction(fn, "sO", path, py_entry(entry));
 	if (ret == NULL)
 		return py_svn_error();
-    return NULL;
+	return NULL;
 }
 
 static svn_wc_entry_callbacks_t py_wc_entry_callbacks = {
-	.found_entry = py_wc_found_entry
+	py_wc_found_entry
 };
 
 void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool)
@@ -158,11 +158,65 @@ static PyMemberDef entry_members[] = {
 };
 
 PyTypeObject Entry_Type = {
-	PyObject_HEAD_INIT(&PyType_Type) 0,
-	.tp_name = "wc.Entry",
-	.tp_basicsize = sizeof(EntryObject),
-	.tp_dealloc = entry_dealloc,
-	.tp_members = entry_members,
+	PyObject_HEAD_INIT(NULL) 0,
+	"wc.Entry", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(EntryObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	entry_dealloc, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+	
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+	
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+	
+	NULL, /*	const char *tp_doc;  Documentation string */
+	
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+	
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+	
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+	
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+	
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+	
+	/* Attribute descriptor and subclassing stuff */
+	NULL, /*	struct PyMethodDef *tp_methods;	*/
+	entry_members, /*	struct PyMemberDef *tp_members;	*/
+
 };
 
 static PyObject *py_entry(const svn_wc_entry_t *entry)
@@ -175,13 +229,13 @@ static PyObject *py_entry(const svn_wc_entry_t *entry)
 	if (ret->pool == NULL)
 		return NULL;
 	ret->entry = *svn_wc_entry_dup(entry, ret->pool);
-    return (PyObject *)ret;
+	return (PyObject *)ret;
 }
 
 typedef struct {
 	PyObject_HEAD
-    svn_wc_adm_access_t *adm;
-    apr_pool_t *pool;
+	svn_wc_adm_access_t *adm;
+	apr_pool_t *pool;
 } AdmObject;
 
 static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
@@ -211,8 +265,8 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 		parent_wc = ((AdmObject *)associated)->adm;
 	}
 	if (!check_error(svn_wc_adm_open3(&ret->adm, parent_wc, path, 
-                     write_lock, depth, py_cancel_func, cancel_func, 
-                     ret->pool)))
+					 write_lock, depth, py_cancel_func, cancel_func, 
+					 ret->pool)))
 		return NULL;
 
 	return (PyObject *)ret;
@@ -361,7 +415,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	AdmObject *admobj = (AdmObject *)self;
 	svn_prop_t el;
 	int i;
-	PyObject *py_propchanges, *py_orig_props;
+	PyObject *py_propchanges, *py_orig_props, *pyval;
 
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
@@ -374,11 +428,17 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	py_propchanges = PyList_New(propchanges->nelts);
 	for (i = 0; i < propchanges->nelts; i++) {
 		el = APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-		PyList_SetItem(py_propchanges, i, 
-		   Py_BuildValue("(ss#)", el.name, el.value->data, el.value->len));
+		pyval = Py_BuildValue("(ss#)", el.name, el.value->data, el.value->len);
+		if (pyval == NULL) {
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+		PyList_SetItem(py_propchanges, i, pyval);
 	}
 	py_orig_props = prop_hash_to_dict(original_props);
 	apr_pool_destroy(temp_pool);
+	if (py_orig_props == NULL)
+		return NULL;
 	return Py_BuildValue("(NN)", py_propchanges, py_orig_props);
 }
 
@@ -533,7 +593,7 @@ static bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_arra
 		   if (val == Py_None) {
 			   prop->value = NULL;
 		   } else {
-		       prop->value = svn_string_ncreate(PyString_AsString(val), PyString_Size(val), pool);
+			   prop->value = svn_string_ncreate(PyString_AsString(val), PyString_Size(val), pool);
 		   }
 		   APR_ARRAY_PUSH(*ret, svn_prop_t *) = prop;
 	}
@@ -552,7 +612,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
 	char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author", 
-		                "wcprop_changes", "remove_lock", "digest", NULL };
+						"wcprop_changes", "remove_lock", "digest", NULL };
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblss|Obs", kwnames, 
 									 &path, &recurse, &new_revnum, &rev_date,
@@ -615,12 +675,74 @@ static PyMethodDef adm_methods[] = {
 };
 
 PyTypeObject Adm_Type = {
-	PyObject_HEAD_INIT(&PyType_Type) 0,
-	.tp_name = "wc.WorkingCopy",
-	.tp_basicsize = sizeof(AdmObject),
-	.tp_new = adm_init,
-	.tp_dealloc = adm_dealloc,
-	.tp_methods = adm_methods,
+	PyObject_HEAD_INIT(NULL) 0,
+	"wc.WorkingCopy", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(AdmObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	adm_dealloc, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+	
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+	
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+	
+	NULL, /*	const char *tp_doc;  Documentation string */
+	
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+	
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+	
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+	
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+	
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+	
+	/* Attribute descriptor and subclassing stuff */
+	adm_methods, /*	struct PyMethodDef *tp_methods;	*/
+	NULL, /*	struct PyMemberDef *tp_members;	*/
+	NULL, /*	struct PyGetSetDef *tp_getset;	*/
+	NULL, /*	struct _typeobject *tp_base;	*/
+	NULL, /*	PyObject *tp_dict;	*/
+	NULL, /*	descrgetfunc tp_descr_get;	*/
+	NULL, /*	descrsetfunc tp_descr_set;	*/
+	0, /*	Py_ssize_t tp_dictoffset;	*/
+	NULL, /*	initproc tp_init;	*/
+	NULL, /*	allocfunc tp_alloc;	*/
+	adm_init, /*	newfunc tp_new;	*/
+
 };
 
 /** 
@@ -635,22 +757,22 @@ static PyObject *revision_status(PyObject *self, PyObject *args, PyObject *kwarg
 	char *wc_path, *trail_url=NULL;
 	bool committed=false;
 	PyObject *cancel_func=Py_None, *ret;
-     svn_wc_revision_status_t *revstatus;
-    apr_pool_t *temp_pool;
+	 svn_wc_revision_status_t *revstatus;
+	apr_pool_t *temp_pool;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zbO", kwnames, &wc_path, &trail_url, &committed, 
 						  &cancel_func))
 		return NULL;
 
-    temp_pool = Pool(NULL);
+	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-    RUN_SVN_WITH_POOL(temp_pool, svn_wc_revision_status(&revstatus, wc_path, trail_url,
-                 committed, py_cancel_func, cancel_func, temp_pool));
-    ret = Py_BuildValue("(llbb)", revstatus->min_rev, revstatus->max_rev, 
-            revstatus->switched, revstatus->modified);
-    apr_pool_destroy(temp_pool);
-    return ret;
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_revision_status(&revstatus, wc_path, trail_url,
+				 committed, py_cancel_func, cancel_func, temp_pool));
+	ret = Py_BuildValue("(llbb)", revstatus->min_rev, revstatus->max_rev, 
+			revstatus->switched, revstatus->modified);
+	apr_pool_destroy(temp_pool);
+	return ret;
 }
 
 static PyObject *is_normal_prop(PyObject *self, PyObject *args)
@@ -660,7 +782,7 @@ static PyObject *is_normal_prop(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &name))
 		return NULL;
 
-    return PyBool_FromLong(svn_wc_is_normal_prop(name));
+	return PyBool_FromLong(svn_wc_is_normal_prop(name));
 }
 
 static PyObject *is_adm_dir(PyObject *self, PyObject *args)
@@ -680,7 +802,7 @@ static PyObject *is_adm_dir(PyObject *self, PyObject *args)
 
 	apr_pool_destroy(pool);
 
-    return PyBool_FromLong(ret);
+	return PyBool_FromLong(ret);
 }
 
 static PyObject *is_wc_prop(PyObject *self, PyObject *args)
@@ -690,7 +812,7 @@ static PyObject *is_wc_prop(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &name))
 		return NULL;
 
-    return PyBool_FromLong(svn_wc_is_wc_prop(name));
+	return PyBool_FromLong(svn_wc_is_wc_prop(name));
 }
 
 static PyObject *is_entry_prop(PyObject *self, PyObject *args)
@@ -700,40 +822,40 @@ static PyObject *is_entry_prop(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &name))
 		return NULL;
 
-    return PyBool_FromLong(svn_wc_is_entry_prop(name));
+	return PyBool_FromLong(svn_wc_is_entry_prop(name));
 }
 
 static PyObject *get_adm_dir(PyObject *self)
 {
-    apr_pool_t *pool;
+	apr_pool_t *pool;
 	PyObject *ret;
 	const char *dir;
-    pool = Pool(NULL);
+	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-    dir = svn_wc_get_adm_dir(pool);
+	dir = svn_wc_get_adm_dir(pool);
 	ret = PyString_FromString(dir);
-    apr_pool_destroy(pool);
-    return ret;
+	apr_pool_destroy(pool);
+	return ret;
 }
 
 static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 {
-    apr_pool_t *pool;
-    const char *pristine_path;
+	apr_pool_t *pool;
+	const char *pristine_path;
 	char *path;
 	PyObject *ret;
 
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
-    pool = Pool(NULL);
+	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(pool, svn_wc_get_pristine_copy_path(path, &pristine_path, pool));
 	ret = PyString_FromString(pristine_path);
 	apr_pool_destroy(pool);
-    return ret;
+	return ret;
 }
 
 static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -741,37 +863,37 @@ static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 	char *path, *uuid, *url;
 	char *repos=NULL; 
 	svn_revnum_t rev=-1;
-    apr_pool_t *pool;
+	apr_pool_t *pool;
 	char *kwnames[] = { "path", "uuid", "url", "repos", "rev", NULL };
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|sl", kwnames, 
 									 &path, &uuid, &url, &repos, &rev))
 		return NULL;
 
-    pool = Pool(NULL);
+	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-    RUN_SVN_WITH_POOL(pool, 
+	RUN_SVN_WITH_POOL(pool, 
 					  svn_wc_ensure_adm2(path, uuid, url, repos, rev, pool));
-    apr_pool_destroy(pool);
+	apr_pool_destroy(pool);
 	Py_RETURN_NONE;
 }
 
 static PyObject *check_wc(PyObject *self, PyObject *args)
 {
 	char *path;
-    apr_pool_t *pool;
-    int wc_format;
+	apr_pool_t *pool;
+	int wc_format;
 
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
-    pool = Pool(NULL);
+	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(path, &wc_format, pool));
-    apr_pool_destroy(pool);
-    return PyLong_FromLong(wc_format);
+	apr_pool_destroy(pool);
+	return PyLong_FromLong(wc_format);
 }
 
 static PyMethodDef wc_methods[] = {

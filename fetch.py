@@ -35,10 +35,10 @@ from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_MERGE,
                      SVN_PROP_BZR_FILEIDS, SVN_REVPROP_BZR_SIGNATURE,
                      parse_merge_property,
                      parse_revision_metadata)
+from bzrlib.plugins.svn.properties import parse_externals_description
 from bzrlib.plugins.svn.repository import SvnRepository, SvnRepositoryFormat
 from bzrlib.plugins.svn.svk import SVN_PROP_SVK_MERGE
-from bzrlib.plugins.svn.tree import (parse_externals_description, 
-                  inventory_add_external)
+from bzrlib.plugins.svn.tree import inventory_add_external
 
 def _escape_commit_message(message):
     """Replace xml-incompatible control characters."""
@@ -90,7 +90,7 @@ class RevisionBuildEditor(object):
     def __init__(self, source, target):
         self.target = target
         self.source = source
-        self.transact = target.get_transaction()
+        self.texts = target.texts
 
     def set_target_revision(self, revnum):
         assert self.revnum == revnum
@@ -156,12 +156,6 @@ class RevisionBuildEditor(object):
     def close(self):
         pass
 
-    def _store_directory(self, file_id, parents):
-        raise NotImplementedError(self._store_directory)
-
-    def _get_file_data(self, file_id, revid):
-        raise NotImplementedError(self._get_file_data)
-
     def _finish_commit(self):
         raise NotImplementedError(self._finish_commit)
 
@@ -170,9 +164,6 @@ class RevisionBuildEditor(object):
 
     def _start_revision(self):
         pass
-
-    def _store_file(self, file_id, lines, parents):
-        raise NotImplementedError(self._store_file)
 
     def _get_existing_id(self, old_parent_id, new_parent_id, path):
         assert isinstance(path, unicode)
@@ -218,7 +209,8 @@ class DirectoryBuildEditor(object):
         self.editor.inventory[self.new_id].revision = self.editor.revid
 
         # Only record root if the target repository supports it
-        self.editor._store_directory(self.new_id, self.parent_revids)
+        self.editor.texts.add_lines((self.new_id, self.editor.revid), 
+                 [(self.new_id, revid) for revid in self.parent_revids], [])
 
         if self.new_id == self.editor.inventory.root.file_id:
             assert len(self.editor._premature_deletes) == 0
@@ -320,7 +312,8 @@ class DirectoryBuildEditor(object):
         base_revid = self.editor.old_inventory[base_file_id].revision
         file_id = self.editor._get_existing_id(self.old_id, self.new_id, path)
         is_symlink = (self.editor.inventory[base_file_id].kind == 'symlink')
-        file_data = self.editor._get_file_data(base_file_id, base_revid)
+        record = self.editor.texts.get_record_stream([(base_file_id, base_revid)], 'unordered', True).next()
+        file_data = record.get_bytes_as('fulltext')
         if file_id == base_file_id:
             file_parents = [base_revid]
         else:
@@ -400,7 +393,8 @@ class FileBuildEditor(object):
         actual_checksum = md5_strings(lines)
         assert checksum is None or checksum == actual_checksum
 
-        self.editor._store_file(self.file_id, lines, self.file_parents)
+        self.editor.texts.add_lines((self.file_id, self.editor.revid), 
+                [(self.file_id, revid) for revid in self.file_parents], lines)
 
         assert self.is_symlink in (True, False)
 
@@ -431,27 +425,9 @@ class FileBuildEditor(object):
 class WeaveRevisionBuildEditor(RevisionBuildEditor):
     """Subversion commit editor that can write to a weave-based repository.
     """
-    def __init__(self, source, target):
-        RevisionBuildEditor.__init__(self, source, target)
-        self.weave_store = target.weave_store
-
     def _start_revision(self):
         self._write_group_active = True
         self.target.start_write_group()
-
-    def _store_directory(self, file_id, parents):
-        file_weave = self.weave_store.get_weave_or_empty(file_id, self.transact)
-        if not file_weave.has_version(self.revid):
-            file_weave.add_lines(self.revid, parents, [])
-
-    def _get_file_data(self, file_id, revid):
-        file_weave = self.weave_store.get_weave_or_empty(file_id, self.transact)
-        return file_weave.get_text(revid)
-
-    def _store_file(self, file_id, lines, parents):
-        file_weave = self.weave_store.get_weave_or_empty(file_id, self.transact)
-        if not file_weave.has_version(self.revid):
-            file_weave.add_lines(self.revid, parents, lines)
 
     def _finish_commit(self):
         (rev, signature) = self._get_revision(self.revid)
@@ -471,24 +447,6 @@ class WeaveRevisionBuildEditor(RevisionBuildEditor):
             self._write_group_active = False
 
 
-class PackRevisionBuildEditor(WeaveRevisionBuildEditor):
-    """Revision Build Editor for Subversion that is specific for the packs API.
-    """
-    def __init__(self, source, target):
-        WeaveRevisionBuildEditor.__init__(self, source, target)
-
-    def _add_text_to_weave(self, file_id, new_lines, parents):
-        return self.target._packs._add_text_to_weave(file_id,
-            self.revid, new_lines, parents, nostore_sha=None, 
-            random_revid=False)
-
-    def _store_directory(self, file_id, parents):
-        self._add_text_to_weave(file_id, [], parents)
-
-    def _store_file(self, file_id, lines, parents):
-        self._add_text_to_weave(file_id, lines, parents)
-
-
 class CommitBuilderRevisionBuildEditor(RevisionBuildEditor):
     """Revision Build Editor for Subversion that uses the CommitBuilder API.
     """
@@ -503,8 +461,6 @@ def get_revision_build_editor(repository):
     :param repository: Repository to obtain the buildeditor for.
     :return: Class object of class descending from RevisionBuildEditor
     """
-    if getattr(repository, '_packs', None):
-        return PackRevisionBuildEditor
     return WeaveRevisionBuildEditor
 
 
@@ -539,13 +495,14 @@ class InterFromSvnRepository(InterRepository):
     def _find_branches(self, branches, find_ghosts=False, fetch_rhs_ancestry=False, pb=None):
         set_needed = set()
         ret_needed = list()
-        for revid in branches:
+        checked = set()
+        for branch in branches:
             if pb:
-                pb.update("determining revisions to fetch", branches.index(revid), len(branches))
+                pb.update("determining revisions to fetch", branches.index(branch), len(branches))
             try:
                 nestedpb = ui.ui_factory.nested_progress_bar()
-                for rev in self._find_until(revid, find_ghosts=find_ghosts, fetch_rhs_ancestry=False,
-                                            pb=nestedpb):
+                for rev in self._find_until(branch.last_revision(), find_ghosts=find_ghosts, 
+                                            fetch_rhs_ancestry=False, pb=nestedpb, checked=checked):
                     if rev[0] not in set_needed:
                         ret_needed.append(rev)
                         set_needed.add(rev[0])
@@ -553,7 +510,8 @@ class InterFromSvnRepository(InterRepository):
                 nestedpb.finished()
         return ret_needed
 
-    def _find_until(self, revision_id, find_ghosts=False, fetch_rhs_ancestry=False, pb=None):
+    def _find_until(self, revision_id, find_ghosts=False, fetch_rhs_ancestry=False, pb=None,
+                    checked=None):
         """Find all missing revisions until revision_id
 
         :param revision_id: Stop revision
@@ -562,6 +520,10 @@ class InterFromSvnRepository(InterRepository):
         :return: Tuple with revisions missing and a dictionary with 
             parents for those revision.
         """
+        if checked is None:
+            checked = set()
+        if revision_id in checked:
+            return []
         extra = set()
         needed = []
         revs = []
@@ -576,6 +538,10 @@ class InterFromSvnRepository(InterRepository):
                 revid = revmeta.get_revision_id(mapping)
                 lhs_parent[prev] = revid
                 meta_map[revid] = revmeta
+                if revid in checked:
+                    # This revision (and its ancestry) has already been checked
+                    prev = None
+                    break
                 if fetch_rhs_ancestry:
                     extra.update(revmeta.get_rhs_parents(mapping))
                 if not self.target.has_revision(revid):
@@ -583,6 +549,7 @@ class InterFromSvnRepository(InterRepository):
                 elif not find_ghosts:
                     prev = None
                     break
+                checked.add(revid)
                 prev = revid
             lhs_parent[prev] = NULL_REVISION
 
@@ -624,7 +591,6 @@ class InterFromSvnRepository(InterRepository):
         num = 0
         prev_inv = None
 
-        self.target.lock_write()
         revbuildklass = get_revision_build_editor(self.target)
         editor = revbuildklass(self.source, self.target)
 
@@ -643,41 +609,33 @@ class InterFromSvnRepository(InterRepository):
 
                 editor.start_revision(revid, parent_inv, revmeta)
 
+                if parent_revid == NULL_REVISION:
+                    parent_branch = editor.branch_path
+                    parent_revnum = editor.revnum
+                    start_empty = True
+                else:
+                    (parent_branch, parent_revnum, mapping) = \
+                            self.source.lookup_revision_id(parent_revid)
+                    start_empty = False
+
                 try:
                     conn = None
                     try:
-                        if parent_revid == NULL_REVISION:
-                            branch_url = urlutils.join(repos_root, 
-                                                       editor.branch_path)
+                        conn = self.source.transport.connections.get(urlutils.join(repos_root, parent_branch))
 
-                            conn = self.source.transport.connections.get(branch_url)
-                            reporter = conn.do_update(editor.revnum, "", True, 
-                                                           editor)
-
-                            try:
-                                # Report status of existing paths
-                                reporter.set_path("", editor.revnum, True, None)
-                            except:
-                                reporter.abort()
-                                raise
+                        if parent_branch != editor.branch_path:
+                            reporter = conn.do_switch(editor.revnum, "", True, 
+                                urlutils.join(repos_root, editor.branch_path), 
+                                editor)
                         else:
-                            (parent_branch, parent_revnum, mapping) = \
-                                    self.source.lookup_revision_id(parent_revid)
-                            conn = self.source.transport.connections.get(urlutils.join(repos_root, parent_branch))
+                            reporter = conn.do_update(editor.revnum, "", True, editor)
 
-                            if parent_branch != editor.branch_path:
-                                reporter = conn.do_switch(editor.revnum, "", True, 
-                                    urlutils.join(repos_root, editor.branch_path), 
-                                    editor)
-                            else:
-                                reporter = conn.do_update(editor.revnum, "", True, editor)
-
-                            try:
-                                # Report status of existing paths
-                                reporter.set_path("", parent_revnum, False, None)
-                            except:
-                                reporter.abort()
-                                raise
+                        try:
+                            # Report status of existing paths
+                            reporter.set_path("", parent_revnum, start_empty)
+                        except:
+                            reporter.abort()
+                            raise
 
                         reporter.finish()
                     finally:
@@ -692,7 +650,6 @@ class InterFromSvnRepository(InterRepository):
                 prev_revid = revid
                 num += 1
         finally:
-            self.target.unlock()
             if nested_pb is not None:
                 nested_pb.finished()
 
@@ -709,22 +666,27 @@ class InterFromSvnRepository(InterRepository):
         # Loop over all the revnums until revision_id
         # (or youngest_revnum) and call self.target.add_revision() 
         # or self.target.add_inventory() each time
-        self.target.lock_read()
+        self.target.lock_write()
         try:
-            if branches is not None:
-                needed = self._find_branches(branches, find_ghosts, fetch_rhs_ancestry, pb=pb)
-            elif revision_id is None:
-                needed = self._find_all(self.source.get_mapping(), pb=pb)
-            else:
-                needed = self._find_until(revision_id, find_ghosts, fetch_rhs_ancestry, pb=pb)
+            nested_pb = ui.ui_factory.nested_progress_bar()
+            try:
+                if branches is not None:
+                    needed = self._find_branches(branches, find_ghosts, 
+                                fetch_rhs_ancestry, pb=nested_pb)
+                elif revision_id is None:
+                    needed = self._find_all(self.source.get_mapping(), pb=nested_pb)
+                else:
+                    needed = self._find_until(revision_id, find_ghosts, fetch_rhs_ancestry, pb=nested_pb)
+            finally:
+                nested_pb.finished()
+
+            if len(needed) == 0:
+                # Nothing to fetch
+                return
+
+            self._fetch_switch(self.source.transport.get_svn_repos_root(), needed, pb)
         finally:
             self.target.unlock()
-
-        if len(needed) == 0:
-            # Nothing to fetch
-            return
-
-        self._fetch_switch(self.source.transport.get_svn_repos_root(), needed, pb)
 
     @staticmethod
     def is_compatible(source, target):

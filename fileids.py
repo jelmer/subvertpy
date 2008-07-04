@@ -17,9 +17,10 @@
 
 from bzrlib import ui
 from bzrlib.errors import NotBranchError, RevisionNotPresent
-from bzrlib.knit import make_file_knit
+from bzrlib.knit import make_file_factory
 from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter
+from bzrlib.versionedfile import ConstantMapper
 
 import urllib
 
@@ -28,8 +29,17 @@ from bzrlib.plugins.svn.mapping import escape_svn_path
 
 def get_local_changes(paths, branch, mapping, generate_revid, 
                       get_children=None):
+    """Obtain all of the changes relative to a particular path
+    (usually a branch path).
+
+    :param paths: Changes
+    :param branch: Path under which to select changes
+    :parma mapping: Mapping to use to determine what are valid branch paths
+    :param generate_revid: Function for generating revision id from svn revnum
+    :param get_children: Function for obtaining the children of a path
+    """
     new_paths = {}
-    for p in sorted(paths.keys()):
+    for p in sorted(paths.keys(), reverse=False):
         if not changes.path_is_child(branch, p):
             continue
         data = paths[p]
@@ -60,15 +70,20 @@ def get_local_changes(paths, branch, mapping, generate_revid,
 FILEIDMAP_VERSION = 1
 
 def simple_apply_changes(new_file_id, changes, find_children=None):
-    """Simple function that can apply file id changes.
+    """Simple function that generates a dictionary with file id changes.
     
     Does not track renames. """
     map = {}
-    for p in sorted(changes.keys()):
+    for p in sorted(changes.keys(), reverse=False):
         data = changes[p]
 
+        inv_p = p.decode("utf-8")
+        if data[0] in ('D', 'R'):
+            map[inv_p] = None
+            for p in map:
+                if p.startswith("%s/" % inv_p):
+                    map[p] = None
         if data[0] in ('A', 'R'):
-            inv_p = p.decode("utf-8")
             map[inv_p] = new_file_id(inv_p)
 
             if data[1] is not None:
@@ -173,7 +188,14 @@ class FileIdMap(object):
             if changes[p][0] == 'M' and not idmap.has_key(p):
                 idmap[p] = map[p][0]
 
-        map.update(dict([(x, (str(idmap[x]), revid)) for x in idmap]))
+        for x in sorted(idmap.keys()):
+            if idmap[x] is None:
+                del map[x]
+                for p in map.keys():
+                    if p.startswith("%s/" % x):
+                        del map[p]
+            else:
+                map[x] = (str(idmap[x]), revid)
 
         # Mark all parent paths as changed
         for p in idmap:
@@ -189,7 +211,8 @@ class FileIdMap(object):
 class CachingFileIdMap(object):
     """A file id map that uses a cache."""
     def __init__(self, cache_transport, actual):
-        self.idmap_knit = make_file_knit("fileidmap-v%d" % FILEIDMAP_VERSION, cache_transport, 0644, create=True)
+        mapper = ConstantMapper("fileidmap-v%d" % FILEIDMAP_VERSION)
+        self.idmap_knit = make_file_factory(True, mapper)(cache_transport)
         self.actual = actual
         self.apply_changes = actual.apply_changes
         self.repos = actual.repos
@@ -202,16 +225,16 @@ class CachingFileIdMap(object):
             assert isinstance(id, str)
             assert isinstance(created_revid, str)
 
-        self.idmap_knit.add_lines_with_ghosts(revid, parent_revids, 
+        self.idmap_knit.add_lines((revid,), [(r, ) for r in parent_revids], 
                 ["%s\t%s\t%s\n" % (urllib.quote(filename.encode("utf-8")), urllib.quote(_map[filename][0]), 
                                         urllib.quote(_map[filename][1])) for filename in sorted(_map.keys())])
 
     def load(self, revid):
         map = {}
-        for line in self.idmap_knit.get_lines(revid):
+        for ((create_revid,), line) in self.idmap_knit.annotate((revid,)):
             (filename, id, create_revid) = line.rstrip("\n").split("\t", 3)
             map[urllib.unquote(filename).decode("utf-8")] = (urllib.unquote(id), urllib.unquote(create_revid))
-            assert isinstance(map[urllib.unquote(filename)][0], str)
+            assert isinstance(map[urllib.unquote(filename).decode("utf-8")][0], str)
 
         return map
 

@@ -17,6 +17,7 @@
 
 from bzrlib.repository import Repository
 from bzrlib.tests.blackbox import ExternalBase
+from bzrlib.tests import KnownFailure
 from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
@@ -41,6 +42,70 @@ class TestBranch(ExternalBase, TestCaseWithSubversionRepository):
     def test_log_empty(self):
         repos_url = self.make_repository('d')
         self.run_bzr('log %s' % repos_url)
+
+    def test_info_verbose(self):
+        repos_url = self.make_repository('d')
+        self.run_bzr('info -v %s' % repos_url)
+
+    def test_push(self):
+        repos_url = self.make_repository('d')
+        
+        dc = self.get_commit_editor(repos_url)
+        dc.add_file("foo").modify()
+        dc.close()
+
+        self.run_bzr("branch %s dc" % repos_url)
+        self.build_tree({"dc/foo": "blaaaa"})
+        self.run_bzr("commit -m msg dc")
+        self.run_bzr("push -d dc %s" % repos_url)
+        self.check_output("", "status dc")
+
+    def test_dpush(self):
+        repos_url = self.make_repository('d')
+        
+        dc = self.get_commit_editor(repos_url)
+        dc.add_file("foo").modify()
+        dc.close()
+
+        self.run_bzr("branch %s dc" % repos_url)
+        self.build_tree({"dc/foo": "blaaaa"})
+        self.run_bzr("commit -m msg dc")
+        self.run_bzr("dpush -d dc %s" % repos_url)
+        self.check_output("", "status dc")
+
+    def test_dpush_new(self):
+        repos_url = self.make_repository('d')
+        
+        dc = self.get_commit_editor(repos_url)
+        dc.add_file("foo").modify()
+        dc.close()
+
+        self.run_bzr("branch %s dc" % repos_url)
+        self.build_tree({"dc/foofile": "blaaaa"})
+        self.run_bzr("add dc/foofile")
+        self.run_bzr("commit -m msg dc")
+        self.run_bzr("dpush -d dc %s" % repos_url)
+        self.check_output("", "status dc")
+
+    def test_dpush_wt_diff(self):
+        raise KnownFailure
+        repos_url = self.make_repository('d')
+        
+        dc = self.get_commit_editor(repos_url)
+        dc.add_file("foo").modify()
+        dc.close()
+
+        self.run_bzr("branch %s dc" % repos_url)
+        self.build_tree({"dc/foofile": "blaaaa"})
+        self.run_bzr("add dc/foofile")
+        self.run_bzr("commit -m msg dc")
+        self.build_tree({"dc/foofile": "blaaaal"})
+        self.run_bzr("dpush -d dc %s" % repos_url)
+        self.check_output('modified:\n  foofile\n', "status dc")
+
+    def test_info_workingtree(self):
+        repos_url = self.make_client('d', 'dc')
+        self.run_bzr('info -v dc')
 
     def test_dumpfile(self):
         filename = os.path.join(self.test_dir, "dumpfile")
@@ -203,19 +268,19 @@ Node-copyfrom-path: x
 
 
     def test_list(self):
-        repos_url = self.make_client("a", "dc")
-        self.build_tree({'dc/foo': "test", 'dc/bla': "ha"})
-        self.client_add("dc/foo")
-        self.client_add("dc/bla")
-        self.client_commit("dc", "Msg")
+        repos_url = self.make_repository("a")
+        dc = self.get_commit_editor(repos_url)
+        dc.add_file("foo").modify("test")
+        dc.add_file("bla").modify("ha")
+        dc.close()
         self.check_output("a/bla\na/foo\n", "ls a")
 
     def test_info_remote(self):
-        repos_url = self.make_client("a", "dc")
-        self.build_tree({'dc/foo': "test", 'dc/bla': "ha"})
-        self.client_add("dc/foo")
-        self.client_add("dc/bla")
-        self.client_commit("dc", "Msg")
+        repos_url = self.make_repository("a")
+        dc = self.get_commit_editor(repos_url)
+        dc.add_file("foo").modify("test")
+        dc.add_file("bla").modify("ha")
+        dc.close()
         self.check_output(
                 "Repository branch (format: subversion)\nLocation:\n  shared repository: a\n  repository branch: a\n", 'info a')
 

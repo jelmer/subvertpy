@@ -26,9 +26,9 @@
 
 typedef struct {
 	PyObject_HEAD
-    const svn_delta_editor_t *editor;
-    void *baton;
-    apr_pool_t *pool;
+	const svn_delta_editor_t *editor;
+	void *baton;
+	apr_pool_t *pool;
 	void (*done_cb) (void *baton);
 	void *done_baton;
 } EditorObject;
@@ -39,7 +39,7 @@ PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_p
 	if (obj == NULL)
 		return NULL;
 	obj->editor = editor;
-    obj->baton = baton;
+	obj->baton = baton;
 	obj->pool = pool;
 	obj->done_cb = done_cb;
 	obj->done_baton = done_baton;
@@ -53,13 +53,89 @@ static void py_editor_dealloc(PyObject *self)
 	PyObject_Del(self);
 }
 
+static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	char *kwnames[] = { "window", NULL };
+	svn_txdelta_window_t window;
+	TxDeltaWindowHandlerObject *obj = (TxDeltaWindowHandlerObject *)self;
+	PyObject *py_window, *py_ops, *py_new_data;
+	int i;
+	svn_string_t new_data;
+	svn_txdelta_op_t *ops;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwnames, &py_window))
+		return NULL;
+
+	if (py_window == Py_None) {
+		if (!check_error(obj->txdelta_handler(NULL, obj->txdelta_baton)))
+			return NULL;
+		Py_RETURN_NONE;
+	}
+
+	if (!PyArg_ParseTuple(py_window, "LIIiOO", &window.sview_offset, &window.sview_len, 
+											&window.tview_len, &window.src_ops, &py_ops, &py_new_data))
+		return NULL;
+
+	if (py_new_data == Py_None) {
+		window.new_data = NULL;
+	} else {
+		new_data.data = PyString_AsString(py_new_data);
+		new_data.len = PyString_Size(py_new_data);
+		window.new_data = &new_data;
+	}
+
+	if (!PyList_Check(py_ops)) {
+		PyErr_SetString(PyExc_TypeError, "ops not a list");
+		return NULL;
+	}
+
+	window.num_ops = PyList_Size(py_ops);
+
+	window.ops = ops = malloc(sizeof(svn_txdelta_op_t) * window.num_ops);
+
+	for (i = 0; i < window.num_ops; i++) {
+		if (!PyArg_ParseTuple(PyList_GetItem(py_ops, i), "iII", &ops[i].action_code, &ops[i].offset, &ops[i].length)) {
+			free(ops);
+			return NULL;
+		}
+	}
+
+	if (!check_error(obj->txdelta_handler(&window, obj->txdelta_baton))) {
+		free(ops);
+		return NULL;
+	}
+
+	free(ops);
+
+	Py_RETURN_NONE;
+}
 
 PyTypeObject TxDeltaWindowHandler_Type = {
-	PyObject_HEAD_INIT(&PyType_Type) 0,
-	.tp_basicsize = sizeof(TxDeltaWindowHandlerObject),
-	.tp_name = "ra.TxDeltaWindowHandler",
-	.tp_call = NULL, /* FIXME */
-	.tp_dealloc = (destructor)PyObject_Del
+	PyObject_HEAD_INIT(NULL) 0,
+	"ra.TxDeltaWindowHandler", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(TxDeltaWindowHandlerObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	(destructor)PyObject_Del, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	txdelta_call, /*	ternaryfunc tp_call;	*/
+	
 };
 
 static PyObject *py_file_editor_apply_textdelta(PyObject *self, PyObject *args)
@@ -119,7 +195,7 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "|z", &c_checksum))
 		return NULL;
 	if (!check_error(editor->editor->close_file(editor->baton, c_checksum, 
-                    editor->pool)))
+					editor->pool)))
 		return NULL;
 	Py_RETURN_NONE;
 }
@@ -132,11 +208,63 @@ static PyMethodDef py_file_editor_methods[] = {
 };
 
 PyTypeObject FileEditor_Type = { 
-	PyObject_HEAD_INIT(&PyType_Type) 0,
-	.tp_name = "ra.FileEditor",
-	.tp_basicsize = sizeof(EditorObject),
-	.tp_methods = py_file_editor_methods,
-	.tp_dealloc = (destructor)PyObject_Del,
+	PyObject_HEAD_INIT(NULL) 0, 
+	"ra.FileEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(EditorObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	(destructor)PyObject_Del, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+	
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+	
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+	
+	NULL, /*	const char *tp_doc;  Documentation string */
+	
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+	
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+	
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+	
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+	
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+	
+	/* Attribute descriptor and subclassing stuff */
+	py_file_editor_methods, /*	struct PyMethodDef *tp_methods;	*/
 };
 
 static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
@@ -154,7 +282,7 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!check_error(editor->editor->delete_entry(path, revision, editor->baton,
-                                             editor->pool)))
+											 editor->pool)))
 		return NULL;
 
 	Py_RETURN_NONE;
@@ -177,10 +305,10 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!check_error(editor->editor->add_directory(path, editor->baton,
-                    copyfrom_path, copyfrom_rev, editor->pool, &child_baton)))
+					copyfrom_path, copyfrom_rev, editor->pool, &child_baton)))
 		return NULL;
 
-    return new_editor_object(editor->editor, child_baton, editor->pool, 
+	return new_editor_object(editor->editor, child_baton, editor->pool, 
 							 &DirectoryEditor_Type, NULL, NULL);
 }
 
@@ -200,10 +328,10 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!check_error(editor->editor->open_directory(path, editor->baton,
-                    base_revision, editor->pool, &child_baton)))
+					base_revision, editor->pool, &child_baton)))
 		return NULL;
 
-    return new_editor_object(editor->editor, child_baton, editor->pool, 
+	return new_editor_object(editor->editor, child_baton, editor->pool, 
 							 &DirectoryEditor_Type, NULL, NULL);
 }
 
@@ -224,7 +352,7 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 	p_c_value = &c_value;
 
 	if (!check_error(editor->editor->change_dir_prop(editor->baton, name, 
-                    p_c_value, editor->pool)))
+					p_c_value, editor->pool)))
 		return NULL;
 
 	Py_RETURN_NONE;
@@ -239,7 +367,7 @@ static PyObject *py_dir_editor_close(PyObject *self)
 		return NULL;
 	}
 
-    if (!check_error(editor->editor->close_directory(editor->baton, 
+	if (!check_error(editor->editor->close_directory(editor->baton, 
 													 editor->pool)))
 		return NULL;
 
@@ -259,9 +387,9 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
-    
+	
 	if (!check_error(editor->editor->absent_directory(path, editor->baton, 
-                    editor->pool)))
+					editor->pool)))
 		return NULL;
 
 	Py_RETURN_NONE;
@@ -283,7 +411,7 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!check_error(editor->editor->add_file(path, editor->baton, copy_path,
-                    copy_rev, editor->pool, &file_baton)))
+					copy_rev, editor->pool, &file_baton)))
 		return NULL;
 
 	return new_editor_object(editor->editor, file_baton, editor->pool,
@@ -306,7 +434,7 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!check_error(editor->editor->open_file(path, editor->baton, 
-                    base_revision, editor->pool, &file_baton)))
+					base_revision, editor->pool, &file_baton)))
 		return NULL;
 
 	return new_editor_object(editor->editor, file_baton, editor->pool,
@@ -347,11 +475,64 @@ static PyMethodDef py_dir_editor_methods[] = {
 };
 
 PyTypeObject DirectoryEditor_Type = { 
-	PyObject_HEAD_INIT(&PyType_Type) 0,
-	.tp_name = "ra.DirEditor",
-	.tp_basicsize = sizeof(EditorObject),
-	.tp_methods = py_dir_editor_methods,
-	.tp_dealloc = (destructor)PyObject_Del,
+	PyObject_HEAD_INIT(NULL) 0,
+	"ra.DirEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(EditorObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	(destructor)PyObject_Del, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+	
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+	
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+	
+	NULL, /*	const char *tp_doc;  Documentation string */
+	
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+	
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+	
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+	
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+	
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+	
+	/* Attribute descriptor and subclassing stuff */
+	py_dir_editor_methods, /*	struct PyMethodDef *tp_methods;	*/
+	
 };
 
 static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
@@ -368,12 +549,12 @@ static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!check_error(editor->editor->set_target_revision(editor->baton,
-                    target_revision, editor->pool)))
+					target_revision, editor->pool)))
 		return NULL;
 
 	Py_RETURN_NONE;
 }
-    
+	
 static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 {
 	svn_revnum_t base_revision=-1;
@@ -388,8 +569,8 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "|l:open_root", &base_revision))
 		return NULL;
 
-    if (!check_error(editor->editor->open_root(editor->baton, base_revision,
-                    editor->pool, &root_baton)))
+	if (!check_error(editor->editor->open_root(editor->baton, base_revision,
+					editor->pool, &root_baton)))
 		return NULL;
 
 	return new_editor_object(editor->editor, root_baton, editor->pool,
@@ -441,11 +622,63 @@ static PyMethodDef py_editor_methods[] = {
 };
 
 PyTypeObject Editor_Type = { 
-	PyObject_HEAD_INIT(&PyType_Type) 0,
-	.tp_name = "ra.Editor",
-	.tp_basicsize = sizeof(EditorObject),
-	.tp_methods = py_editor_methods,
-	.tp_dealloc = py_editor_dealloc,
+	PyObject_HEAD_INIT(NULL) 0,
+	"ra.Editor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(EditorObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	py_editor_dealloc, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+	
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+	
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+	
+	NULL, /*	const char *tp_doc;  Documentation string */
+	
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+	
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+	
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+	
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+	
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+	
+	/* Attribute descriptor and subclassing stuff */
+	py_editor_methods, /*	struct PyMethodDef *tp_methods;	*/
 };
 
 

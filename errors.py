@@ -25,10 +25,6 @@ import urllib
 from bzrlib.plugins.svn import core
 
 
-class InvalidExternalsDescription(BzrError):
-    _fmt = """Unable to parse externals description."""
-
-
 ERR_UNKNOWN_HOSTNAME = 670002
 ERR_UNKNOWN_HOSTNAME = 670002
 ERR_RA_SVN_CONNECTION_CLOSED = 210002
@@ -58,6 +54,7 @@ ERR_WC_UNSUPPORTED_FORMAT = 155021
 ERR_UNKNOWN_CAPABILITY = 200026
 ERR_AUTHN_NO_PROVIDER = 215001
 ERR_RA_DAV_RELOCATED = 175011
+ERR_FS_NOT_FILE = 160017
 
 
 class NotSvnBranchPath(NotBranchError):

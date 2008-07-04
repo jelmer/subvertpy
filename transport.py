@@ -28,7 +28,7 @@ from bzrlib.plugins.svn import properties
 from bzrlib.plugins.svn.auth import create_auth_baton
 from bzrlib.plugins.svn.client import get_config
 from bzrlib.plugins.svn.core import SubversionException
-from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY, ERR_RA_DAV_RELOCATED
+from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY, ERR_RA_DAV_RELOCATED, RedirectRequested
 from bzrlib.plugins.svn.ra import DIRENT_KIND, RemoteAccess
 import urlparse
 import urllib
@@ -51,12 +51,15 @@ def get_svn_ra_transport(bzr_transport):
     if isinstance(bzr_transport, SvnRaTransport):
         return bzr_transport
 
-    try:
-        return SvnRaTransport(bzr_transport.base)
-    except SubversionException, (msg, num):
-        if num == ERR_RA_DAV_RELOCATED:
-            raise RedirectRequested(url, msg.split("'")[1], is_permanent=True)
-        raise
+    ra_transport = getattr(bzr_transport, "_svn_ra", None)
+    if ra_transport is not None:
+        return ra_transport
+
+    # Save _svn_ra transport here so we don't have to connect again next time
+    # we try to use bzr svn on this transport
+    ra_transport = SvnRaTransport(bzr_transport.base)
+    bzr_transport._svn_ra = ra_transport
+    return ra_transport
 
 
 def _url_unescape_uri(url):
@@ -91,12 +94,13 @@ def Connection(url):
         ret = ra.RemoteAccess(url.encode('utf8'), 
                 auth=create_auth_baton(url),
                 client_string_func=get_client_string)
-        # FIXME: Callbacks
     except SubversionException, (msg, num):
         if num in (ERR_RA_SVN_REPOS_NOT_FOUND,):
             raise NoSvnRepositoryPresent(url=url)
         if num == ERR_BAD_URL:
             raise InvalidURL(url)
+        if num == ERR_RA_DAV_RELOCATED:
+            raise RedirectRequested(url, msg.split("'")[1], is_permanent=True)
         raise
 
     from bzrlib.plugins.svn import lazy_check_versions
@@ -142,7 +146,7 @@ class SvnRaTransport(Transport):
     This implements just as much of Transport as is necessary 
     to fool Bazaar. """
     @convert_svn_error
-    def __init__(self, url="", _backing_url=None, pool=None):
+    def __init__(self, url="", _backing_url=None, pool=None, _uuid=None, _repos_root=None):
         bzr_url = url
         self.svn_url = bzr_to_svn_url(url)
         # _backing_url is an evil hack so the root directory of a repository 
@@ -160,6 +164,8 @@ class SvnRaTransport(Transport):
         else:
             self.connections = pool
 
+        self._repos_root = _repos_root
+        self._uuid = _uuid
         self.capabilities = {}
 
         from bzrlib.plugins.svn import lazy_check_versions
@@ -188,12 +194,14 @@ class SvnRaTransport(Transport):
         raise TransportNotPossible('stat not supported on Subversion')
 
     def get_uuid(self):
-        conn = self.get_connection()
-        self.mutter('svn get-uuid')
-        try:
-            return conn.get_uuid()
-        finally:
-            self.add_connection(conn)
+        if self._uuid is None:
+            conn = self.get_connection()
+            self.mutter('svn get-uuid')
+            try:
+                return conn.get_uuid()
+            finally:
+                self.add_connection(conn)
+        return self._uuid
 
     def get_repos_root(self):
         root = self.get_svn_repos_root()
@@ -203,12 +211,14 @@ class SvnRaTransport(Transport):
         return root
 
     def get_svn_repos_root(self):
-        conn = self.get_connection()
-        self.mutter('svn get-repos-root')
-        try:
-            return conn.get_repos_root()
-        finally:
-            self.add_connection(conn)
+        if self._repos_root is None:
+            self.mutter('svn get-repos-root')
+            conn = self.get_connection()
+            try:
+                self._repos_root = conn.get_repos_root()
+            finally:
+                self.add_connection(conn)
+        return self._repos_root
 
     def get_latest_revnum(self):
         conn = self.get_connection()
@@ -221,7 +231,6 @@ class SvnRaTransport(Transport):
     def iter_log(self, paths, from_revnum, to_revnum, limit, discover_changed_paths, 
                  strict_node_history, include_merged_revisions, revprops):
         assert paths is None or isinstance(paths, list)
-        assert paths is None or all([isinstance(x, str) for x in paths])
         assert isinstance(from_revnum, int) and isinstance(to_revnum, int)
         assert isinstance(limit, int)
         from threading import Thread, Semaphore
@@ -234,8 +243,9 @@ class SvnRaTransport(Transport):
                 self.args = args
                 self.kwargs = kwargs
                 self.pending = []
-                self.conn = None
+                self.conn = self.transport.get_connection()
                 self.semaphore = Semaphore(0)
+                self.busy = False
 
             def next(self):
                 self.semaphore.acquire()
@@ -248,17 +258,20 @@ class SvnRaTransport(Transport):
                 return ret
 
             def run(self):
-                assert self.conn is None, "already running"
+                assert not self.busy, "already running"
+                self.busy = True
                 def rcvr(*args):
                     self.pending.append(args)
                     self.semaphore.release()
-                self.conn = self.transport.get_connection()
                 try:
-                    self.conn.get_log(callback=rcvr, *self.args, **self.kwargs)
-                    self.pending.append(None)
-                except Exception, e:
-                    self.pending.append(e)
-                self.semaphore.release()
+                    try:
+                        self.conn.get_log(callback=rcvr, *self.args, **self.kwargs)
+                        self.pending.append(None)
+                    except Exception, e:
+                        self.pending.append(e)
+                finally:
+                    self.pending.append(Exception("Some exception was not handled"))
+                    self.semaphore.release()
 
         if paths is None:
             newpaths = None
@@ -272,7 +285,14 @@ class SvnRaTransport(Transport):
     def get_log(self, rcvr, paths, from_revnum, to_revnum, limit, discover_changed_paths, 
                 strict_node_history, include_merged_revisions, revprops):
         assert paths is None or isinstance(paths, list), "Invalid paths"
-        assert paths is None or all([isinstance(x, str) for x in paths])
+
+        all_true = True
+        for item in [isinstance(x, str) for x in paths]:
+            if not item:
+                all_true = False
+                break
+        
+        assert paths is None or all_true
 
         self.mutter('svn log -r%d:%d %r' % (from_revnum, to_revnum, paths))
 
@@ -310,6 +330,15 @@ class SvnRaTransport(Transport):
         self.mutter('svn get-dir -r%d %s' % (revnum, path))
         try:
             return conn.get_dir(path, revnum, kind)
+        finally:
+            self.add_connection(conn)
+
+    def get_file(self, path, stream, revnum):
+        path = self._request_path(path)
+        conn = self.get_connection()
+        self.mutter('svn get-file -r%d %s' % (revnum, path))
+        try:
+            return conn.get_file(path, stream, revnum)
         finally:
             self.add_connection(conn)
 
@@ -396,6 +425,14 @@ class SvnRaTransport(Transport):
         finally:
             self.add_connection(conn)
 
+    def get_locations(self, path, peg_revnum, revnums):
+        conn = self.get_connection()
+        self.mutter('svn get_locations -r%d %s (%r)' % (peg_revnum,path,revnums))
+        try:
+            return conn.get_locations(path, peg_revnum, revnums)
+        finally:
+            self.add_connection(conn)
+
     def get_commit_editor(self, revprops, done_cb=None, 
                           lock_token=None, keep_locks=False):
         conn = self._open_real_transport()
@@ -422,6 +459,7 @@ class SvnRaTransport(Transport):
         return self.PhonyLock() # FIXME
 
     def _is_http_transport(self):
+        return False
         return (self.svn_url.startswith("http://") or 
                 self.svn_url.startswith("https://"))
 
@@ -436,9 +474,11 @@ class SvnRaTransport(Transport):
     def clone(self, offset=None):
         """See Transport.clone()."""
         if offset is None:
-            return SvnRaTransport(self.base, pool=self.connections)
+            newurl = self.base
+        else:
+            newurl = urlutils.join(self.base, offset)
 
-        return SvnRaTransport(urlutils.join(self.base, offset), pool=self.connections)
+        return SvnRaTransport(newurl, pool=self.connections)
 
     def local_abspath(self, relpath):
         """See Transport.local_abspath()."""

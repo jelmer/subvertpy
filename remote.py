@@ -67,6 +67,9 @@ class SvnRemoteAccess(BzrDir):
             return SvnRepository(self, self.root_transport)
         raise NoSvnRepositoryPresent(self.root_transport.base)
 
+    def break_lock(self):
+        pass
+
     def find_repository(self):
         """Open the repository associated with this BzrDir.
         
@@ -115,27 +118,31 @@ class SvnRemoteAccess(BzrDir):
         :param stop_revision: Tip of new branch
         :return: Branch object
         """
-        from commit import push_new
-        if stop_revision is None:
-            stop_revision = source.last_revision()
-        target_branch_path = self.branch_path.strip("/")
-        repos = self.find_repository()
-        repos.lock_write()
+        from bzrlib.plugins.svn.commit import push_new
+        source.lock_read()
         try:
-            full_branch_url = urlutils.join(repos.transport.base, 
-                                            target_branch_path)
-            if repos.transport.check_path(target_branch_path,
-                repos.get_latest_revnum()) != core.NODE_NONE:
-                raise AlreadyBranchError(full_branch_url)
-            push_new(repos, target_branch_path, source, stop_revision)
+            if stop_revision is None:
+                stop_revision = source.last_revision()
+            target_branch_path = self.branch_path.strip("/")
+            repos = self.find_repository()
+            repos.lock_write()
+            try:
+                full_branch_url = urlutils.join(repos.transport.base, 
+                                                target_branch_path)
+                if repos.transport.check_path(target_branch_path,
+                    repos.get_latest_revnum()) != core.NODE_NONE:
+                    raise AlreadyBranchError(full_branch_url)
+                push_new(repos, target_branch_path, source, stop_revision)
+            finally:
+                repos.unlock()
+            branch = self.open_branch()
+            branch.lock_write()
+            try:
+                branch.pull(source, stop_revision=stop_revision)
+            finally:
+                branch.unlock()
         finally:
-            repos.unlock()
-        branch = self.open_branch()
-        branch.lock_write()
-        try:
-            branch.pull(source, stop_revision=stop_revision)
-        finally:
-            branch.unlock()
+            source.unlock()
         return branch
 
     def create_branch(self):
@@ -149,15 +156,15 @@ class SvnRemoteAccess(BzrDir):
         elif repos.get_latest_revnum() > 0:
             # Bail out if there are already revisions in this repository
             raise AlreadyBranchError(self.root_transport.base)
-        branch = SvnBranch(self.root_transport.base, repos, self.branch_path)
+        branch = SvnBranch(repos, self.branch_path)
         branch.bzrdir = self
         return branch
 
     def open_branch(self, unsupported=True):
         """See BzrDir.open_branch()."""
-        from branch import SvnBranch
+        from bzrlib.plugins.svn.branch import SvnBranch
         repos = self.find_repository()
-        branch = SvnBranch(self.root_transport.base, repos, self.branch_path)
+        branch = SvnBranch(repos, self.branch_path)
         branch.bzrdir = self
         return branch
 

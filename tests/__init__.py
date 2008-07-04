@@ -30,8 +30,9 @@ from bzrlib.urlutils import local_path_to_url
 from bzrlib.workingtree import WorkingTree
 
 from bzrlib.plugins.svn import properties, ra, repos
+from bzrlib.plugins.svn.delta import send_stream
 from bzrlib.plugins.svn.client import Client
-from bzrlib.plugins.svn.ra import Auth, RemoteAccess, txdelta_send_stream
+from bzrlib.plugins.svn.ra import Auth, RemoteAccess
 
 class TestFileEditor(object):
     def __init__(self, file):
@@ -45,7 +46,7 @@ class TestFileEditor(object):
         if contents is None:
             contents = osutils.rand_chars(100)
         txdelta = self.file.apply_textdelta()
-        txdelta_send_stream(StringIO(contents), txdelta)
+        send_stream(StringIO(contents), txdelta)
 
     def close(self):
         assert not self.is_closed
@@ -99,6 +100,10 @@ class TestDirEditor(object):
 
     def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
         self.close_children()
+        if copyfrom_path is not None:
+            copyfrom_path = urlutils.join(self.baseurl, copyfrom_path)
+        if copyfrom_path is not None and copyfrom_rev == -1:
+            copyfrom_rev = self.revnum
         child = TestFileEditor(self.dir.add_file(path, copyfrom_path, copyfrom_rev))
         self.children.append(child)
         return child
@@ -168,11 +173,6 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         self.client_ctx.checkout(repos_url, relpath, "HEAD") 
 
     @staticmethod
-    def create_checkout(branch, path, revision_id=None, lightweight=False):
-        return branch.create_checkout(path, revision_id=revision_id,
-                                          lightweight=lightweight)
-
-    @staticmethod
     def open_checkout(url):
         return WorkingTree.open(url)
 
@@ -197,10 +197,12 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
             return ret.values()[0]
 
     def client_get_revprop(self, url, revnum, name):
-        return self.client_ctx.revprop_get(name, url, revnum)[0]
+        r = ra.RemoteAccess(url)
+        return r.rev_proplist(revnum)[name]
 
     def client_set_revprop(self, url, revnum, name, value):
-        self.client_ctx.revprop_set(name, value, url, revnum, True)
+        r = ra.RemoteAccess(url)
+        r.change_rev_prop(revnum, name, value)
         
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.
@@ -222,22 +224,13 @@ class TestCaseWithSubversionRepository(TestCaseInTempDir):
         """
         self.client_ctx.add(relpath, recursive, False, False)
 
-    def revnum_to_opt_rev(self, revnum):
-        if revnum is None:
-            rev = "HEAD"
-        else:
-            assert isinstance(revnum, int)
-            rev = revnum
-        return rev
-
-    def client_log(self, path, start_revnum=None, stop_revnum=None):
-        assert isinstance(path, str)
+    def client_log(self, url, start_revnum, stop_revnum):
+        r = ra.RemoteAccess(url)
+        assert isinstance(url, str)
         ret = {}
         def rcvr(orig_paths, rev, revprops, has_children):
             ret[rev] = (orig_paths, revprops.get(properties.PROP_REVISION_AUTHOR), revprops.get(properties.PROP_REVISION_DATE), revprops.get(properties.PROP_REVISION_LOG))
-        self.client_ctx.log([path], rcvr, None, self.revnum_to_opt_rev(start_revnum),
-                       self.revnum_to_opt_rev(stop_revnum), 0,
-                       True, True)
+        r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True)
         return ret
 
     def client_delete(self, relpath):
@@ -336,6 +329,7 @@ def test_suite():
             'test_fileids', 
             'test_logwalker',
             'test_mapping',
+            'test_properties',
             'test_push',
             'test_ra',
             'test_radir',
@@ -348,6 +342,7 @@ def test_suite():
             'test_transport',
             'test_tree',
             'test_upgrade',
+            'test_versionedfiles',
             'test_wc',
             'test_workingtree',
             'test_blackbox']

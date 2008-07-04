@@ -27,13 +27,16 @@ class VersionTest(TestCase):
 class TestRemoteAccess(TestCaseWithSubversionRepository):
     def setUp(self):
         super(TestRemoteAccess, self).setUp()
-        self.repos_url = self.make_client("d", "dc")
+        self.repos_url = self.make_repository("d")
         self.ra = ra.RemoteAccess(self.repos_url)
 
+    def commit_editor(self):
+        return self.get_commit_editor(self.repos_url)
+
     def do_commit(self):
-        self.build_tree({'dc/foo': None})
-        self.client_add("dc/foo")
-        self.client_commit("dc", "msg")
+        dc = self.get_commit_editor(self.repos_url)
+        dc.add_dir("foo")
+        dc.close()
 
     def test_repr(self):
         self.assertEquals("RemoteAccess(%s)" % self.repos_url,
@@ -112,7 +115,58 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
         subdir.close()
         dir.close()
         editor.close()
+    
+    def test_get_file_revs(self):
+        cb = self.commit_editor()
+        cb.add_file("bar").modify("a")
+        cb.close()
 
+        cb = self.commit_editor()
+        f = cb.open_file("bar")
+        f.modify("b")
+        f.change_prop("bla", "bloe")
+        cb.close()
+        
+        rets = []
+
+        def handle(path, rev, props):
+            rets.append((path, rev, props))
+
+        self.ra.get_file_revs("bar", 1, 2, handle)
+
+        self.assertEquals(2, len(rets))
+        self.assertEquals(1, rets[0][1])
+        self.assertEquals(2, rets[1][1])
+        self.assertEquals("/bar", rets[0][0])
+        self.assertEquals("/bar", rets[1][0])
+
+    def test_get_locations_root(self):
+        self.assertEquals({0: "/"}, self.ra.get_locations("", 0, [0]))
+
+    def test_get_locations_dir(self):
+        cb = self.commit_editor()
+        cb.add_dir("bar")
+        cb.close()
+
+        cb = self.commit_editor()
+        cb.add_dir("bla", "bar", 1)
+        cb.close()
+
+        cb = self.commit_editor()
+        cb.delete("bar")
+        cb.close()
+
+        self.assertEquals({1: "/bar", 2: "/bla"}, 
+                          self.ra.get_locations("bla", 2, [1,2]))
+
+        self.assertEquals({1: "/bar", 2: "/bar"}, 
+                          self.ra.get_locations("bar", 1, [1,2]))
+
+        self.assertEquals({1: "/bar", 2: "/bar"}, 
+                          self.ra.get_locations("bar", 2, [1,2]))
+
+        self.assertEquals({1: "/bar", 2: "/bla", 3: "/bla"}, 
+                          self.ra.get_locations("bla", 3, [1,2,3]))
 
 class AuthTests(TestCase):
     def test_not_registered(self):
@@ -120,31 +174,31 @@ class AuthTests(TestCase):
         self.assertRaises(core.SubversionException, auth.credentials, "svn.simple", "MyRealm")
 
     def test_simple(self):
-        auth = ra.Auth([ra.get_simple_prompt_provider(lambda realm, uname, may_save: ('foo', "geheim", 0), 0)])
+        auth = ra.Auth([ra.get_simple_prompt_provider(lambda realm, uname, may_save: ("foo", "geheim", False), 0)])
         creds = auth.credentials("svn.simple", "MyRealm")
         self.assertEquals(("foo", "geheim", 0), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_username(self):
-        auth = ra.Auth([ra.get_username_prompt_provider(lambda realm, may_save: ("somebody", 0), 0)])
+        auth = ra.Auth([ra.get_username_prompt_provider(lambda realm, may_save: ("somebody", False), 0)])
         creds = auth.credentials("svn.username", "MyRealm")
         self.assertEquals(("somebody", 0), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_client_cert(self):
-        auth = ra.Auth([ra.get_ssl_client_cert_prompt_provider(lambda realm, may_save: ("filename", 0), 0)])
+        auth = ra.Auth([ra.get_ssl_client_cert_prompt_provider(lambda realm, may_save: ("filename", False), 0)])
         creds = auth.credentials("svn.ssl.client-cert", "MyRealm")
-        self.assertEquals(("filename", 0), creds.next())
+        self.assertEquals(("filename", False), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_client_cert_pw(self):
-        auth = ra.Auth([ra.get_ssl_client_cert_pw_prompt_provider(lambda realm, may_save: ("supergeheim", 0), 0)])
+        auth = ra.Auth([ra.get_ssl_client_cert_pw_prompt_provider(lambda realm, may_save: ("supergeheim", False), 0)])
         creds = auth.credentials("svn.ssl.client-passphrase", "MyRealm")
-        self.assertEquals(("supergeheim", 0), creds.next())
+        self.assertEquals(("supergeheim", False), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_server_trust(self):
-        auth = ra.Auth([ra.get_ssl_server_trust_prompt_provider(lambda realm, failures, certinfo, may_save: (42, 0))])
+        auth = ra.Auth([ra.get_ssl_server_trust_prompt_provider(lambda realm, failures, certinfo, may_save: (42, False))])
         auth.set_parameter("svn:auth:ssl:failures", 23)
         creds = auth.credentials("svn.ssl.server", "MyRealm")
         self.assertEquals((42, 0), creds.next())
@@ -154,7 +208,7 @@ class AuthTests(TestCase):
         self.i = 0
         def inc_foo(realm, may_save):
             self.i += 1
-            return ("somebody%d" % self.i, 0)
+            return ("somebody%d" % self.i, False)
         auth = ra.Auth([ra.get_username_prompt_provider(inc_foo, 2)])
         creds = auth.credentials("svn.username", "MyRealm")
         self.assertEquals(("somebody1", 0), creds.next())

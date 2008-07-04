@@ -16,7 +16,21 @@ bzr-svn 0.4.11    UNRELEASED
 
      * Crash bug trying to access sites that use self-signed certificates. (#238529)
 
+     * Username and password prompting will now always work.
+
    * Now uses absolute imports and no longer adds plugin directory to the system path.
+
+   * Basic support for stacked branches.
+
+   * Avoid reopening connections to branch and repository when finding branches. (#243749)
+
+  FEATURES
+  
+   * Add new "dpush" command that works similar to git-svn's dcommit.
+
+   * Support proper Bazaar tags. (#81102)
+
+   * Set mergeinfo properties when pushing merges. (write part of #131323)
 
   BUG FIXES
 
@@ -57,6 +71,11 @@ bzr-svn 0.4.11    UNRELEASED
    * New function for finding path children that's faster and more correct. (#240954)
 
    * Support cloning bzr-svn branches (will clone to rich-root-pack). (#229819)
+
+   * Fix inconsistent revision iteration when branches' parents were moved but 
+     not changed. (#237901)
+
+   * Avoid assumption that a revision can only occur in one branch. (#208566)
 
 bzr-svn 0.4.10  2008-05-12
 
