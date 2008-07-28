@@ -22,7 +22,7 @@ from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn.cache import CacheTable
 from bzrlib.plugins.svn.core import SubversionException
-from bzrlib.plugins.svn.errors import InvalidPropertyValue, ERR_FS_NO_SUCH_REVISION, ERR_FS_NOT_DIRECTORY
+from bzrlib.plugins.svn.errors import InvalidPropertyValue, ERR_FS_NO_SUCH_REVISION, ERR_FS_NOT_DIRECTORY, InvalidBzrSvnRevision
 from bzrlib.plugins.svn.mapping import (parse_revision_id, BzrSvnMapping, 
                      SVN_PROP_BZR_REVISION_ID, parse_revid_property)
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
@@ -64,7 +64,7 @@ class RevidMap(object):
 
         for entry_revid, branch, revno, mapping in self.discover_revids(layout, 0, self.repos.get_latest_revnum()):
             if revid == entry_revid:
-                return self.bisect_revid_revnum(revid, branch, revno)
+                return self.bisect_revid_revnum(revid, branch, 0, revno)
         raise NoSuchRevision(self, revid)
 
     def discover_revids(self, layout, from_revnum, to_revnum):
@@ -92,10 +92,10 @@ class RevidMap(object):
             for ((entry_revno, entry_revid), scheme) in revids:
                 yield (entry_revid, branch, revno, BzrSvnMappingv3FileProps(BranchingScheme.find_scheme(scheme)))
 
-    def bisect_revid_revnum(self, revid, branch_path, max_revnum):
+    def bisect_revid_revnum(self, revid, branch_path, min_revnum, max_revnum):
         # Find the branch property between min_revnum and max_revnum that 
         # added revid
-        for revmeta in self.repos.iter_reverse_branch_changes(branch_path, max_revnum):
+        for revmeta in self.repos.iter_reverse_branch_changes(branch_path, max_revnum, min_revnum):
             for propname, propvalue in revmeta.fileprops.items():
                 if not propname.startswith(SVN_PROP_BZR_REVISION_ID):
                     continue
@@ -112,7 +112,7 @@ class RevidMap(object):
                             scheme.is_branch(revmeta.branch_path))
                     return (revmeta.branch_path, revmeta.revnum, BzrSvnMappingv3FileProps(scheme))
 
-        raise AssertionError("Revision id %s was added incorrectly" % revid)
+        raise InvalidBzrSvnRevision(revid)
 
 
 class CachingRevidMap(object):
@@ -129,6 +129,7 @@ class CachingRevidMap(object):
         revid = self.actual.get_revision_id(revnum, path, mapping, changed_fileprops, revprops)
 
         self.cache.insert_revid(revid, path, revnum, revnum, str(mapping.scheme))
+        self.cache.commit_conditionally()
 
         return revid
 
@@ -168,10 +169,13 @@ class CachingRevidMap(object):
                 # check again.
                 raise e
             found = False
+            revid_seen = set()
             for entry_revid, branch, revno, mapping in self.actual.discover_revids(layout, self.cache.last_revnum_checked(str(layout)), last_revnum):
                 if entry_revid == revid:
                     found = True
-                self.cache.insert_revid(entry_revid, branch, 0, revno, str(mapping.scheme))
+                if entry_revid not in revid_seen:
+                    self.cache.insert_revid(entry_revid, branch, 0, revno, str(mapping.scheme))
+                    revid_seen.add(entry_revid)
                 
             # We've added all the revision ids for this layout in the repository,
             # so no need to check again unless new revisions got added
@@ -181,7 +185,8 @@ class CachingRevidMap(object):
             (branch_path, min_revnum, max_revnum, scheme) = self.cache.lookup_revid(revid)
             assert isinstance(branch_path, str)
 
-        return self.actual.bisect_revid_revnum(revid, branch_path, max_revnum)
+        return self.actual.bisect_revid_revnum(revid, branch_path, min_revnum,
+                                               max_revnum)
 
 
 class RevisionIdMapCache(CacheTable):
@@ -199,6 +204,8 @@ class RevisionIdMapCache(CacheTable):
         create table if not exists revids_seen (scheme text, max_revnum int);
         create unique index if not exists scheme on revids_seen (scheme);
         """)
+        # Revisions ids are quite expensive
+        self._commit_interval = 100
 
     def set_last_revnum_checked(self, layout, revnum):
         """Remember the latest revision number that has been checked
@@ -208,6 +215,7 @@ class RevisionIdMapCache(CacheTable):
         :param revnum: Revision number.
         """
         self.cachedb.execute("replace into revids_seen (scheme, max_revnum) VALUES (?, ?)", (layout, revnum))
+        self.commit_conditionally()
 
     def last_revnum_checked(self, layout):
         """Retrieve the latest revision number that has been checked 

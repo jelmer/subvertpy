@@ -56,23 +56,50 @@ def parse_externals_description(base_url, val):
               as value. revnum is the revision number and is 
               set to None if not applicable.
     """
+    def is_url(u):
+        return ("://" in u)
     ret = {}
     for l in val.splitlines():
         if l == "" or l[0] == "#":
             continue
-        pts = l.rsplit(None, 2) 
-        if len(pts) == 3:
-            if not pts[1].startswith("-r"):
+        pts = l.rsplit(None, 3) 
+        if len(pts) == 4:
+            if pts[0] == "-r": # -r X URL DIR
+                revno = int(pts[1])
+                path = pts[3]
+                relurl = pts[2]
+            elif pts[1] == "-r": # DIR -r X URL
+                revno = int(pts[2])
+                path = pts[0]
+                relurl = pts[3]
+            else:
                 raise InvalidExternalsDescription()
-            ret[pts[0]] = (int(pts[1][2:]), urlutils.join(base_url, pts[2]))
+        elif len(pts) == 3:
+            if pts[1].startswith("-r"): # DIR -rX URL
+                revno = int(pts[1][2:])
+                path = pts[0]
+                relurl = pts[2]
+            elif pts[0].startswith("-r"): # -rX URL DIR
+                revno = int(pts[0][2:])
+                path = pts[2]
+                relurl = pts[1]
+            else:
+                raise InvalidExternalsDescription()
         elif len(pts) == 2:
-            if pts[1].startswith("//"):
-                raise NotImplementedError("Relative to the scheme externals not yet supported")
-            if pts[1].startswith("^/"):
-                raise NotImplementedError("Relative to the repository root externals not yet supported")
-            ret[pts[0]] = (None, urlutils.join(base_url, pts[1]))
+            if not is_url(pts[0]):
+                relurl = pts[1]
+                path = pts[0]
+            else:
+                relurl = pts[0]
+                path = pts[1]
+            revno = None
         else:
             raise InvalidExternalsDescription()
+        if relurl.startswith("//"):
+            raise NotImplementedError("Relative to the scheme externals not yet supported")
+        if relurl.startswith("^/"):
+            raise NotImplementedError("Relative to the repository root externals not yet supported")
+        ret[path] = (revno, urlutils.join(base_url, relurl))
     return ret
 
 
@@ -83,21 +110,29 @@ def parse_mergeinfo_property(text):
         assert path.startswith("/")
         ret[path] = []
         for range in ranges.split(","):
+            if range[-1] == "*":
+                inheritable = False
+                range = range[:-1]
+            else:
+                inheritable = True
             try:
                 (start, end) = range.split("-", 1)
-                ret[path].append((int(start), int(end)))
+                ret[path].append((int(start), int(end), inheritable))
             except ValueError:
-                ret[path].append((int(range), int(range)))
+                ret[path].append((int(range), int(range), inheritable))
 
     return ret
 
 
 def generate_mergeinfo_property(merges):
-    def formatrange((start, end)):
+    def formatrange((start, end, inheritable)):
+        suffix = ""
+        if not inheritable:
+            suffix = "*"
         if start == end:
-            return "%d" % (start, )
+            return "%d%s" % (start, suffix)
         else:
-            return "%d-%d" % (start, end)
+            return "%d-%d%s" % (start, end, suffix)
     text = ""
     for (path, ranges) in merges.items():
         assert path.startswith("/")
@@ -106,33 +141,34 @@ def generate_mergeinfo_property(merges):
 
 
 def range_includes_revnum(ranges, revnum):
-    i = bisect.bisect(ranges, (revnum, revnum))
+    i = bisect.bisect(ranges, (revnum, revnum, True))
     if i == 0:
         return False
-    (start, end) = ranges[i-1]
+    (start, end, inheritable) = ranges[i-1]
     return (start <= revnum <= end)
 
 
-def range_add_revnum(ranges, revnum):
-    item = (revnum, revnum)
+def range_add_revnum(ranges, revnum, inheritable=True):
+    # TODO: Deal with inheritable
+    item = (revnum, revnum, inheritable)
     if len(ranges) == 0:
         ranges.append(item)
         return ranges
     i = bisect.bisect(ranges, item)
     if i > 0:
-        (start, end) = ranges[i-1]
+        (start, end, inh) = ranges[i-1]
         if (start <= revnum <= end):
             # already there
             return ranges
         if end == revnum-1:
             # Extend previous range
-            ranges[i-1] = (start, end+1)
+            ranges[i-1] = (start, end+1, inh)
             return ranges
     if i < len(ranges):
-        (start, end) = ranges[i]
+        (start, end, inh) = ranges[i]
         if start-1 == revnum:
             # Extend next range
-            ranges[i] = (start-1, end)
+            ranges[i] = (start-1, end, inh)
             return ranges
     ranges.insert(i, item)
     return ranges

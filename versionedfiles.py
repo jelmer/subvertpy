@@ -15,7 +15,7 @@
 
 from bzrlib import debug, osutils, urlutils
 from bzrlib.trace import mutter
-from bzrlib.versionedfile import FulltextContentFactory, VersionedFiles, AbsentContentFactory
+from bzrlib.versionedfile import FulltextContentFactory, VersionedFiles, AbsentContentFactory, VirtualVersionedFiles
 
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import ERR_FS_NOT_FILE
@@ -73,56 +73,13 @@ class SvnTexts(VersionedFiles):
     # TODO: annotate, get_sha1s, iter_lines_added_or_present_in_keys, keys
 
 
-class VirtualVersionedFiles(VersionedFiles):
-    def mutter(self, text, *args):
-        if "virtualvf" in debug.debug_flags:
-            mutter(text, *args)
-
-    def __init__(self, get_parent_map, get_lines):
-        self._get_parent_map = get_parent_map
-        self._get_lines = get_lines
-        
-    def check(self, progressbar=None):
-        return True
-
-    def add_mpdiffs(self, records):
-        raise NotImplementedError(self.add_mpdiffs)
-
-    def get_parent_map(self, keys):
-        self.mutter("get_parent_map(%r)" % keys)
-        return dict([((k,), tuple([(p,) for p in v])) for k,v in self._get_parent_map([k for (k,) in keys]).iteritems()])
-
-    def get_sha1s(self, keys):
-        self.mutter("get_sha1s(%r)" % keys)
-        ret = {}
-        for (k,) in keys:
-            lines = self._get_lines(k)
-            if lines is not None:
-                assert isinstance(lines, list)
-                ret[(k,)] = osutils.sha_strings(lines)
-        return ret
-
-    def get_record_stream(self, keys, ordering, include_delta_closure):
-        self.mutter("get_record_stream(%r)" % keys)
-        for (k,) in list(keys):
-            lines = self._get_lines(k)
-            if lines is not None:
-                assert isinstance(lines, list)
-                yield FulltextContentFactory((k,), None, 
-                        sha1=osutils.sha_strings(lines),
-                        text=''.join(lines))
-            else:
-                yield AbsentContentFactory((k,))
-
-
 class VirtualRevisionTexts(VirtualVersionedFiles):
     """Virtual revisions backend."""
     def __init__(self, repository):
         self.repository = repository
-        super(VirtualRevisionTexts, self).__init__(self.repository.get_parent_map, self.get_lines)
+        super(VirtualRevisionTexts, self).__init__(self.repository._make_parents_provider().get_parent_map, self.get_lines)
 
     def get_lines(self, key):
-        self.mutter("get revision text(%r)", key)
         return osutils.split_lines(self.repository.get_revision_xml(key))
 
     # TODO: annotate, iter_lines_added_or_present_in_keys, keys
@@ -132,7 +89,7 @@ class VirtualInventoryTexts(VirtualVersionedFiles):
     """Virtual inventories backend."""
     def __init__(self, repository):
         self.repository = repository
-        super(VirtualInventoryTexts, self).__init__(self.repository.get_parent_map, self.get_lines)
+        super(VirtualInventoryTexts, self).__init__(self.repository._make_parents_provider().get_parent_map, self.get_lines)
 
     def get_lines(self, key):
         return osutils.split_lines(self.repository.get_inventory_xml(key))
@@ -144,7 +101,7 @@ class VirtualSignatureTexts(VirtualVersionedFiles):
     """Virtual signatures backend."""
     def __init__(self, repository):
         self.repository = repository
-        super(VirtualSignatureTexts, self).__init__(self.repository.get_parent_map, self.get_lines)
+        super(VirtualSignatureTexts, self).__init__(self.repository._make_parents_provider().get_parent_map, self.get_lines)
 
     def get_lines(self, key):
         return osutils.split_lines(self.repository.get_signature_text(key))
