@@ -15,7 +15,7 @@
 
 """Maps between Subversion and Bazaar semantics."""
 
-from bzrlib import log, osutils, registry
+from bzrlib import foreign, log, osutils, registry
 from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
 
@@ -250,7 +250,7 @@ def parse_bzr_svn_revprops(props, rev):
             rev.properties[name[len(SVN_REVPROP_BZR_REVPROP_PREFIX):]] = value
 
 
-class BzrSvnMapping(object):
+class BzrSvnMapping(foreign.VcsMapping):
     """Class that maps between Subversion and Bazaar semantics."""
     experimental = False
     _warned_experimental = False
@@ -695,28 +695,7 @@ class BzrSvnMappingv4(BzrSvnMappingRevProps):
         return type(self) == type(other)
 
 
-class BzrSvnMappingRegistry(registry.Registry):
-    """Registry for the various Bzr<->Svn mappings."""
-    def register(self, key, factory, help):
-        """Register a mapping between Bazaar and Subversion semantics.
-
-        The factory must be a callable that takes one parameter: the key.
-        It must produce an instance of BzrSvnMapping when called.
-        """
-        registry.Registry.register(self, key, factory, help)
-
-    def set_default(self, key):
-        """Set the 'default' key to be a clone of the supplied key.
-
-        This method must be called once and only once.
-        """
-        self._set_default_key(key)
-
-    def get_default(self):
-        """Convenience function for obtaining the default mapping to use."""
-        return self.get(self._get_default_key())
-
-mapping_registry = BzrSvnMappingRegistry()
+mapping_registry = foreign.VcsMappingRegistry()
 mapping_registry.register('v1', BzrSvnMappingv1,
         'Original bzr-svn mapping format')
 mapping_registry.register('v2', BzrSvnMappingv2,
