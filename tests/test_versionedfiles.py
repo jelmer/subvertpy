@@ -14,7 +14,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from bzrlib import osutils
-from bzrlib.graph import DictParentsProvider
 from bzrlib.tests import TestCase
 
 from bzrlib.plugins.svn.versionedfiles import (SvnTexts, VirtualRevisionTexts, 
@@ -38,12 +37,15 @@ class BasicSvnTextsTests:
                           [])
 
 
-class SvnTextsTests(TestCase,BasicSvnTextsTests):
+class SvnTextsTests(TestCase, BasicSvnTextsTests):
     def setUp(self):
         self.texts = SvnTexts(self)
 
 
-class VirtualRevisionTextsTests(TestCase,BasicSvnTextsTests):
+class VirtualRevisionTextsTests(TestCase, BasicSvnTextsTests):
+    def _make_parents_provider(self):
+        return self
+
     def setUp(self):
         self.texts = VirtualRevisionTexts(self)
 
@@ -51,7 +53,10 @@ class VirtualRevisionTextsTests(TestCase,BasicSvnTextsTests):
         raise NotImplementedError
 
 
-class VirtualInventoryTextsTests(TestCase,BasicSvnTextsTests):
+class VirtualInventoryTextsTests(TestCase, BasicSvnTextsTests):
+    def _make_parents_provider(self):
+        return self
+
     def get_inventory_xml(self, key):
         return "FOO"
 
@@ -65,7 +70,10 @@ class VirtualInventoryTextsTests(TestCase,BasicSvnTextsTests):
         self.assertEquals({("A",): osutils.sha_strings(["FOO"])}, self.texts.get_sha1s([("A",)]))
 
 
-class VirtualSignatureTextsTests(TestCase,BasicSvnTextsTests):
+class VirtualSignatureTextsTests(TestCase, BasicSvnTextsTests):
+    def _make_parents_provider(self):
+        return self
+
     def setUp(self):
         self.texts = VirtualSignatureTexts(self)
 

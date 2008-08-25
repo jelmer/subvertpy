@@ -1,4 +1,5 @@
 # Copyright (C) 2006 Jelmer Vernooij <jelmer@samba.org>
+# -*- coding: utf-8 -*-
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,18 +19,16 @@
 import bzrlib
 from bzrlib import debug, urlutils
 from bzrlib.errors import (NoSuchFile, TransportNotPossible, 
-                           FileExists, NotLocalUrl, InvalidURL)
+                           FileExists, NotLocalUrl, InvalidURL, RedirectRequested)
 from bzrlib.trace import mutter, warning
 from bzrlib.transport import Transport
 
 import bzrlib.plugins.svn
-from bzrlib.plugins.svn import core, properties, ra
-from bzrlib.plugins.svn import properties
+from bzrlib.plugins.svn import ra
 from bzrlib.plugins.svn.auth import create_auth_baton
 from bzrlib.plugins.svn.client import get_config
 from bzrlib.plugins.svn.core import SubversionException
-from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY, ERR_RA_DAV_RELOCATED, RedirectRequested
-from bzrlib.plugins.svn.ra import DIRENT_KIND, RemoteAccess
+from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_DIRECTORY, ERR_RA_DAV_RELOCATED, ERR_RA_DAV_PATH_NOT_FOUND
 import urlparse
 import urllib
 
@@ -117,8 +116,18 @@ def Connection(url):
             raise NoSvnRepositoryPresent(url=url)
         if num == ERR_BAD_URL:
             raise InvalidURL(url)
+        if num == ERR_RA_DAV_PATH_NOT_FOUND:
+            raise NoSuchFile(url)
         if num == ERR_RA_DAV_RELOCATED:
-            raise RedirectRequested(url, msg.split("'")[1], is_permanent=True)
+            # Try to guess the new url
+            if "'" in msg:
+                new_url = msg.split("'")[1]
+            elif "«" in msg:
+                new_url = msg[msg.index("»")+2:msg.index("«")]
+            else:
+                new_url = None
+            raise RedirectRequested(source=url, target=new_url, 
+                                    is_permanent=True)
         raise
 
     from bzrlib.plugins.svn import lazy_check_versions
@@ -211,6 +220,9 @@ class SvnRaTransport(Transport):
         """See Transport.stat()."""
         raise TransportNotPossible('stat not supported on Subversion')
 
+    def put_file(self, name, file, mode=0):
+        raise TransportNotPossible("put_file not supported on Subversion")
+
     def get_uuid(self):
         if self._uuid is None:
             conn = self.get_connection()
@@ -296,7 +308,7 @@ class SvnRaTransport(Transport):
         else:
             newpaths = [self._request_path(path) for path in paths]
         
-        fetcher = logfetcher(self, paths=newpaths, start=from_revnum, end=to_revnum, limit=limit, discover_changed_paths=discover_changed_paths, strict_node_history=strict_node_history, include_merged_revisions=include_merged_revisions,revprops=revprops)
+        fetcher = logfetcher(self, paths=newpaths, start=from_revnum, end=to_revnum, limit=limit, discover_changed_paths=discover_changed_paths, strict_node_history=strict_node_history, include_merged_revisions=include_merged_revisions, revprops=revprops)
         fetcher.start()
         return iter(fetcher.next, None)
 
@@ -446,18 +458,11 @@ class SvnRaTransport(Transport):
 
     def get_locations(self, path, peg_revnum, revnums):
         conn = self.get_connection()
-        self.mutter('svn get_locations -r%d %s (%r)' % (peg_revnum,path,revnums))
+        self.mutter('svn get_locations -r%d %s (%r)' % (peg_revnum, path, revnums))
         try:
             return conn.get_locations(path, peg_revnum, revnums)
         finally:
             self.add_connection(conn)
-
-    @convert_svn_error
-    def get_commit_editor(self, revprops, done_cb=None, 
-                          lock_token=None, keep_locks=False):
-        conn = self._open_real_transport()
-        self.mutter('svn get-commit-editor %r' % (revprops,))
-        return conn.get_commit_editor(revprops, done_cb, lock_token, keep_locks)
 
     def listable(self):
         """See Transport.listable().

@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Access to stored Subversion basis trees."""
 
-from bzrlib import osutils, urlutils, ui
+from bzrlib import osutils, urlutils
 from bzrlib.branch import Branch
 from bzrlib.inventory import Inventory, InventoryDirectory, TreeReference
 from bzrlib.revision import CURRENT_REVISION
@@ -27,7 +27,7 @@ import md5
 from cStringIO import StringIO
 import urllib
 
-from bzrlib.plugins.svn import core, errors, properties, wc
+from bzrlib.plugins.svn import core, properties, wc
 from bzrlib.plugins.svn.delta import apply_txdelta_handler
 
 
@@ -72,6 +72,7 @@ class SvnRevisionTree(RevisionTree):
         self._revision_id = revision_id
         (self.branch_path, self.revnum, mapping) = repository.lookup_revision_id(revision_id)
         self._inventory = Inventory()
+        self._inventory.revision_id = revision_id
         self.id_map = repository.get_fileid_map(self.revnum, self.branch_path, 
                                                 mapping)
         editor = TreeBuildEditor(self)
@@ -87,11 +88,9 @@ class SvnRevisionTree(RevisionTree):
         finally:
             repository.transport.add_connection(conn)
 
-    def get_file_lines(self, file_id):
-        return osutils.split_lines(self.get_file_text(file_id))
-
     def get_file_text(self, file_id):
         return self.file_data[file_id]
+
 
 class TreeBuildEditor(object):
     """Builds a tree given Subversion tree transform calls."""
@@ -107,7 +106,6 @@ class TreeBuildEditor(object):
         file_id, revision_id = self.tree.id_map[""]
         ie = self.tree._inventory.add_path("", 'directory', file_id)
         ie.revision = revision_id
-        self.tree._inventory.revision_id = revision_id
         return DirectoryTreeEditor(self.tree, file_id)
 
     def close(self):
@@ -236,22 +234,21 @@ class SvnBasisTree(RevisionTree):
 
         def add_file_to_inv(relpath, id, revid, adm):
             (propchanges, props) = adm.get_prop_diffs(self.workingtree.abspath(relpath).encode("utf-8"))
-            abspath = self._abspath(relpath)
             if props.has_key(properties.PROP_SPECIAL):
-                is_symlink = (open(abspath).read(5) == "link ")
+                is_symlink = (self.get_file_byname(relpath).read(5) == "link ")
             else:
                 is_symlink = False
 
             if is_symlink:
                 ie = self._inventory.add_path(relpath, 'symlink', id)
-                ie.symlink_target = open(abspath).read()[len("link "):]
+                ie.symlink_target = self.get_file_byname(relpath).read()[len("link "):]
                 ie.text_sha1 = None
                 ie.text_size = None
                 ie.text_id = None
                 ie.executable = False
             else:
                 ie = self._inventory.add_path(relpath, 'file', id)
-                data = osutils.fingerprint_file(open(abspath))
+                data = osutils.fingerprint_file(self.get_file_byname(relpath))
                 ie.text_sha1 = data['sha1']
                 ie.text_size = data['size']
                 ie.executable = props.has_key(properties.PROP_EXECUTABLE)
@@ -309,12 +306,14 @@ class SvnBasisTree(RevisionTree):
         finally:
             adm.close()
 
-    def _abspath(self, relpath):
+    def abspath(self, relpath):
         return wc.get_pristine_copy_path(self.workingtree.abspath(relpath).encode("utf-8"))
 
-    def get_file_lines(self, file_id):
-        base_copy = self._abspath(self.id2path(file_id))
-        return osutils.split_lines(open(base_copy).read())
+    def get_file_byname(self, name):
+        return open(self.abspath(name))
+
+    def get_file_text(self, file_id):
+        return self.get_file_byname(self.id2path(file_id)).read()
 
     def annotate_iter(self, file_id,
                       default_revision=CURRENT_REVISION):

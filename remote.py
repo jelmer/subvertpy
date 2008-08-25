@@ -17,15 +17,13 @@
 
 import bzrlib
 from bzrlib import urlutils
-from bzrlib.bzrdir import BzrDirFormat, BzrDir, format_registry
-from bzrlib.errors import (NotBranchError, NotLocalUrl, NoRepositoryPresent,
-                           NoWorkingTree, AlreadyBranchError)
+from bzrlib.bzrdir import BzrDirFormat, BzrDir
+from bzrlib.errors import (NotLocalUrl, NoWorkingTree, AlreadyBranchError)
 from bzrlib.trace import warning
-from bzrlib.transport.local import LocalTransport
 
 from bzrlib.plugins.svn import core
 from bzrlib.plugins.svn.errors import NoSvnRepositoryPresent
-from bzrlib.plugins.svn.format import get_rich_root_format, SvnRemoteFormat
+from bzrlib.plugins.svn.format import SvnRemoteFormat
 from bzrlib.plugins.svn.repository import SvnRepository
 from bzrlib.plugins.svn.transport import bzr_to_svn_url, get_svn_ra_transport
 
@@ -117,7 +115,7 @@ class SvnRemoteAccess(BzrDir):
             format = BzrDirFormat.get_default_format()
         return not isinstance(self._format, format.__class__)
 
-    def import_branch(self, source, stop_revision=None):
+    def import_branch(self, source, stop_revision=None, _push_merged=None):
         """Create a new branch in this repository, possibly 
         with the specified history, optionally importing revisions.
         
@@ -139,13 +137,14 @@ class SvnRemoteAccess(BzrDir):
                 if repos.transport.check_path(target_branch_path,
                     repos.get_latest_revnum()) != core.NODE_NONE:
                     raise AlreadyBranchError(full_branch_url)
-                push_new(repos, target_branch_path, source, stop_revision)
+                push_new(repos, target_branch_path, source.repository, stop_revision)
             finally:
                 repos.unlock()
             branch = self.open_branch()
             branch.lock_write()
             try:
-                branch.pull(source, stop_revision=stop_revision)
+                branch.pull(source, stop_revision=stop_revision, 
+                            _push_merged=_push_merged)
             finally:
                 branch.unlock()
         finally:

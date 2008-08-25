@@ -14,18 +14,50 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Conversion of full repositories."""
-from bzrlib import ui, urlutils
+
+import os
+
+from bzrlib import osutils, ui, urlutils
 from bzrlib.bzrdir import BzrDir, Converter
 from bzrlib.errors import (BzrError, NotBranchError, NoSuchFile, 
-                           NoRepositoryPresent, NoSuchRevision) 
+                           NoRepositoryPresent) 
 from bzrlib.repository import InterRepository
 from bzrlib.revision import ensure_null
 from bzrlib.transport import get_transport
 
 from bzrlib.plugins.svn import repos
+from bzrlib.plugins.svn.branch import SvnBranch
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import ERR_STREAM_MALFORMED_DATA
 from bzrlib.plugins.svn.format import get_rich_root_format
+
+LATEST_IMPORT_REVISION_FILENAME = "svn-import-revision"
+
+def get_latest_svn_import_revision(repo, uuid):
+    """Retrieve the latest revision checked by svn-import.
+    
+    :param repo: A repository object.
+    :param uuid: Subversion repository UUID.
+    """
+    try:
+        text = repo.bzrdir.transport.get_bytes(LATEST_IMPORT_REVISION_FILENAME)
+    except NoSuchFile:
+        return 0
+    (text_uuid, revnum) = text.strip().split(" ")
+    if text_uuid != uuid:
+        return 0
+    return int(revnum)
+
+
+def put_latest_svn_import_revision(repo, uuid, revnum):
+    """Store the latest revision checked by svn-import.
+
+    :param repo: A repository object.
+    :param uuid: Subversion repository UUID.
+    :param revnum: A revision number.
+    """
+    repo.bzrdir.transport.put_bytes(LATEST_IMPORT_REVISION_FILENAME, 
+                             "%s %d\n" % (uuid, revnum))
 
 
 def transport_makedirs(transport, location_url):
@@ -82,7 +114,8 @@ def load_dumpfile(dumpfile, outputdir):
 
 def convert_repository(source_repos, output_url, scheme=None, layout=None,
                        create_shared_repo=True, working_trees=False, all=False,
-                       format=None, filter_branch=None):
+                       format=None, filter_branch=None, keep=False, 
+                       incremental=False):
     """Convert a Subversion repository and its' branches to a 
     Bazaar repository.
 
@@ -128,10 +161,30 @@ def convert_repository(source_repos, output_url, scheme=None, layout=None,
         except NoRepositoryPresent:
             target_repos = get_dir("").create_repository(shared=True)
         target_repos.set_make_working_trees(working_trees)
+    else:
+        target_repos = None
 
     source_repos.lock_read()
     try:
-        existing_branches = source_repos.find_branches(layout=layout)
+        if incremental and target_repos is not None:
+            from_revnum = get_latest_svn_import_revision(target_repos, 
+                                                         source_repos.uuid)
+        else:
+            from_revnum = 0
+        to_revnum = source_repos.get_latest_revnum()
+        changed_branches = source_repos.find_fileprop_paths(layout=layout, 
+            from_revnum=from_revnum, to_revnum=to_revnum, check_removed=True,
+            find_branches=True, find_tags=False)
+        existing_branches = []
+        removed_branches = []
+        for (bp, revnum, exists) in changed_branches:
+            if not exists and not keep:
+                removed_branches.append((bp, revnum))
+            elif exists and layout.is_branch(bp):
+                try:
+                    existing_branches.append(SvnBranch(source_repos, bp))
+                except NotBranchError: # Skip non-directories
+                    pass
         if filter_branch is not None:
             existing_branches = filter(filter_branch, existing_branches)
 
@@ -145,11 +198,19 @@ def convert_repository(source_repos, output_url, scheme=None, layout=None,
                   inter._supports_branches):
                 inter.fetch(branches=existing_branches)
 
+        # Remove removed branches
+        for (bp, revnum) in removed_branches:
+            # TODO: Perhaps check if path is a valid branch with the right last
+            # revid?
+            fullpath = to_transport.local_abspath(bp)
+            if not os.path.isdir(fullpath):
+                continue
+            osutils.rmtree(fullpath)
+
         source_graph = source_repos.get_graph()
         pb = ui.ui_factory.nested_progress_bar()
         try:
-            i = 0
-            for source_branch in existing_branches:
+            for i, source_branch in enumerate(existing_branches):
                 pb.update("%s:%d" % (source_branch.get_branch_path(), source_branch.get_revnum()), i, len(existing_branches))
                 target_dir = get_dir(source_branch.get_branch_path())
                 if not create_shared_repo:
@@ -174,11 +235,13 @@ def convert_repository(source_repos, output_url, scheme=None, layout=None,
                     target_branch.pull(source_branch)
                 if working_trees and not target_dir.has_workingtree():
                     target_dir.create_workingtree()
-                i += 1
         finally:
             pb.finished()
     finally:
         source_repos.unlock()
+
+    if target_repos is not None:
+        put_latest_svn_import_revision(target_repos, source_repos.uuid, to_revnum)
         
 
 class SvnConverter(Converter):
@@ -187,6 +250,7 @@ class SvnConverter(Converter):
         """Create a SvnConverter.
         :param target_format: The format the resulting repository should be.
         """
+        super(SvnConverter, self).__init__()
         self.target_format = target_format
 
     def convert(self, to_convert, pb):

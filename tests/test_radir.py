@@ -19,10 +19,10 @@
 from bzrlib import osutils
 from bzrlib.branch import Branch
 from bzrlib.bzrdir import BzrDir, format_registry
-from bzrlib.errors import (NoRepositoryPresent, NotBranchError, NotLocalUrl,
+from bzrlib.errors import (NoRepositoryPresent, NotLocalUrl,
                            NoWorkingTree, AlreadyBranchError)
 
-from bzrlib.plugins.svn import core, ra
+from bzrlib.plugins.svn import core
 from bzrlib.plugins.svn.format import SvnRemoteFormat
 from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
 from bzrlib.plugins.svn.transport import SvnRaTransport
@@ -35,7 +35,7 @@ class TestRemoteAccess(TestCaseWithSubversionRepository):
         dc.add_dir("foo")
         dc.close()
 
-        x = self.open_checkout_bzrdir("dc")
+        x = BzrDir.open("dc")
         self.assertRaises(NotImplementedError, x.clone, "dir")
 
     def test_break_lock(self):

@@ -22,7 +22,6 @@ from bzrlib.errors import NotBranchError, NoSuchFile, IncompatibleRepositories
 from bzrlib.urlutils import local_path_to_url
 from bzrlib.repository import Repository
 from bzrlib.tests import TestCaseInTempDir
-from bzrlib.trace import mutter
 
 import os, sys
 
@@ -81,7 +80,7 @@ class TestConversion(TestCaseWithSubversionRepository):
         dc.close()
 
     def get_commit_editor(self):
-        return super(TestConversion,self).get_commit_editor(self.repos_url)
+        return super(TestConversion, self).get_commit_editor(self.repos_url)
 
     def test_sets_parent_urls(self):
         convert_repository(Repository.open(self.repos_url), "e", 
@@ -188,6 +187,21 @@ class TestConversion(TestCaseWithSubversionRepository):
 
         convert_repository(Repository.open(self.repos_url), "e", 
                            TrunkBranchingScheme(), create_shared_repo=True)
+
+    def test_shared_import_remove_nokeep(self):
+        convert_repository(Repository.open(self.repos_url), "e", 
+                TrunkBranchingScheme(), create_shared_repo=True)
+
+        dc = self.get_commit_editor()
+        dc.delete("trunk")
+        dc.close()
+
+        self.assertTrue(os.path.exists("e/trunk"))
+
+        convert_repository(Repository.open(self.repos_url), "e", 
+                           TrunkBranchingScheme(), create_shared_repo=True)
+
+        self.assertFalse(os.path.exists("e/trunk"))
 
     def test_shared_import_continue_with_wt(self):
         convert_repository(Repository.open(self.repos_url), "e", 

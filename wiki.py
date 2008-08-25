@@ -34,13 +34,15 @@ def write_releaselist(f):
 
     def version_sort(a, b):
         def versiontuple(a):
+            if "~" in a:
+                a = a.split("~")[0]
             return [int(x) for x in a.split(".")]
         return cmp(versiontuple(a), versiontuple(b))
 
     versions.sort(version_sort, reverse=True)
 
     for version in versions:
-        f.write("* %s_\n" % version)
+        f.write("* `%s`_\n" % version)
 
     f.write("\n")
 

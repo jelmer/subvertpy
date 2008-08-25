@@ -1,4 +1,33 @@
-bzr-svn 0.4.11    UNRELEASED
+bzr-svn-0.4.11	UNRELEASED
+
+  CHANGES
+
+   * Fix setup.py run with python2.4. (#256804)
+
+   * Use rst2html.py rather than rst2html if it is available.
+
+  BUG FIXES
+
+   * Parse http redirect errors in some non-English locales better.
+
+   * Avoid importing tags as branches in svn-import, now that tags are 
+     converted to native Bazaar tags.
+
+  FEATURES
+
+   * svn-import will now remove branches removed in Subversion. 
+     (#246243). The --keep option can be specified to keep 
+	 branches removed in Subversion around.
+
+   * Add --incremental option to bzr-svn for incremental imports.
+
+   * Set revision properties from v3 mappings when possible.
+
+   * Create tags base directory if it doesn't exist.
+
+   * Add --merged option to svn-push command.
+
+bzr-svn 0.4.11~rc1	2008-08-08
 
   CHANGES
 
@@ -31,7 +60,9 @@ bzr-svn 0.4.11    UNRELEASED
 
    * Set mergeinfo properties when pushing merges. (write part of #131323)
 
-   * Basic support for stacked branches.
+   * Basic (experimental) support for stacked branches. Not very
+     efficient at the moment because of certain assumptions in the 
+	 stacking implementation.
 
    * Avoid reopening connections to branch and repository when finding 
      branches. (#243749)
@@ -41,6 +72,18 @@ bzr-svn 0.4.11    UNRELEASED
    * Extend "bzr help svn".
 
    * Warn when trying to clone a repository root as a branch. (#244638)
+
+   * Much faster Repository.get_revision_delta(). (#127030)
+
+   * Support bzr push --overwrite. (#118787)
+
+   * Support bzr uncommit.
+
+   * Support bzr sign-my-commits. (Requires revision properties in the 
+	 Subversion repository to be mutable)
+
+   * Support pushing merged revisions. To enable, set 
+     ``push_merged_revisions = True'' in the repository config. (#158883)
 
   BUG FIXES
 
@@ -105,6 +148,14 @@ bzr-svn 0.4.11    UNRELEASED
    * Lazily connect to repository when opening working copies. (#250706)
 
    * Stricter checking of special files for links. (#219832)
+
+   * Avoid showing backtrace for RA_DAV_REQUEST_FAILED errors, since 
+     they may be raised in other situations than when a bug is hit.
+	 (#253376)
+
+   * Fixed http exception during expensive log -v. (#94316)
+
+   * Preserve individual text revision ids correctly when round-tripping. (#250480)
 
 bzr-svn 0.4.10  2008-05-12
 

@@ -17,7 +17,6 @@
 
 from bzrlib import urlutils
 from bzrlib.errors import NoSuchRevision
-from bzrlib.trace import mutter
 import bzrlib.ui as ui
 
 from bzrlib.plugins.svn import changes, core
@@ -212,7 +211,7 @@ class LogCache(CacheTable):
         """
         result = self.cachedb.execute("select name, value from revprop where rev = ?", (revnum,))
         revprops = {}
-        for k,v in result:
+        for k, v in result:
             revprops[k.encode("utf-8")] = v.encode("utf-8")
         return revprops
 
@@ -223,10 +222,12 @@ class LogCache(CacheTable):
         :param name: Name of the revision property.
         :param value: Contents of the revision property.
         """
-        self.cachedb.execute("replace into revprop (rev, name, value) values (?, ?, ?)", (rev, name, value))
+        self.cachedb.execute("replace into revprop (rev, name, value) values (?, ?, ?)", (rev, name.decode("utf-8"), value.decode("utf-8")))
     
     def insert_revprops(self, revision, revprops):
-        for k,v in revprops.items():
+        if revprops is None:
+            return
+        for k, v in revprops.items():
             self.insert_revprop(revision, k, v)
 
     def has_all_revprops(self, revnum):
@@ -436,7 +437,7 @@ class CachingLogWalker(CacheTable):
         else:
             todo_revprops = ["svn:author", "svn:log", "svn:date"]
 
-        def rcvr(orig_paths, revision, revprops, has_children):
+        def rcvr(orig_paths, revision, revprops, has_children=None):
             nested_pb.update('fetching svn revision info', revision, to_revnum)
             if orig_paths is None:
                 orig_paths = {}
@@ -476,7 +477,7 @@ class CachingLogWalker(CacheTable):
 def struct_revpaths_to_tuples(changed_paths):
     assert isinstance(changed_paths, dict)
     revpaths = {}
-    for k,(action, copyfrom_path, copyfrom_rev) in changed_paths.items():
+    for k, (action, copyfrom_path, copyfrom_rev) in changed_paths.items():
         if copyfrom_path is None:
             copyfrom_path = None
         else:
@@ -550,7 +551,7 @@ class LogWalker(object):
                 if todo_revprops is None:
                     revprops = known_revprops
                 else:
-                    revprops = lazy_dict(known_revprops, self.revprop_list, revnum)
+                    revprops = lazy_dict(known_revprops, self._transport.revprop_list, revnum)
                 yield (revpaths, revnum, revprops)
         except SubversionException, (_, num):
             if num == ERR_FS_NO_SUCH_REVISION:
@@ -601,7 +602,7 @@ class LogWalker(object):
                     if num == ERR_FS_NOT_DIRECTORY:
                         continue
                     raise
-                for k,v in dirents.items():
+                for k, v in dirents.items():
                     childp = urlutils.join(nextp, k)
                     if v['kind'] == core.NODE_DIR:
                         unchecked_dirs.add(childp)

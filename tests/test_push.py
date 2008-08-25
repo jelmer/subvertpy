@@ -16,23 +16,19 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from bzrlib.branch import Branch, BranchReferenceFormat
-from bzrlib.bzrdir import BzrDir, BzrDirFormat
+from bzrlib.branch import Branch
+from bzrlib.bzrdir import BzrDir
 from bzrlib.errors import AlreadyBranchError, BzrError, DivergedBranches
-from bzrlib.inventory import Inventory
 from bzrlib.merge import Merger, Merge3Merger
 from bzrlib.osutils import has_symlinks
 from bzrlib.progress import DummyProgress
 from bzrlib.repository import Repository
-from bzrlib.tests import KnownFailure, TestCaseWithTransport
 from bzrlib.trace import mutter
-from bzrlib.workingtree import WorkingTree
 
 import os
-from time import sleep
 
 from bzrlib.plugins.svn import core, format, ra
-from bzrlib.plugins.svn.errors import ChangesRootLHSHistory, MissingPrefix
+from bzrlib.plugins.svn.errors import MissingPrefix
 from bzrlib.plugins.svn.commit import push, dpush
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID
 from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
@@ -307,16 +303,17 @@ class TestPush(TestCaseWithSubversionRepository):
         b = Branch.open("b")
 
         def check_tree_revids(rtree):
-            self.assertEqual(rtree.inventory.root.revision, revid)
             self.assertEqual(rtree.inventory[rtree.path2id("file")].revision,
                              revid)
             self.assertEqual(rtree.inventory[rtree.path2id("foo")].revision,
-                             revid)
+                             b.revision_history()[1])
             self.assertEqual(rtree.inventory[rtree.path2id("foo/bla")].revision,
                              revid)
+            self.assertEqual(rtree.inventory.root.revision, b.revision_history()[0])
+
+        check_tree_revids(wt.branch.repository.revision_tree(b.last_revision()))
 
         check_tree_revids(b.repository.revision_tree(b.last_revision()))
-
         bc = self.svndir.open_branch()
         check_tree_revids(bc.repository.revision_tree(bc.last_revision()))
 
@@ -437,12 +434,14 @@ class TestPush(TestCaseWithSubversionRepository):
         self.build_tree({'mybranch/foo': 'bladata'})
         wt = self.bzrdir.open_workingtree()
         revid = wt.commit(message="Commit from Bzr")
-        push(Branch.open("%s/trunk" % self.repos_url), wt.branch, 
+        b = Branch.open("%s/trunk" % self.repos_url)
+        push(b.repository.get_graph(), b, wt.branch.repository, 
              wt.branch.revision_history()[-2])
         mutter('log %r' % self.client_log("%s/trunk" % self.repos_url, 0, 4)[4][0])
         self.assertEquals('M',
             self.client_log("%s/trunk" % self.repos_url, 0, 4)[4][0]['/trunk'][0])
-        push(Branch.open("%s/trunk" % self.repos_url), wt.branch, wt.branch.last_revision())
+        b = Branch.open("%s/trunk" % self.repos_url)
+        push(b.repository.get_graph(), b, wt.branch.repository, wt.branch.last_revision())
         mutter('log %r' % self.client_log("%s/trunk" % self.repos_url, 0, 5)[5][0])
         self.assertEquals("/branches/mybranch", 
             self.client_log("%s/trunk" % self.repos_url, 0, 5)[5][0]['/trunk'][1])
@@ -578,6 +577,57 @@ class PushNewBranchTests(TestCaseWithSubversionRepository):
         self.assertTrue(os.path.exists("bzrco/baz.txt"))
         wt.branch.push(Branch.open(repos_url+"/trunk"))
 
+    def test_push_merge_unchanged_file(self):
+        def check_tree(t):
+            self.assertEquals(base_revid, t.inventory[t.path2id("bar.txt")].revision)
+            self.assertEquals(other_revid, t.inventory[t.path2id("bar2.txt")].revision)
+        repos_url = self.make_repository("test")
+
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.add_dir("trunk")
+        trunk.add_file("trunk/foo.txt").modify("add file")
+        dc.close()
+
+        os.mkdir('bzrco1')
+        dir1 = BzrDir.open(repos_url+"/trunk").sprout("bzrco1")
+
+        os.mkdir('bzrco2')
+        dir2 = BzrDir.open(repos_url+"/trunk").sprout("bzrco2")
+
+        wt1 = dir1.open_workingtree()
+        self.build_tree({'bzrco1/bar.txt': 'bar'})
+        wt1.add("bar.txt")
+        base_revid = wt1.commit("add another file", rev_id="mybase")
+        wt1.branch.push(Branch.open(repos_url+"/trunk"))
+
+        wt2 = dir2.open_workingtree()
+        self.build_tree({'bzrco2/bar2.txt': 'bar'})
+        wt2.add("bar2.txt")
+        other_revid = wt2.commit("add yet another file", rev_id="side1")
+
+        wt1.lock_write()
+        try:
+            wt1.merge_from_branch(wt2.branch)
+            self.assertEquals([wt1.last_revision(), other_revid], wt1.get_parent_ids())
+            mergingrevid = wt1.commit("merge", rev_id="side2")
+            check_tree(wt1.branch.repository.revision_tree(mergingrevid))
+        finally:
+            wt1.unlock()
+        self.assertTrue(os.path.exists("bzrco1/bar2.txt"))
+        wt1.branch.push(Branch.open(repos_url+"/trunk"))
+        r = Repository.open(repos_url)
+        props = r.branchprop_list.get_changed_properties("trunk", 3)
+        self.assertEquals(props['bzr:text-parents'], 'bar2.txt\tside1\n')
+
+        os.mkdir("cpy")
+        cpy = BzrDir.create("cpy", format.get_rich_root_format())
+        cpyrepos = cpy.create_repository()
+        r.copy_content_into(cpyrepos)
+        check_tree(cpyrepos.revision_tree(mergingrevid))
+
+        t = r.revision_tree(mergingrevid)
+        check_tree(t)
+
     def test_missing_prefix_error(self):
         repos_url = self.make_repository("a")
         bzrwt = BzrDir.create_standalone_workingtree("c", 
@@ -692,16 +742,50 @@ class PushNewBranchTests(TestCaseWithSubversionRepository):
 
         self.build_tree({'d2/myfile': "France"})
         bzrwt2.add("myfile")
-        revid2 = bzrwt1.commit("Do a commit")
+        revid2 = bzrwt2.commit("Do a commit")
 
         bzrwt1.branch.push(Branch.open(repos_url+"/trunk"))
-
-        raise KnownFailure("push --overwrite not supported yet")
+        self.assertEquals(bzrwt1.branch.revision_history(),
+                Branch.open(repos_url+"/trunk").revision_history())
 
         bzrwt2.branch.push(Branch.open(repos_url+"/trunk"), overwrite=True)
 
-        self.assertEquals([revid2], 
+        self.assertEquals(bzrwt2.branch.revision_history(),
                 Branch.open(repos_url+"/trunk").revision_history())
+
+    def test_push_overwrite_unrelated(self):
+        repos_url = self.make_repository("a")
+
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.add_dir("trunk")
+        trunk.add_file("trunk/bloe").modify("text")
+        dc.close()
+
+        os.mkdir("d1")
+        bzrdir = BzrDir.open(repos_url+"/trunk").sprout("d1")
+        bzrwt1 = bzrdir.open_workingtree()
+
+        bzrwt2 = BzrDir.create_standalone_workingtree("d2", 
+            format=format.get_rich_root_format())
+
+        self.build_tree({'d1/myfile': "Tour"})
+        bzrwt1.add("myfile")
+        revid1 = bzrwt1.commit("Do a commit")
+
+        self.build_tree({'d2/myfile': "France"})
+        bzrwt2.add("myfile")
+        revid2 = bzrwt2.commit("Do a commit")
+
+        bzrwt1.branch.push(Branch.open(repos_url+"/trunk"))
+        self.assertEquals(bzrwt1.branch.revision_history(),
+                Branch.open(repos_url+"/trunk").revision_history())
+
+        bzrwt2.branch.push(Branch.open(repos_url+"/trunk"), overwrite=True)
+
+        self.assertEquals(bzrwt2.branch.revision_history(),
+                Branch.open(repos_url+"/trunk").revision_history())
+
+
 
     def test_complex_rename(self):
         repos_url = self.make_repository("a")

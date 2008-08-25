@@ -18,14 +18,13 @@
 import sha
 
 from bzrlib.errors import InvalidRevisionId
-from bzrlib.tests import TestCase, adapt_tests, TestNotApplicable
+from bzrlib.tests import TestCase, TestNotApplicable
 from bzrlib.revision import Revision
-from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn.errors import InvalidPropertyValue
 from bzrlib.plugins.svn.mapping import (generate_revision_metadata, parse_revision_metadata, 
-                     parse_revid_property, parse_merge_property, 
-                     BzrSvnMappingv1, BzrSvnMappingv2, 
+                     parse_revid_property, parse_merge_property, parse_text_parents_property,
+                     generate_text_parents_property, BzrSvnMappingv1, BzrSvnMappingv2, 
                      BzrSvnMappingv4, parse_revision_id)
 from bzrlib.plugins.svn.mapping3 import (BzrSvnMappingv3FileProps, BzrSvnMappingv3RevProps, 
                       BzrSvnMappingv3Hybrid)
@@ -114,6 +113,22 @@ class MetadataMarshallerTests(TestCase):
                 lambda: parse_revid_property("foo\nbar"))
 
 
+class ParseTextParentsTestCase(TestCase):
+    def test_text_parents(self):
+        self.assertEquals({"bla": "bloe"}, parse_text_parents_property("bla\tbloe\n"))
+
+    def test_text_parents_empty(self):
+        self.assertEquals({}, parse_text_parents_property(""))
+
+
+class GenerateTextParentsTestCase(TestCase):
+    def test_generate_empty(self):
+        self.assertEquals("", generate_text_parents_property({}))
+
+    def test_generate_simple(self):
+        self.assertEquals("bla\tbloe\n", generate_text_parents_property({"bla": "bloe"}))
+
+
 class ParseMergePropertyTestCase(TestCase):
     def test_parse_merge_space(self):
         self.assertEqual((), parse_merge_property("bla bla"))
@@ -140,19 +155,29 @@ class MappingTestAdapter(object):
         revprops = {}
         fileprops = {}
         fileids = {"": "some-id", "bla/blie": "other-id"}
-        self.mapping.export_fileid_map(fileids, revprops, fileprops)
+        self.mapping.export_fileid_map(True, fileids, revprops, fileprops)
         revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
         self.assertEquals(fileids, 
                 self.mapping.import_fileid_map(revprops, fileprops))
 
+    def test_text_parents(self):
+        if not self.mapping.supports_roundtripping():
+            raise TestNotApplicable
+        revprops = {}
+        fileprops = {}
+        text_parents = {"bla": "bloe", "ll": "12"}
+        self.mapping.export_text_parents(True, text_parents, revprops, fileprops)
+        self.assertEquals(text_parents,
+            self.mapping.import_text_parents(revprops, fileprops))
+
     def test_message(self):
         if not self.mapping.supports_roundtripping():
             raise TestNotApplicable
-        (revprops, fileprops) = self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", 
+        (revprops, fileprops) = self.mapping.export_revision(True, "branchp", 432432432.0, 0, "somebody", 
                                      {"arevprop": "val"}, "arevid", 4, ["merge1"], dict())
         revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
         try:
-            self.mapping.export_message("My Commit message", revprops, fileprops)
+            self.mapping.export_message(True, "My Commit message", revprops, fileprops)
         except NotImplementedError:
             raise TestNotApplicable
         targetrev = Revision(None)
@@ -162,7 +187,7 @@ class MappingTestAdapter(object):
     def test_revision(self):
         if not self.mapping.supports_roundtripping():
             raise TestNotApplicable
-        (revprops, fileprops) = self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", 
+        (revprops, fileprops) = self.mapping.export_revision(True, "branchp", 432432432.0, 0, "somebody", 
                                      {"arevprop": "val" }, "arevid", 4, ["merge1"], dict())
         targetrev = Revision(None)
         revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
@@ -175,7 +200,7 @@ class MappingTestAdapter(object):
     def test_revision_id(self):
         if not self.mapping.supports_roundtripping():
             raise TestNotApplicable
-        (revprops, fileprops) = self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", {}, "arevid", 4, ["merge1"], dict())
+        (revprops, fileprops) = self.mapping.export_revision(True, "branchp", 432432432.0, 0, "somebody", {}, "arevid", 4, ["merge1"], dict())
         self.assertEquals((4, "arevid"), self.mapping.get_revision_id("branchp", revprops, fileprops))
     
     def test_revision_id_none(self):
@@ -193,12 +218,12 @@ class MappingTestAdapter(object):
                 self.mapping.generate_revision_id("myuuid", 5, "bla")))
 
 
-class Mappingv1Tests(MappingTestAdapter,TestCase):
+class Mappingv1Tests(MappingTestAdapter, TestCase):
     def setUp(self):
         self.mapping = BzrSvnMappingv1()
 
 
-class Mappingv2Tests(MappingTestAdapter,TestCase):
+class Mappingv2Tests(MappingTestAdapter, TestCase):
     def setUp(self):
         self.mapping = BzrSvnMappingv2()
 
@@ -207,7 +232,7 @@ def sha1(text):
     return sha.new(text).hexdigest()
 
 
-class Mappingv3FilePropTests(MappingTestAdapter,TestCase):
+class Mappingv3FilePropTests(MappingTestAdapter, TestCase):
     def setUp(self):
         self.mapping = BzrSvnMappingv3FileProps(NoBranchingScheme())
 
@@ -271,17 +296,17 @@ class Mappingv3FilePropTests(MappingTestAdapter,TestCase):
                 self.mapping.generate_file_id("uuid", 2, u"\xe6".encode('utf-8'), u"\xe6\xf8\xe5"))
 
 
-class Mappingv3RevPropTests(MappingTestAdapter,TestCase):
+class Mappingv3RevPropTests(MappingTestAdapter, TestCase):
     def setUp(self):
         self.mapping = BzrSvnMappingv3RevProps(NoBranchingScheme())
 
 
-class Mappingv3HybridTests(MappingTestAdapter,TestCase):
+class Mappingv3HybridTests(MappingTestAdapter, TestCase):
     def setUp(self):
         self.mapping = BzrSvnMappingv3Hybrid(NoBranchingScheme())
 
 
-class Mappingv4TestAdapter(MappingTestAdapter,TestCase):
+class Mappingv4TestAdapter(MappingTestAdapter, TestCase):
     def setUp(self):
         self.mapping = BzrSvnMappingv4()
 

@@ -26,30 +26,29 @@ from bzrlib.tests import KnownFailure, TestCase
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn import wc
 from bzrlib.plugins.svn.transport import svn_config
 from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
 from bzrlib.plugins.svn.workingtree import generate_ignore_list
 
-import os, sys
+import os
 
 class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_add_duplicate(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
         self.client_add("dc/bl")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["bl"])
 
     def test_add_unexisting(self):
         self.make_client('a', 'dc')
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertRaises(NoSuchFile, tree.add, ["bl"])
 
     def test_add(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["bl"])
 
         inv = tree.read_working_inventory()
@@ -61,7 +60,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.make_client('a', 'dc')
         self.build_tree({u"dc/I²C": "data"})
         self.client_add("dc/I²C")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         inv = tree.read_working_inventory()
         self.assertIsInstance(inv, Inventory)
         self.assertTrue(inv.has_filename(u"I²C"))
@@ -69,7 +68,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_smart_add_file(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.smart_add(["dc/bl"])
 
         inv = tree.read_working_inventory()
@@ -80,7 +79,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_smart_add_recurse(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl/foo": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.smart_add(["dc/bl"])
 
         inv = tree.read_working_inventory()
@@ -92,7 +91,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_smart_add_recurse_more(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl/foo/da": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.smart_add(["dc/bl"])
 
         inv = tree.read_working_inventory()
@@ -105,7 +104,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_smart_add_more(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl/foo/da": "data", "dc/ha": "contents"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.smart_add(["dc/bl", "dc/ha"])
 
         inv = tree.read_working_inventory()
@@ -120,7 +119,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.make_client('a', 'dc')
         self.build_tree({"dc/.bzrignore": "bl/ha"})
         self.build_tree({"dc/bl/foo/da": "data", "dc/bl/ha": "contents"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.smart_add(["dc/bl"])
 
         inv = tree.read_working_inventory()
@@ -134,7 +133,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_smart_add_toplevel(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl/foo/da": "data", "dc/ha": "contents"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.smart_add(["dc"])
 
         inv = tree.read_working_inventory()
@@ -148,7 +147,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_add_nolist(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add("bl")
 
         inv = tree.read_working_inventory()
@@ -159,7 +158,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_add_nolist_withid(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add("bl", "bloe")
 
         inv = tree.read_working_inventory()
@@ -171,7 +170,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_add_not_recursive(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl/file": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["bl"])
 
         tree = WorkingTree.open("dc")
@@ -181,7 +180,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_add_nested(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl/file": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["bl", "bl/file"])
 
         tree = WorkingTree.open("dc")
@@ -190,29 +189,29 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
 
     def test_lock_write(self):
         self.make_client('a', 'dc')
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.lock_write()
 
     def test_lock_read(self):
         self.make_client('a', 'dc')
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.lock_read()
 
     def test_unlock(self):
         self.make_client('a', 'dc')
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.lock_read()
         tree.unlock()
 
     def test_get_ignore_list_empty(self):
         self.make_client('a', 'dc')
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertEqual(set([".svn"] + svn_config.get_default_ignores()), tree.get_ignore_list())
 
     def test_get_ignore_list_onelevel(self):
         self.make_client('a', 'dc')
         self.client_set_prop("dc", "svn:ignore", "*.d\n*.c\n")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertEqual(set([".svn"] + svn_config.get_default_ignores() + ["./*.d", "./*.c"]), tree.get_ignore_list())
 
     def test_get_ignore_list_morelevel(self):
@@ -221,13 +220,13 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.build_tree({'dc/x': None})
         self.client_add("dc/x")
         self.client_set_prop("dc/x", "svn:ignore", "*.e\n")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertEqual(set([".svn"] + svn_config.get_default_ignores() + ["./*.d", "./*.c", "./x/*.e"]), tree.get_ignore_list())
 
     def test_add_reopen(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["bl"])
 
         inv = WorkingTree.open("dc").read_working_inventory()
@@ -236,7 +235,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_remove(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["bl"])
         tree.remove(["bl"])
         inv = tree.read_working_inventory()
@@ -245,7 +244,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_remove_dup(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["bl"])
         os.remove("dc/bl")
         inv = tree.read_working_inventory()
@@ -253,7 +252,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
 
     def test_is_control_file(self):
         self.make_client('a', 'dc')
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertTrue(tree.is_control_filename(".svn"))
         self.assertFalse(tree.is_control_filename(".bzr"))
 
@@ -274,7 +273,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.build_tree({"dc/bl": "data"})
         self.client_add("dc/bl")
         self.client_commit("dc", "Bla")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.rename_one("bl", "bloe")
         
         basis_inv = tree.basis_tree().inventory
@@ -288,7 +287,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
 
     def test_empty_basis_tree(self):
         self.make_client('a', 'dc')
-        wt = self.open_checkout("dc")
+        wt = WorkingTree.open("dc")
         self.assertEqual(wt.branch.generate_revision_id(0), 
                          wt.basis_tree().inventory.revision_id)
         inv = Inventory()
@@ -304,7 +303,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.client_add("dc/bl")
         self.client_commit("dc", "Bla")
         self.client_update("dc")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertEqual(
             tree.branch.generate_revision_id(1),
             tree.basis_tree().get_revision_id())
@@ -316,7 +315,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.client_add("dc/a")
         self.client_add("dc/dir")
         self.client_commit("dc", "Bla")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.move(["bl", "a"], "dir")
         
         basis_inv = tree.basis_tree().inventory
@@ -333,7 +332,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_get_parent_ids_no_merges(self):
         repos_url = self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertEqual([Branch.open(repos_url).last_revision()], tree.get_parent_ids())
  
     def test_delta(self):
@@ -343,7 +342,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.build_tree({"dc/bl": "data"})
         self.client_commit("dc", "Bla")
         self.build_tree({"dc/bl": "data2"})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.basis_tree()
         delta = tree.changes_from(tree.basis_tree())
         self.assertEqual("bl", delta.modified[0][0])
@@ -356,7 +355,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.client_commit("dc", "bla")
         self.build_tree({"dc/test": "data"})
         self.client_add("dc/test")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         inv = tree.read_working_inventory()
         self.assertEqual(inv.path2id(""), inv.root.file_id)
         self.assertTrue(inv.path2id("foo") != "")
@@ -373,7 +372,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.client_commit("dc", "bla")
         self.client_set_prop("dc", "svn:ignore", "foo\nbar\n")
 
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         ignorelist = tree.get_ignore_list()
         self.assertTrue("./bl/test.*" in ignorelist)
         self.assertTrue("./foo" in ignorelist)
@@ -387,7 +386,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.client_commit("dc", "bla")
         self.client_set_prop("dc", "svn:ignore", "foo\nbar\n")
 
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertTrue(tree.is_ignored("bl/test.foo"))
         self.assertFalse(tree.is_ignored("bl/notignored"))
         self.assertTrue(tree.is_ignored("foo"))
@@ -396,28 +395,28 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
 
     def test_ignore_controldir(self):
         self.make_client('a', 'dc')
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertEqual([], list(tree.unknowns()))
 
     def test_unknowns(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": None})
 
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertEqual(['bl'], list(tree.unknowns()))
 
     def test_unknown_not_added(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": None})
 
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertFalse(tree.inventory.has_filename("bl"))
 
     def test_extras(self):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": None})
 
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertEqual(['.svn', 'bl'], list(tree.extras()))
 
     def test_executable(self):
@@ -427,7 +426,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.build_tree({"dc/bla": "data"})
         self.client_add("dc/bla")
         self.client_set_prop("dc/bla", "svn:executable", "*")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         inv = tree.read_working_inventory()
         self.assertTrue(inv[inv.path2id("bla")].executable)
 
@@ -437,7 +436,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.make_client('a', 'dc')
         os.symlink("target", "dc/bla")
         self.client_add("dc/bla")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         inv = tree.read_working_inventory()
         self.assertEqual('symlink', inv[inv.path2id("bla")].kind)
         self.assertEqual("target", inv[inv.path2id("bla")].symlink_target)
@@ -448,7 +447,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
 
         lhs_parent_id = Branch.open(repos_url).last_revision()
 
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.set_pending_merges(["a", "c"])
         self.assertEqual([lhs_parent_id, "a", "c"], tree.get_parent_ids())
         tree.set_pending_merges([])
@@ -459,7 +458,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.build_tree({"dc/bl": None})
         self.client_add("dc/bl")
         
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.set_pending_merges([
             tree.branch.mapping.generate_revision_id("a-uuid-foo", 1, "branch/fpath"), "c"])
         self.assertEqual(
@@ -471,7 +470,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.build_tree({"dc/bl": None})
         self.client_add("dc/bl")
         
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.set_pending_merges([
             tree.branch.mapping.generate_revision_id("a-uuid-foo", 1, "branch/path"), "c"])
         self.assertEqual("a-uuid-foo:/branch/path:1\n", 
@@ -481,7 +480,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
         self.client_add("dc/bl")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.basis_tree()
         tree.commit(message_callback=lambda x: "data")
 
@@ -489,7 +488,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
         self.client_add("dc/bl")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.basis_tree()
         tree.commit(message_callback=lambda x: u"data")
 
@@ -497,7 +496,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
         self.client_add("dc/bl")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         orig_tree = tree.basis_tree()
         tree.commit(message=u"data")
 
@@ -507,7 +506,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.client_add("dc/branches")
         self.client_commit("dc", "initial changes")
         self.make_checkout(repos_url + "/branches/foobranch", "de")
-        tree = self.open_checkout("de")
+        tree = WorkingTree.open("de")
         self.build_tree({'de/file': "foo"})
         tree.basis_tree()
         tree.commit(message="data")
@@ -516,7 +515,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
         self.client_add("dc/bl")
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         orig_tree = tree.basis_tree()
         tree.commit(message="data")
         self.assertEqual(
@@ -533,7 +532,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
 
     def test_status(self):
         self.make_client('a', 'dc')
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         self.assertTrue(os.path.exists(os.path.join("dc", ".svn")))
         self.assertFalse(os.path.exists(os.path.join("dc", ".bzr")))
         tree.read_working_inventory()
@@ -544,14 +543,14 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.build_tree({'dc/bla': "data"})
         self.client_add("dc/bla")
         self.client_commit("dc", "msg")
-        tree = self.open_checkout("de")
+        tree = WorkingTree.open("de")
         tree.update()
         self.assertTrue(os.path.exists(os.path.join("de", ".svn")))
         self.assertTrue(os.path.exists(os.path.join("de", "bla")))
 
     def test_status_bzrdir(self):
         self.make_client('a', 'dc')
-        bzrdir = self.open_checkout_bzrdir("dc")
+        bzrdir = BzrDir.open("dc")
         self.assertTrue(os.path.exists(os.path.join("dc", ".svn")))
         self.assertTrue(not os.path.exists(os.path.join("dc", ".bzr")))
         bzrdir.open_workingtree()
@@ -559,7 +558,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_file_id_consistent(self):
         self.make_client('a', 'dc')
         self.build_tree({'dc/file': 'data'})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["file"])
         oldid = tree.inventory.path2id("file")
         tree = WorkingTree.open("dc")
@@ -569,7 +568,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_file_id_kept(self):
         self.make_client('a', 'dc')
         self.build_tree({'dc/file': 'data'})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["file"], ["fooid"])
         self.assertEqual("fooid", tree.inventory.path2id("file"))
         tree = WorkingTree.open("dc")
@@ -578,7 +577,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_file_rename_id(self):
         self.make_client('a', 'dc')
         self.build_tree({'dc/file': 'data'})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["file"], ["fooid"])
         tree.commit("msg")
         tree.rename_one("file", "file2")
@@ -590,7 +589,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_file_id_kept_2(self):
         self.make_client('a', 'dc')
         self.build_tree({'dc/file': 'data', 'dc/other': 'blaid'})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["file", "other"], ["fooid", "blaid"])
         self.assertEqual("fooid", tree.inventory.path2id("file"))
         self.assertEqual("blaid", tree.inventory.path2id("other"))
@@ -598,7 +597,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_file_remove_id(self):
         self.make_client('a', 'dc')
         self.build_tree({'dc/file': 'data'})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["file"], ["fooid"])
         tree.commit("msg")
         tree.remove(["file"])
@@ -609,7 +608,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_file_move_id(self):
         self.make_client('a', 'dc')
         self.build_tree({'dc/file': 'data', 'dc/dir': None})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["file", "dir"], ["fooid", "blaid"])
         tree.commit("msg")
         tree.move(["file"], "dir")
@@ -622,7 +621,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_escaped_char_filename(self):
         self.make_client('a', 'dc')
         self.build_tree({'dc/file with spaces': 'data'})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["file with spaces"], ["fooid"])
         tree.commit("msg")
         self.assertEqual("fooid", tree.inventory.path2id("file with spaces"))
@@ -630,7 +629,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
     def test_get_branch_nick(self):
         self.make_client('a', 'dc')
         self.build_tree({'dc/some strange file': 'data'})
-        tree = self.open_checkout("dc")
+        tree = WorkingTree.open("dc")
         tree.add(["some strange file"])
         tree.commit("message")
         self.assertEqual(None, tree.branch.nick)
@@ -645,7 +644,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.build_tree({'dc/some strange file': 'data-x'})
         self.client_commit("dc", "msg")
         self.client_update("dc")
-        tree = self.open_checkout("de")
+        tree = WorkingTree.open("de")
         self.build_tree({'de/some strange file': 'data-y'})
         self.assertRaises(OutOfDateTree, lambda: tree.commit("bar"))
 

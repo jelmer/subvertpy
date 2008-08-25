@@ -106,7 +106,7 @@ def parse_externals_description(base_url, val):
 def parse_mergeinfo_property(text):
     ret = {}
     for l in text.splitlines():
-        (path, ranges) = l.rsplit(":",1)
+        (path, ranges) = l.rsplit(":", 1)
         assert path.startswith("/")
         ret[path] = []
         for range in ranges.split(","):
@@ -203,6 +203,7 @@ PROP_PREFIX = 'svn:'
 PROP_SPECIAL = 'svn:special'
 PROP_SPECIAL_VALUE = '*'
 PROP_WC_PREFIX = 'svn:wc:'
+PROP_ENTRY_PREFIX = 'svn:entry'
 PROP_ENTRY_COMMITTED_DATE = 'svn:entry:committed-date'
 PROP_ENTRY_COMMITTED_REV = 'svn:entry:committed-rev'
 PROP_ENTRY_LAST_AUTHOR = 'svn:entry:last-author'

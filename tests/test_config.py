@@ -70,7 +70,7 @@ class ReposConfigTests(TestCaseInTempDir):
         c.set_user_option("override-svn-revprops", "False")
         self.assertEquals([], c.get_override_svn_revprops())
         c.set_user_option("override-svn-revprops", ["svn:author", "svn:date"])
-        self.assertEquals(["svn:author","svn:date"], c.get_override_svn_revprops())
+        self.assertEquals(["svn:author", "svn:date"], c.get_override_svn_revprops())
         c.set_user_option("override-svn-revprops", ["svn:author"])
         self.assertEquals(["svn:author"], c.get_override_svn_revprops())
 
@@ -81,14 +81,6 @@ class ReposConfigTests(TestCaseInTempDir):
         self.assertEquals(True, c.get_append_revisions_only())
         c.set_user_option("append_revisions_only", "False")
         self.assertEquals(False, c.get_append_revisions_only())
-
-    def test_set_revprops(self):
-        c = SvnRepositoryConfig("blabla2")
-        self.assertEquals(None, c.get_set_revprops())
-        c.set_user_option("set-revprops", "True")
-        self.assertEquals(True, c.get_set_revprops())
-        c.set_user_option("set-revprops", "False")
-        self.assertEquals(False, c.get_set_revprops())
 
     def test_log_strip_trailing_newline(self):
         c = SvnRepositoryConfig("blabla3")

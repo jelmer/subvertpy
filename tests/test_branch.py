@@ -73,7 +73,7 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
         dc.close()
 
         b = Branch.open(repos_url + "/trunk")
-        b.tags.set_tag("mytag", b.repository.generate_revision_id(1, "trunk", b.repository.get_mapping()))
+        b.tags.set_tag(u"mytag", b.repository.generate_revision_id(1, "trunk", b.repository.get_mapping()))
 
         self.assertEquals(core.NODE_DIR, 
                 b.repository.transport.check_path("tags/mytag", 3))
@@ -89,7 +89,7 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
 
         b = Branch.open(repos_url + "/trunk")
         self.assertEquals(["foo"], b.tags.get_tag_dict().keys())
-        b.tags.delete_tag("foo")
+        b.tags.delete_tag(u"foo")
         b = Branch.open(repos_url + "/trunk")
         self.assertEquals([], b.tags.get_tag_dict().keys())
 
@@ -103,6 +103,7 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
         dc.close()
 
         b = Branch.open(repos_url + "/trunk")
+        self.assertEquals("", b.project)
         self.assertEquals(b.repository.generate_revision_id(1, "tags/foo", b.repository.get_mapping()), b.tags.lookup_tag("foo"))
 
     def test_tag_lookup_nonexistant(self):
@@ -123,7 +124,7 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
         dc.close()
        
         b = Branch.open(repos_url + "/trunk")
-        self.assertRaises(NoSuchTag, b.tags.delete_tag, "foo")
+        self.assertRaises(NoSuchTag, b.tags.delete_tag, u"foo")
 
     def test_get_branch_path_old(self):
         repos_url = self.make_repository("a")
@@ -210,10 +211,44 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
         self.assertEqual(repos.generate_revision_id(2, "", mapping),
                 branch.last_revision())
 
-    def test_set_revision_history(self):
+    def test_set_revision_history_empty(self):
         repos_url = self.make_repository('a')
         branch = Branch.open(repos_url)
         self.assertRaises(NotImplementedError, branch.set_revision_history, [])
+
+    def test_set_revision_history_ghost(self):
+        repos_url = self.make_repository('a')
+
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.add_dir("trunk")
+        trunk.add_file('trunk/foo').modify()
+        dc.close()
+
+        branch = Branch.open(repos_url+"/trunk")
+        self.assertRaises(NotImplementedError, branch.set_revision_history, ["nonexistantt"])
+
+    def test_set_revision_history(self):
+        repos_url = self.make_repository('a')
+
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.add_dir("trunk")
+        trunk.add_file('trunk/foo').modify()
+        dc.close()
+
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.open_dir("trunk")
+        trunk.add_file('trunk/bla').modify()
+        dc.close()
+
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.open_dir("trunk")
+        trunk.add_file('trunk/bar').modify()
+        dc.close()
+
+        branch = Branch.open(repos_url+"/trunk")
+        orig_history = branch.revision_history()
+        branch.set_revision_history(orig_history[:-1])
+        self.assertEquals(orig_history[:-1], branch.revision_history())
 
     def test_break_lock(self):
         repos_url = self.make_repository('a')
@@ -239,11 +274,6 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
         repos_url = self.make_repository('a')
         branch = Branch.open(repos_url)
         self.assertEqual(None, branch.get_parent())
-
-    def test_append_revision(self):
-        repos_url = self.make_repository('a')
-        branch = Branch.open(repos_url)
-        branch.append_revision([])
 
     def test_get_push_location(self):
         repos_url = self.make_repository('a')
@@ -755,7 +785,7 @@ foohosts""")
         foo.add_file("foo/bla").modify()
         sc.close()
 
-        olddir = self.open_checkout_bzrdir("sc")
+        olddir = BzrDir.open("sc")
 
         os.mkdir("dc")
         
@@ -781,7 +811,7 @@ foohosts""")
         sc.close()
 
         self.client_update('sc')
-        olddir = self.open_checkout_bzrdir("sc/branches/abranch")
+        olddir = BzrDir.open("sc/branches/abranch")
 
         os.mkdir("dc")
         
@@ -807,7 +837,7 @@ foohosts""")
         sc.close()
 
         self.client_update('sc')
-        olddir = self.open_checkout_bzrdir("sc/trunk")
+        olddir = BzrDir.open("sc/trunk")
 
         os.mkdir("dc")
         
@@ -830,7 +860,7 @@ foohosts""")
         sc.change_prop("bzr:ancestry:v3-none", "some-ghost\n")
         sc.close()
 
-        olddir = self.open_checkout_bzrdir("sc")
+        olddir = BzrDir.open("sc")
 
         os.mkdir("dc")
         

@@ -19,20 +19,17 @@ from bzrlib import ui, urlutils
 from bzrlib.errors import BzrError
 from bzrlib.trace import mutter
 
-from bzrlib.errors import NotBranchError
-
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from bzrlib.plugins.svn.errors import InvalidSvnBranchPath
 from bzrlib.plugins.svn import properties
 import bz2
-import urllib
 
 class BranchingScheme(object):
     """ Divides SVN repository data up into branches. Since there
     is no proper way to do this, there are several subclasses of this class
     each of which handles a particular convention that may be in use.
     """
-    def is_branch(self, path):
+    def is_branch(self, path, project=None):
         """Check whether a location refers to a branch.
         
         :param path: Path to check.
@@ -91,7 +88,7 @@ class BranchingScheme(object):
 
         raise UnknownBranchingScheme(name)
 
-    def is_branch_parent(self, path):
+    def is_branch_parent(self, path, project=None):
         """Check whether the specified path is the parent directory of branches.
         The path may not be a branch itself.
         
@@ -100,7 +97,7 @@ class BranchingScheme(object):
         """
         raise NotImplementedError
 
-    def is_tag_parent(self, path):
+    def is_tag_parent(self, path, project=None):
         """Check whether the specified path is the parent directory of tags.
         The path may not be a tag itself.
         
@@ -109,7 +106,7 @@ class BranchingScheme(object):
         """
         raise NotImplementedError
 
-    def is_tag(self, path):
+    def is_tag(self, path, project=None):
         """Check whether the specified path is a tag 
         according to this branching scheme.
 
@@ -152,7 +149,7 @@ def prop_name_quote(text):
 class ListBranchingScheme(BranchingScheme):
     """Branching scheme that keeps a list of branch paths, including 
     wildcards."""
-    def __init__(self, branch_list):
+    def __init__(self, branch_list, tag_list=[]):
         """Create new ListBranchingScheme instance.
 
         :param branch_list: List of know branch locations.
@@ -161,12 +158,13 @@ class ListBranchingScheme(BranchingScheme):
         if isinstance(branch_list, str):
             branch_list = bz2.decompress(prop_name_unquote(branch_list.encode("ascii"))).splitlines()
         self.branch_list = [p.strip("/") for p in branch_list]
+        self.tag_list = tag_list
         self.split_branch_list = [p.split("/") for p in self.branch_list]
 
     def __str__(self):
         return "list-%s" % prop_name_quote(bz2.compress("".join(map(lambda x:x+"\n", self.branch_list))))
             
-    def is_tag(self, path):
+    def is_tag(self, path, project=None):
         """See BranchingScheme.is_tag()."""
         return False
 
@@ -179,7 +177,7 @@ class ListBranchingScheme(BranchingScheme):
                 return False
         return True
 
-    def is_branch(self, path):
+    def is_branch(self, path, project=None):
         """See BranchingScheme.is_branch()."""
         parts = path.strip("/").split("/")
         for pattern in self.split_branch_list:
@@ -193,21 +191,23 @@ class ListBranchingScheme(BranchingScheme):
         parts = path.strip("/").split("/")
         for pattern in self.split_branch_list:
             if self._pattern_cmp(parts[:len(pattern)], pattern):
-                return ("", "/".join(parts[:len(pattern)]), 
+                return ("/".join(parts[:len(pattern)]), 
+                        "/".join(parts[:len(pattern)]), 
                         "/".join(parts[len(pattern):]))
         raise InvalidSvnBranchPath(path, self)
 
     def __eq__(self, other):
-        return self.branch_list == other.branch_list
+        return (self.branch_list == other.branch_list and \
+                self.tag_list == other.tag_list)
 
     def to_lines(self):
         return self.branch_list
 
-    def is_tag_parent(self, path):
+    def is_tag_parent(self, path, project=None):
         # ListBranchingScheme doesn't have tags
         return False
 
-    def is_branch_parent(self, path):
+    def is_branch_parent(self, path, project=None):
         parts = path.strip("/").split("/")
         for pattern in self.split_branch_list:
             if len(parts) == len(pattern):
@@ -223,11 +223,13 @@ class NoBranchingScheme(ListBranchingScheme):
     def __init__(self):
         ListBranchingScheme.__init__(self, [""])
 
-    def is_branch(self, path):
+    def is_branch(self, path, project=None):
         """See BranchingScheme.is_branch()."""
-        return path.strip("/") == ""
+        if project is None or project == "":
+            return path.strip("/") == ""
+        return False
 
-    def is_tag(self, path):
+    def is_tag(self, path, project=None):
         return False
 
     def unprefix(self, path):
@@ -241,10 +243,10 @@ class NoBranchingScheme(ListBranchingScheme):
     def __repr__(self):
         return "%s()" % self.__class__.__name__
 
-    def is_branch_parent(self, path):
+    def is_branch_parent(self, path, project=None):
         return False
 
-    def is_tag_parent(self, path):
+    def is_tag_parent(self, path, project=None):
         return False
 
 
@@ -257,27 +259,35 @@ class TrunkBranchingScheme(ListBranchingScheme):
         self.level = level
         ListBranchingScheme.__init__(self,
             ["*/" * level + "trunk",
-             "*/" * level + "branches/*",
-             "*/" * level + "tags/*"])
+             "*/" * level + "branches/*"])
+        self.tag_list = ["*/" * level + "tags/*"]
 
-    def get_tag_path(self, name):
-        # Only implemented for level 0
-        if self.level == 0:
-            return urlutils.join("tags", name)
-        raise NotImplementedError
+    def get_tag_path(self, name, project=""):
+        assert isinstance(name, unicode)
+        if project == "":
+            return urlutils.join("tags", name.encode("utf-8"))
+        return urlutils.join(project, "tags", name.encode("utf-8"))
 
-    def get_branch_path(self, name):
+    def get_branch_path(self, name, project=""):
         # Only implemented for level 0
-        if self.level == 0:
-            if name == "trunk":
+        if name == "trunk":
+            if project == "":
                 return "trunk"
             else:
+                return urlutils.join(project, "trunk")
+        else:
+            if project == "":
                 return urlutils.join("branches", name)
-        raise NotImplementedError
+            else:
+                return urlutils.join(project, "branches", name)
 
-    def is_branch(self, path):
+    def is_branch(self, path, project=None):
         """See BranchingScheme.is_branch()."""
         parts = path.strip("/").split("/")
+
+        if project is not None and project != "/".join(parts[0:self.level]):
+            return False
+
         if len(parts) == self.level+1 and parts[self.level] == "trunk":
             return True
 
@@ -286,9 +296,13 @@ class TrunkBranchingScheme(ListBranchingScheme):
 
         return False
 
-    def is_tag(self, path):
+    def is_tag(self, path, project=None):
         """See BranchingScheme.is_tag()."""
         parts = path.strip("/").split("/")
+
+        if project is not None and project != "/".join(parts[0:self.level]):
+            return False
+
         if len(parts) == self.level+2 and \
            (parts[self.level] == "tags"):
             return True
@@ -320,15 +334,15 @@ class TrunkBranchingScheme(ListBranchingScheme):
     def __repr__(self):
         return "%s(%d)" % (self.__class__.__name__, self.level)
 
-    def is_branch_parent(self, path):
+    def is_branch_parent(self, path, project=None):
         parts = path.strip("/").split("/")
         if len(parts) <= self.level:
             return True
-        return self.is_branch(path+"/trunk")
+        return self.is_branch(path+"/trunk", project)
 
-    def is_tag_parent(self, path):
+    def is_tag_parent(self, path, project=None):
         parts = path.strip("/").split("/")
-        return self.is_tag(path+"/aname")
+        return self.is_tag(path+"/aname", project)
 
 
 
@@ -350,11 +364,11 @@ class SingleBranchingScheme(ListBranchingScheme):
             raise BzrError("NoBranchingScheme should be used")
         ListBranchingScheme.__init__(self, [self.path])
 
-    def is_branch(self, path):
+    def is_branch(self, path, project=None):
         """See BranchingScheme.is_branch()."""
         return self.path == path.strip("/")
 
-    def is_tag(self, path):
+    def is_tag(self, path, project=None):
         """See BranchingScheme.is_tag()."""
         return False
 
@@ -378,12 +392,12 @@ class SingleBranchingScheme(ListBranchingScheme):
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self.path)
 
-    def is_branch_parent(self, path):
+    def is_branch_parent(self, path, project=None):
         if not "/" in self.path:
             return False
-        return self.is_branch(path+"/"+self.path.split("/")[-1])
+        return self.is_branch(path+"/"+self.path.split("/")[-1], project=None)
 
-    def is_tag_parent(self, path):
+    def is_tag_parent(self, path, project=None):
         return False
 
 

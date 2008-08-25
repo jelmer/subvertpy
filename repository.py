@@ -15,9 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Subversion repository access."""
 
-import bzrlib
 from bzrlib import osutils, ui, urlutils, xml7
-from bzrlib.branch import Branch, BranchCheckResult
+from bzrlib.branch import BranchCheckResult
 from bzrlib.errors import (InvalidRevisionId, NoSuchRevision, NotBranchError, 
                            UninitializableFormat, NotWriteLocked)
 from bzrlib.graph import CachingParentsProvider
@@ -27,8 +26,9 @@ from bzrlib.repository import Repository, RepositoryFormat, needs_read_lock
 from bzrlib.revisiontree import RevisionTree
 from bzrlib.revision import Revision, NULL_REVISION, ensure_null
 from bzrlib.transport import Transport, get_transport
-from bzrlib.trace import info, mutter
+from bzrlib.trace import info
 
+from itertools import chain
 import os
 
 from bzrlib.plugins.svn import changes, core, errors, logwalker, properties
@@ -37,12 +37,10 @@ from bzrlib.plugins.svn.cache import create_cache_dir, sqlite3
 from bzrlib.plugins.svn.changes import changes_path, find_prev_location
 from bzrlib.plugins.svn.config import SvnRepositoryConfig
 from bzrlib.plugins.svn.core import SubversionException
-from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_REVISION_ID, SVN_REVPROP_BZR_SIGNATURE,
-                     parse_revision_metadata, parse_revid_property, 
-                     parse_merge_property, BzrSvnMapping,
-                     get_default_mapping, parse_revision_id, 
+from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
+                     BzrSvnMapping,
+                     get_default_mapping, 
                      parse_svn_dateprop)
-from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.parents import DiskCachingParentsProvider
 from bzrlib.plugins.svn.revids import CachingRevidMap, RevidMap
 from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
@@ -50,7 +48,6 @@ from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_sinc
 from bzrlib.plugins.svn.tree import SvnRevisionTree
 from bzrlib.plugins.svn.versionedfiles import (SvnTexts, VirtualRevisionTexts, 
                                                VirtualInventoryTexts, VirtualSignatureTexts)
-import urllib
 
 def full_paths(find_children, paths, bp, from_bp, from_rev):
     for c in find_children(from_bp, from_rev):
@@ -170,7 +167,8 @@ class SvnRepository(Repository):
     def __init__(self, bzrdir, transport, branch_path=None):
         from bzrlib.plugins.svn import lazy_register_optimizers
         lazy_register_optimizers()
-        from fileids import CachingFileIdMap, simple_apply_changes, FileIdMap
+        from bzrlib.plugins.svn.fileids import (CachingFileIdMap, 
+                                                simple_apply_changes, FileIdMap)
         _revision_store = None
 
         assert isinstance(transport, Transport)
@@ -210,6 +208,7 @@ class SvnRepository(Repository):
             self.revmap = CachingRevidMap(self.revmap, self.cachedb)
             self._real_parents_provider = DiskCachingParentsProvider(self._real_parents_provider, cachedir_transport)
 
+        self._parents_provider = CachingParentsProvider(self._real_parents_provider)
         self.texts = SvnTexts(self)
         self.revisions = VirtualRevisionTexts(self)
         self.inventories = VirtualInventoryTexts(self)
@@ -240,10 +239,10 @@ class SvnRepository(Repository):
 
     def _clear_cached_state(self):
         self._cached_revnum = None
+        self._parents_provider = CachingParentsProvider(self._real_parents_provider)
 
     def lock_write(self):
         """See Branch.lock_write()."""
-        # TODO: Obtain lock on the remote server?
         if self._lock_mode:
             assert self._lock_mode == 'w'
             self._lock_count += 1
@@ -251,11 +250,23 @@ class SvnRepository(Repository):
             self._lock_mode = 'w'
             self._lock_count = 1
 
+    def is_write_locked(self):
+        return (self._lock_mode == 'w')
+
     def get_latest_revnum(self):
         if self._lock_mode in ('r','w') and self._cached_revnum:
             return self._cached_revnum
         self._cached_revnum = self.transport.get_latest_revnum()
         return self._cached_revnum
+
+    def start_write_group(self):
+        pass
+
+    def abort_write_group(self):
+        pass
+
+    def commit_write_group(self):
+        pass
 
     def item_keys_introduced_by(self, revision_ids, _files_pb=None):
         fileids = {}
@@ -315,7 +326,38 @@ class SvnRepository(Repository):
         return self._default_mapping
 
     def _make_parents_provider(self):
-        return CachingParentsProvider(self._real_parents_provider)
+        return self._parents_provider
+
+    def get_deltas_for_revisions(self, revisions):
+        for revision in revisions:
+            yield self.get_revision_delta(revision)
+
+    def get_revision_delta(self, revision):
+        parentrevmeta = self.branch_prev_location(revision.svn_meta.branch_path, revision.svn_meta.revnum, 
+                                                  revision.svn_mapping)
+        from bzrlib.plugins.svn.fetch import TreeDeltaBuildEditor
+        if parentrevmeta is None:
+            parentfileidmap = {}
+            parent_branch_path = revision.svn_meta.branch_path
+            parentrevnum = revision.svn_meta.revnum
+            start_empty = True
+        else:
+            parentfileidmap = self.get_fileid_map(parentrevmeta.revnum, parentrevmeta.branch_path, revision.svn_mapping)
+            parent_branch_path = parentrevmeta.branch_path
+            parentrevnum = parentrevmeta.revnum
+            start_empty = False
+        editor = TreeDeltaBuildEditor(revision.svn_meta, revision.svn_mapping, 
+                                      self.get_fileid_map(revision.svn_meta.revnum, 
+                                                          revision.svn_meta.branch_path,
+                                                          revision.svn_mapping), parentfileidmap)
+        conn = self.transport.connections.get(urlutils.join(self.transport.get_svn_repos_root(), parent_branch_path))
+        try:
+            reporter = conn.do_diff(revision.svn_meta.revnum, "", urlutils.join(self.transport.get_svn_repos_root(), revision.svn_meta.branch_path), editor, True, True, False)
+            reporter.set_path("", parentrevnum, start_empty)
+            reporter.finish()
+        finally:
+            self.transport.add_connection(conn)
+        return editor.delta
 
     def set_layout(self, layout):
         self._layout = layout
@@ -379,7 +421,7 @@ class SvnRepository(Repository):
                             if not bp in paths:
                                 svn_fileprops = {}
                             else:
-                                svn_fileprops = logwalker.lazy_dict({}, self.branchprop_list.get_changed_properties, bp, revnum)
+                                svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum)
                             yield RevisionMetadata(self, bp, paths, revnum, revprops, svn_fileprops)
 
     def all_revision_ids(self, layout=None, mapping=None):
@@ -462,15 +504,7 @@ class SvnRepository(Repository):
 
         return SvnRevisionTree(self, revision_id)
 
-    def lhs_revision_parent(self, path, revnum, mapping):
-        """Find the mainline parent of the specified revision.
-
-        :param path: Path of the revision in Subversion
-        :param revnum: Subversion revision number
-        :param mapping: Mapping.
-        :return: Revision id of the left-hand-side parent or None if 
-                  this is the first revision
-        """
+    def branch_prev_location(self, path, revnum, mapping):
         assert isinstance(path, str)
         assert isinstance(revnum, int)
 
@@ -480,9 +514,23 @@ class SvnRepository(Repository):
         assert revmeta.branch_path == path
         assert revmeta.revnum == revnum
         try:
-            return iterator.next().get_revision_id(mapping)
+            return iterator.next()
         except StopIteration:
+            return None
+
+    def lhs_revision_parent(self, path, revnum, mapping):
+        """Find the mainline parent of the specified revision.
+
+        :param path: Path of the revision in Subversion
+        :param revnum: Subversion revision number
+        :param mapping: Mapping.
+        :return: Revision id of the left-hand-side parent or None if 
+                  this is the first revision
+        """
+        parentrevmeta = self.branch_prev_location(path, revnum, mapping)
+        if parentrevmeta is None:
             return NULL_REVISION
+        return parentrevmeta.get_revision_id(mapping)
 
     def get_parent_map(self, revids):
         parent_map = {}
@@ -496,7 +544,7 @@ class SvnRepository(Repository):
             except NoSuchRevision:
                 continue
 
-            svn_fileprops = logwalker.lazy_dict({}, self.branchprop_list.get_changed_properties, branch, revnum)
+            svn_fileprops = self.branchprop_list.get_changed_properties(branch, revnum)
             svn_revprops = self._log.revprop_list(revnum)
             revmeta = RevisionMetadata(self, branch, None, revnum, svn_revprops, svn_fileprops)
 
@@ -530,7 +578,7 @@ class SvnRepository(Repository):
         (path, revnum, mapping) = self.lookup_revision_id(revision_id)
         
         svn_revprops = self._log.revprop_list(revnum)
-        svn_fileprops = logwalker.lazy_dict({}, self.branchprop_list.get_changed_properties, path, revnum)
+        svn_fileprops = self.branchprop_list.get_changed_properties(path, revnum)
 
         revmeta = RevisionMetadata(self, path, None, revnum, svn_revprops, svn_fileprops)
 
@@ -541,9 +589,8 @@ class SvnRepository(Repository):
                        parent_ids=parent_ids,
                        inventory_sha1="")
 
-        rev.svn_revision = revnum
-        rev.svn_branch = path
-        rev.svn_uuid = self.uuid
+        rev.svn_meta = revmeta
+        rev.svn_mapping = mapping
 
         mapping.import_revision(svn_revprops, svn_fileprops, self.uuid, path, 
                                 revnum, rev)
@@ -558,7 +605,8 @@ class SvnRepository(Repository):
     def add_revision(self, rev_id, rev, inv=None, config=None):
         raise NotImplementedError(self.add_revision)
 
-    def generate_revision_id(self, revnum, path, mapping, revprops=None, changed_fileprops=None):
+    def generate_revision_id(self, revnum, path, mapping, revprops=None, 
+                             changed_fileprops=None):
         """Generate an unambiguous revision id. 
         
         :param revnum: Subversion revision number.
@@ -575,11 +623,12 @@ class SvnRepository(Repository):
             revprops = self._log.revprop_list(revnum)
 
         if changed_fileprops is None:
-            changed_fileprops = logwalker.lazy_dict({}, self.branchprop_list.get_changed_properties, path, revnum)
+            changed_fileprops = self.branchprop_list.get_changed_properties(path, revnum)
 
         return self.get_revmap().get_revision_id(revnum, path, mapping, revprops, changed_fileprops)
 
-    def lookup_revision_id(self, revid, layout=None, ancestry=None):
+    def lookup_revision_id(self, revid, layout=None, ancestry=None, 
+                           project=None):
         """Parse an existing Subversion-based revision id.
 
         :param revid: The revision id.
@@ -592,7 +641,7 @@ class SvnRepository(Repository):
         # If there is no entry in the map, walk over all branches:
         if layout is None:
             layout = self.get_layout()
-        return self.get_revmap().get_branch_revnum(revid, layout)
+        return self.get_revmap().get_branch_revnum(revid, layout, project)
 
     def get_inventory_xml(self, revision_id):
         """See Repository.get_inventory_xml()."""
@@ -676,7 +725,7 @@ class SvnRepository(Repository):
             if not bp in paths:
                 svn_fileprops = {}
             else:
-                svn_fileprops = logwalker.lazy_dict({}, self.branchprop_list.get_changed_properties, bp, revnum)
+                svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum)
 
             yield RevisionMetadata(self, bp, paths, revnum, revprops, svn_fileprops)
 
@@ -713,7 +762,10 @@ class SvnRepository(Repository):
 
     def add_signature_text(self, revision_id, signature):
         (path, revnum, mapping) = self.lookup_revision_id(revision_id)
-        self.transport.change_rev_prop(revnum, SVN_REVPROP_BZR_SIGNATURE, signature)
+        try:
+            self.transport.change_rev_prop(revnum, SVN_REVPROP_BZR_SIGNATURE, signature)
+        except SubversionException, (_, errors.ERR_REPOS_DISABLED_FEATURE):
+            raise errors.RevpropChangeFailed(SVN_REVPROP_BZR_SIGNATURE)
 
     @needs_read_lock
     def find_branches(self, using=False, layout=None):
@@ -733,16 +785,13 @@ class SvnRepository(Repository):
         pb = ui.ui_factory.nested_progress_bar()
         try:
             for project, bp, nick in layout.get_branches(self.get_latest_revnum(), pb=pb):
-                try:
-                    branches.append(SvnBranch(self, bp))
-                except NotBranchError: # Skip non-directories
-                    pass
+                branches.append(SvnBranch(self, bp, _skip_check=True))
         finally:
             pb.finished()
         return branches
 
     @needs_read_lock
-    def find_tags(self, project, layout=None, revnum=None):
+    def find_tags(self, project, layout=None, from_revnum=0, to_revnum=None):
         """Find tags underneath this repository for the specified project.
 
         :param layout: Repository layout to use
@@ -753,20 +802,22 @@ class SvnRepository(Repository):
         if layout is None:
             layout = self.get_layout()
 
-        if revnum is None:
-            revnum = self.get_latest_revnum()
+        if to_revnum is None:
+            to_revnum = self.get_latest_revnum()
 
         mapping = self.get_mapping()
 
         tags = {}
         pb = ui.ui_factory.nested_progress_bar()
-        pb.update("finding tags")
         try:
-            for project, bp, nick in layout.get_tags(revnum, project=project, pb=pb):
-                pb.tick()
+            tag_paths = list(layout.get_tags(to_revnum, project=project, pb=pb))
+            for i, (project, bp, nick) in enumerate(tag_paths):
+                pb.update("finding tags", i, len(tag_paths))
                 npb = ui.ui_factory.nested_progress_bar()
                 try:
-                    it = self.iter_changes(bp, revnum, to_revnum=0, mapping=mapping, pb=npb, limit=2)
+                    it = self.iter_changes(bp, from_revnum=to_revnum, 
+                                           to_revnum=0, mapping=mapping, 
+                                           pb=npb, limit=2)
                     (bp, paths, rev, _) = it.next()
                     if paths.has_key(bp):
                         del paths[bp]
@@ -783,14 +834,15 @@ class SvnRepository(Repository):
             pb.finished()
         return tags
 
-    def find_branchpaths(self, layout, from_revnum=0, to_revnum=None):
+    def find_branchpaths(self, check_path, check_parent_path, 
+                         from_revnum=0, to_revnum=None, 
+                         project=None):
         """Find all branch paths that were changed in the specified revision 
         range.
 
         :param revnum: Revision to search for branches.
         :return: iterator that returns tuples with (path, revision number, still exists). The revision number is the revision in which the branch last existed.
         """
-        assert layout is not None
         if to_revnum is None:
             to_revnum = self.get_latest_revnum()
 
@@ -803,14 +855,14 @@ class SvnRepository(Repository):
             for (paths, i, revprops) in self._log.iter_changes([""], from_revnum, to_revnum):
                 pb.update("finding branches", i, to_revnum)
                 for p in sorted(paths.keys()):
-                    if layout.is_branch(p) or layout.is_tag(p):
+                    if check_path(p, project):
                         if paths[p][0] in ('R', 'D') and p in created_branches:
                             ret.append((p, created_branches[p], False))
                             del created_branches[p]
 
                         if paths[p][0] in ('A', 'R', 'M'): 
                             created_branches[p] = i
-                    elif layout.is_branch_parent(p) or layout.is_tag_parent(p):
+                    elif check_parent_path(p, project):
                         if paths[p][0] in ('R', 'D'):
                             k = created_branches.keys()
                             for c in k:
@@ -824,10 +876,9 @@ class SvnRepository(Repository):
                                 try:
                                     for c in self.transport.get_dir(p, i)[0].keys():
                                         n = p+"/"+c
-                                        if layout.is_branch(n) or layout.is_tag(n):
+                                        if check_path(n, project):
                                             created_branches[n] = i
-                                        elif (layout.is_branch_parent(n) or 
-                                              layout.is_tag_parent(n)):
+                                        elif check_parent_path(n, project):
                                             parents.append(n)
                                 except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
                                     pass
@@ -849,22 +900,37 @@ class SvnRepository(Repository):
     def get_commit_builder(self, branch, parents, config, timestamp=None, 
                            timezone=None, committer=None, revprops=None, 
                            revision_id=None):
-        from commit import SvnCommitBuilder
+        from bzrlib.plugins.svn.commit import SvnCommitBuilder
         return SvnCommitBuilder(self, branch, parents, config, timestamp, 
                 timezone, committer, revprops, revision_id)
 
-    def find_fileprop_branches(self, layout, from_revnum, to_revnum):
-        reuse_policy = self.get_config().get_reuse_revisions()
-        if reuse_policy == "removed-branches":
-            for (branch, revno, _) in self.find_branchpaths(layout, from_revnum, 
-                                                            to_revnum):
-                yield (branch, revno)
-        elif reuse_policy in ("other-branches", "none"):
-            revnum = self.get_latest_revnum()
-            for (project, branch, nick) in layout.get_branches(revnum):
-                yield (branch, revnum)
+    def find_fileprop_paths(self, layout, from_revnum, to_revnum, 
+                               project=None, check_removed=False, 
+                               find_branches=True, find_tags=True):
+        if not check_removed and from_revnum == 0:
+            it = iter([])
+            if find_branches:
+                it = chain(it, layout.get_branches(to_revnum, project))
+            if find_tags:
+                it = chain(it, layout.get_tags(to_revnum, project))
+            for (project, branch, nick) in it:
+                yield (branch, to_revnum, True)
         else:
-            assert False
+            if find_branches and find_tags:
+                check_path_fn = layout.is_branch_or_tag
+                check_parent_path_fn = layout.is_branch_or_tag_parent
+            elif find_branches:
+                check_path_fn = layout.is_branch
+                check_parent_path_fn = layout.is_branch_parent
+            elif find_tags:
+                check_path_fn = layout.is_tag
+                check_parent_path_fn = layout.is_tag_parent
+            else:
+                assert False
+            for (branch, revno, exists) in self.find_branchpaths(
+                check_path_fn, check_parent_path_fn,
+                from_revnum, to_revnum, project):
+                yield (branch, revno, exists)
 
     def abort_write_group(self):
         self._write_group = None

@@ -13,9 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from bzrlib import debug, osutils, urlutils
-from bzrlib.trace import mutter
-from bzrlib.versionedfile import FulltextContentFactory, VersionedFiles, AbsentContentFactory, VirtualVersionedFiles
+from bzrlib import osutils, urlutils
+from bzrlib.versionedfile import FulltextContentFactory, VersionedFiles, VirtualVersionedFiles
 
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import ERR_FS_NOT_FILE
@@ -35,6 +34,9 @@ class SvnTexts(VersionedFiles):
         raise NotImplementedError(self.add_mpdiffs)
 
     def get_record_stream(self, keys, ordering, include_delta_closure):
+        # TODO: there may be valid text revisions that only exist as 
+        # ghosts in the repository itself. This function will 
+        # not be able to report them.
         # TODO: Sort keys by file id and issue just one get_file_revs() call 
         # per file-id ?
         for (fileid, revid) in list(keys):
@@ -42,7 +44,7 @@ class SvnTexts(VersionedFiles):
             map = self.repository.get_fileid_map(revnum, branch, mapping)
             # Unfortunately, the map is the other way around
             lines = None
-            for k,(v,ck) in map.items():
+            for k, (v, ck) in map.items():
                 if v == fileid:
                     try:
                         stream = StringIO()
@@ -56,7 +58,7 @@ class SvnTexts(VersionedFiles):
                     break
             if lines is None:
                 raise Exception("Inconsistent key specified: (%r,%r)" % (fileid, revid))
-            yield FulltextContentFactory((fileid,revid), None, 
+            yield FulltextContentFactory((fileid, revid), None, 
                         sha1=osutils.sha_strings(lines),
                         text=''.join(lines))
 

@@ -15,10 +15,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Blackbox tests."""
 
+import bzrlib.gpg
 from bzrlib.repository import Repository
 from bzrlib.tests.blackbox import ExternalBase
 from bzrlib.tests import KnownFailure
-from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme
@@ -31,11 +31,14 @@ class TestBranch(ExternalBase, TestCaseWithSubversionRepository):
         repos_url = self.make_repository('d')
         self.run_bzr("branch %s dc" % repos_url)
 
+    def commit_something(self, repos_url):
+        dc = self.get_commit_editor(repos_url)
+        dc.add_file("foo").modify("bar")
+        dc.close()
+
     def test_branch_onerev(self):
         repos_url = self.make_client('d', 'de')
-        self.build_tree({'de/foo': 'bar'})
-        self.client_add('de/foo')
-        self.client_commit("de", "msg")
+        self.commit_something(repos_url)
         self.run_bzr("branch %s dc" % repos_url)
         self.check_output("2\n", "revno de")
         
@@ -58,6 +61,21 @@ class TestBranch(ExternalBase, TestCaseWithSubversionRepository):
         self.build_tree({"dc/foo": "blaaaa"})
         self.run_bzr("commit -m msg dc")
         self.run_bzr("push -d dc %s" % repos_url)
+        self.check_output("", "status dc")
+
+    def test_push_overwrite(self):
+        repos_url = self.make_repository('d')
+        
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.add_dir('trunk')
+        trunk.add_file("trunk/foo").modify()
+        dc.close()
+
+        self.run_bzr("init dc")
+        self.build_tree({"dc/bar": "blaaaa"})
+        self.run_bzr("add dc/bar")
+        self.run_bzr("commit -m msg dc")
+        self.run_bzr("push --overwrite -d dc %s/trunk" % repos_url)
         self.check_output("", "status dc")
 
     def test_dpush(self):
@@ -293,6 +311,13 @@ Node-copyfrom-path: x
         self.client_commit("dc", "Msg")
         self.run_bzr("checkout --lightweight dc de")
 
+    def test_commit(self):
+        repos_url = self.make_client('d', 'de')
+        self.build_tree({'de/foo': 'bla'})
+        self.run_bzr("add de/foo")
+        self.run_bzr("commit -m test de")
+        self.check_output("2\n", "revno de")
+
     # this method imported from bzrlib.tests.test_msgeditor:
     def make_fake_editor(self, message='test message from fed\\n'):
         """Set up environment so that an editor will be a known script.
@@ -339,3 +364,26 @@ if len(sys.argv) == 2:
         self.make_fake_editor()
         repos_url = self.make_repository("a")
         self.check_output("", 'svn-branching-scheme --repository-wide --set %s' % repos_url)
+
+    def monkey_patch_gpg(self):
+        """Monkey patch the gpg signing strategy to be a loopback.
+
+        This also registers the cleanup, so that we will revert to
+        the original gpg strategy when done.
+        """
+        self._oldstrategy = bzrlib.gpg.GPGStrategy
+
+        # monkey patch gpg signing mechanism
+        bzrlib.gpg.GPGStrategy = bzrlib.gpg.LoopbackGPGStrategy
+
+        self.addCleanup(self._fix_gpg_strategy)
+
+    def _fix_gpg_strategy(self):
+        bzrlib.gpg.GPGStrategy = self._oldstrategy
+
+    def test_sign_my_commits(self):
+        repos_url = self.make_repository('dc')
+        self.commit_something(repos_url)
+
+        self.monkey_patch_gpg()
+        self.run_bzr('sign-my-commits')

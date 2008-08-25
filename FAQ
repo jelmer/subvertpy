@@ -17,7 +17,7 @@ upgrade the repository, run:
 
 ::
 
- $ bzr upgrade --rich-root-pack
+ $ bzr upgrade --1.6-rich-root
 
 Pushing a branch that didn't exist in Subversion yet with `bzr push` fails.
 ---------------------------------------------------------------------------
@@ -40,12 +40,15 @@ e.g.::
 
 The Bazaar revno's differ from the Subversion revno's
 -----------------------------------------------------
-That's right. Bazaar revision numbers are per-branch, whereas Subversion revno's are per-repository. If you 
-would like to use Subversion revision numbers, use the "svn:" revision specifier. For example:
+That's right. Bazaar revision numbers are per-branch, whereas Subversion 
+revno's are per-repository. If you would like to use Subversion revision 
+numbers, use the "svn:" revision specifier. For example:
 
 ::
 
   $ bzr ls -rsvn:34 svn://example.com/bar
+
+bzr log will also show the Subversion revision number.
 
 After upgrading bzr-svn, Bazaar reports branches have diverged while pulling, when they haven't
 -----------------------------------------------------------------------------------------------
@@ -104,9 +107,9 @@ can not be losslessly mapped to existing Subversion metadata.
 
 It is possible to push changes to Subversion without
 setting that metadata by using the ``bzr dpush`` command. 
-Since revisions created in Subversion this way are actually (slightly) different 
-from the matching revisions in the local branch, it is necessary for the dpush command 
-to rebase your branch to the remote branch after pushing.
+Since revisions created in Subversion this way are actually (slightly) 
+different from the matching revisions in the local branch, it is necessary for 
+the dpush command to rebase your branch to the remote branch after pushing.
 
 You would get a DivergedBranches error when pulling from a svn branch you have 
 just pushed to. 

@@ -25,6 +25,7 @@ from bzrlib.plugins.svn.mapping3.scheme import (BranchingScheme, guess_scheme_fr
                              guess_scheme_from_history, ListBranchingScheme, 
                              parse_list_scheme_text, NoBranchingScheme,
                              TrunkBranchingScheme, ListBranchingScheme)
+from bzrlib.plugins.svn.ra import DIRENT_KIND
 import sha
 
 SVN_PROP_BZR_BRANCHING_SCHEME = 'bzr:branching-scheme'
@@ -32,7 +33,7 @@ SVN_PROP_BZR_BRANCHING_SCHEME = 'bzr:branching-scheme'
 # Number of revisions to evaluate when guessing the branching scheme
 SCHEME_GUESS_SAMPLE_SIZE = 2000
 
-def expand_branch_pattern(begin, todo, check_path, get_children):
+def expand_branch_pattern(begin, todo, check_path, get_children, project=None):
     """Find the paths in the repository that match the expected branch pattern.
 
     :param begin: List of path elements currently opened.
@@ -42,6 +43,10 @@ def expand_branch_pattern(begin, todo, check_path, get_children):
     """
     mutter('expand branches: %r, %r', begin, todo)
     path = "/".join(begin)
+    if (project is not None and 
+        not project.startswith(path) and 
+        not path.startswith(project)):
+        return []
     # If all elements have already been handled, just check the path exists
     if len(todo) == 0:
         if check_path(path):
@@ -50,7 +55,8 @@ def expand_branch_pattern(begin, todo, check_path, get_children):
             return []
     # Not a wildcard? Just expand next bits
     if todo[0] != "*":
-        return expand_branch_pattern(begin+[todo[0]], todo[1:], check_path, get_children)
+        return expand_branch_pattern(begin+[todo[0]], todo[1:], check_path, 
+                                     get_children, project)
     children = get_children(path)
     if children is None:
         return []
@@ -63,7 +69,8 @@ def expand_branch_pattern(begin, todo, check_path, get_children):
                 # Last path element, so return directly
                 ret.append("/".join(begin+[c]))
             else:
-                ret += expand_branch_pattern(begin+[c], todo[1:], check_path, get_children)
+                ret += expand_branch_pattern(begin+[c], todo[1:], check_path, 
+                                             get_children, project)
     finally:
         pb.finished()
     return ret
@@ -82,43 +89,59 @@ class SchemeDerivedLayout(RepositoryLayout):
             type = "branch"
         return (type, proj, bp, rp)
 
-    def _get_root_paths(self, revnum, verify_fn, project="", pb=None):
+    def _get_root_paths(self, itemlist, revnum, verify_fn, project=None, pb=None):
         def check_path(path):
             return self.repository.transport.check_path(path, revnum) == NODE_DIR
         def find_children(path):
             try:
                 assert not path.startswith("/")
-                dirents = self.repository.transport.get_dir(path, revnum)[0]
+                dirents = self.repository.transport.get_dir(path, revnum, DIRENT_KIND)[0]
             except SubversionException, (msg, num):
                 if num in (ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND):
                     return None
                 raise
-            return dirents.keys()
+            return [d for d in dirents if dirents[d]['kind'] == NODE_DIR]
 
-        for idx, pattern in enumerate(self.scheme.branch_list):
+        for idx, pattern in enumerate(itemlist):
             if pb is not None:
-                pb.update("finding branches", idx, len(self.scheme.branch_list))
+                pb.update("finding branches", idx, len(itemlist))
             for bp in expand_branch_pattern([], pattern.split("/"), check_path,
-                    find_children):
-                if verify_fn(bp):
+                    find_children, project):
+                if verify_fn(bp, project):
                     yield "", bp, bp.split("/")[-1]
 
-    def get_branches(self, revnum, project="", pb=None):
-        return self._get_root_paths(revnum, self.scheme.is_branch, project, pb)
+    def get_branches(self, revnum, project=None, pb=None):
+        return self._get_root_paths(self.scheme.branch_list, revnum, self.scheme.is_branch, project, pb)
 
-    def get_tags(self, revnum, project="", pb=None):
-        return self._get_root_paths(revnum, self.scheme.is_tag, project, pb)
+    def get_tags(self, revnum, project=None, pb=None):
+        return self._get_root_paths(self.scheme.tag_list, revnum, self.scheme.is_tag, project, pb)
 
     def get_tag_path(self, name, project=""):
-        return self.scheme.get_tag_path(name)
+        return self.scheme.get_tag_path(name, project)
 
-    def is_branch_parent(self, path):
-        # Na, na, na...
-        return self.scheme.is_branch_parent(path)
+    def get_branch_path(self, name, project=""):
+        return self.scheme.get_branch_path(name, project)
 
-    def is_tag_parent(self, path):
+    def get_branch_path(self, name, project=""):
+        return self.scheme.get_branch_path(name, project)
+
+    def is_branch_parent(self, path, project=None):
         # Na, na, na...
-        return self.scheme.is_tag_parent(path)
+        return self.scheme.is_branch_parent(path, project)
+
+    def is_tag_parent(self, path, project=None):
+        # Na, na, na...
+        return self.scheme.is_tag_parent(path, project)
+
+    def push_merged_revisions(self, project=""):
+        try:
+            self.scheme.get_branch_path("somebranch")
+            return self.repository.get_config().get_push_merged_revisions()
+        except NotImplementedError:
+            return False
+
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__, repr(self.scheme))
 
 
 def get_stored_scheme(repository):
@@ -279,8 +302,7 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
         return (uuid, branch_path, srevnum, cls(scheme))
 
     def is_branch(self, branch_path):
-        return (self.scheme.is_branch(branch_path) or 
-                self.scheme.is_tag(branch_path))
+        return self.scheme.is_branch(branch_path)
 
     def is_tag(self, tag_path):
         return self.scheme.is_tag(tag_path)
@@ -306,12 +328,41 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
     def __eq__(self, other):
         return type(self) == type(other) and self.scheme == other.scheme
 
+
 class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
-    pass
+
+    def __init__(self, scheme, guessed_scheme=None):
+        mapping.BzrSvnMappingFileProps.__init__(self, scheme, guessed_scheme)
+        BzrSvnMappingv3.__init__(self, scheme, guessed_scheme)
+        self.revprop_map = mapping.BzrSvnMappingRevProps()
+
+    def export_text_parents(self, can_use_custom_revprops, text_parents, svn_revprops, fileprops):
+        mapping.BzrSvnMappingFileProps.export_text_parents(self, can_use_custom_revprops, text_parents, svn_revprops, fileprops)
+        if can_use_custom_revprops:
+            self.revprop_map.export_text_parents(can_use_custom_revprops, text_parents, svn_revprops, fileprops)
+
+    def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, old_fileprops):
+        (_, fileprops) = mapping.BzrSvnMappingFileProps.export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, old_fileprops)
+        if can_use_custom_revprops:
+            (revprops, _) = self.revprop_map.export_revision(can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, None, revno, merges, old_fileprops)
+        return (revprops, fileprops)
+
+    def export_fileid_map(self, can_use_custom_revprops, fileids, revprops, fileprops):
+        mapping.BzrSvnMappingFileProps.export_fileid_map(self, can_use_custom_revprops, fileids, revprops, fileprops)
+        if can_use_custom_revprops:
+            self.revprop_map.export_fileid_map(can_use_custom_revprops, fileids, revprops, fileprops)
+
+    def export_message(self, can_use_custom_revprops, log, revprops, fileprops):
+        mapping.BzrSvnMappingFileProps.export_message(self, can_use_custom_revprops, log, revprops, fileprops)
+        if can_use_custom_revprops:
+            self.revprop_map.export_message(can_use_custom_revprops, log, revprops, fileprops)
 
 
 class BzrSvnMappingv3RevProps(mapping.BzrSvnMappingRevProps, BzrSvnMappingv3):
-    pass
+    def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops):
+        (revprops, fileprops) = mapping.BzrSvnMappingRevProps.export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops)
+        revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "3"
+        return (revprops, fileprops)
 
 
 class BzrSvnMappingv3Hybrid(BzrSvnMappingv3):
@@ -332,23 +383,33 @@ class BzrSvnMappingv3Hybrid(BzrSvnMappingv3):
         else:
             return self.fileprops.get_revision_id(branch_path, revprops, fileprops)
 
+    def import_text_parents(self, svn_revprops, fileprops):
+        if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_TEXT_PARENTS):
+            return self.revprops.import_text_parents(svn_revprops, fileprops)
+        else:
+            return self.fileprops.import_text_parents(svn_revprops, fileprops)
+
     def import_fileid_map(self, svn_revprops, fileprops):
         if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_MAPPING_VERSION):
             return self.revprops.import_fileid_map(svn_revprops, fileprops)
         else:
             return self.fileprops.import_fileid_map(svn_revprops, fileprops)
 
-    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, 
+    def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, 
                         revno, merges, fileprops):
-        (_, fileprops) = self.fileprops.export_revision(branch_root, timestamp, timezone, committer, 
+        (_, fileprops) = self.fileprops.export_revision(can_use_custom_revprops, branch_root, timestamp, timezone, committer, 
                                       revprops, revision_id, revno, merges, fileprops)
-        (revprops, _) = self.revprops.export_revision(branch_root, timestamp, timezone, committer, 
+        (revprops, _) = self.revprops.export_revision(can_use_custom_revprops, branch_root, timestamp, timezone, committer, 
                                       revprops, revision_id, revno, merges, fileprops)
         return (revprops, fileprops)
 
-    def export_fileid_map(self, fileids, revprops, fileprops):
-        self.fileprops.export_fileid_map(fileids, revprops, fileprops)
-        self.revprops.export_fileid_map(fileids, revprops, fileprops)
+    def export_fileid_map(self, can_use_custom_revprops, fileids, revprops, fileprops):
+        self.fileprops.export_fileid_map(can_use_custom_revprops, fileids, revprops, fileprops)
+        self.revprops.export_fileid_map(can_use_custom_revprops, fileids, revprops, fileprops)
+
+    def export_text_parents(self, can_use_custom_revprops, text_parents, revprops, fileprops):
+        self.fileprops.export_text_parents(can_use_custom_revprops, text_parents, revprops, fileprops)
+        self.revprops.export_text_parents(can_use_custom_revprops, text_parents, revprops, fileprops)
 
     def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
         self.fileprops.import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)

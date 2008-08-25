@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Subversion BzrDir formats."""
 
-from bzrlib.bzrdir import BzrDirFormat, BzrDir, format_registry
+from bzrlib.bzrdir import BzrDirFormat, format_registry
 from bzrlib.errors import UninitializableFormat
 from bzrlib.lazy_import import lazy_import
 from bzrlib.lockable_files import TransportLock
@@ -34,7 +34,7 @@ def get_rich_root_format():
     if format.repository_format.rich_root_data:
         return format
     # Default format does not support rich root data, 
-    # fall back to rich-root-pack
+    # fall back to 1.6-rich-root
     format = format_registry.make_bzrdir('rich-root-pack')
     assert format.repository_format.rich_root_data
     return format

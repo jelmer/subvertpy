@@ -1,14 +1,35 @@
+# Simple Makefile for Bazaar plugin
+# Copyright (C) 2008 Jelmer Vernooij <jelmer@samba.org>
+#   
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#   
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#   
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 DEBUGGER ?= 
 BZR ?= $(shell which bzr)
+BZR_OPTIONS ?= 
 PYTHON ?= $(shell which python)
-SETUP ?= ./setup.py
+SETUP ?= $(PYTHON) ./setup.py
 PYDOCTOR ?= pydoctor
 CTAGS ?= ctags
 PYLINT ?= pylint
-RST2HTML ?= rst2html
+RST2HTML ?= $(if $(shell which rst2html.py 2>/dev/null), rst2html.py, rst2html)
 TESTS ?= 
+DESTDIR ?=
 
-all:: build build-inplace README.html FAQ.html AUTHORS.html
+REST_DOCS = README FAQ AUTHORS
+
+all:: build build-inplace $(patsubst %,%.html,$(REST_DOCS))
 
 build::
 	$(SETUP) build
@@ -20,7 +41,12 @@ build-inplace-debug::
 	$(SETUP) build_ext --inplace --debug
 
 install::
+ifneq ($(DESTDIR),)
+	$(SETUP) install --root "$(DESTDIR)"
+else
 	$(SETUP) install
+endif
+ 
 
 clean::
 	$(SETUP) clean
@@ -35,7 +61,7 @@ $(TMP_PLUGINS_DIR)/svn: $(TMP_PLUGINS_DIR)
 	ln -sf .. $@
 
 check:: build-inplace $(TMP_PLUGINS_DIR)/svn 
-	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(DEBUGGER) $(PYTHON) $(PYTHON_OPTIONS) $(BZR) selftest $(TEST_OPTIONS) --starting-with=bzrlib.plugins.svn $(TESTS)
+	BZR_PLUGIN_PATH=$(TMP_PLUGINS_DIR) $(DEBUGGER) $(PYTHON) $(PYTHON_OPTIONS) $(BZR) $(BZR_OPTIONS) selftest $(TEST_OPTIONS) --starting-with=bzrlib.plugins.svn $(TESTS)
 
 check-verbose::
 	$(MAKE) check TEST_OPTIONS=-v

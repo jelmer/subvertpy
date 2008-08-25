@@ -25,7 +25,6 @@ from bzrlib.versionedfile import ConstantMapper
 import urllib
 
 from bzrlib.plugins.svn import changes
-from bzrlib.plugins.svn.mapping import escape_svn_path
 
 def get_local_changes(paths, branch, mapping, layout, generate_revid, 
                       get_children=None):
@@ -68,7 +67,7 @@ def get_local_changes(paths, branch, mapping, layout, generate_revid,
     return new_paths
 
 
-FILEIDMAP_VERSION = 1
+FILEIDMAP_VERSION = 2
 
 def simple_apply_changes(new_file_id, changes, find_children=None):
     """Simple function that generates a dictionary with file id changes.
@@ -96,6 +95,7 @@ def simple_apply_changes(new_file_id, changes, find_children=None):
 
     return map
 
+
 class FileIdMap(object):
     """File id store. 
 
@@ -107,6 +107,12 @@ class FileIdMap(object):
         self.apply_changes_fn = apply_changes_fn
         self.repos = repos
 
+    def _use_text_revids(self, mapping, revmeta, map):
+        text_revids = mapping.import_text_parents(revmeta.revprops, revmeta.fileprops).items()
+        for path, revid in text_revids:
+            assert path in map
+            map[path] = (map[path][0], revid)
+
     def apply_changes(self, revmeta, mapping, find_children=None):
         """Change file id map to incorporate specified changes.
 
@@ -115,6 +121,7 @@ class FileIdMap(object):
         :param mapping: Mapping
         """
         renames = mapping.import_fileid_map(revmeta.revprops, revmeta.fileprops)
+        assert revmeta.paths is not None
         changes = get_local_changes(revmeta.paths, revmeta.branch_path, mapping,
                     self.repos.get_layout(),
                     self.repos.generate_revision_id, find_children)
@@ -162,6 +169,7 @@ class FileIdMap(object):
                 (idmap, changes) = self.apply_changes(revmeta, 
                         mapping, self.repos._log.find_children)
                 self.update_map(map, revid, idmap, changes)
+                self._use_text_revids(mapping, revmeta, map)
 
                 parent_revs = next_parent_revs
 
@@ -190,30 +198,18 @@ class FileIdMap(object):
                         del map[p]
 
         for x in sorted(delta.keys()):
-            if delta[x] is not None:
+            if (delta[x] is not None and 
+                # special case - we change metadata in svn at the branch root path
+                # but that's not reflected as a bzr metadata change in bzr
+                (x != "" or not "" in map or map[x][1] == NULL_REVISION)):
                 map[x] = (str(delta[x]), revid)
 
-        # Mark all parent paths as changed
-        for p in delta:
-            if delta[p] is None:
-                continue
-            parts = p.split("/")
-            for j in range(1, len(parts)+1):
-                parent = "/".join(parts[0:len(parts)-j])
-                assert map.has_key(parent), "Parent item %s of %s doesn't exist in map" % (parent, p)
-                if map[parent][1] == revid:
-                    break
-                map[parent] = map[parent][0], revid
 
+class FileIdMapCache(object):
 
-class CachingFileIdMap(object):
-    """A file id map that uses a cache."""
-    def __init__(self, cache_transport, actual):
+    def __init__(self, cache_transport):
         mapper = ConstantMapper("fileidmap-v%d" % FILEIDMAP_VERSION)
         self.idmap_knit = make_file_factory(True, mapper)(cache_transport)
-        self.actual = actual
-        self.apply_changes = actual.apply_changes
-        self.repos = actual.repos
 
     def save(self, revid, parent_revids, _map):
         mutter('saving file id map for %r', revid)
@@ -236,6 +232,16 @@ class CachingFileIdMap(object):
 
         return map
 
+
+class CachingFileIdMap(object):
+    """A file id map that uses a cache."""
+    def __init__(self, cache_transport, actual):
+        self.cache = FileIdMapCache(cache_transport)
+        self.actual = actual
+        self.apply_changes = actual.apply_changes
+        self._use_text_revids = actual._use_text_revids
+        self.repos = actual.repos
+
     def get_map(self, uuid, revnum, branch, mapping):
         """Make sure the map is up to date until revnum."""
         # First, find the last cached map
@@ -254,7 +260,7 @@ class CachingFileIdMap(object):
                 pb.update("fetching changes for file ids", revnum-revmeta.revnum, revnum)
                 revid = revmeta.get_revision_id(mapping)
                 try:
-                    map = self.load(revid)
+                    map = self.cache.load(revid)
                     # found the nearest cached map
                     next_parent_revs = [revid]
                     break
@@ -279,26 +285,20 @@ class CachingFileIdMap(object):
             for i, revmeta in enumerate(reversed(todo)):
                 pb.update('generating file id map', i, len(todo))
                 revid = revmeta.get_revision_id(mapping)
-                expensive = False
                 def log_find_children(path, revnum):
-                    expensive = True
                     return self.repos._log.find_children(path, revnum)
 
                 (idmap, changes) = self.actual.apply_changes(
                         revmeta, mapping, log_find_children)
 
                 self.actual.update_map(map, revid, idmap, changes)
+                self._use_text_revids(mapping, revmeta, map)
 
                 parent_revs = next_parent_revs
                        
-                saved = False
-                if i % 500 == 0 or expensive:
-                    self.save(revid, parent_revs, map)
-                    saved = True
+                self.cache.save(revid, parent_revs, map)
                 next_parent_revs = [revid]
         finally:
             pb.finished()
-        if not saved:
-            self.save(revid, parent_revs, map)
         return map
 

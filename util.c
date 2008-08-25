@@ -60,8 +60,10 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 
 void PyErr_SetSubversionException(svn_error_t *error)
 {
-	PyObject *coremod = PyImport_ImportModule("bzrlib.plugins.svn.core"), *excobj;
-	PyObject *excval;
+	PyObject *coremod;
+	PyObject *excval, *excobj;
+
+	coremod = PyImport_ImportModule("bzrlib.plugins.svn.core");
 
 	if (coremod == NULL) {
 		return;
@@ -149,6 +151,46 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 	return py_props;
 }
 
+apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
+{
+	Py_ssize_t idx = 0;
+	PyObject *k, *v;
+	apr_hash_t *hash_props;
+	svn_string_t *val_string;
+
+	if (!PyDict_Check(py_props)) {
+		PyErr_SetString(PyExc_TypeError, "props should be dictionary");
+		return NULL;
+	}
+
+	hash_props = apr_hash_make(pool);
+	if (hash_props == NULL) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+
+	while (PyDict_Next(py_props, &idx, &k, &v)) {
+
+		if (!PyString_Check(k)) {
+			PyErr_SetString(PyExc_TypeError, 
+							"property name should be string");
+			return NULL;
+		}
+		if (!PyString_Check(v)) {
+			PyErr_SetString(PyExc_TypeError, 
+							"property value should be string");
+			return NULL;
+		}
+
+		val_string = svn_string_ncreate(PyString_AsString(v), 
+										PyString_Size(v), pool);
+		apr_hash_set(hash_props, PyString_AsString(k), 
+					 PyString_Size(k), val_string);
+	}
+
+	return hash_props;
+}
+
 static PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool)
 {
 	PyObject *py_changed_paths, *pyval;
@@ -179,22 +221,22 @@ static PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
 	PyObject *revprops, *py_changed_paths, *ret;
+	PyGILState_STATE state = PyGILState_Ensure();
 
 	py_changed_paths = pyify_changed_paths(log_entry->changed_paths, pool);
-	if (py_changed_paths == NULL)
-		return py_svn_error();
+	CB_CHECK_PYRETVAL(py_changed_paths);
 
 	revprops = prop_hash_to_dict(log_entry->revprops);
-	if (revprops == NULL)
-		return py_svn_error();
+	CB_CHECK_PYRETVAL(revprops);
 
 	ret = PyObject_CallFunction((PyObject *)baton, "OlOb", py_changed_paths, 
 								 log_entry->revision, revprops, log_entry->has_children);
 	Py_DECREF(py_changed_paths);
 	Py_DECREF(revprops);
-	if (ret == NULL)
-		return py_svn_error();
+	CB_CHECK_PYRETVAL(ret);
 	Py_DECREF(ret);
+
+	PyGILState_Release(state);
 	return NULL;
 }
 #endif
@@ -202,12 +244,13 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
 	PyObject *revprops, *py_changed_paths, *ret;
+	PyGILState_STATE state = PyGILState_Ensure();
 
 	py_changed_paths = pyify_changed_paths(changed_paths, pool);
-	if (py_changed_paths == NULL)
-		return py_svn_error();
+	CB_CHECK_PYRETVAL(py_changed_paths);
 
 	revprops = PyDict_New();
+	CB_CHECK_PYRETVAL(revprops);
 	if (message != NULL) {
 		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, 
 							 PyString_FromString(message));
@@ -220,13 +263,14 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revn
 		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, 
 							 PyString_FromString(date));
 	}
-	ret = PyObject_CallFunction((PyObject *)baton, "OlOb", py_changed_paths, 
-								 revision, revprops, FALSE);
+	ret = PyObject_CallFunction((PyObject *)baton, "OlO", py_changed_paths, 
+								 revision, revprops);
 	Py_DECREF(py_changed_paths);
 	Py_DECREF(revprops);
-	if (ret == NULL)
-		return py_svn_error();
+	CB_CHECK_PYRETVAL(ret);
 	Py_DECREF(ret);
+
+	PyGILState_Release(state);
 	return NULL;
 }
 
@@ -264,37 +308,44 @@ apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l)
 static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length)
 {
 	PyObject *self = (PyObject *)baton, *ret;
+	PyGILState_STATE state = PyGILState_Ensure();
+
 	ret = PyObject_CallMethod(self, "read", "i", *length);
-	if (ret == NULL)
-		return py_svn_error();
+	CB_CHECK_PYRETVAL(ret);
+
 	if (!PyString_Check(ret)) {
 		PyErr_SetString(PyExc_TypeError, "Expected stream read function to return string");
+		PyGILState_Release(state);
 		return py_svn_error();
 	}
 	*length = PyString_Size(ret);
 	memcpy(buffer, PyString_AS_STRING(ret), *length);
 	Py_DECREF(ret);
+	PyGILState_Release(state);
 	return NULL;
 }
 
 static svn_error_t *py_stream_write(void *baton, const char *data, apr_size_t *len)
 {
 	PyObject *self = (PyObject *)baton, *ret;
+	PyGILState_STATE state = PyGILState_Ensure();
+
 	ret = PyObject_CallMethod(self, "write", "s#", data, len[0]);
-	if (ret == NULL)
-		return py_svn_error();
+	CB_CHECK_PYRETVAL(ret);
 	Py_DECREF(ret);
+	PyGILState_Release(state);
 	return NULL;
 }
 
 static svn_error_t *py_stream_close(void *baton)
 {
 	PyObject *self = (PyObject *)baton, *ret;
+	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallMethod(self, "close", "");
 	Py_DECREF(self);
-	if (ret == NULL)
-		return py_svn_error();
+	CB_CHECK_PYRETVAL(ret);
 	Py_DECREF(ret);
+	PyGILState_Release(state);
 	return NULL;
 }
 

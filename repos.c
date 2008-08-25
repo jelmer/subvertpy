@@ -49,7 +49,13 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
 	if (pool == NULL)
 		return NULL;
     hash_config = config_hash_from_object(config, pool);
+	if (hash_config == NULL)
+		return NULL;
     hash_fs_config = apr_hash_make(pool); /* FIXME */
+	if (hash_fs_config == NULL) {
+		PyErr_SetString(PyExc_RuntimeError, "Unable to create fs config hash");
+		return NULL;
+	}
     RUN_SVN_WITH_POOL(pool, svn_repos_create(&repos, path, NULL, NULL, 
                 hash_config, hash_fs_config, pool));
 
@@ -86,11 +92,14 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	ret->pool = Pool(NULL);
 	if (ret->pool == NULL)
 		return NULL;
+	Py_BEGIN_ALLOW_THREADS
     if (!check_error(svn_repos_open(&ret->repos, path, ret->pool))) {
 		apr_pool_destroy(ret->pool);
+		PyEval_RestoreThread(_save);
 		PyObject_Del(ret);
 		return NULL;
 	}
+	Py_END_ALLOW_THREADS
 
 	return (PyObject *)ret;
 }

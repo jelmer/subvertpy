@@ -19,23 +19,18 @@ from bzrlib import ui, urlutils
 from bzrlib.branch import Branch, BranchFormat, BranchCheckResult, PullResult
 from bzrlib.bzrdir import BzrDir
 from bzrlib.errors import (NoSuchFile, DivergedBranches, NoSuchRevision, 
-                           NoSuchTag, NotBranchError, UnstackableBranchFormat,
-                           UnrelatedBranches)
-from bzrlib.inventory import (Inventory)
-from bzrlib.revision import is_null, ensure_null, NULL_REVISION
-from bzrlib.tag import BasicTags
-from bzrlib.trace import mutter
+                           NotBranchError, UnstackableBranchFormat)
+from bzrlib.revision import is_null, ensure_null
 from bzrlib.workingtree import WorkingTree
 
 from bzrlib.plugins.svn import core, wc
-from bzrlib.plugins.svn.auth import create_auth_baton
-from bzrlib.plugins.svn.client import Client, get_config
-from bzrlib.plugins.svn.commit import push
+from bzrlib.plugins.svn.commit import push, push_ancestors
 from bzrlib.plugins.svn.config import BranchConfig
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import NotSvnBranchPath, ERR_FS_NO_SUCH_REVISION
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.repository import SvnRepository
+from bzrlib.plugins.svn.tags import SubversionTags
 from bzrlib.plugins.svn.transport import bzr_to_svn_url
 
 import os
@@ -55,92 +50,9 @@ class FakeControlFiles(object):
         pass
 
 
-class SubversionTags(BasicTags):
-    def __init__(self, branch):
-        self.branch = branch
-        self.repository = branch.repository
-
-    def set_tag(self, tag_name, tag_target):
-        path = self.branch.layout.get_tag_path(tag_name, self.branch.project)
-        parent = urlutils.dirname(path)
-        try:
-            (from_bp, from_revnum, mapping) = self.repository.lookup_revision_id(tag_target)
-        except NoSuchRevision:
-            mutter("not setting tag %s; unknown revision %s", tag_name, tag_target)
-            return
-        if from_bp == path:
-            return
-        conn = self.repository.transport.connections.get(urlutils.join(self.repository.base, parent))
-        deletefirst = (conn.check_path(urlutils.basename(path), self.repository.get_latest_revnum()) != core.NODE_NONE)
-        try:
-            ci = conn.get_commit_editor({"svn:log": "Add tag %s" % tag_name})
-            try:
-                root = ci.open_root()
-                if deletefirst:
-                    root.delete_entry(urlutils.basename(path))
-                root.add_directory(urlutils.basename(path), urlutils.join(self.repository.base, from_bp), from_revnum)
-                root.close()
-            except:
-                ci.abort()
-                raise
-            ci.close()
-        finally:
-            self.repository.transport.add_connection(conn)
-
-    def lookup_tag(self, tag_name):
-        try:
-            return self.get_tag_dict()[tag_name]
-        except KeyError:
-            raise NoSuchTag(tag_name)
-
-    def get_tag_dict(self):
-        return self.repository.find_tags(project=self.branch.project, 
-                                         layout=self.branch.layout)
-
-    def get_reverse_tag_dict(self):
-        """Returns a dict with revisions as keys
-           and a list of tags for that revision as value"""
-        d = self.get_tag_dict()
-        rev = {}
-        for key in d:
-            try:
-                rev[d[key]].append(key)
-            except KeyError:
-                rev[d[key]] = [key]
-        return rev
-
-    def delete_tag(self, tag_name):
-        path = self.branch.layout.get_tag_path(tag_name, self.branch.project)
-        parent = urlutils.dirname(path)
-        conn = self.repository.transport.connections.get(urlutils.join(self.repository.base, parent))
-        if conn.check_path(urlutils.basename(path), self.repository.get_latest_revnum()) != core.NODE_DIR:
-            raise NoSuchTag(tag_name)
-        try:
-            ci = conn.get_commit_editor({"svn:log": "Remove tag %s" % tag_name})
-            try:
-                root = ci.open_root()
-                root.delete_entry(urlutils.basename(path))
-                root.close()
-            except:
-                ci.abort()
-                raise
-            ci.close()
-        finally:
-            self.repository.transport.add_connection(conn)
-
-    def _set_tag_dict(self, dest_dict):
-        cur_dict = self.get_tag_dict()
-        for k,v in dest_dict.iteritems():
-            if cur_dict.get(k) != v:
-                self.set_tag(k, v)
-        for k in cur_dict:
-            if k not in dest_dict:
-                self.delete_tag(k)
-
-
 class SvnBranch(Branch):
     """Maps to a Branch in a Subversion repository """
-    def __init__(self, repository, branch_path):
+    def __init__(self, repository, branch_path, _skip_check=False):
         """Instantiate a new SvnBranch.
 
         :param repos: SvnRepository this branch is part of.
@@ -159,18 +71,20 @@ class SvnBranch(Branch):
         self.mapping = self.repository.get_mapping()
         self.layout = self.repository.get_layout()
         self._branch_path = branch_path.strip("/")
-        self.base = urlutils.join(self.repository.base, self._branch_path).rstrip("/")
+        self.base = urlutils.join(self.repository.base, 
+                        self._branch_path).rstrip("/")
         self._revmeta_cache = None
         assert isinstance(self._branch_path, str)
-        try:
-            revnum = self.get_revnum()
-            if self.repository.transport.check_path(self._branch_path, 
-                revnum) != core.NODE_DIR:
-                raise NotBranchError(self.base)
-        except SubversionException, (_, num):
-            if num == ERR_FS_NO_SUCH_REVISION:
-                raise NotBranchError(self.base)
-            raise
+        if not _skip_check:
+            try:
+                revnum = self.get_revnum()
+                if self.repository.transport.check_path(self._branch_path, 
+                    revnum) != core.NODE_DIR:
+                    raise NotBranchError(self.base)
+            except SubversionException, (_, num):
+                if num == ERR_FS_NO_SUCH_REVISION:
+                    raise NotBranchError(self.base)
+                raise
         (type, self.project, _, ip) = self.layout.parse(branch_path)
         # FIXME: Don't allow tag here
         if type not in ('branch', 'tag') or ip != '':
@@ -224,7 +138,8 @@ class SvnBranch(Branch):
         if self._lock_mode == 'r' and self._cached_revnum:
             return self._cached_revnum
         latest_revnum = self.repository.get_latest_revnum()
-        self._cached_revnum = self.repository._log.find_latest_change(self.get_branch_path(), latest_revnum)
+        self._cached_revnum = self.repository._log.find_latest_change(
+            self.get_branch_path(), latest_revnum)
         if self._cached_revnum is None:
             raise NotBranchError(self.base)
         return self._cached_revnum
@@ -236,7 +151,8 @@ class SvnBranch(Branch):
         """
         return BranchCheckResult(self)
 
-    def _create_heavyweight_checkout(self, to_location, revision_id=None, hardlink=False):
+    def _create_heavyweight_checkout(self, to_location, revision_id=None, 
+                                     hardlink=False):
         """Create a new heavyweight checkout of this branch.
 
         :param to_location: URL of location to create the new checkout in.
@@ -262,7 +178,7 @@ class SvnBranch(Branch):
         :raises NoSuchRevision: If the revision id was not found.
         """
         (bp, revnum, mapping) = self.repository.lookup_revision_id(revid, 
-                                         ancestry=(self.get_branch_path(), self.get_revnum()))
+            ancestry=(self.get_branch_path(), self.get_revnum()))
         assert bp.strip("/") == self.get_branch_path(revnum).strip("/"), \
                 "Got %r, expected %r" % (bp, self.get_branch_path(revnum))
         return revnum
@@ -303,7 +219,8 @@ class SvnBranch(Branch):
         if lightweight:
             return self._create_lightweight_checkout(to_location, revision_id)
         else:
-            return self._create_heavyweight_checkout(to_location, revision_id, hardlink=hardlink)
+            return self._create_heavyweight_checkout(to_location, revision_id, 
+                                                     hardlink=hardlink)
 
     def generate_revision_id(self, revnum):
         """Generate a new revision id for a revision on this branch."""
@@ -333,7 +250,12 @@ class SvnBranch(Branch):
 
     def set_revision_history(self, rev_history):
         """See Branch.set_revision_history()."""
-        raise NotImplementedError(self.set_revision_history)
+        if (rev_history == [] or 
+            not self.repository.has_revision(rev_history[-1])):
+            raise NotImplementedError("set_revision_history can't add ghosts")
+        push(self.repository.get_graph(), 
+             self, self.repository, rev_history[-1])
+        self._clear_cached_state()
 
     def set_last_revision_info(self, revno, revid):
         """See Branch.set_last_revision_info()."""
@@ -353,11 +275,12 @@ class SvnBranch(Branch):
             missing.append(revid)
         return None
 
-    def otherline_missing_revisions(self, other, stop_revision):
+    def otherline_missing_revisions(self, other, stop_revision, overwrite=False):
         """Find the revisions missing on the mainline.
         
         :param other: Other branch to retrieve revisions from.
         :param stop_revision: Revision to stop fetching at.
+        :param overwrite: Whether or not the existing data should be overwritten
         """
         missing = []
         for revid in other.repository.iter_reverse_revision_history(stop_revision):
@@ -365,7 +288,10 @@ class SvnBranch(Branch):
                 missing.reverse()
                 return missing
             missing.append(revid)
-        return None
+        if not overwrite:
+            return None
+        else:
+            return missing
  
     def last_revision_info(self):
         """See Branch.last_revision_info()."""
@@ -427,7 +353,7 @@ class SvnBranch(Branch):
         return self.generate_revision_id(self.get_revnum())
 
     def pull(self, source, overwrite=False, stop_revision=None, 
-             _hook_master=None, run_hooks=True):
+             _hook_master=None, run_hooks=True, _push_merged=None):
         """See Branch.pull()."""
         result = PullResult()
         result.source_branch = source
@@ -436,13 +362,8 @@ class SvnBranch(Branch):
         source.lock_read()
         try:
             (result.old_revno, result.old_revid) = self.last_revision_info()
-            try:
-                self.update_revisions(source, stop_revision)
-            except DivergedBranches:
-                if overwrite:
-                    raise NotImplementedError('overwrite not supported for '
-                                              'Subversion branches')
-                raise
+            self.update_revisions(source, stop_revision, overwrite, 
+                                  _push_merged=_push_merged)
             result.tag_conflicts = source.tags.merge_to(self.tags, overwrite)
             (result.new_revno, result.new_revid) = self.last_revision_info()
             return result
@@ -481,10 +402,8 @@ class SvnBranch(Branch):
         destination.set_last_revision_info(revno, revision_id)
 
     def update_revisions(self, other, stop_revision=None, overwrite=False, 
-                         graph=None):
+                         graph=None, _push_merged=False):
         """See Branch.update_revisions()."""
-        if overwrite:
-            raise NotImplementedError("overwrite not supported for Subversion branches")
         if stop_revision is None:
             stop_revision = ensure_null(other.last_revision())
         if (self.last_revision() == stop_revision or
@@ -492,25 +411,35 @@ class SvnBranch(Branch):
             return
         if graph is None:
             graph = self.repository.get_graph()
-        if not other.repository.get_graph().is_ancestor(self.last_revision(), 
+        other_graph = other.repository.get_graph()
+        if not other_graph.is_ancestor(self.last_revision(), 
                                                         stop_revision):
-            if graph.is_ancestor(stop_revision, 
-                                                       self.last_revision()):
+            if graph.is_ancestor(stop_revision, self.last_revision()):
                 return
-            raise DivergedBranches(self, other)
+            if not overwrite:
+                raise DivergedBranches(self, other)
         todo = self.mainline_missing_revisions(other, stop_revision)
         if todo is None:
             # Not possible to add cleanly onto mainline, perhaps need a replace operation
-            todo = self.otherline_missing_revisions(other, stop_revision)
+            todo = self.otherline_missing_revisions(other, stop_revision, overwrite)
         if todo is None:
             raise DivergedBranches(self, other)
-            
+        if _push_merged is None:
+            _push_merged = self.layout.push_merged_revisions(self.project)
+        self._push_missing_revisions(graph, other, other_graph, todo, 
+                                     _push_merged)
+
+    def _push_missing_revisions(self, my_graph, other, other_graph, todo, 
+                                push_merged=False):
         pb = ui.ui_factory.nested_progress_bar()
         try:
             for revid in todo:
                 pb.update("pushing revisions", todo.index(revid), 
                           len(todo))
-                push(self, other, revid)
+                if push_merged:
+                    parent_revids = other_graph.get_parent_map([revid])[revid]
+                    push_ancestors(self.repository, other.repository, self.layout, self.project, parent_revids, other_graph)
+                push(my_graph, self, other.repository, revid)
                 self._clear_cached_state()
         finally:
             pb.finished()
@@ -545,7 +474,7 @@ class SvnBranch(Branch):
         self.repository.unlock()
 
     def _clear_cached_state(self):
-        super(SvnBranch,self)._clear_cached_state()
+        super(SvnBranch, self)._clear_cached_state()
         self._cached_revnum = None
         self._revmeta_cache = None
 
@@ -555,13 +484,6 @@ class SvnBranch(Branch):
 
     def set_parent(self, url):
         """See Branch.set_parent()."""
-
-    def append_revision(self, *revision_ids):
-        """See Branch.append_revision()."""
-        self._clear_cached_state()
-        #raise NotImplementedError(self.append_revision)
-        #FIXME: Make sure the appended revision is already 
-        # part of the revision history
 
     def get_physical_lock_status(self):
         """See Branch.get_physical_lock_status()."""
