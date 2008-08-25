@@ -391,6 +391,7 @@ class SvnWorkingTree(WorkingTree):
         # TODO: Implement more efficient version
         newrev = self.branch.repository.get_revision(revid)
         newrevtree = self.branch.repository.revision_tree(revid)
+        svn_revprops = self.branch.repository._log.revprop_list(rev)
 
         def update_settings(wc, path):
             id = newrevtree.inventory.path2id(path)
@@ -398,27 +399,33 @@ class SvnWorkingTree(WorkingTree):
             revnum = self.branch.lookup_revision_id(
                     newrevtree.inventory[id].revision)
 
-            wc.process_committed(self.abspath(path).rstrip("/"), 
-                          False, revnum, 
-                          properties.time_to_cstring(newrev.timestamp), 
-                          newrev.committer)
-
             if newrevtree.inventory[id].kind != 'directory':
                 return
 
             entries = wc.entries_read(True)
-            for entry in entries:
-                if entry == "":
+            for name, entry in entries.items():
+                if name == "" and path != "":
                     continue
 
-                subwc = WorkingCopy(wc, os.path.join(self.basedir, path, entry), 
-                                   write_lock=True)
-                try:
-                    update_settings(subwc, os.path.join(path, entry))
-                finally:
-                    subwc.close()
+                wc.process_committed(self.abspath(path).rstrip("/"), 
+                              False, rev, 
+                              svn_revprops[properties.PROP_REVISION_DATE], 
+                              svn_revprops[properties.PROP_REVISION_AUTHOR])
+
+                if name == "":
+                    continue
+
+                child_path = os.path.join(path, name)
+
+                if newrevtree.inventory[newrevtree.inventory.path2id(child_path)].kind == 'directory':
+                    subwc = WorkingCopy(wc, self.abspath(child_path).rstrip("/"), write_lock=True)
+                    try:
+                        update_settings(subwc, child_path)
+                    finally:
+                        subwc.close()
 
         # Set proper version for all files in the wc
+        import pdb; pdb.set_trace()
         wc = self._get_wc(write_lock=True)
         try:
             update_settings(wc, "")
