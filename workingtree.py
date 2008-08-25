@@ -404,16 +404,13 @@ class SvnWorkingTree(WorkingTree):
 
             entries = wc.entries_read(True)
             for name, entry in entries.items():
-                if name == "" and path != "":
+                if name == "":
                     continue
 
                 wc.process_committed(self.abspath(path).rstrip("/"), 
-                              False, rev, 
+                              False, entry.revision, 
                               svn_revprops[properties.PROP_REVISION_DATE], 
                               svn_revprops[properties.PROP_REVISION_AUTHOR])
-
-                if name == "":
-                    continue
 
                 child_path = os.path.join(path, name)
 
@@ -425,13 +422,15 @@ class SvnWorkingTree(WorkingTree):
                         subwc.close()
 
         # Set proper version for all files in the wc
-        import pdb; pdb.set_trace()
         wc = self._get_wc(write_lock=True)
         try:
+            wc.process_committed(self.abspath("").rstrip("/"), 
+                          False, entry.revision, 
+                          svn_revprops[properties.PROP_REVISION_DATE], 
+                          svn_revprops[properties.PROP_REVISION_AUTHOR])
             update_settings(wc, "")
         finally:
             wc.close()
-        self.base_revid = revid
 
     def smart_add(self, file_list, recurse=True, action=None, save=True):
         assert isinstance(recurse, bool)
@@ -609,6 +608,10 @@ class SvnWorkingTree(WorkingTree):
 
     def get_parent_ids(self):
         return [self.base_revid] + self.pending_merges()
+
+    def set_parent_ids(self, revision_ids, allow_lefmost_as_ghost=False):
+        self.base_revid = revision_ids[0]
+        self.set_pending_merges(revision_ids[1:])
 
     def pending_merges(self):
         merged = self._get_bzr_merges(self._get_base_branch_props()).splitlines()
