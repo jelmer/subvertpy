@@ -356,12 +356,14 @@ class SvnWorkingTree(WorkingTree):
                 if entry.kind == core.NODE_DIR:
                     subwc = WorkingCopy(wc, self.abspath(subrelpath))
                     try:
+                        assert isinstance(subrelpath, unicode)
                         add_dir_to_inv(subrelpath, subwc, id)
                     finally:
                         subwc.close()
                 else:
                     (subid, subrevid) = find_ids(entry, rootwc)
                     if subid:
+                        assert isinstance(subrelpath, unicode)
                         add_file_to_inv(subrelpath, subid, subrevid, id)
                     else:
                         mutter('no id for %r', entry.url)
@@ -412,7 +414,7 @@ class SvnWorkingTree(WorkingTree):
                               svn_revprops[properties.PROP_REVISION_DATE], 
                               svn_revprops[properties.PROP_REVISION_AUTHOR])
 
-                child_path = os.path.join(path, name)
+                child_path = os.path.join(path, name.decode("utf-8"))
 
                 if newrevtree.inventory[newrevtree.inventory.path2id(child_path)].kind == 'directory':
                     subwc = WorkingCopy(wc, self.abspath(child_path).rstrip("/"), write_lock=True)
