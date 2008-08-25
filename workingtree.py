@@ -408,7 +408,7 @@ class SvnWorkingTree(WorkingTree):
                     continue
 
                 wc.process_committed(self.abspath(path).rstrip("/"), 
-                              False, entry.revision, 
+                              False, self.branch.lookup_revision_id(newrevtree.inventory[id].revision),
                               svn_revprops[properties.PROP_REVISION_DATE], 
                               svn_revprops[properties.PROP_REVISION_AUTHOR])
 
@@ -424,8 +424,8 @@ class SvnWorkingTree(WorkingTree):
         # Set proper version for all files in the wc
         wc = self._get_wc(write_lock=True)
         try:
-            wc.process_committed(self.abspath("").rstrip("/"), 
-                          False, rev,
+            wc.process_committed(self.basedir,
+                          False, self.branch.lookup_revision_id(newrevtree.inventory.root.revision),
                           svn_revprops[properties.PROP_REVISION_DATE], 
                           svn_revprops[properties.PROP_REVISION_AUTHOR])
             update_settings(wc, "")
