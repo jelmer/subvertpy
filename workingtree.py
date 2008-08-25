@@ -425,7 +425,7 @@ class SvnWorkingTree(WorkingTree):
         wc = self._get_wc(write_lock=True)
         try:
             wc.process_committed(self.abspath("").rstrip("/"), 
-                          False, entry.revision, 
+                          False, rev,
                           svn_revprops[properties.PROP_REVISION_DATE], 
                           svn_revprops[properties.PROP_REVISION_AUTHOR])
             update_settings(wc, "")
@@ -610,8 +610,9 @@ class SvnWorkingTree(WorkingTree):
         return [self.base_revid] + self.pending_merges()
 
     def set_parent_ids(self, revision_ids, allow_lefmost_as_ghost=False):
-        self.base_revid = revision_ids[0]
-        self.set_pending_merges(revision_ids[1:])
+        self.set_last_revision(revision_ids[0])
+        if self.pending_merges() != revision_ids[1:]:
+            self.set_pending_merges(revision_ids[1:])
 
     def pending_merges(self):
         merged = self._get_bzr_merges(self._get_base_branch_props()).splitlines()
