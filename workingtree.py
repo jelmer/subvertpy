@@ -16,13 +16,12 @@
 """Checkouts and working trees (working copies)."""
 
 import bzrlib, bzrlib.add
-from bzrlib import osutils, urlutils, ignores
+from bzrlib import osutils, urlutils
 from bzrlib.branch import PullResult
 from bzrlib.bzrdir import BzrDirFormat, BzrDir
 from bzrlib.errors import (InvalidRevisionId, NotBranchError, NoSuchFile,
                            NoRepositoryPresent, 
                            OutOfDateTree, NoWorkingTree, UnsupportedFormatError)
-from bzrlib.ignores import get_runtime_ignores, get_user_ignores
 from bzrlib.inventory import Inventory, InventoryFile, InventoryLink
 from bzrlib.lockable_files import LockableFiles
 from bzrlib.lockdir import LockDir
@@ -90,9 +89,11 @@ class SvnWorkingTree(WorkingTree):
         assert isinstance(self.basedir, unicode)
         self.bzrdir = bzrdir
         self._branch = branch
+        self.base_revnum = 0
+        self.client_ctx = Client(auth=create_auth_baton(bzrdir.svn_url))
+
         self._get_wc()
-        (min_rev, max_rev, switch, modified) = revision_status(self.basedir, None, True, None)
-        assert min_rev >= 0 and max_rev >= 0, "min rev: (%d, %d)" % (min_rev, max_rev)
+        max_rev = revision_status(self.basedir, None, True)[1]
         self.base_revnum = max_rev
         self.base_tree = SvnBasisTree(self)
         self.base_revid = branch.generate_revision_id(self.base_revnum)
@@ -112,8 +113,7 @@ class SvnWorkingTree(WorkingTree):
 
     def get_ignore_list(self):
         ignores = set([get_adm_dir()])
-        ignores.update(get_runtime_ignores())
-        ignores.update(get_user_ignores())
+        ignores.update(svn_config.get_default_ignores())
 
         def dir_add(wc, prefix, patprefix):
             ignorestr = wc.prop_get(properties.PROP_IGNORE, 
