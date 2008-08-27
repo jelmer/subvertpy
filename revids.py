@@ -81,7 +81,8 @@ class RevidMap(object):
                 for propname, propvalue in props.items():
                     if not propname.startswith(SVN_PROP_BZR_REVISION_ID):
                         continue
-                    scheme = propname[len(SVN_PROP_BZR_REVISION_ID):]
+                    mapping_name = propname[len(SVN_PROP_BZR_REVISION_ID):]
+                    scheme = mapping_name[mapping_name.find("-")+1:]
                     for line in propvalue.splitlines():
                         try:
                             revids.add((parse_revid_property(line), scheme))
@@ -119,7 +120,9 @@ class RevidMap(object):
                     # that will already have happened earlier
                     continue
                 if entry_revid == revid:
-                    scheme = BranchingScheme.find_scheme(propname[len(SVN_PROP_BZR_REVISION_ID):])
+                    mapping_name = propname[len(SVN_PROP_BZR_REVISION_ID):]
+                    schemename = mapping_name[mapping_name.find("-")+1:]
+                    scheme = BranchingScheme.find_scheme(schemename)
                     assert (scheme.is_tag(revmeta.branch_path) or 
                             scheme.is_branch(revmeta.branch_path))
                     return (revmeta.branch_path, revmeta.revnum, scheme)

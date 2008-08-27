@@ -25,9 +25,10 @@ from bzrlib.plugins.svn.errors import InvalidPropertyValue
 from bzrlib.plugins.svn.mapping import (generate_revision_metadata, parse_revision_metadata, 
                      parse_revid_property, parse_merge_property, parse_text_parents_property,
                      generate_text_parents_property, BzrSvnMappingv1, BzrSvnMappingv2, 
-                     BzrSvnMappingv4, parse_revision_id)
+                     parse_revision_id)
 from bzrlib.plugins.svn.mapping3 import (BzrSvnMappingv3FileProps, BzrSvnMappingv3RevProps, 
                       BzrSvnMappingv3Hybrid)
+from bzrlib.plugins.svn.mapping4 import BzrSvnMappingv4
 from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme
 
 
