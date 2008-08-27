@@ -766,7 +766,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_ra_open2(&ret->ra, apr_pstrdup(ret->pool, url),
+	err = svn_ra_open2(&ret->ra, svn_path_canonicalize(url, ret->pool),
 			   callbacks2, ret, config_hash, ret->pool);
 	Py_END_ALLOW_THREADS
 	if (!check_error(err)) {
@@ -874,7 +874,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		 * so tweak our own parameters a bit. */
 		apr_paths = apr_array_make(temp_pool, 1, sizeof(char *));
 		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(temp_pool, "");
-	} else if (!string_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+	} else if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
@@ -1763,7 +1763,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-	if (!string_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+	if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}

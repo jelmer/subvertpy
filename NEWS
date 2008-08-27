@@ -1,8 +1,14 @@
 bzr-svn-0.5			UNRELEASED
 
-bzr-svn-0.4.11	2008-08-26
+bzr-svn 0.4.12	UNRELEASED
 
-bzr-svn-0.4.11~rc2	2008-08-26
+  BUG FIXES
+
+   * Cope with svn+ prefix when setting tags. (#261748)
+
+bzr-svn 0.4.11	2008-08-26
+
+bzr-svn 0.4.11~rc2	2008-08-26
 
   CHANGES
 
