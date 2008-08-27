@@ -45,6 +45,7 @@ SVN_REVPROP_BZR_SIGNATURE = 'bzr:gpg-signature'
 SVN_REVPROP_BZR_TIMESTAMP = 'bzr:timestamp'
 SVN_REVPROP_BZR_LOG = 'bzr:log'
 SVN_REVPROP_BZR_TEXT_PARENTS = 'bzr:text-parents'
+SVN_REVPROP_BZR_REQUIRED_FEATURES = 'bzr:required-features'
 
 
 def escape_svn_path(x):

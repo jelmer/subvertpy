@@ -217,6 +217,9 @@ def set_branching_scheme(repository, scheme, mandatory=False):
 class BzrSvnMappingv3(mapping.BzrSvnMapping):
     """The third version of the mappings as used in the 0.4.x series.
 
+    Relies exclusively on file properties, though 
+    bzr-svn 0.4.11 and up will set some revision properties 
+    as well if possible.
     """
     experimental = False
     upgrade_suffix = "-svn3"

@@ -17,7 +17,16 @@ from bzrlib import errors
 
 from bzrlib.plugins.svn import mapping
 
+supported_features = set()
+
+
 class BzrSvnMappingv4(mapping.BzrSvnMappingRevProps):
+    """Mapping between Subversion and Bazaar, introduced in bzr-svn 0.5.
+
+    Tries to use revision properties when possible.
+
+    TODO: Add variable with required features.
+    """
     revid_prefix = "svn-v4"
     experimental = True
 
@@ -27,10 +36,14 @@ class BzrSvnMappingv4(mapping.BzrSvnMappingRevProps):
 
     def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
         super(BzrSvnMappingv4, self).import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
+        if revprops.has_key(mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES):
+            features = set(revprops[mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES].split(","))
+            assert features.issubset(supported_features)
 
     def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops):
         (revprops, fileprops) = mapping.BzrSvnMappingRevProps.export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops)
         revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "4"
+        revprops[mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES] = ",".join([])
         return (revprops, fileprops)
 
     @classmethod
