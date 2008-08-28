@@ -503,6 +503,7 @@ class cmd_svn_branching_scheme(Command):
         Option('repository-wide', 
             help="Act on repository-wide setting rather than local.")
         ]
+    hidden = True
 
     def run(self, location=".", set=False, repository_wide=False):
         from bzrlib.bzrdir import BzrDir
