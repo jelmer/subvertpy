@@ -1,4 +1,14 @@
-bzr-svn-0.4.11	UNRELEASED
+bzr-svn-0.5			UNRELEASED
+
+bzr-svn 0.4.12	UNRELEASED
+
+  BUG FIXES
+
+   * Cope with svn+ prefix when setting tags. (#261748)
+
+bzr-svn 0.4.11	2008-08-26
+
+bzr-svn 0.4.11~rc2	2008-08-26
 
   CHANGES
 
@@ -22,10 +32,13 @@ bzr-svn-0.4.11	UNRELEASED
    * Add --incremental option to bzr-svn for incremental imports.
 
    * Set revision properties from v3 mappings when possible.
+     (#127736)
 
    * Create tags base directory if it doesn't exist.
 
    * Add --merged option to svn-push command.
+
+   * Improve tag/branch discovery.
 
 bzr-svn 0.4.11~rc1	2008-08-08
 

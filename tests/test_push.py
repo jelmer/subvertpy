@@ -340,7 +340,7 @@ class TestPush(TestCaseWithSubversionRepository):
 
         c = ra.RemoteAccess(self.repos_url)
         self.assertEqual("3 some-rid\n", 
-                c.get_dir("", c.get_latest_revnum())[2][SVN_PROP_BZR_REVISION_ID+"none"])
+                c.get_dir("", c.get_latest_revnum())[2][SVN_PROP_BZR_REVISION_ID+"v3-none"])
 
     def test_commit_check_rev_equal(self):
         self.build_tree({'dc/file': 'data'})
@@ -918,7 +918,7 @@ class PushNewBranchTests(TestCaseWithSubversionRepository):
         self.assertEquals([revid1, revid2, revid3], trunk.revision_history())
         self.assertEquals(
                 '1 initialrevid\n2 changerevid\n3 mergerevid\n',
-                self.client_get_prop(repos_url+"/branches/foo", SVN_PROP_BZR_REVISION_ID+"trunk0", r.get_latest_revnum()))
+                self.client_get_prop(repos_url+"/branches/foo", SVN_PROP_BZR_REVISION_ID+"v3-trunk0", r.get_latest_revnum()))
 
     def test_complex_replace_dir(self):
         repos_url = self.make_repository("a")
@@ -986,7 +986,7 @@ class PushNewBranchTests(TestCaseWithSubversionRepository):
         self.assertEquals([revid1, revid2], trunk.revision_history())
         self.assertEquals(
                 '1 initialrevid\n2 mergerevid\n',
-                self.client_get_prop(repos_url+"/trunk", SVN_PROP_BZR_REVISION_ID+"trunk0",
+                self.client_get_prop(repos_url+"/trunk", SVN_PROP_BZR_REVISION_ID+"v3-trunk0",
                                      c.get_latest_revnum()))
 
 

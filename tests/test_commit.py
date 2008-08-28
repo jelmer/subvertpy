@@ -136,7 +136,7 @@ class TestNativeCommit(TestCaseWithSubversionRepository):
         self.client_add("dc/foo")
         wt = WorkingTree.open("dc")
         wt.set_pending_merges(["some-ghost-revision"])
-        self.assertEqual(["some-ghost-revision"], wt.pending_merges())
+        self.assertEqual(("some-ghost-revision",), wt.pending_merges())
         wt.commit(message="data")
         self.assertEqual("some-ghost-revision\n", 
                 self.client_get_prop(repos_url, "bzr:ancestry:v3-none", 1))

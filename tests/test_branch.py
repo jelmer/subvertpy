@@ -289,7 +289,7 @@ class WorkingSubversionBranch(TestCaseWithSubversionRepository):
 
         dc = self.get_commit_editor(repos_url)
         dc.add_file("foo").modify()
-        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"none", 
+        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", 
                 "42 mycommit\n")
         dc.close()
         

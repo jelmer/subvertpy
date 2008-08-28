@@ -37,9 +37,7 @@ from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import ERR_FS_TXN_OUT_OF_DATE, ERR_ENTRY_EXISTS, ERR_WC_PATH_NOT_FOUND, ERR_WC_NOT_DIRECTORY, NotSvnBranchPath
 from bzrlib.plugins.svn.format import get_rich_root_format
-from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_ANCESTRY, SVN_PROP_BZR_FILEIDS, 
-                     SVN_PROP_BZR_REVISION_ID, SVN_PROP_BZR_REVISION_INFO,
-                     escape_svn_path, generate_revision_metadata)
+from bzrlib.plugins.svn.mapping import escape_svn_path
 from bzrlib.plugins.svn.remote import SvnRemoteAccess
 from bzrlib.plugins.svn.repository import SvnRepository
 from bzrlib.plugins.svn.svk import SVN_PROP_SVK_MERGE, parse_svk_features, serialize_svk_features
@@ -159,7 +157,7 @@ class SvnWorkingTree(WorkingTree):
             revnum = self.branch.get_revnum()
         adm = self._get_wc(write_lock=True)
         try:
-            conn = self.branch.repository.transport.connections.get(bzr_to_svn_url(self.branch.base))
+            conn = self.branch.repository.transport.get_connection(self.branch.get_branch_path())
             try:
                 update_wc(adm, self.basedir, conn, revnum)
             finally:
@@ -548,29 +546,49 @@ class SvnWorkingTree(WorkingTree):
         else:
             assert isinstance(id, str)
             new_entries[path] = id
-        existing = "".join(map(lambda (path, id): "%s\t%s\n" % (path, id), new_entries.items()))
-        if existing != "":
-            subwc.prop_set(SVN_PROP_BZR_FILEIDS, existing.encode("utf-8"), self.basedir)
+        revprops = {}
+        fileprops = self._get_branch_props()
+        self.branch.mapping.export_fileid_map(False, new_entries, revprops, fileprops)
+        self._set_branch_props(subwc, fileprops)
         if wc is None:
             subwc.close()
 
+    def _get_branch_props(self):
+        wc = self._get_wc()
+        try:
+            (prop_changes, orig_props) = wc.get_prop_diffs(self.basedir)
+            for k,v in prop_changes:
+                if v is None:
+                    del orig_props[k]
+                else:
+                    orig_props[k] = v
+            return orig_props
+        finally:
+            wc.close()
+
+    def _get_changed_branch_props(self):
+        wc = self._get_wc()
+        try:
+            (prop_changes, orig_props) = wc.get_prop_diffs(self.basedir)
+            return dict(prop_changes)
+        finally:
+            wc.close()
+
+    def _set_branch_props(self, wc, fileprops):
+        for k,v in fileprops.items():
+            wc.prop_set(k, v, self.basedir)
+
     def _get_base_branch_props(self):
-        return self.branch.repository.branchprop_list.get_properties(
-                self.branch.get_branch_path(self.base_revnum), self.base_revnum)
+        wc = self._get_wc()
+        try:
+            (prop_changes, orig_props) = wc.get_prop_diffs(self.basedir)
+            return orig_props
+        finally:
+            wc.close()
 
     def _get_new_file_ids(self, wc):
-        committed = self._get_base_branch_props().get(SVN_PROP_BZR_FILEIDS, "")
-        existing = wc.prop_get(SVN_PROP_BZR_FILEIDS, self.basedir)
-        if existing is None or committed == existing:
-            return {}
-        return dict(map(lambda x: str(x).split("\t"), 
-            existing.splitlines()))
-
-    def _get_bzr_revids(self, base_branch_props):
-        return base_branch_props.get(SVN_PROP_BZR_REVISION_ID+str(self.branch.mapping.scheme), "")
-
-    def _get_bzr_merges(self, base_branch_props):
-        return base_branch_props.get(SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), "")
+        return self.branch.mapping.import_fileid_map({}, 
+                self._get_branch_props())
 
     def _get_svk_merges(self, base_branch_props):
         return base_branch_props.get(SVN_PROP_SVK_MERGE, "")
@@ -579,17 +597,10 @@ class SvnWorkingTree(WorkingTree):
         """See MutableTree.set_pending_merges()."""
         wc = self._get_wc(write_lock=True)
         try:
-            # Set bzr:merge
-            if len(merges) > 0:
-                bzr_merge = "\t".join(merges) + "\n"
-            else:
-                bzr_merge = ""
-
-            wc.prop_set(SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), 
-                                 self._get_bzr_merges(self._get_base_branch_props()) + bzr_merge, 
-                                 self.basedir)
-            
-            svk_merges = parse_svk_features(self._get_svk_merges(self._get_base_branch_props()))
+            base_fileprops = self._get_base_branch_props()
+            fileprops = self.branch.mapping.record_merges(merges, base_fileprops)
+           
+            svk_merges = parse_svk_features(self._get_svk_merges(base_fileprops))
 
             # Set svk:merge
             for merge in merges:
@@ -598,8 +609,8 @@ class SvnWorkingTree(WorkingTree):
                 except InvalidRevisionId:
                     pass
 
-            wc.prop_set(SVN_PROP_SVK_MERGE, 
-                             serialize_svk_features(svk_merges), self.basedir)
+            fileprops[SVN_PROP_SVK_MERGE] = serialize_svk_features(svk_merges)
+            self._set_branch_props(wc, fileprops)
         finally:
             wc.close()
 
@@ -609,7 +620,7 @@ class SvnWorkingTree(WorkingTree):
         self.set_pending_merges(merges)
 
     def get_parent_ids(self):
-        return [self.base_revid] + self.pending_merges()
+        return (self.base_revid,) + self.pending_merges()
 
     def set_parent_ids(self, revision_ids, allow_lefmost_as_ghost=False):
         self.set_last_revision(revision_ids[0])
@@ -617,25 +628,12 @@ class SvnWorkingTree(WorkingTree):
             self.set_pending_merges(revision_ids[1:])
 
     def pending_merges(self):
-        merged = self._get_bzr_merges(self._get_base_branch_props()).splitlines()
         wc = self._get_wc()
         try:
-            merged_data = wc.prop_get(
-                SVN_PROP_BZR_ANCESTRY+str(self.branch.mapping.scheme), self.basedir)
-            if merged_data is None:
-                set_merged = []
-            else:
-                set_merged = merged_data.splitlines()
+            return self.branch.mapping.get_rhs_parents(self.branch.get_branch_path(), {}, 
+                                                self._get_changed_branch_props())
         finally:
             wc.close()
-
-        assert (len(merged) == len(set_merged) or 
-               len(merged)+1 == len(set_merged))
-
-        if len(set_merged) > len(merged):
-            return set_merged[-1].split("\t")
-
-        return []
 
     def path_content_summary(self, path, _lstat=os.lstat,
         _mapper=osutils.file_kind_from_stat_mode):

@@ -127,7 +127,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repos_url = self.make_repository("a")
 
         dc = self.get_commit_editor(repos_url)
-        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"none", 
+        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", 
                              "2 someid\n")
         dc.close()
 
@@ -139,7 +139,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repos_url = self.make_repository("a")
 
         dc = self.get_commit_editor(repos_url)
-        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"none", "corrupt-id\n")
+        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", "corrupt-id\n")
         dc.close()
 
         repos = Repository.open(repos_url)
@@ -974,7 +974,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
 
         dc = self.get_commit_editor(repos_url)
         dc.add_dir("bloe")
-        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"none", "2 myid\n")
+        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", "2 myid\n")
         dc.close()
         repository = Repository.open("svn+%s" % repos_url)
         mapping = repository.get_mapping()
@@ -988,7 +988,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
 
         dc = self.get_commit_editor(repos_url)
         dc.add_dir("bloe")
-        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"none", "corrupt-entry\n")
+        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", "corrupt-entry\n")
         dc.close()
 
         repository = Repository.open("svn+%s" % repos_url)
@@ -1002,12 +1002,12 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repos_url = self.make_client('d', 'dc')
         self.build_tree({'dc/bloe': None})
         self.client_add("dc/bloe")
-        self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"none", 
+        self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"v3-none", 
                              "corrupt-entry\n")
         self.client_commit("dc", "foobar")
         self.build_tree({'dc/bla': None})
         self.client_add("dc/bla")
-        self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"none", 
+        self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"v3-none", 
                 "corrupt-entry\n2 corrupt-entry\n")
         self.client_commit("dc", "foobar")
         repository = Repository.open("svn+%s" % repos_url)
@@ -1025,7 +1025,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repos_url = self.make_client('d', 'dc')
         self.build_tree({'dc/bloe': None})
         self.client_add("dc/bloe")
-        self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"none", "2 myid\n")
+        self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"v3-none", "2 myid\n")
         self.client_commit("dc", "foobar")
         repository = Repository.open("svn+%s" % repos_url)
         self.assertRaises(NoSuchRevision, 

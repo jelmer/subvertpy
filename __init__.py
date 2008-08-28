@@ -45,7 +45,7 @@ import os
 # versions ending in 'exp' mean experimental mappings
 # versions ending in 'dev' mean development version
 # versions ending in 'final' mean release (well tested, etc)
-version_info = (0, 4, 11, 'rc', 1)
+version_info = (0, 5, 0, 'exp', 0)
 
 if version_info[3] == 'final':
     version_string = '%d.%d.%d' % version_info[:3]
@@ -503,6 +503,7 @@ class cmd_svn_branching_scheme(Command):
         Option('repository-wide', 
             help="Act on repository-wide setting rather than local.")
         ]
+    hidden = True
 
     def run(self, location=".", set=False, repository_wide=False):
         from bzrlib.bzrdir import BzrDir

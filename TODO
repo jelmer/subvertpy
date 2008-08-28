@@ -1,15 +1,16 @@
+mappingv4:
+ - use revprops if possible, fall back to fileprops
+ - check revprops first, then fileprops
+ - refuse to set fileprops on repository on which revprops have been set
+
 todo:
 - generate deltas rather than fulltexts when creating file id maps
-- BzrDir.create_branch() should set the revision id to NULL_REVISION
 - tests for setting svk:merge from .bzr checkout
 - tests for http-specific SvnRaTransport._request_path() code
-- tests for auth.py
 - more blackbox tests
  - svn-import without scheme specified should guess
  - bzr missing
 - transform file ids in workingtree in svn-upgrade
-- more efficient implementation of get_revision_delta() to speed up bzr log -v
-- nestedtree support
 - lookup_revision_id()'s result depends on the current branching scheme, 
   causing weird errors when pushing
 
@@ -21,6 +22,16 @@ todo:
 - when committing specific files in a lightweight checkout, make sure to 
   also commit the file property changes for the tree root
 - faster "bzr status"
+
+pushmerge:
+ - create branches/ dir automatically
+
+- Needs more tests
+ - parents cache
+ - Run all tests against repository with revprop changing allowed and without
+- Needs upgrade command that can use legacy file properties and set revprops
+- Support disabling legacy file property support somehow
+- remove set revision properties settings
 
 for other things to do, see:
 

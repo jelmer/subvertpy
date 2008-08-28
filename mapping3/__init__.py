@@ -89,6 +89,9 @@ class SchemeDerivedLayout(RepositoryLayout):
             type = "branch"
         return (type, proj, bp, rp)
 
+    def get_tag_name(self, path, project=None):
+        return path.split("/")[-1]
+
     def _get_root_paths(self, itemlist, revnum, verify_fn, project=None, pb=None):
         def check_path(path):
             return self.repository.transport.check_path(path, revnum) == NODE_DIR
@@ -214,6 +217,9 @@ def set_branching_scheme(repository, scheme, mandatory=False):
 class BzrSvnMappingv3(mapping.BzrSvnMapping):
     """The third version of the mappings as used in the 0.4.x series.
 
+    Relies exclusively on file properties, though 
+    bzr-svn 0.4.11 and up will set some revision properties 
+    as well if possible.
     """
     experimental = False
     upgrade_suffix = "-svn3"
@@ -332,8 +338,8 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
 class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
 
     def __init__(self, scheme, guessed_scheme=None):
-        mapping.BzrSvnMappingFileProps.__init__(self, scheme, guessed_scheme)
         BzrSvnMappingv3.__init__(self, scheme, guessed_scheme)
+        self.name = "v3-" + str(scheme)
         self.revprop_map = mapping.BzrSvnMappingRevProps()
 
     def export_text_parents(self, can_use_custom_revprops, text_parents, svn_revprops, fileprops):
@@ -342,10 +348,11 @@ class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
             self.revprop_map.export_text_parents(can_use_custom_revprops, text_parents, svn_revprops, fileprops)
 
     def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, old_fileprops):
-        (_, fileprops) = mapping.BzrSvnMappingFileProps.export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, old_fileprops)
+        (svn_revprops, fileprops) = mapping.BzrSvnMappingFileProps.export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, old_fileprops)
         if can_use_custom_revprops:
-            (revprops, _) = self.revprop_map.export_revision(can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, None, revno, merges, old_fileprops)
-        return (revprops, fileprops)
+            (extra_svn_revprops, _) = self.revprop_map.export_revision(can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, None, revno, merges, old_fileprops)
+            svn_revprops.update(extra_svn_revprops)
+        return (svn_revprops, fileprops)
 
     def export_fileid_map(self, can_use_custom_revprops, fileids, revprops, fileprops):
         mapping.BzrSvnMappingFileProps.export_fileid_map(self, can_use_custom_revprops, fileids, revprops, fileprops)

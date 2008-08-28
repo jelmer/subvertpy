@@ -493,9 +493,12 @@ class SvnCommitBuilder(RootCommitBuilder):
                                               bp_parts, -1)
             self.revision_metadata = None
             for prop in self._svn_revprops:
+                assert prop.split(":")[0] in ("bzr", "svk", "svn")
                 if not properties.is_valid_property_name(prop):
                     warning("Setting property %r with invalid characters in name", prop)
             conn = self.repository.transport.get_connection()
+            assert self.supports_custom_revprops or self._svn_revprops.keys() == [properties.PROP_REVISION_LOG], \
+                    "revprops: %r" % self._svn_revprops.keys()
             self.editor = conn.get_commit_editor(
                     self._svn_revprops, done, None, False)
             try:

@@ -172,19 +172,22 @@ def convert_repository(source_repos, output_url, scheme=None, layout=None,
         else:
             from_revnum = 0
         to_revnum = source_repos.get_latest_revnum()
-        changed_branches = source_repos.find_fileprop_paths(layout=layout, 
-            from_revnum=from_revnum, to_revnum=to_revnum, check_removed=True,
-            find_branches=True, find_tags=False)
-        existing_branches = []
-        removed_branches = []
-        for (bp, revnum, exists) in changed_branches:
-            if not exists and not keep:
-                removed_branches.append((bp, revnum))
-            elif exists and layout.is_branch(bp):
+        # Searching history for touched and removed branches is more expensive than 
+        # just listing the branches in HEAD, so avoid it if possible.
+        # If there's more than one subdirectory (we always have .bzr), we may 
+        # have to remove existing branches.
+        if from_revnum == 0 or (not keep and len(to_transport.list_dir(".")) > 1):
+            removed_branches, changed_branches = source_repos.find_branches_between(layout=layout, 
+                from_revnum=from_revnum, to_revnum=to_revnum)
+            existing_branches = []
+            for bp in changed_branches:
                 try:
                     existing_branches.append(SvnBranch(source_repos, bp))
                 except NotBranchError: # Skip non-directories
                     pass
+        else:
+            existing_branches = source_repos.find_branches(layout=layout, revnum=to_revnum)
+
         if filter_branch is not None:
             existing_branches = filter(filter_branch, existing_branches)
 
@@ -198,14 +201,15 @@ def convert_repository(source_repos, output_url, scheme=None, layout=None,
                   inter._supports_branches):
                 inter.fetch(branches=existing_branches)
 
-        # Remove removed branches
-        for (bp, revnum) in removed_branches:
-            # TODO: Perhaps check if path is a valid branch with the right last
-            # revid?
-            fullpath = to_transport.local_abspath(bp)
-            if not os.path.isdir(fullpath):
-                continue
-            osutils.rmtree(fullpath)
+        if not keep:
+            # Remove removed branches
+            for bp in removed_branches:
+                # TODO: Perhaps check if path is a valid branch with the right last
+                # revid?
+                fullpath = to_transport.local_abspath(bp)
+                if not os.path.isdir(fullpath):
+                    continue
+                osutils.rmtree(fullpath)
 
         source_graph = source_repos.get_graph()
         pb = ui.ui_factory.nested_progress_bar()
