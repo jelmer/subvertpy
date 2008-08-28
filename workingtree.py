@@ -458,7 +458,7 @@ class SvnWorkingTree(WorkingTree):
             extra = "%d %s\n" % (self.branch.revno()+1, rev_id)
         else:
             extra = ""
-        original_props = self._get_branch_props()
+        original_props = self._get_base_branch_props()
         wc = self._get_wc(write_lock=True)
         (svn_revprops, svn_fileprops) = self.branch.mapping.export_revision(False, self.branch.get_branch_path(), 
                                             timestamp, timezone, committer, revprops, 

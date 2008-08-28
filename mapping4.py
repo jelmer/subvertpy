@@ -36,14 +36,13 @@ class BzrSvnMappingv4(mapping.BzrSvnMappingRevProps):
 
     def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
         super(BzrSvnMappingv4, self).import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
-        if revprops.has_key(mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES):
-            features = set(revprops[mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES].split(","))
-            assert features.issubset(supported_features)
+        if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES):
+            features = set(svn_revprops[mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES].split(","))
+            assert features.issubset(supported_features), "missing feature: %r" % features.difference(supported_features)
 
     def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops):
         (revprops, fileprops) = mapping.BzrSvnMappingRevProps.export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops)
         revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "4"
-        revprops[mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES] = ",".join([])
         return (revprops, fileprops)
 
     @classmethod
