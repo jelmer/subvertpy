@@ -659,21 +659,13 @@ mapping_registry.register('v1', BzrSvnMappingv1,
         'Original bzr-svn mapping format')
 mapping_registry.register('v2', BzrSvnMappingv2,
         'Second format')
-mapping_registry.register_lazy('v3-revprops', 'bzrlib.plugins.svn.mapping3', 
-                               'BzrSvnMappingv3RevProps', 
-                               'Third format with revision properties')
-mapping_registry.register_lazy('v3-fileprops', 'bzrlib.plugins.svn.mapping3', 
-                               'BzrSvnMappingv3FileProps',
-                               'Third format with file properties')
-mapping_registry.register_lazy('v3-hybrid', 'bzrlib.plugins.svn.mapping3', 
-                               'BzrSvnMappingv3Hybrid', 'Hybrid third format')
 mapping_registry.register_lazy('v3', 'bzrlib.plugins.svn.mapping3', 
                                'BzrSvnMappingv3FileProps', 
                                'Default third format')
 mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4', 
                                'BzrSvnMappingv4',
                                'Fourth format')
-mapping_registry.set_default('v3-fileprops')
+mapping_registry.set_default('v3')
 
 def parse_revision_id(revid):
     """Try to parse a Subversion revision id.
