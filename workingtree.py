@@ -495,6 +495,8 @@ class SvnWorkingTree(WorkingTree):
         self.base_revnum = revision
         self.base_tree = SvnBasisTree(self)
 
+        self.branch.repository._clear_cached_state()
+        self.branch._clear_cached_state()
         return revid
 
     def smart_add(self, file_list, recurse=True, action=None, save=True):
