@@ -338,6 +338,10 @@ class SvnBranch(Branch):
         # on large branches.
         return self.generate_revision_id(self.get_revnum())
 
+    def dpush(self, target, stop_revision=None):
+        from bzrlib.plugins.svn.commit import dpush
+        return dpush(target, self, stop_revision)
+
     def pull(self, source, overwrite=False, stop_revision=None, 
              _hook_master=None, run_hooks=True, _push_merged=None):
         """See Branch.pull()."""
