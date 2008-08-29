@@ -233,6 +233,10 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
             self.scheme = scheme
         self.guessed_scheme = guessed_scheme
 
+    @classmethod
+    def from_revprops(cls, revprops):
+        return None
+
     def get_mandated_layout(self, repository):
         return SchemeDerivedLayout(repository, self.scheme)
 

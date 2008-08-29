@@ -2,6 +2,9 @@ mappingv4:
  - refuse to set fileprops on repository on which revprops have been set
  - skip looking for fileprops if revprops have been found in earlier revisions
  - implement set-svn-revprops command
+  - iterate over all revisions in history and:
+   - check if a revision is a bzr revision
+    - if it is, upgrade it
  - implement layout functions, including command
 
 todo:

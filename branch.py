@@ -505,7 +505,7 @@ class SvnBranchFormat(BranchFormat):
 
     def __get_matchingbzrdir(self):
         """See BranchFormat.__get_matchingbzrdir()."""
-        from remote import SvnRemoteFormat
+        from bzrlib.plugins.svn.remote import SvnRemoteFormat
         return SvnRemoteFormat()
 
     _matchingbzrdir = property(__get_matchingbzrdir)

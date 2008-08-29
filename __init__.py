@@ -34,8 +34,9 @@ import bzrlib
 from bzrlib import log
 from bzrlib.bzrdir import BzrDirFormat, format_registry
 from bzrlib.errors import BzrError
-from bzrlib.commands import Command, register_command, display_command, Option
+from bzrlib.commands import Command, register_command, display_command
 from bzrlib.help_topics import topic_registry
+from bzrlib.option import Option, RegistryOption
 from bzrlib.revisionspec import SPEC_TYPES
 from bzrlib.trace import warning, mutter
 from bzrlib.transport import register_lazy_transport, register_transport_proto
@@ -235,7 +236,7 @@ class cmd_svn_import(Command):
             incremental=False):
         from bzrlib.bzrdir import BzrDir
         from bzrlib.errors import BzrCommandError, NoRepositoryPresent
-        from bzrlib import urlutils
+        from bzrlib import osutils, urlutils
         from bzrlib.plugins.svn.convert import convert_repository
         from bzrlib.plugins.svn.mapping3 import repository_guess_scheme
         from bzrlib.plugins.svn.repository import SvnRepository
@@ -299,7 +300,6 @@ class cmd_svn_import(Command):
                                keep=keep, incremental=incremental)
 
             if tmp_repos is not None:
-                from bzrlib import osutils
                 osutils.rmtree(tmp_repos)
         finally:
             from_repos.unlock()
@@ -313,11 +313,16 @@ class cmd_svn_upgrade(Command):
     This will change the revision ids of revisions whose parents 
     were mapped from svn revisions.
     """
+    from bzrlib.plugins.svn.mapping import mapping_registry, get_default_mapping
     takes_args = ['from_repository?']
-    takes_options = ['verbose']
+    takes_options = ['verbose', RegistryOption('mapping', 
+                                 help="New mapping to upgrade to.",
+                                 registry=mapping_registry,
+                                 title="Subversion mapping",
+                                 value_switches=True)]
 
     @display_command
-    def run(self, from_repository=None, verbose=False):
+    def run(self, from_repository=None, verbose=False, mapping=None):
         from bzrlib.plugins.svn.upgrade import (upgrade_branch, 
                                                 upgrade_workingtree)
         from bzrlib.branch import Branch
@@ -346,11 +351,18 @@ class cmd_svn_upgrade(Command):
         else:
             from_repository = Repository.open(from_repository)
 
+        if mapping is None:
+            mapping = get_default_mapping()
+
+        new_mapping = mapping.from_repository(from_repository)
+
         if wt_to is not None:
             renames = upgrade_workingtree(wt_to, from_repository, 
+                                          new_mapping=new_mapping,
                                           allow_changes=True, verbose=verbose)
         else:
             renames = upgrade_branch(branch_to, from_repository, 
+                                     new_mapping=new_mapping,
                                      allow_changes=True, verbose=verbose)
 
         if renames == {}:
@@ -489,10 +501,23 @@ class cmd_svn_set_revprops(Command):
     To change these permissions, edit the hooks/pre-revprop-change 
     file in the Subversion repository.
     """
-    takes_args = ['location']
+    takes_args = ['location?']
+    from bzrlib.plugins.svn.mapping import mapping_registry
+    takes_options = [RegistryOption('mapping', 
+                                 help="New mapping to upgrade to.",
+                                 registry=mapping_registry,
+                                 title="Subversion mapping",
+                                 value_switches=True)]
 
-    def run(self, location="."):
-        raise NotImplementedError(self.run)
+    def run(self, location=".", mapping=None):
+        from bzrlib.repository import Repository
+        from bzrlib.plugins.svn.upgrade import set_revprops
+        from bzrlib.plugins.svn.mapping import get_default_mapping
+        repos = Repository.open(location) 
+        if mapping is None:
+            mapping = get_default_mapping()
+        new_mapping = mapping.from_repository(repos)
+        set_revprops(repos, new_mapping)
 
 
 register_command(cmd_svn_set_revprops)

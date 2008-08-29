@@ -266,6 +266,10 @@ class BzrSvnMapping(foreign.VcsMapping):
         return cls()
 
     @classmethod
+    def from_revprops(cls, revprops):
+        return cls()
+
+    @classmethod
     def supports_roundtripping(cls):
         """Whether this mapping supports roundtripping.
         """
@@ -670,13 +674,13 @@ mapping_registry = foreign.VcsMappingRegistry()
 mapping_registry.register('v1', BzrSvnMappingv1,
         'Original bzr-svn mapping format')
 mapping_registry.register('v2', BzrSvnMappingv2,
-        'Second format')
+        'Second format (bzr-svn 0.3.x)')
 mapping_registry.register_lazy('v3', 'bzrlib.plugins.svn.mapping3', 
                                'BzrSvnMappingv3FileProps', 
-                               'Default third format')
+                               'Default third format (bzr-svn 0.4.x)')
 mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4', 
                                'BzrSvnMappingv4',
-                               'Fourth format')
+                               'Fourth format (bzr-svn 0.5.x)')
 mapping_registry.set_default('v3')
 
 def parse_mapping_name(name):
@@ -700,7 +704,18 @@ def parse_revision_id(revid):
     mapping = mapping_registry.get(mapping_version)
     return mapping.revision_id_bzr_to_foreign(revid)
 
+
 def get_default_mapping():
     return mapping_registry.get_default()
 
+
+def find_mapping(revprops, fileprops):
+    if SVN_REVPROP_BZR_MAPPING_VERSION in revprops:
+        ret = BzrSvnMapping.from_revprops(revprops)
+        if ret is not None:
+            return ret
+    for k, v in fileprops.items():
+        if k.startswith(SVN_PROP_BZR_REVISION_ID):
+            return parse_mapping_name(k[len(SVN_PROP_BZR_REVISION_ID):])
+    return None
 
