@@ -74,7 +74,14 @@ class RevisionMetadata(object):
         return self.repository.generate_revision_id(self.revnum, self.branch_path, mapping, self.revprops, self.fileprops)
 
     def get_lhs_parent(self, mapping):
-        return self.repository.lhs_revision_parent(self.branch_path, self.revnum, mapping)
+        lhs_parent = mapping.get_lhs_parent(self.branch_path, self.revprops, self.fileprops)
+        if lhs_parent is None:
+            # Determine manually
+            lhs_parent = self.repository.lhs_revision_parent(self.branch_path, self.revnum, mapping)
+        return lhs_parent
+
+    def is_bzr_revision(self, mapping):
+        return mapping.is_bzr_revision(self.revprops, self.fileprops)
 
     def get_rhs_parents(self, mapping):
         extra_rhs_parents = mapping.get_rhs_parents(self.branch_path, self.revprops, self.fileprops)
@@ -82,7 +89,7 @@ class RevisionMetadata(object):
         if extra_rhs_parents != ():
             return extra_rhs_parents
 
-        if mapping.is_bzr_revision(self.revprops, self.fileprops):
+        if self.is_bzr_revision(mapping):
             return ()
 
         (prev_path, prev_revnum) = self.repository._log.get_previous(self.branch_path, 
@@ -112,6 +119,23 @@ class RevisionMetadata(object):
                                          parent_ids)
 
         return parent_ids
+
+    def get_revision(self, mapping):
+        parent_ids = self.get_parent_ids(mapping)
+        if parent_ids == (NULL_REVISION,):
+            parent_ids = ()
+        rev = Revision(revision_id=self.get_revision_id(mapping), 
+                       parent_ids=parent_ids,
+                       inventory_sha1="")
+
+        rev.svn_meta = self
+        rev.svn_mapping = mapping
+
+        mapping.import_revision(self.revprops, self.fileprops, self.repository.uuid, self.branch_path, 
+                                self.revnum, rev)
+
+        return rev
+
 
     def __hash__(self):
         return hash((self.__class__, self.repository.uuid, self.branch_path, self.revnum))
@@ -585,20 +609,7 @@ class SvnRepository(Repository):
 
         revmeta = RevisionMetadata(self, path, None, revnum, svn_revprops, svn_fileprops)
 
-        parent_ids = revmeta.get_parent_ids(mapping)
-        if parent_ids == (NULL_REVISION,):
-            parent_ids = ()
-        rev = Revision(revision_id=revision_id, 
-                       parent_ids=parent_ids,
-                       inventory_sha1="")
-
-        rev.svn_meta = revmeta
-        rev.svn_mapping = mapping
-
-        mapping.import_revision(svn_revprops, svn_fileprops, self.uuid, path, 
-                                revnum, rev)
-
-        return rev
+        return revmeta.get_revision(mapping)
 
     def get_revisions(self, revision_ids):
         """See Repository.get_revisions()."""

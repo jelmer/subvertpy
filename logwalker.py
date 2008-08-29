@@ -206,7 +206,6 @@ class LogCache(CacheTable):
 
     def drop_revprops(self, revnum):
         self.cachedb.execute("update revinfo set all_revprops = 0 where rev = ?", (revnum,))
-        self.cachedb.commit()
 
     def get_revprops(self, revnum):
         """Retrieve all the cached revision properties.

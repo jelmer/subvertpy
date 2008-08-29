@@ -48,6 +48,13 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     def supports_custom_revprops():
         return True
 
+    def is_bzr_revision(self, revprops, fileprops):
+        """Whether this is a revision that was pushed by Bazaar."""
+        is_revprop_rev = self.revprops.is_bzr_revision(revprops, fileprops)
+        if is_revprop_rev is not None:
+            return is_revprop_rev
+        return self.fileprops.is_bzr_revision(revprops, fileprops)
+
     @classmethod
     def revision_id_bzr_to_foreign(cls, revid):
         assert isinstance(revid, str)
@@ -79,6 +86,9 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     def __eq__(self, other):
         return type(self) == type(other)
 
+    def get_lhs_parent(self, branch_path, svn_revprops, fileprops):
+        return self.revprops.get_lhs_parent(branch_path, svn_revprops, fileprops)
+
     def get_rhs_parents(self, branch_path, svn_revprops, fileprops):
         if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_MAPPING_VERSION):
             return self.revprops.get_rhs_parents(branch_path, svn_revprops, fileprops)
@@ -104,14 +114,14 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
             return self.fileprops.import_fileid_map(svn_revprops, fileprops)
 
     def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, 
-                        revno, merges, svn_revprops, svn_fileprops):
+                        revno, parent_ids, svn_revprops, svn_fileprops):
         if svn_revprops is not None:
             self.revprops.export_revision(branch_root, timestamp, timezone, committer, 
-                                          revprops, revision_id, revno, merges, svn_revprops, svn_fileprops)
+                                          revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops)
             svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "v4"
         else:
             self.fileprops.export_revision(branch_root, timestamp, timezone, committer, 
-                                      revprops, revision_id, revno, merges, svn_revprops, svn_fileprops)
+                                      revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops)
 
     def export_fileid_map(self, fileids, revprops, fileprops):
         if revprops is not None:

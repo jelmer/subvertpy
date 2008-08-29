@@ -17,6 +17,7 @@
 
 from bzrlib import osutils, registry
 from bzrlib.errors import InvalidRevisionId
+from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn import errors, foreign, properties, version_info
@@ -46,6 +47,8 @@ SVN_REVPROP_BZR_TIMESTAMP = 'bzr:timestamp'
 SVN_REVPROP_BZR_LOG = 'bzr:log'
 SVN_REVPROP_BZR_TEXT_PARENTS = 'bzr:text-parents'
 SVN_REVPROP_BZR_REQUIRED_FEATURES = 'bzr:required-features'
+SVN_REVPROP_BZR_BASE_REVISION = 'bzr:base-revision'
+SVN_REVPROP_BZR_SKIP = 'bzr:skip'
 
 
 def escape_svn_path(x):
@@ -142,19 +145,22 @@ def parse_svn_dateprop(date):
     return (properties.time_from_cstring(date) / 1000000.0, 0)
 
 
+def parse_svn_log(log):
+    if log is None:
+        return None
+    try:
+        return log.decode("utf-8")
+    except UnicodeDecodeError:
+        return log
+
+
 def parse_svn_revprops(svn_revprops, rev):
     if svn_revprops.has_key(properties.PROP_REVISION_AUTHOR):
         rev.committer = svn_revprops[properties.PROP_REVISION_AUTHOR]
     else:
         rev.committer = ""
     
-    rev.message = svn_revprops.get(properties.PROP_REVISION_LOG)
-
-    if rev.message:
-        try:
-            rev.message = rev.message.decode("utf-8")
-        except UnicodeDecodeError:
-            pass
+    rev.message = parse_svn_log(svn_revprops.get(properties.PROP_REVISION_LOG))
 
     assert svn_revprops.has_key(properties.PROP_REVISION_DATE)
     (rev.timestamp, rev.timezone) = parse_svn_dateprop(svn_revprops[properties.PROP_REVISION_DATE])
@@ -343,6 +349,15 @@ class BzrSvnMapping(foreign.VcsMapping):
         """
         raise NotImplementedError(self.import_revision)
 
+    def get_lhs_parent(self, branch_path, revprops, fileprops):
+        """Determine the left hand side parent, if it was explicitly recorded.
+
+        If not explicitly recorded, returns None. Returns NULL_REVISION if 
+        there is no lhs parent.
+
+        """
+        return None
+
     def get_rhs_parents(self, branch_path, revprops, fileprops):
         """Obtain the right-hand side parents for a revision.
 
@@ -387,7 +402,7 @@ class BzrSvnMapping(foreign.VcsMapping):
         """
         raise NotImplementedError(self.export_text_parents)
 
-    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops):
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops):
         """Determines the revision properties and branch root file 
         properties.
         """
@@ -547,14 +562,14 @@ class BzrSvnMappingFileProps(object):
 
         return svnprops
  
-    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops):
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops):
 
         # Keep track of what Subversion properties to set later on
         svn_fileprops[SVN_PROP_BZR_REVISION_INFO] = generate_revision_metadata(
             timestamp, timezone, committer, revprops)
 
-        if len(merges) > 0:
-            svn_fileprops.update(self.record_merges(merges, svn_fileprops))
+        if len(parent_ids) > 1:
+            svn_fileprops.update(self.record_merges(parent_ids[1:], svn_fileprops))
 
         # Set appropriate property if revision id was specified by 
         # caller
@@ -616,6 +631,9 @@ class BzrSvnMappingRevProps(object):
         if text_parents != {}:
             svn_revprops[SVN_REVPROP_BZR_TEXT_PARENTS] = generate_text_parents_property(text_parents)
 
+    def get_lhs_parent(self, branch_parent, svn_revprops, fileprops):
+        return svn_revprops.get(SVN_REVPROP_BZR_BASE_REVISION)
+
     def get_rhs_parents(self, branch_path, svn_revprops, 
                         fileprops):
         if svn_revprops[SVN_REVPROP_BZR_ROOT] != branch:
@@ -623,7 +641,11 @@ class BzrSvnMappingRevProps(object):
         return svn_revprops.get(SVN_REVPROP_BZR_MERGE, "").splitlines()
 
     def is_bzr_revision(self, revprops, fileprops):
-        return revprops.has_key(SVN_REVPROP_BZR_MAPPING_VERSION)
+        if revprops.has_key(SVN_REVPROP_BZR_MAPPING_VERSION):
+            return True
+        if revprops.has_key(SVN_REVPROP_BZR_SKIP):
+            return False
+        return None
 
     def get_revision_id(self, branch_path, revprops, fileprops):
         if not self.is_bzr_revision(revprops, fileprops):
@@ -637,7 +659,7 @@ class BzrSvnMappingRevProps(object):
     def export_message(self, message, revprops, fileprops):
         revprops[SVN_REVPROP_BZR_LOG] = message.encode("utf-8")
 
-    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops):
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops):
 
         if timestamp is not None:
             svn_revprops[SVN_REVPROP_BZR_TIMESTAMP] = format_highres_date(timestamp, timezone)
@@ -654,8 +676,13 @@ class BzrSvnMappingRevProps(object):
         if revision_id is not None:
             svn_revprops[SVN_REVPROP_BZR_REVISION_ID] = revision_id
 
-        if merges != []:
-            svn_revprops[SVN_REVPROP_BZR_MERGE] = "".join([x+"\n" for x in merges])
+        if len(parent_ids) > 1:
+            svn_revprops[SVN_REVPROP_BZR_MERGE] = "".join([x+"\n" for x in parent_ids[1:]])
+        if len(parent_ids) == 0:
+            svn_revprops[SVN_REVPROP_BZR_BASE_REVISION] = NULL_REVISION
+        else:
+            svn_revprops[SVN_REVPROP_BZR_BASE_REVISION] = parent_ids[0]
+        
         svn_revprops[SVN_REVPROP_BZR_REVNO] = str(revno)
 
     def export_fileid_map(self, fileids, revprops, fileprops):

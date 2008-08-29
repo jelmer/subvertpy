@@ -356,10 +356,10 @@ class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
         if svn_revprops is not None:
             self.revprop_map.export_text_parents(text_parents, svn_revprops, fileprops)
 
-    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops):
-        mapping.BzrSvnMappingFileProps.export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops)
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops):
+        mapping.BzrSvnMappingFileProps.export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops)
         if svn_revprops is not None:
-            self.revprop_map.export_revision(branch_root, timestamp, timezone, committer, revprops, None, revno, merges, svn_revprops, svn_fileprops)
+            self.revprop_map.export_revision(branch_root, timestamp, timezone, committer, revprops, None, revno, parent_ids, svn_revprops, svn_fileprops)
 
     def export_fileid_map(self, fileids, revprops, fileprops):
         mapping.BzrSvnMappingFileProps.export_fileid_map(self, fileids, revprops, fileprops)
@@ -373,8 +373,8 @@ class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
 
 
 class BzrSvnMappingv3RevProps(mapping.BzrSvnMappingRevProps, BzrSvnMappingv3):
-    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops):
-        mapping.BzrSvnMappingRevProps.export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops)
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops):
+        mapping.BzrSvnMappingRevProps.export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops)
         svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "3"
 
 
