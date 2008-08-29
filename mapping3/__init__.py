@@ -351,34 +351,31 @@ class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
         self.name = "v3-" + str(scheme)
         self.revprop_map = mapping.BzrSvnMappingRevProps()
 
-    def export_text_parents(self, can_use_custom_revprops, text_parents, svn_revprops, fileprops):
-        mapping.BzrSvnMappingFileProps.export_text_parents(self, can_use_custom_revprops, text_parents, svn_revprops, fileprops)
-        if can_use_custom_revprops:
-            self.revprop_map.export_text_parents(can_use_custom_revprops, text_parents, svn_revprops, fileprops)
+    def export_text_parents(self, text_parents, svn_revprops, fileprops):
+        mapping.BzrSvnMappingFileProps.export_text_parents(self, text_parents, svn_revprops, fileprops)
+        if svn_revprops is not None:
+            self.revprop_map.export_text_parents(text_parents, svn_revprops, fileprops)
 
-    def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, old_fileprops):
-        (svn_revprops, fileprops) = mapping.BzrSvnMappingFileProps.export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, old_fileprops)
-        if can_use_custom_revprops:
-            (extra_svn_revprops, _) = self.revprop_map.export_revision(can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, None, revno, merges, old_fileprops)
-            svn_revprops.update(extra_svn_revprops)
-        return (svn_revprops, fileprops)
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops):
+        mapping.BzrSvnMappingFileProps.export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops)
+        if svn_revprops is not None:
+            self.revprop_map.export_revision(branch_root, timestamp, timezone, committer, revprops, None, revno, merges, svn_revprops, svn_fileprops)
 
-    def export_fileid_map(self, can_use_custom_revprops, fileids, revprops, fileprops):
-        mapping.BzrSvnMappingFileProps.export_fileid_map(self, can_use_custom_revprops, fileids, revprops, fileprops)
-        if can_use_custom_revprops:
-            self.revprop_map.export_fileid_map(can_use_custom_revprops, fileids, revprops, fileprops)
+    def export_fileid_map(self, fileids, revprops, fileprops):
+        mapping.BzrSvnMappingFileProps.export_fileid_map(self, fileids, revprops, fileprops)
+        if revprops is not None:
+            self.revprop_map.export_fileid_map(fileids, revprops, fileprops)
 
-    def export_message(self, can_use_custom_revprops, log, revprops, fileprops):
-        mapping.BzrSvnMappingFileProps.export_message(self, can_use_custom_revprops, log, revprops, fileprops)
-        if can_use_custom_revprops:
-            self.revprop_map.export_message(can_use_custom_revprops, log, revprops, fileprops)
+    def export_message(self, log, revprops, fileprops):
+        mapping.BzrSvnMappingFileProps.export_message(self, log, revprops, fileprops)
+        if revprops is not None:
+            self.revprop_map.export_message(log, revprops, fileprops)
 
 
 class BzrSvnMappingv3RevProps(mapping.BzrSvnMappingRevProps, BzrSvnMappingv3):
-    def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops):
-        (revprops, fileprops) = mapping.BzrSvnMappingRevProps.export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops)
-        revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "3"
-        return (revprops, fileprops)
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops):
+        mapping.BzrSvnMappingRevProps.export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops)
+        svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "3"
 
 
 

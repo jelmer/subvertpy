@@ -88,12 +88,13 @@ def changes_root(paths):
     """
     if paths == []:
         return None
+    paths = sorted(paths)
     root = paths[0]
     for p in paths[1:]:
-        if p.startswith("%s/" % root):
+        if p.startswith("%s/" % root): # new path is child of root
             continue
-        elif root.startswith("%s/" % p):
+        elif root.startswith("%s/" % p): # new path is parent of root
             root = p
         else:
-            return None
+            return None # Mismatch
     return root

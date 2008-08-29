@@ -229,6 +229,7 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
     graph = repository.get_graph()
     assert from_revnum <= to_revnum
     pb = ui.ui_factory.nested_progress_bar()
+    logcache = getattr(repository._log, "cache", None)
     try:
         for (paths, revnum, revprops) in repository._log.iter_changes(None, to_revnum, from_revnum, pb=pb):
             # Find the root path of the change
@@ -239,19 +240,24 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
             else:
                 fileprops = logwalker.lazy_dict({}, repository.branchprop_list.get_properties, bp, revnum)
             old_mapping = mapping.find_mapping(revprops, fileprops)
-            if old_mapping is None:
+            if old_mapping is None or old_mapping == new_mapping:
                 continue
+            assert old_mapping.supports_custom_revprops() or bp is not None
+            new_revprops = dict(revprops.items())
             rev = Revision(old_mapping.get_revision_id(bp, revprops, fileprops)[1])
             old_mapping.import_revision(revprops, fileprops, repository.uuid, bp, revnum, rev)
             revno = graph.find_distance_to_null(rev.revision_id, [])
-            (new_revprops, new_fileprops) = new_mapping.export_revision(True, bp, rev.timestamp, rev.timezone, rev.committer, rev.properties, rev.revision_id, revno, old_mapping.get_rhs_parents(bp, revprops, fileprops), fileprops)
-            new_mapping.export_fileid_map(True, old_mapping.import_fileid_map(revprops, fileprops), 
-                new_revprops, new_fileprops)
-            new_mapping.export_text_parents(True, old_mapping.import_text_parents(revprops, fileprops),
-                new_revprops, new_fileprops)
+            new_mapping.export_revision(bp, rev.timestamp, rev.timezone, rev.committer, rev.properties, rev.revision_id, revno, old_mapping.get_rhs_parents(bp, revprops, fileprops), new_revprops, None)
+            new_mapping.export_fileid_map(old_mapping.import_fileid_map(revprops, fileprops), 
+                new_revprops, None)
+            new_mapping.export_text_parents(old_mapping.import_text_parents(revprops, fileprops),
+                new_revprops, None)
             # new_mapping.export_message
-            assert new_fileprops == fileprops, "expected %r got %r" % (new_fileprops, fileprops)
             for k, v in new_revprops.items():
-                repository.transport.change_rev_prop(revnum, k, v)
+                if v != revprops.get(k):
+                    repository.transport.change_rev_prop(revnum, k, v)
+            # Might as well update the cache while we're at it
+            if logcache is not None:
+                logcache.insert_revprops(revnum, new_revprops)
     finally:
         pb.finished()

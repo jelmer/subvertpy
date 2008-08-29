@@ -510,6 +510,7 @@ class cmd_svn_set_revprops(Command):
                                  value_switches=True)]
 
     def run(self, location=".", mapping=None):
+        from bzrlib.errors import BzrCommandError
         from bzrlib.repository import Repository
         from bzrlib.plugins.svn.upgrade import set_revprops
         from bzrlib.plugins.svn.mapping import get_default_mapping
@@ -517,6 +518,9 @@ class cmd_svn_set_revprops(Command):
         if mapping is None:
             mapping = get_default_mapping()
         new_mapping = mapping.from_repository(repos)
+        if not new_mapping.supports_custom_revprops():
+            raise BzrCommandError("Please specify a different mapping, %s doesn't support revision properties." % new_mapping.name)
+
         set_revprops(repos, new_mapping)
 
 

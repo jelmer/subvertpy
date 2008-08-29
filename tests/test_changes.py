@@ -63,6 +63,9 @@ class ChangesRootTests(TestCase):
     def test_simple(self):
         self.assertEquals("bla", changes_root(["bla", "bla/blie"]))
 
+    def test_siblings(self):
+        self.assertEquals("bla", changes_root(["bla/blie", "bla/bloe", "bla"]))
+
     def test_simple_other(self):
         self.assertEquals("bla", changes_root(["bla/blie", "bla"]))
 

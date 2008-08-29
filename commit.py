@@ -26,6 +26,7 @@ from bzrlib.revision import NULL_REVISION, ensure_null
 from bzrlib.trace import mutter, warning
 
 from cStringIO import StringIO
+from copy import copy
 
 from bzrlib.plugins.svn import core, properties
 from bzrlib.plugins.svn.core import SubversionException
@@ -191,9 +192,13 @@ class SvnCommitBuilder(RootCommitBuilder):
         else:
             base_branch_props = lazy_dict({}, self.repository.branchprop_list.get_properties, self.base_path, self.base_revnum)
         self.supports_custom_revprops = self.repository.transport.has_capability("commit-revprops")
-        (self._svn_revprops, self._svnprops) = self.base_mapping.export_revision(self.supports_custom_revprops, 
+        if self.supports_custom_revprops:
+            self._svn_revprops = {}
+        else:
+            self._svnprops = copy(base_branch_props)
+        self.base_mapping.export_revision(
             self.branch.get_branch_path(), timestamp, timezone, committer, revprops, 
-            revision_id, self.base_revno+1, merges, base_branch_props)
+            revision_id, self.base_revno+1, merges, self._svn_revprops, self._svnprops)
 
         if len(merges) > 0:
             new_svk_merges = update_svk_features(base_branch_props.get(SVN_PROP_SVK_MERGE, ""), merges)
@@ -474,17 +479,15 @@ class SvnCommitBuilder(RootCommitBuilder):
         repository_latest_revnum = self.repository.get_latest_revnum()
         lock = self.repository.transport.lock_write(".")
 
-        (fileids, text_parents) = self._determine_texts_identity()
+        if self.push_metadata:
+            (fileids, text_parents) = self._determine_texts_identity()
 
-        self.base_mapping.export_text_parents(self.supports_custom_revprops, text_parents, 
-                                              self._svn_revprops, self._svnprops)
-        self.base_mapping.export_fileid_map(self.supports_custom_revprops, fileids, 
-                                            self._svn_revprops, self._svnprops)
-        if self._config.get_log_strip_trailing_newline():
-            self.base_mapping.export_message(self.supports_custom_revprops, message, 
-                                             self._svn_revprops, self._svnprops)
-            message = message.rstrip("\n")
-        if not self.push_metadata:
+            self.base_mapping.export_text_parents(text_parents, self._svn_revprops, self._svnprops)
+            self.base_mapping.export_fileid_map(fileids, self._svn_revprops, self._svnprops)
+            if self._config.get_log_strip_trailing_newline():
+                self.base_mapping.export_message(message, self._svn_revprops, self._svnprops)
+                message = message.rstrip("\n")
+        if not self.supports_custom_revprops:
             self._svn_revprops = {}
         self._svn_revprops[properties.PROP_REVISION_LOG] = message.encode("utf-8")
 

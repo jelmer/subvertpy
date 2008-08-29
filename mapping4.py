@@ -41,6 +41,14 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
         return True
 
     @classmethod
+    def from_revprops(cls, revprops):
+        return cls()
+
+    @staticmethod
+    def supports_custom_revprops():
+        return True
+
+    @classmethod
     def revision_id_bzr_to_foreign(cls, revid):
         assert isinstance(revid, str)
 
@@ -95,28 +103,27 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
         else:
             return self.fileprops.import_fileid_map(svn_revprops, fileprops)
 
-    def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, 
-                        revno, merges, fileprops):
-        if can_use_custom_revprops:
-            (svn_revprops, fileprops) = self.revprops.export_revision(can_use_custom_revprops, branch_root, timestamp, timezone, committer, 
-                                          revprops, revision_id, revno, merges, fileprops)
-            svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "4"
-            return (svn_revprops, fileprops)
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, 
+                        revno, merges, svn_revprops, svn_fileprops):
+        if svn_revprops is not None:
+            self.revprops.export_revision(branch_root, timestamp, timezone, committer, 
+                                          revprops, revision_id, revno, merges, svn_revprops, svn_fileprops)
+            svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "v4"
         else:
-            return self.fileprops.export_revision(can_use_custom_revprops, branch_root, timestamp, timezone, committer, 
-                                      revprops, revision_id, revno, merges, fileprops)
+            self.fileprops.export_revision(branch_root, timestamp, timezone, committer, 
+                                      revprops, revision_id, revno, merges, svn_revprops, svn_fileprops)
 
-    def export_fileid_map(self, can_use_custom_revprops, fileids, revprops, fileprops):
-        if can_use_custom_revprops:
-            self.revprops.export_fileid_map(can_use_custom_revprops, fileids, revprops, fileprops)
+    def export_fileid_map(self, fileids, revprops, fileprops):
+        if revprops is not None:
+            self.revprops.export_fileid_map(fileids, revprops, fileprops)
         else:
-            self.fileprops.export_fileid_map(can_use_custom_revprops, fileids, revprops, fileprops)
+            self.fileprops.export_fileid_map(fileids, revprops, fileprops)
 
-    def export_text_parents(self, can_use_custom_revprops, text_parents, revprops, fileprops):
-        if can_use_custom_revprops:
-            self.revprops.export_text_parents(can_use_custom_revprops, text_parents, revprops, fileprops)
+    def export_text_parents(self, text_parents, revprops, fileprops):
+        if revprops is not None:
+            self.revprops.export_text_parents(text_parents, revprops, fileprops)
         else:
-            self.fileprops.export_text_parents(can_use_custom_revprops, text_parents, revprops, fileprops)
+            self.fileprops.export_text_parents(text_parents, revprops, fileprops)
 
     def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
         if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES):
