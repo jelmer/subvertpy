@@ -451,6 +451,11 @@ class BzrSvnMappingv2(BzrSvnMapping):
 
 
 def parse_fileid_property(text):
+    """Pares a fileid file or revision property.
+
+    :param text: Property value
+    :return: Map of path -> fileid
+    """
     ret = {}
     for line in text.splitlines():
         (path, key) = line.split("\t", 1)
@@ -459,7 +464,11 @@ def parse_fileid_property(text):
 
 
 def generate_fileid_property(fileids):
-    """Marshall a dictionary with file ids."""
+    """Marshall a dictionary with file ids.
+    
+    :param fileids: Map of path -> fileid
+    :return: Property value
+    """
     return "".join(["%s\t%s\n" % (urllib.quote(path.encode("utf-8")), fileids[path]) for path in sorted(fileids.keys())])
 
 
@@ -476,6 +485,9 @@ def generate_text_parents_property(text_parents):
 
 
 class BzrSvnMappingFileProps(object):
+    def __init__(self, name):
+        self.name = name
+
     @classmethod
     def supports_custom_fileprops(cls):
         """Whether this mapping can be used with custom file properties."""

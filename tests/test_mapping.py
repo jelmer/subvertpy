@@ -26,8 +26,7 @@ from bzrlib.plugins.svn.mapping import (generate_revision_metadata, parse_revisi
                      parse_revid_property, parse_merge_property, parse_text_parents_property,
                      generate_text_parents_property, BzrSvnMappingv1, BzrSvnMappingv2, 
                      parse_revision_id)
-from bzrlib.plugins.svn.mapping3 import (BzrSvnMappingv3FileProps, BzrSvnMappingv3RevProps, 
-                      BzrSvnMappingv3Hybrid)
+from bzrlib.plugins.svn.mapping3 import (BzrSvnMappingv3FileProps, BzrSvnMappingv3RevProps)
 from bzrlib.plugins.svn.mapping4 import BzrSvnMappingv4
 from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme
 
@@ -153,9 +152,8 @@ class MappingTestAdapter(object):
     def test_fileid_map(self):
         if not self.mapping.supports_roundtripping():
             raise TestNotApplicable
-        revprops = {}
-        fileprops = {}
         fileids = {"": "some-id", "bla/blie": "other-id"}
+        (revprops, fileprops) = self.mapping.export_revision(True, "branchp", 432432432.0, 0, "somebody", {}, "arevid", 4, ["merge1"], dict())
         self.mapping.export_fileid_map(True, fileids, revprops, fileprops)
         revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
         self.assertEquals(fileids, 
@@ -300,11 +298,6 @@ class Mappingv3FilePropTests(MappingTestAdapter, TestCase):
 class Mappingv3RevPropTests(MappingTestAdapter, TestCase):
     def setUp(self):
         self.mapping = BzrSvnMappingv3RevProps(NoBranchingScheme())
-
-
-class Mappingv3HybridTests(MappingTestAdapter, TestCase):
-    def setUp(self):
-        self.mapping = BzrSvnMappingv3Hybrid(NoBranchingScheme())
 
 
 class Mappingv4TestAdapter(MappingTestAdapter, TestCase):
