@@ -677,12 +677,16 @@ mapping_registry.register_lazy('v3', 'bzrlib.plugins.svn.mapping3',
 mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4', 
                                'BzrSvnMappingv4',
                                'Fourth format')
-mapping_registry.set_default('v4')
+mapping_registry.set_default('v3')
 
 def parse_mapping_name(name):
+    assert isinstance(name, str)
     if "-" in name:
-        name = name.split("-")[0]
-    return mapping_registry.get(name)
+        name, rest = name.split("-", 1)
+        assert isinstance(rest, str)
+        return mapping_registry.get(name)(rest)
+    return mapping_registry.get(name)()
+
 
 def parse_revision_id(revid):
     """Try to parse a Subversion revision id.

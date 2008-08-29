@@ -227,8 +227,10 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
 
     def __init__(self, scheme, guessed_scheme=None):
         mapping.BzrSvnMapping.__init__(self)
-        self.scheme = scheme
-        assert not isinstance(scheme, str)
+        if isinstance(scheme, str):
+            self.scheme = BranchingScheme.find_scheme(scheme)
+        else:
+            self.scheme = scheme
         self.guessed_scheme = guessed_scheme
 
     def get_mandated_layout(self, repository):

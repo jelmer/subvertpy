@@ -122,7 +122,7 @@ class RevidMap(object):
                     mapping = parse_mapping_name(mapping_name)
                     assert (mapping.is_tag(revmeta.branch_path) or 
                             mapping.is_branch(revmeta.branch_path))
-                    return (revmeta.branch_path, revmeta.revnum, mapping_name)
+                    return (revmeta.branch_path, revmeta.revnum, mapping)
 
         raise InvalidBzrSvnRevision(revid)
 
@@ -135,13 +135,13 @@ class CachingRevidMap(object):
 
     def get_revision_id(self, revnum, path, mapping, changed_fileprops, revprops):
         # Look in the cache to see if it already has a revision id
-        revid = self.cache.lookup_branch_revnum(revnum, path, str(mapping))
+        revid = self.cache.lookup_branch_revnum(revnum, path, mapping.name)
         if revid is not None:
             return revid
 
         revid = self.actual.get_revision_id(revnum, path, mapping, changed_fileprops, revprops)
 
-        self.cache.insert_revid(revid, path, revnum, revnum, str(mapping))
+        self.cache.insert_revid(revid, path, revnum, revnum, mapping.name)
         self.cache.commit_conditionally()
 
         return revid
@@ -183,7 +183,7 @@ class CachingRevidMap(object):
                 if entry_revid == revid:
                     found = True
                 if entry_revid not in self.revid_seen:
-                    self.cache.insert_revid(entry_revid, branch, last_checked, revno, str(mapping))
+                    self.cache.insert_revid(entry_revid, branch, last_checked, revno, mapping.name)
                     self.revid_seen.add(entry_revid)
                 
             # We've added all the revision ids for this layout in the
@@ -198,8 +198,8 @@ class CachingRevidMap(object):
 
         (branch_path, revnum, mapping) = self.actual.bisect_revid_revnum(revid, 
             branch_path, min_revnum, max_revnum)
-        self.cache.insert_revid(revid, branch_path, revnum, revnum, str(mapping))
-        return (branch_path, revnum, BzrSvnMappingv3FileProps(mapping))
+        self.cache.insert_revid(revid, branch_path, revnum, revnum, mapping.name)
+        return (branch_path, revnum, mapping)
 
 
 
