@@ -26,7 +26,6 @@ from bzrlib.revision import NULL_REVISION, ensure_null
 from bzrlib.trace import mutter, warning
 
 from cStringIO import StringIO
-from copy import copy
 
 from bzrlib.plugins.svn import core, properties
 from bzrlib.plugins.svn.core import SubversionException
@@ -188,24 +187,25 @@ class SvnCommitBuilder(RootCommitBuilder):
         self.visit_dirs = set()
         self.modified_files = {}
         if self.base_revid == NULL_REVISION:
-            base_branch_props = {}
+            self._base_branch_props = {}
         else:
-            base_branch_props = lazy_dict({}, self.repository.branchprop_list.get_properties, self.base_path, self.base_revnum)
+            self._base_branch_props = lazy_dict({}, self.repository.branchprop_list.get_properties, self.base_path, self.base_revnum)
         self.supports_custom_revprops = self.repository.transport.has_capability("commit-revprops")
         if self.supports_custom_revprops:
             self._svn_revprops = {}
         else:
-            self._svnprops = copy(base_branch_props)
+            self._svn_revprops = None
+        self._svnprops = dict(self._base_branch_props.items())
         self.base_mapping.export_revision(
             self.branch.get_branch_path(), timestamp, timezone, committer, revprops, 
             revision_id, self.base_revno+1, merges, self._svn_revprops, self._svnprops)
 
         if len(merges) > 0:
-            new_svk_merges = update_svk_features(base_branch_props.get(SVN_PROP_SVK_MERGE, ""), merges)
+            new_svk_merges = update_svk_features(self._base_branch_props.get(SVN_PROP_SVK_MERGE, ""), merges)
             if new_svk_merges is not None:
                 self._svnprops[SVN_PROP_SVK_MERGE] = new_svk_merges
 
-            new_mergeinfo = update_mergeinfo(self.repository, graph, base_branch_props.get(properties.PROP_MERGEINFO, ""), self.base_revid, merges)
+            new_mergeinfo = update_mergeinfo(self.repository, graph, self._base_branch_props.get(properties.PROP_MERGEINFO, ""), self.base_revid, merges)
             if new_mergeinfo is not None:
                 self._svnprops[properties.PROP_MERGEINFO] = new_mergeinfo
 
@@ -530,6 +530,8 @@ class SvnCommitBuilder(RootCommitBuilder):
                 # Set all the revprops
                 if self.push_metadata:
                     for prop, value in self._svnprops.items():
+                        if value == self._base_branch_props.get(prop):
+                            continue
                         if not properties.is_valid_property_name(prop):
                             warning("Setting property %r with invalid characters in name", prop)
                         assert isinstance(value, str)

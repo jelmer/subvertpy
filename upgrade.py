@@ -232,6 +232,9 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
     logcache = getattr(repository._log, "cache", None)
     try:
         for (paths, revnum, revprops) in repository._log.iter_changes(None, to_revnum, from_revnum, pb=pb):
+            if revnum == 0:
+                # Never a bzr-svn revision
+                continue
             # Find the root path of the change
             bp = changes.changes_root(paths.keys())
             # FIXME: Check revprops for branch root

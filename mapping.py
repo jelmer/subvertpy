@@ -550,7 +550,6 @@ class BzrSvnMappingFileProps(object):
     def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, svn_revprops, svn_fileprops):
 
         # Keep track of what Subversion properties to set later on
-        svn_fileprops = {}
         svn_fileprops[SVN_PROP_BZR_REVISION_INFO] = generate_revision_metadata(
             timestamp, timezone, committer, revprops)
 
@@ -710,7 +709,7 @@ def find_mapping(revprops, fileprops):
     if SVN_REVPROP_BZR_MAPPING_VERSION in revprops:
         try:
             cls = mapping_registry.get(revprops[SVN_REVPROP_BZR_MAPPING_VERSION])
-            ret = BzrSvnMapping.from_revprops(revprops)
+            ret = cls.from_revprops(revprops)
         except KeyError:
             pass
         except NotImplementedError:
