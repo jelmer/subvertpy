@@ -142,7 +142,7 @@ class ParseMergePropertyTestCase(TestCase):
 
 class MappingTestAdapter(object):
     def test_roundtrip_revision(self):
-        revid = self.mapping.generate_revision_id("myuuid", 42, "path")
+        revid = self.mapping.generate_revision_id(("myuuid", 42, "path"))
         (uuid, path, revnum, mapping) = self.mapping.parse_revision_id(revid)
         self.assertEquals(uuid, "myuuid")
         self.assertEquals(revnum, 42)
@@ -214,7 +214,7 @@ class MappingTestAdapter(object):
     def test_parse_revision_id(self):
         self.assertEquals(("myuuid", "bla", 5, self.mapping), 
             self.mapping.parse_revision_id(
-                self.mapping.generate_revision_id("myuuid", 5, "bla")))
+                self.mapping.generate_revision_id(("myuuid", 5, "bla"))))
 
 
 class Mappingv1Tests(MappingTestAdapter, TestCase):

@@ -179,12 +179,12 @@ class TestInventoryExternals(TestCaseWithSubversionRepository):
         mapping = repos.get_mapping()
         inv = Inventory(root_id='blabloe')
         inventory_add_external(inv, 'blabloe', 'blie/bla', 
-                mapping.generate_revision_id(repos.uuid, 1, ""), 
+                mapping.generate_revision_id((repos.uuid, 1, "")), 
                 None, repos_url)
         self.assertEqual(TreeReference(
             mapping.generate_file_id(repos.uuid, 0, "", u""),
              'bla', inv.path2id('blie'), 
-             revision=mapping.generate_revision_id(repos.uuid, 1, "")), 
+             revision=mapping.generate_revision_id((repos.uuid, 1, ""))), 
              inv[inv.path2id('blie/bla')])
 
     def test_add_simple_norev(self):
@@ -193,13 +193,13 @@ class TestInventoryExternals(TestCaseWithSubversionRepository):
         mapping = repos.get_mapping()
         inv = Inventory(root_id='blabloe')
         inventory_add_external(inv, 'blabloe', 'bla', 
-            mapping.generate_revision_id(repos.uuid, 1, ""), None, 
+            mapping.generate_revision_id((repos.uuid, 1, "")), None, 
             repos_url)
 
         self.assertEqual(TreeReference(
             mapping.generate_file_id(repos.uuid, 0, "", u""),
              'bla', 'blabloe', 
-             revision=mapping.generate_revision_id(repos.uuid, 1, "")), 
+             revision=mapping.generate_revision_id((repos.uuid, 1, ""))), 
              inv[inv.path2id('bla')])
 
     def test_add_simple_rev(self):
@@ -208,13 +208,13 @@ class TestInventoryExternals(TestCaseWithSubversionRepository):
         inv = Inventory(root_id='blabloe')
         mapping = repos.get_mapping()
         inventory_add_external(inv, 'blabloe', 'bla', 
-            mapping.generate_revision_id(repos.uuid, 1, ""), 0, repos_url)
+            mapping.generate_revision_id((repos.uuid, 1, "")), 0, repos_url)
         expected_ie = TreeReference(mapping.generate_file_id(repos.uuid, 0, "", u""),
             'bla', 'blabloe', 
-            revision=mapping.generate_revision_id(repos.uuid, 1, ""),
+            revision=mapping.generate_revision_id((repos.uuid, 1, "")),
             reference_revision=NULL_REVISION)
         ie = inv[inv.path2id('bla')]
         self.assertEqual(NULL_REVISION, ie.reference_revision)
-        self.assertEqual(mapping.generate_revision_id(repos.uuid, 1, ""), 
+        self.assertEqual(mapping.generate_revision_id((repos.uuid, 1, "")), 
                          ie.revision)
         self.assertEqual(expected_ie, inv[inv.path2id('bla')])

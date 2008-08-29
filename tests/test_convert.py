@@ -409,5 +409,5 @@ data
             abspath = '/' + abspath
         branch = Branch.open(os.path.join(self.test_dir, "e", "trunk"))
         self.assertEqual(local_path_to_url(os.path.join(self.test_dir, "e", "trunk")), branch.base.rstrip("/"))
-        self.assertEqual(mapping.generate_revision_id("6987ef2d-cd6b-461f-9991-6f1abef3bd59", 1, 'trunk'), branch.last_revision())
+        self.assertEqual(mapping.generate_revision_id(("6987ef2d-cd6b-461f-9991-6f1abef3bd59", 1, 'trunk')), branch.last_revision())
 

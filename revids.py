@@ -41,7 +41,7 @@ class RevidMap(object):
 
         # Or generate it
         if revid is None:
-            return mapping.generate_revision_id(self.repos.uuid, revnum, path)
+            return mapping.generate_revision_id((self.repos.uuid, revnum, path))
 
         return revid
 

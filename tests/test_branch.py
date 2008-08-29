@@ -695,9 +695,9 @@ foohosts""")
         host_fileid = tree.inventory.path2id("hosts")
         mapping = BzrSvnMappingv3FileProps(TrunkBranchingScheme())
         self.assertVersionsPresentEquals(texts, host_fileid, [
-            mapping.generate_revision_id(uuid, 1, "trunk"),
-            mapping.generate_revision_id(uuid, 2, "trunk"),
-            mapping.generate_revision_id(uuid, 3, "trunk"),
+            mapping.generate_revision_id((uuid, 1, "trunk")),
+            mapping.generate_revision_id((uuid, 2, "trunk")),
+            mapping.generate_revision_id((uuid, 3, "trunk")),
             oldbranch.generate_revision_id(6)])
         newbranch.repository.unlock()
 

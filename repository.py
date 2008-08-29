@@ -129,7 +129,7 @@ def svk_feature_to_revision_id(feature, mapping):
         return None
     if not mapping.is_branch(bp) and not mapping.is_tag(bp):
         return None
-    return mapping.generate_revision_id(uuid, revnum, bp)
+    return mapping.generate_revision_id((uuid, revnum, bp))
 
 
 class SvnRepositoryFormat(RepositoryFormat):

@@ -101,7 +101,7 @@ def generate_upgrade_map(new_mapping, revs):
         except InvalidRevisionId:
             # Not a bzr-svn revision, nothing to do
             continue
-        newrevid = new_mapping.generate_revision_id(uuid, rev, bp)
+        newrevid = new_mapping.generate_revision_id((uuid, rev, bp))
         if revid == newrevid:
             continue
         rename_map[revid] = newrevid
@@ -199,7 +199,7 @@ def upgrade_repository(repository, svn_repository, new_mapping=None,
                 (uuid, bp, rev, mapping) = parse_revision_id(revid)
             except InvalidRevisionId:
                 return revid
-            return new_mapping.generate_revision_id(uuid, rev, bp)
+            return new_mapping.generate_revision_id((uuid, rev, bp))
         def replay(repository, oldrevid, newrevid, new_parents):
             return replay_snapshot(repository, oldrevid, newrevid, new_parents,
                                    revid_renames, fix_revid)

@@ -299,7 +299,7 @@ class BzrSvnMapping(foreign.VcsMapping):
         """
         raise NotImplementedError(self.parse_revision_id)
 
-    def generate_revision_id(self, uuid, revnum, path):
+    def generate_revision_id(self, (uuid, revnum, path)):
         """Generate a unambiguous revision id. 
         
         :param uuid: UUID of the repository.
@@ -419,7 +419,7 @@ class BzrSvnMappingv1(BzrSvnMapping):
         assert revnum >= 0
         return (uuid, branch_path, revnum, cls())
 
-    def generate_revision_id(self, uuid, revnum, path):
+    def generate_revision_id(self, (uuid, revnum, path)):
         return "svn-v1:%d@%s-%s" % (revnum, uuid, escape_svn_path(path))
 
     def __eq__(self, other):
@@ -443,7 +443,7 @@ class BzrSvnMappingv2(BzrSvnMapping):
         assert revnum >= 0
         return (uuid, branch_path, revnum, cls())
 
-    def generate_revision_id(self, uuid, revnum, path):
+    def generate_revision_id(self, (uuid, revnum, path)):
         return "svn-v2:%d@%s-%s" % (revnum, uuid, escape_svn_path(path))
 
     def __eq__(self, other):
