@@ -204,6 +204,10 @@ class LogCache(CacheTable):
         assert not path.startswith("/")
         self.cachedb.execute("replace into changed_path (rev, path, action, copyfrom_path, copyfrom_rev) values (?, ?, ?, ?, ?)", (rev, path, action, copyfrom_path, copyfrom_rev))
 
+    def drop_revprops(self, revnum):
+        self.cachedb.execute("update revinfo set all_revprops = 0 where rev = ?", (revnum,))
+        self.cachedb.commit()
+
     def get_revprops(self, revnum):
         """Retrieve all the cached revision properties.
 
@@ -394,8 +398,7 @@ class CachingLogWalker(CacheTable):
         return self.cache.get_change(path, revnum)
 
     def revprop_list(self, revnum):
-        self.mutter("revprop list: %r", revnum)
-
+        self.mutter('revprop list: %d' % revnum)
         self.fetch_revisions(revnum)
 
         if revnum > 0:

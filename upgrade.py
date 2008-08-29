@@ -21,7 +21,7 @@ from bzrlib.revision import Revision
 from bzrlib.trace import info
 
 import itertools
-from bzrlib.plugins.svn import changes, logwalker, mapping
+from bzrlib.plugins.svn import changes, logwalker, mapping, properties
 from bzrlib.plugins.svn.mapping import parse_revision_id
 from bzrlib.plugins.svn.repository import RevisionMetadata
 
@@ -237,7 +237,6 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
                 continue
             # Find the root path of the change
             bp = changes.changes_root(paths.keys())
-            # FIXME: Check revprops for branch root
             if bp is None:
                 fileprops = {}
             else:
@@ -255,12 +254,13 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
                 new_revprops, None)
             new_mapping.export_text_parents(old_mapping.import_text_parents(revprops, fileprops),
                 new_revprops, None)
-            # new_mapping.export_message
-            for k, v in new_revprops.items():
-                if v != revprops.get(k):
-                    repository.transport.change_rev_prop(revnum, k, v)
-            # Might as well update the cache while we're at it
+            if rev.message != revprops[properties.PROP_REVISION_LOG]:
+                new_mapping.export_message(rev.message)
+            changed_revprops = dict(filter(lambda (k,v): revprops.get(k) != v, new_revprops.items()))
             if logcache is not None:
-                logcache.insert_revprops(revnum, new_revprops)
+                logcache.drop_revprops()
+            for k, v in changed_revprops.items():
+                repository.transport.change_rev_prop(revnum, k, v)
+            # Might as well update the cache while we're at it
     finally:
         pb.finished()
