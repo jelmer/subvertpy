@@ -24,7 +24,7 @@ def show_subversion_properties(rev):
         data = (rev.svn_meta.revnum, rev.svn_meta.branch_path)
     else:
         try:
-            (uuid, bp, revnum, mapp) = mapping.revision_id_bzr_to_foreign(rev.revision_id)
+            (uuid, bp, revnum, mapp) = mapping.parse_revision_id(rev.revision_id)
         except InvalidRevisionId:
             pass
         else:
