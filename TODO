@@ -1,7 +1,8 @@
 mappingv4:
- - use revprops if possible, fall back to fileprops
- - check revprops first, then fileprops
  - refuse to set fileprops on repository on which revprops have been set
+ - skip looking for fileprops if revprops have been found in earlier revisions
+ - implement set-svn-revprops command
+ - implement layout functions, including command
 
 todo:
 - generate deltas rather than fulltexts when creating file id maps
