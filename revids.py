@@ -23,9 +23,8 @@ from bzrlib.plugins.svn.cache import CacheTable
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import InvalidPropertyValue, ERR_FS_NO_SUCH_REVISION, InvalidBzrSvnRevision
 from bzrlib.plugins.svn.mapping import (parse_revision_id, BzrSvnMapping, 
-                     SVN_PROP_BZR_REVISION_ID, parse_revid_property)
-from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
-from bzrlib.plugins.svn.mapping3.scheme import BranchingScheme
+                     SVN_PROP_BZR_REVISION_ID, parse_revid_property,
+                     parse_mapping_name)
 
 class RevidMap(object):
     def __init__(self, repos):
@@ -63,8 +62,8 @@ class RevidMap(object):
 
         for entry_revid, branch, revno, mapping in self.discover_revids(layout, 0, self.repos.get_latest_revnum(), project):
             if revid == entry_revid:
-                (bp, revnum, scheme) = self.bisect_revid_revnum(revid, branch, 0, revno)
-                return (bp, revnum, BzrSvnMappingv3FileProps(scheme))
+                (bp, revnum, mapping_name) = self.bisect_revid_revnum(revid, branch, 0, revno)
+                return (bp, revnum, parse_mapping_name(mapping_name))
         raise NoSuchRevision(self, revid)
 
     def discover_revids(self, layout, from_revnum, to_revnum, project=None):
@@ -82,10 +81,9 @@ class RevidMap(object):
                     if not propname.startswith(SVN_PROP_BZR_REVISION_ID):
                         continue
                     mapping_name = propname[len(SVN_PROP_BZR_REVISION_ID):]
-                    scheme = mapping_name[mapping_name.find("-")+1:]
                     for line in propvalue.splitlines():
                         try:
-                            revids.add((parse_revid_property(line), scheme))
+                            revids.add((parse_revid_property(line), mapping_name))
                         except InvalidPropertyValue, ie:
                             mutter(str(ie))
             except SubversionException, (_, ERR_FS_NOT_DIRECTORY):
@@ -93,8 +91,8 @@ class RevidMap(object):
 
             # If there are any new entries that are not yet in the cache, 
             # add them
-            for ((entry_revno, entry_revid), scheme) in revids:
-                yield (entry_revid, branch, revno, BzrSvnMappingv3FileProps(BranchingScheme.find_scheme(scheme)))
+            for ((entry_revno, entry_revid), mapping_name) in revids:
+                yield (entry_revid, branch, revno, parse_mapping_name(mapping_name))
 
     def bisect_revid_revnum(self, revid, branch_path, min_revnum, max_revnum):
         """Find out what the actual revnum was that corresponds to a revid.
@@ -103,7 +101,7 @@ class RevidMap(object):
         :param branch_path: Branch path at which to start searching
         :param min_revnum: Last revnum to check
         :param max_revnum: First revnum to check
-        :return: Tuple with actual branchpath, revnum and scheme
+        :return: Tuple with actual branchpath, revnum and mapping
         """
         assert min_revnum <= max_revnum
         # Find the branch property between min_revnum and max_revnum that 
@@ -121,11 +119,10 @@ class RevidMap(object):
                     continue
                 if entry_revid == revid:
                     mapping_name = propname[len(SVN_PROP_BZR_REVISION_ID):]
-                    schemename = mapping_name[mapping_name.find("-")+1:]
-                    scheme = BranchingScheme.find_scheme(schemename)
-                    assert (scheme.is_tag(revmeta.branch_path) or 
-                            scheme.is_branch(revmeta.branch_path))
-                    return (revmeta.branch_path, revmeta.revnum, scheme)
+                    mapping = parse_mapping_name(mapping_name)
+                    assert (mapping.is_tag(revmeta.branch_path) or 
+                            mapping.is_branch(revmeta.branch_path))
+                    return (revmeta.branch_path, revmeta.revnum, mapping_name)
 
         raise InvalidBzrSvnRevision(revid)
 
@@ -138,13 +135,13 @@ class CachingRevidMap(object):
 
     def get_revision_id(self, revnum, path, mapping, changed_fileprops, revprops):
         # Look in the cache to see if it already has a revision id
-        revid = self.cache.lookup_branch_revnum(revnum, path, str(mapping.scheme))
+        revid = self.cache.lookup_branch_revnum(revnum, path, str(mapping))
         if revid is not None:
             return revid
 
         revid = self.actual.get_revision_id(revnum, path, mapping, changed_fileprops, revprops)
 
-        self.cache.insert_revid(revid, path, revnum, revnum, str(mapping.scheme))
+        self.cache.insert_revid(revid, path, revnum, revnum, str(mapping))
         self.cache.commit_conditionally()
 
         return revid
@@ -163,21 +160,16 @@ class CachingRevidMap(object):
         except InvalidRevisionId:
             pass
 
-        def get_scheme(name):
-            from mapping3.scheme import BranchingScheme
-            assert isinstance(name, str)
-            return BranchingScheme.find_scheme(name)
-
         # Check the record out of the cache, if it exists
         try:
             (branch_path, min_revnum, max_revnum, \
-                    scheme) = self.cache.lookup_revid(revid)
+                    mapping) = self.cache.lookup_revid(revid)
             assert isinstance(branch_path, str)
-            assert isinstance(scheme, str)
+            assert isinstance(mapping, str)
             # Entry already complete?
             assert min_revnum <= max_revnum
             if min_revnum == max_revnum:
-                return (branch_path, min_revnum, BzrSvnMappingv3FileProps(get_scheme(scheme)))
+                return (branch_path, min_revnum, parse_mapping_name(mapping))
         except NoSuchRevision, e:
             last_revnum = self.actual.repos.get_latest_revnum()
             last_checked = self.cache.last_revnum_checked(repr((layout, project)))
@@ -191,7 +183,7 @@ class CachingRevidMap(object):
                 if entry_revid == revid:
                     found = True
                 if entry_revid not in self.revid_seen:
-                    self.cache.insert_revid(entry_revid, branch, last_checked, revno, str(mapping.scheme))
+                    self.cache.insert_revid(entry_revid, branch, last_checked, revno, str(mapping))
                     self.revid_seen.add(entry_revid)
                 
             # We've added all the revision ids for this layout in the
@@ -200,55 +192,55 @@ class CachingRevidMap(object):
             self.cache.set_last_revnum_checked(repr((layout, project)), last_revnum)
             if not found:
                 raise e
-            (branch_path, min_revnum, max_revnum, scheme) = self.cache.lookup_revid(revid)
+            (branch_path, min_revnum, max_revnum, mapping) = self.cache.lookup_revid(revid)
             assert min_revnum <= max_revnum
             assert isinstance(branch_path, str)
 
-        (branch_path, revnum, scheme) = self.actual.bisect_revid_revnum(revid, 
+        (branch_path, revnum, mapping) = self.actual.bisect_revid_revnum(revid, 
             branch_path, min_revnum, max_revnum)
-        self.cache.insert_revid(revid, branch_path, revnum, revnum, str(scheme))
-        return (branch_path, revnum, BzrSvnMappingv3FileProps(scheme))
+        self.cache.insert_revid(revid, branch_path, revnum, revnum, str(mapping))
+        return (branch_path, revnum, BzrSvnMappingv3FileProps(mapping))
 
 
 
 class RevisionIdMapCache(CacheTable):
     """Revision id mapping store. 
 
-    Stores mapping from revid -> (path, revnum, scheme)
+    Stores mapping from revid -> (path, revnum, mapping)
     """
     def _create_table(self):
         self.cachedb.executescript("""
-        create table if not exists revmap (revid text, path text, min_revnum integer, max_revnum integer, scheme text);
+        create table if not exists revmap (revid text, path text, min_revnum integer, max_revnum integer, mapping text);
         create index if not exists revid on revmap (revid);
-        create unique index if not exists revid_path_scheme on revmap (revid, path, scheme);
+        create unique index if not exists revid_path_mapping on revmap (revid, path, mapping);
         drop index if exists lookup_branch_revnum;
-        create index if not exists lookup_branch_revnum_non_unique on revmap (max_revnum, min_revnum, path, scheme);
-        create table if not exists revids_seen (scheme text, max_revnum int);
-        create unique index if not exists scheme on revids_seen (scheme);
+        create index if not exists lookup_branch_revnum_non_unique on revmap (max_revnum, min_revnum, path, mapping);
+        create table if not exists revids_seen (layout text, max_revnum int);
+        create unique index if not exists layout on revids_seen (layout);
         """)
         # Revisions ids are quite expensive
         self._commit_interval = 100
 
     def set_last_revnum_checked(self, layout, revnum):
         """Remember the latest revision number that has been checked
-        for a particular scheme.
+        for a particular layout.
 
         :param layout: Repository layout.
         :param revnum: Revision number.
         """
-        self.cachedb.execute("replace into revids_seen (scheme, max_revnum) VALUES (?, ?)", (layout, revnum))
+        self.cachedb.execute("replace into revids_seen (layout, max_revnum) VALUES (?, ?)", (layout, revnum))
         self.commit_conditionally()
 
     def last_revnum_checked(self, layout):
         """Retrieve the latest revision number that has been checked 
-        for revision ids for a particular branching scheme.
+        for revision ids for a particular layout.
 
         :param layout: Repository layout.
         :return: Last revision number checked or 0.
         """
         self.mutter("last revnum checked %r", layout)
         ret = self.cachedb.execute(
-            "select max_revnum from revids_seen where scheme = ?", (layout,)).fetchone()
+            "select max_revnum from revids_seen where layout = ?", (layout,)).fetchone()
         if ret is None:
             return 0
         return int(ret[0])
@@ -258,32 +250,32 @@ class RevisionIdMapCache(CacheTable):
 
         :param revid: Revision id.
         :return: Tuple with path inside repository, minimum revision number, maximum revision number and 
-            branching scheme.
+            mapping.
         """
         assert isinstance(revid, str)
         self.mutter("lookup revid %r", revid)
         ret = self.cachedb.execute(
-            "select path, min_revnum, max_revnum, scheme from revmap where revid=? order by abs(min_revnum-max_revnum) asc", (revid,)).fetchone()
+            "select path, min_revnum, max_revnum, mapping from revmap where revid=? order by abs(min_revnum-max_revnum) asc", (revid,)).fetchone()
         if ret is None:
             raise NoSuchRevision(self, revid)
-        (path, min_revnum, max_revnum, scheme) = (ret[0].encode("utf-8"), int(ret[1]), int(ret[2]), ret[3].encode("utf-8"))
+        (path, min_revnum, max_revnum, mapping) = (ret[0].encode("utf-8"), int(ret[1]), int(ret[2]), ret[3].encode("utf-8"))
         if min_revnum > max_revnum:
-            return (path, max_revnum, min_revnum, scheme)
+            return (path, max_revnum, min_revnum, mapping)
         else:
-            return (path, min_revnum, max_revnum, scheme)
+            return (path, min_revnum, max_revnum, mapping)
 
-    def lookup_branch_revnum(self, revnum, path, scheme):
-        """Lookup a revision by revision number, branch path and branching scheme.
+    def lookup_branch_revnum(self, revnum, path, mapping):
+        """Lookup a revision by revision number, branch path and mapping.
 
         :param revnum: Subversion revision number.
         :param path: Subversion branch path.
-        :param scheme: Branching scheme name
+        :param mapping: Mapping
         """
         assert isinstance(revnum, int)
         assert isinstance(path, str)
-        assert isinstance(scheme, str)
+        assert isinstance(mapping, str)
         row = self.cachedb.execute(
-                "select revid from revmap where max_revnum=? and min_revnum=? and path=? and scheme=?", (revnum, revnum, path, scheme)).fetchone()
+                "select revid from revmap where max_revnum=? and min_revnum=? and path=? and mapping=?", (revnum, revnum, path, mapping)).fetchone()
         if row is not None:
             ret = str(row[0])
         else:
@@ -291,7 +283,7 @@ class RevisionIdMapCache(CacheTable):
         self.mutter("lookup branch,revnum %r:%r -> %r", path, revnum, ret)
         return ret
 
-    def insert_revid(self, revid, branch, min_revnum, max_revnum, scheme):
+    def insert_revid(self, revid, branch, min_revnum, max_revnum, mapping):
         """Insert a revision id into the revision id cache.
 
         :param revid: Revision id for which to insert metadata.
@@ -300,24 +292,24 @@ class RevisionIdMapCache(CacheTable):
                            revid was found
         :param max_revnum: Maximum Subversion revision number in which the 
                            revid was found
-        :param scheme: Name of the branching scheme with which the revision 
+        :param mapping: Name of the mapping with which the revision 
                        was found
         """
         assert revid is not None and revid != ""
-        assert isinstance(scheme, str)
+        assert isinstance(mapping, str)
         assert isinstance(branch, str)
         assert isinstance(min_revnum, int) and isinstance(max_revnum, int)
         assert min_revnum <= max_revnum
         self.mutter("insert revid %r:%r-%r -> %r", branch, min_revnum, max_revnum, revid)
         if min_revnum == max_revnum:
             cursor = self.cachedb.execute(
-                "update revmap set min_revnum = ?, max_revnum = ? WHERE revid=? AND path=? AND scheme=?",
-                (min_revnum, max_revnum, revid, branch, scheme))
+                "update revmap set min_revnum = ?, max_revnum = ? WHERE revid=? AND path=? AND mapping=?",
+                (min_revnum, max_revnum, revid, branch, mapping))
         else:
             cursor = self.cachedb.execute(
-                "update revmap set min_revnum = MAX(min_revnum,?), max_revnum = MIN(max_revnum, ?) WHERE revid=? AND path=? AND scheme=?",
-                (min_revnum, max_revnum, revid, branch, scheme))
+                "update revmap set min_revnum = MAX(min_revnum,?), max_revnum = MIN(max_revnum, ?) WHERE revid=? AND path=? AND mapping=?",
+                (min_revnum, max_revnum, revid, branch, mapping))
         if cursor.rowcount == 0:
             self.cachedb.execute(
-                "insert into revmap (revid,path,min_revnum,max_revnum,scheme) VALUES (?,?,?,?,?)",
-                (revid, branch, min_revnum, max_revnum, scheme))
+                "insert into revmap (revid,path,min_revnum,max_revnum,mapping) VALUES (?,?,?,?,?)",
+                (revid, branch, min_revnum, max_revnum, mapping))

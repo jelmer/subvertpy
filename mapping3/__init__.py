@@ -334,6 +334,9 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
     def __eq__(self, other):
         return type(self) == type(other) and self.scheme == other.scheme
 
+    def __str__(self):
+        return "%s(%s)" % (self.__class__.__name__, repr(self.scheme))
+
 
 class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
 
