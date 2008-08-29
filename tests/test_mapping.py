@@ -25,7 +25,7 @@ from bzrlib.plugins.svn.errors import InvalidPropertyValue
 from bzrlib.plugins.svn.mapping import (generate_revision_metadata, parse_revision_metadata, 
                      parse_revid_property, parse_merge_property, parse_text_parents_property,
                      generate_text_parents_property, BzrSvnMappingv1, BzrSvnMappingv2, 
-                     parse_revision_id)
+                     parse_revision_id, escape_svn_path, unescape_svn_path)
 from bzrlib.plugins.svn.mapping3 import (BzrSvnMappingv3FileProps, BzrSvnMappingv3RevProps)
 from bzrlib.plugins.svn.mapping4 import BzrSvnMappingv4
 from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme
@@ -329,3 +329,38 @@ class ParseRevisionIdTests(object):
     def test_except_nonsvn(self):
         self.assertRaises(InvalidRevisionId, 
                          parse_revision_id, "blah")
+
+
+class EscapeTest(TestCase):
+    def test_escape_svn_path_none(self):      
+        self.assertEqual("", escape_svn_path(""))
+
+    def test_escape_svn_path_simple(self):
+        self.assertEqual("ab", escape_svn_path("ab"))
+
+    def test_escape_svn_path_percent(self):
+        self.assertEqual("a%25b", escape_svn_path("a%b"))
+
+    def test_escape_svn_path_whitespace(self):
+        self.assertEqual("foobar%20", escape_svn_path("foobar "))
+
+    def test_escape_svn_path_slash(self):
+        self.assertEqual("foobar%2F", escape_svn_path("foobar/"))
+
+    def test_escape_svn_path_special_char(self):
+        self.assertEqual("foobar%8A", escape_svn_path("foobar\x8a"))
+
+    def test_unescape_svn_path_slash(self):
+        self.assertEqual("foobar/", unescape_svn_path("foobar%2F"))
+
+    def test_unescape_svn_path_none(self):
+        self.assertEqual("foobar", unescape_svn_path("foobar"))
+
+    def test_unescape_svn_path_percent(self):
+        self.assertEqual("foobar%b", unescape_svn_path("foobar%25b"))
+
+    def test_escape_svn_path_nordic(self):
+        self.assertEqual("foobar%C3%A6", escape_svn_path(u"foobar\xe6".encode("utf-8")))
+
+
+

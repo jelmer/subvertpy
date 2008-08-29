@@ -32,8 +32,7 @@ from bzrlib.tests import TestCase, TestSkipped
 import os
 
 from bzrlib.plugins.svn import format, ra
-from bzrlib.plugins.svn.mapping import (escape_svn_path, unescape_svn_path, 
-                     SVN_PROP_BZR_REVISION_ID)
+from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_REVISION_ID)
 from bzrlib.plugins.svn.mapping3 import (SVN_PROP_BZR_BRANCHING_SCHEME, set_branching_scheme,
                       set_property_scheme, BzrSvnMappingv3)
 from bzrlib.plugins.svn.mapping3.scheme import (TrunkBranchingScheme, NoBranchingScheme, 
@@ -1343,38 +1342,6 @@ class TestSvnRevisionTree(TestCaseWithSubversionRepository):
     def test_not_executable(self):
         self.assertFalse(self.inventory[
             self.inventory.path2id("foo/bla")].executable)
-
-
-class EscapeTest(TestCase):
-    def test_escape_svn_path_none(self):      
-        self.assertEqual("", escape_svn_path(""))
-
-    def test_escape_svn_path_simple(self):
-        self.assertEqual("ab", escape_svn_path("ab"))
-
-    def test_escape_svn_path_percent(self):
-        self.assertEqual("a%25b", escape_svn_path("a%b"))
-
-    def test_escape_svn_path_whitespace(self):
-        self.assertEqual("foobar%20", escape_svn_path("foobar "))
-
-    def test_escape_svn_path_slash(self):
-        self.assertEqual("foobar%2F", escape_svn_path("foobar/"))
-
-    def test_escape_svn_path_special_char(self):
-        self.assertEqual("foobar%8A", escape_svn_path("foobar\x8a"))
-
-    def test_unescape_svn_path_slash(self):
-        self.assertEqual("foobar/", unescape_svn_path("foobar%2F"))
-
-    def test_unescape_svn_path_none(self):
-        self.assertEqual("foobar", unescape_svn_path("foobar"))
-
-    def test_unescape_svn_path_percent(self):
-        self.assertEqual("foobar%b", unescape_svn_path("foobar%25b"))
-
-    def test_escape_svn_path_nordic(self):
-        self.assertEqual("foobar%C3%A6", escape_svn_path(u"foobar\xe6".encode("utf-8")))
 
 
 class SvnRepositoryFormatTests(TestCase):
