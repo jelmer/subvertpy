@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from bzrlib.tests import TestCase
-from bzrlib.plugins.svn.changes import path_is_child, find_prev_location
+from bzrlib.plugins.svn.changes import path_is_child, find_prev_location, changes_root
 
 class PathIsChildTests(TestCase):
     def test_both_empty(self):
@@ -54,3 +54,20 @@ class FindPrevLocationTests(TestCase):
 
     def test_parentcopy(self):
         self.assertEquals(("foo/bla", 3), find_prev_location({"bar": ("A", "foo", 3)}, "bar/bla", 5))
+
+
+class ChangesRootTests(TestCase):
+    def test_empty(self):
+        self.assertEquals(None, changes_root([]))
+
+    def test_simple(self):
+        self.assertEquals("bla", changes_root(["bla", "bla/blie"]))
+
+    def test_simple_other(self):
+        self.assertEquals("bla", changes_root(["bla/blie", "bla"]))
+
+    def test_single(self):
+        self.assertEquals("bla", changes_root(["bla"]))
+
+    def test_multiple_roots(self):
+        self.assertEquals(None, changes_root(["bla", "blie"]))

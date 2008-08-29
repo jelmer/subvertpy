@@ -81,3 +81,19 @@ def changes_path(changes, path, parents=False):
     return False
 
 
+def changes_root(paths):
+    """Find the root path that was changed.
+
+    If there is more than one root, returns None
+    """
+    if paths == []:
+        return None
+    root = paths[0]
+    for p in paths[1:]:
+        if p.startswith("%s/" % root):
+            continue
+        elif root.startswith("%s/" % p):
+            root = p
+        else:
+            return None
+    return root
