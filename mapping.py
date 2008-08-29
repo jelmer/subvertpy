@@ -283,11 +283,7 @@ class BzrSvnMapping(foreign.VcsMapping):
 
     @classmethod
     def supports_custom_revprops(cls):
-        """Whether this mapping can be used with custom revision properties."""
-        return False
-
-    def is_bzr_revision(self, revprops, fileprops):
-        """Whether this is a revision that was pushed by Bazaar."""
+        """Whether this mapping will primarily use custom revision properties."""
         return False
 
     @classmethod
@@ -580,9 +576,6 @@ class BzrSvnMappingFileProps(object):
     def export_message(self, message, revprops, fileprops):
         fileprops[SVN_PROP_BZR_LOG] = message.encode("utf-8")
 
-    def is_bzr_revision(self, revprops, fileprops):
-        return fileprops.has_key(SVN_PROP_BZR_REVISION_ID+self.name)
-
     def get_revision_id(self, branch_path, revprops, fileprops):
         # Lookup the revision from the bzr:revision-id-vX property
         text = fileprops.get(SVN_PROP_BZR_REVISION_ID+self.name, None)
@@ -640,15 +633,8 @@ class BzrSvnMappingRevProps(object):
             return []
         return svn_revprops.get(SVN_REVPROP_BZR_MERGE, "").splitlines()
 
-    def is_bzr_revision(self, revprops, fileprops):
-        if revprops.has_key(SVN_REVPROP_BZR_MAPPING_VERSION):
-            return True
-        if revprops.has_key(SVN_REVPROP_BZR_SKIP):
-            return False
-        return None
-
     def get_revision_id(self, branch_path, revprops, fileprops):
-        if not self.is_bzr_revision(revprops, fileprops):
+        if not is_bzr_revision_revprops(revprops):
             return (None, None)
         if revprops[SVN_REVPROP_BZR_ROOT] == branch_path:
             revid = revprops[SVN_REVPROP_BZR_REVISION_ID]
@@ -749,3 +735,15 @@ def find_mapping(revprops, fileprops):
             return parse_mapping_name(k[len(SVN_PROP_BZR_REVISION_ID):])
     return None
 
+def is_bzr_revision_revprops(revprops):
+    if revprops.has_key(SVN_REVPROP_BZR_MAPPING_VERSION):
+        return True
+    if revprops.has_key(SVN_REVPROP_BZR_SKIP):
+        return False
+    return None
+
+def is_bzr_revision_fileprops(fileprops):
+    for k in fileprops:
+        if k.startswith(SVN_PROP_BZR_REVISION_ID):
+            return True
+    return None

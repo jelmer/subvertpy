@@ -63,7 +63,7 @@ class RevidMap(object):
         for entry_revid, branch, revno, mapping in self.discover_revids(layout, 0, self.repos.get_latest_revnum(), project):
             if revid == entry_revid:
                 (bp, revnum, mapping_name) = self.bisect_revid_revnum(revid, branch, 0, revno)
-                return (bp, revnum, parse_mapping_name(mapping_name))
+                return (bp, revnum, mapping_name)
         raise NoSuchRevision(self, revid)
 
     def discover_revids(self, layout, from_revnum, to_revnum, project=None):

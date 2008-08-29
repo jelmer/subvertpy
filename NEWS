@@ -2,6 +2,16 @@ bzr-svn-0.5			UNRELEASED
 
 bzr-svn 0.4.12	UNRELEASED
 
+
+  CHANGES
+
+   * Implement set-revprops command.
+
+  FEATURES
+
+   * Add bzr:skip revision property to allow skipping 
+     more detailed analysis of revisions not created by bzr.
+
   BUG FIXES
 
    * Cope with svn+ prefix when setting tags. (#261748)
@@ -9,6 +19,8 @@ bzr-svn 0.4.12	UNRELEASED
    * Fix contents of files when using stacked branching. (#262314)
 
    * Fix compatibility with Bazaar 1.7.
+
+   * Set bzr signature revision property during commit if possible.
 
 bzr-svn 0.4.11	2008-08-26
 

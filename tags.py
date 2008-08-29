@@ -18,7 +18,7 @@ from bzrlib.errors import NoSuchRevision, NoSuchTag
 from bzrlib.tag import BasicTags
 from bzrlib.trace import mutter
 
-from bzrlib.plugins.svn import commit, core, properties
+from bzrlib.plugins.svn import commit, core, mapping, properties
 
 class SubversionTags(BasicTags):
     def __init__(self, branch):

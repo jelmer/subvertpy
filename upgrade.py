@@ -252,9 +252,10 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
                 continue
             assert old_mapping.supports_custom_revprops() or bp is not None
             new_revprops = dict(revprops.items())
-            revmeta = RevisionMetadata(repository, bp, changes, revnum, revprops, fileprops)
+            revmeta = repository._revmeta(bp, changes, revnum, revprops, fileprops)
             rev = revmeta.get_revision(old_mapping)
             revno = graph.find_distance_to_null(rev.revision_id, [])
+            assert bp is not None
             new_mapping.export_revision(bp, rev.timestamp, rev.timezone, rev.committer, rev.properties, rev.revision_id, revno, rev.parent_ids, new_revprops, None)
             new_mapping.export_fileid_map(old_mapping.import_fileid_map(revprops, fileprops), 
                 new_revprops, None)
@@ -262,7 +263,7 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
                 new_revprops, None)
             if rev.message != mapping.parse_svn_log(revprops.get(properties.PROP_REVISION_LOG)):
                 new_mapping.export_message(rev.message, new_revprops, None)
-            changed_revprops = dict(filter(lambda (k,v): revprops.get(k) != v, new_revprops.items()))
+            changed_revprops = dict(filter(lambda (k,v): k not in revprops or revprops[k] != v, new_revprops.items()))
             if logcache is not None:
                 logcache.drop_revprops(revnum)
             for k, v in changed_revprops.items():

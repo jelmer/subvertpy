@@ -587,6 +587,9 @@ class LogWalker(object):
 
     def changes_path(self, path, revnum):
         return self._get_revision_paths(revnum).has_key(path)
+
+    def get_change(self, path, revnum):
+        return self._get_revision_paths(revnum).get(path)
         
     def find_children(self, path, revnum):
         """Find all children of path in revnum.

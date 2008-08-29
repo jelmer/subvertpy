@@ -515,6 +515,8 @@ class cmd_svn_set_revprops(Command):
         from bzrlib.plugins.svn.upgrade import set_revprops
         from bzrlib.plugins.svn.mapping import get_default_mapping
         repos = Repository.open(location) 
+        if not repos.transport.has_capability("commit-revprops"):
+            raise BzrCommandError("Please upgrade the Subversion server to 1.5 or higher.")
         if mapping is None:
             mapping = get_default_mapping()
         new_mapping = mapping.from_repository(repos)

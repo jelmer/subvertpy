@@ -48,13 +48,6 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     def supports_custom_revprops():
         return True
 
-    def is_bzr_revision(self, revprops, fileprops):
-        """Whether this is a revision that was pushed by Bazaar."""
-        is_revprop_rev = self.revprops.is_bzr_revision(revprops, fileprops)
-        if is_revprop_rev is not None:
-            return is_revprop_rev
-        return self.fileprops.is_bzr_revision(revprops, fileprops)
-
     @classmethod
     def revision_id_bzr_to_foreign(cls, revid):
         assert isinstance(revid, str)

@@ -190,7 +190,10 @@ class SvnCommitBuilder(RootCommitBuilder):
         else:
             self._base_branch_props = lazy_dict({}, self.repository.branchprop_list.get_properties, self.base_path, self.base_revnum)
         self.supports_custom_revprops = self.repository.transport.has_capability("commit-revprops")
-        if self.supports_custom_revprops:
+        if self.supports_custom_revprops is None and self.base_mapping.supports_custom_revprops() and self.repository.seen_bzr_revprops():
+            raise BzrError("Please upgrade your Subversion client libraries to 1.5 or higher to be able to commit with Subversion mapping %s" % self.base_mapping.name)
+
+        if self.supports_custom_revprops == True:
             self._svn_revprops = {}
             if opt_signature is not None:
                 self._svn_revprops[mapping.SVN_REVPROP_BZR_SIGNATURE] = opt_signature
