@@ -28,27 +28,13 @@ from bzrlib.plugins.svn.commit import push, push_ancestors
 from bzrlib.plugins.svn.config import BranchConfig
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import NotSvnBranchPath, ERR_FS_NO_SUCH_REVISION
+from bzrlib.plugins.svn.foreign import FakeControlFiles
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.repository import SvnRepository
 from bzrlib.plugins.svn.tags import SubversionTags
 from bzrlib.plugins.svn.transport import bzr_to_svn_url
 
 import os
-
-class FakeControlFiles(object):
-    """Dummy implementation of ControlFiles.
-    
-    This is required as some code relies on controlfiles being 
-    available."""
-    def get_utf8(self, name):
-        raise NoSuchFile(name)
-
-    def get(self, name):
-        raise NoSuchFile(name)
-
-    def break_lock(self):
-        pass
-
 
 class SvnBranch(Branch):
     """Maps to a Branch in a Subversion repository """

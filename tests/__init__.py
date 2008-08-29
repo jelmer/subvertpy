@@ -343,5 +343,6 @@ def test_suite():
             'test_workingtree',
             'test_blackbox']
     suite.addTest(loader.loadTestsFromModuleNames(["%s.%s" % (__name__, i) for i in testmod_names]))
+    suite.addTest(loader.loadTestsFromModuleNames(["bzrlib.plugins.svn.foreign.test_versionedfiles"]))
 
     return suite
