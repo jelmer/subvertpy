@@ -27,7 +27,7 @@ from bzrlib.trace import mutter, warning
 
 from cStringIO import StringIO
 
-from bzrlib.plugins.svn import core, properties
+from bzrlib.plugins.svn import core, mapping, properties
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.delta import send_stream
 from bzrlib.plugins.svn.errors import ChangesRootLHSHistory, MissingPrefix, RevpropChangeFailed, ERR_FS_TXN_OUT_OF_DATE
@@ -129,8 +129,7 @@ class SvnCommitBuilder(RootCommitBuilder):
 
     def __init__(self, repository, branch, parents, config, timestamp, 
                  timezone, committer, revprops, revision_id, old_inv=None,
-                 push_metadata=True,
-                 graph=None):
+                 push_metadata=True, graph=None, opt_signature=None):
         """Instantiate a new SvnCommitBuilder.
 
         :param repository: SvnRepository to commit to.
@@ -193,6 +192,8 @@ class SvnCommitBuilder(RootCommitBuilder):
         self.supports_custom_revprops = self.repository.transport.has_capability("commit-revprops")
         if self.supports_custom_revprops:
             self._svn_revprops = {}
+            if opt_signature is not None:
+                self._svn_revprops[mapping.SVN_REVPROP_BZR_SIGNATURE] = opt_signature
         else:
             self._svn_revprops = None
         self._svnprops = dict(self._base_branch_props.items())
@@ -742,13 +743,18 @@ def push_revision_tree(graph, target, config, source_repo, base_revid,
     else:
         base_revids = [base_revid]
 
+    try:
+        opt_signature = source_repo.get_signature_text(rev.revision_id)
+    except NoSuchRevision:
+        opt_signature = None
     builder = SvnCommitBuilder(target.repository, target, 
                                base_revids,
                                config, rev.timestamp,
                                rev.timezone, rev.committer, rev.properties, 
                                revision_id, base_tree.inventory, 
                                push_metadata=push_metadata,
-                               graph=graph)
+                               graph=graph,
+                               opt_signature=opt_signature)
                          
     replay_delta(builder, base_tree, old_tree)
     try:
@@ -760,8 +766,6 @@ def push_revision_tree(graph, target, config, source_repo, base_revid,
     except ChangesRootLHSHistory:
         raise BzrError("Unable to push revision %r because it would change the ordering of existing revisions on the Subversion repository root. Use rebase and try again or push to a non-root path" % revision_id)
     
-    if source_repo.has_signature_for_revision_id(revision_id):
-        pass # FIXME: Copy revision signature for rev
 
     return revid
 
