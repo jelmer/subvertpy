@@ -2729,6 +2729,30 @@ static PyObject *get_ssl_client_cert_pw_file_provider(PyObject *self)
 	return (PyObject *)auth;
 }
 
+static PyObject *print_modules(PyObject *self)
+{
+	svn_stringbuf_t *stringbuf;
+	svn_string_t *string;
+	PyObject *ret;
+	apr_pool_t *pool = Pool(NULL);
+	if (pool == NULL)
+		return NULL;
+	stringbuf = svn_stringbuf_create("", pool);
+	if (stringbuf == NULL) {
+		apr_pool_destroy(pool);
+		return NULL;
+	}
+	RUN_SVN_WITH_POOL(pool, svn_ra_print_modules(stringbuf, pool));
+	string = svn_string_create_from_buf(stringbuf, pool);
+	if (string == NULL) {
+		apr_pool_destroy(pool);
+		return NULL;
+	}
+	ret = PyString_FromStringAndSize(string->data, string->len);
+	apr_pool_destroy(pool);
+	return ret;
+}
+
 static PyMethodDef ra_module_methods[] = {
 	{ "version", (PyCFunction)version, METH_NOARGS, NULL },
 	{ "get_ssl_client_cert_pw_file_provider", (PyCFunction)get_ssl_client_cert_pw_file_provider, METH_NOARGS, NULL },
@@ -2741,6 +2765,7 @@ static PyMethodDef ra_module_methods[] = {
 	{ "get_ssl_client_cert_prompt_provider", (PyCFunction)get_ssl_client_cert_prompt_provider, METH_VARARGS, NULL },
 	{ "get_ssl_client_cert_pw_prompt_provider", (PyCFunction)get_ssl_client_cert_pw_prompt_provider, METH_VARARGS, NULL },
 	{ "get_username_provider", (PyCFunction)get_username_provider, METH_NOARGS, NULL },
+	{ "print_modules", (PyCFunction)print_modules, METH_NOARGS, NULL },
 	{ NULL, }
 };
 
