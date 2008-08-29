@@ -41,7 +41,7 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
         return True
 
     @classmethod
-    def parse_revision_id(cls, revid):
+    def revision_id_bzr_to_foreign(cls, revid):
         assert isinstance(revid, str)
 
         if not revid.startswith(cls.revid_prefix):
@@ -56,7 +56,7 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
 
         return (uuid, branch_path, int(srevnum), cls())
 
-    def generate_revision_id(self, (uuid, revnum, path)):
+    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
         return "svn-v4:%s:%s:%d" % (uuid, path, revnum)
 
     def generate_file_id(self, uuid, revnum, branch, inv_path):

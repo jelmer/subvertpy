@@ -290,16 +290,16 @@ class BzrSvnMapping(foreign.VcsMapping):
         None otherwise."""
         return None
 
-    def parse_revision_id(self, revid):
+    def revision_id_bzr_to_foreign(self, revid):
         """Parse an existing Subversion-based revision id.
 
         :param revid: The revision id.
         :raises: InvalidRevisionId
         :return: Tuple with uuid, branch path, revision number and scheme.
         """
-        raise NotImplementedError(self.parse_revision_id)
+        raise NotImplementedError(self.revision_id_bzr_to_foreign)
 
-    def generate_revision_id(self, (uuid, revnum, path)):
+    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
         """Generate a unambiguous revision id. 
         
         :param uuid: UUID of the repository.
@@ -308,7 +308,7 @@ class BzrSvnMapping(foreign.VcsMapping):
 
         :return: New revision id.
         """
-        raise NotImplementedError(self.generate_revision_id)
+        raise NotImplementedError(self.revision_id_foreign_to_bzr)
 
     def is_branch(self, branch_path):
         raise NotImplementedError(self.is_branch)
@@ -407,7 +407,7 @@ class BzrSvnMappingv1(BzrSvnMapping):
     as part of a merge.
     """
     @classmethod
-    def parse_revision_id(cls, revid):
+    def revision_id_bzr_to_foreign(cls, revid):
         if not revid.startswith("svn-v1:"):
             raise InvalidRevisionId(revid, "")
         revid = revid[len("svn-v1:"):]
@@ -419,7 +419,7 @@ class BzrSvnMappingv1(BzrSvnMapping):
         assert revnum >= 0
         return (uuid, branch_path, revnum, cls())
 
-    def generate_revision_id(self, (uuid, revnum, path)):
+    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
         return "svn-v1:%d@%s-%s" % (revnum, uuid, escape_svn_path(path))
 
     def __eq__(self, other):
@@ -431,7 +431,7 @@ class BzrSvnMappingv2(BzrSvnMapping):
 
     """
     @classmethod
-    def parse_revision_id(cls, revid):
+    def revision_id_bzr_to_foreign(cls, revid):
         if not revid.startswith("svn-v2:"):
             raise InvalidRevisionId(revid, "")
         revid = revid[len("svn-v2:"):]
@@ -443,7 +443,7 @@ class BzrSvnMappingv2(BzrSvnMapping):
         assert revnum >= 0
         return (uuid, branch_path, revnum, cls())
 
-    def generate_revision_id(self, (uuid, revnum, path)):
+    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
         return "svn-v2:%d@%s-%s" % (revnum, uuid, escape_svn_path(path))
 
     def __eq__(self, other):
@@ -698,7 +698,7 @@ def parse_revision_id(revid):
         raise InvalidRevisionId(revid, None)
     mapping_version = revid[len("svn-"):len("svn-vx")]
     mapping = mapping_registry.get(mapping_version)
-    return mapping.parse_revision_id(revid)
+    return mapping.revision_id_bzr_to_foreign(revid)
 
 def get_default_mapping():
     return mapping_registry.get_default()

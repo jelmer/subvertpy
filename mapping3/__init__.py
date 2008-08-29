@@ -298,7 +298,7 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
         return (uuid, branch_path, int(srevnum), scheme)
 
     @classmethod
-    def parse_revision_id(cls, revid):
+    def revision_id_bzr_to_foreign(cls, revid):
         (uuid, branch_path, srevnum, scheme) = cls._parse_revision_id(revid)
         # Some older versions of bzr-svn 0.4 did not always set a branching
         # scheme but set "undefined" instead.
@@ -325,7 +325,7 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
         return "%s%s:%s:%s:%d" % (cls.revid_prefix, scheme, uuid, \
                        mapping.escape_svn_path(path.strip("/")), revnum)
 
-    def generate_revision_id(self, (uuid, revnum, path)):
+    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
         return self._generate_revision_id(uuid, revnum, path, self.scheme)
 
     def unprefix(self, branch_path, repos_path):
