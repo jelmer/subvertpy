@@ -459,12 +459,15 @@ class SvnWorkingTree(WorkingTree):
         else:
             extra = ""
         original_props = self._get_base_branch_props()
+        svn_fileprops = dict(original_props.items())
         wc = self._get_wc(write_lock=True)
-        (svn_revprops, svn_fileprops) = self.branch.mapping.export_revision(False, self.branch.get_branch_path(), 
+        svn_revprops = {}
+        self.branch.mapping.export_revision(self.branch.get_branch_path(), 
                                             timestamp, timezone, committer, revprops, 
                                             rev_id, self.branch.revno()+1, 
-                                            self.pending_merges(),
-                                            original_props)
+                                            self.get_parent_ids(),
+                                            svn_revprops,
+                                            svn_fileprops)
         try:
             self._set_branch_props(wc, svn_fileprops)
         finally:

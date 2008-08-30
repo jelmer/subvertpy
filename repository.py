@@ -612,6 +612,8 @@ class SvnRepository(Repository):
 
     def _revmeta(self, path, changes, revnum, revprops=None, fileprops=None):
         if (path, revnum) in self._revmeta_cache:
+            if changes is not None:
+                self._revmeta_cache[path,revnum].paths = changes
             return self._revmeta_cache[path,revnum]
 
         if revprops is None:

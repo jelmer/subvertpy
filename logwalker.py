@@ -100,6 +100,10 @@ class lazy_dict(object):
         self._ensure_init()
         return self.dict.__eq__(other)
 
+    def update(self, other):
+        self._ensure_init()
+        return self.dict.update(other)
+
 
 class LogCache(CacheTable):
     """Log browser cache table manager. The methods of this class
