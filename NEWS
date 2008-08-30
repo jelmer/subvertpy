@@ -11,6 +11,10 @@ bzr-svn 0.4.12	UNRELEASED
 	 
 	 + Uses revision properties where possible. (#127736)
 
+     + Branching schemes are no longer used and are 
+	   replaced by "repository layouts", which are 
+	   much more flexible. (#130372)
+
   FEATURES
 
    * Add bzr:skip revision property to allow skipping 
