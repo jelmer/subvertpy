@@ -279,6 +279,7 @@ class SvnRepository(Repository):
     def _clear_cached_state(self):
         self._cached_tags = {}
         self._cached_revnum = None
+        self._layout = None
         self._parents_provider = CachingParentsProvider(self._real_parents_provider)
 
     def lock_write(self):
@@ -403,9 +404,9 @@ class SvnRepository(Repository):
         self._layout = layout
 
     def get_layout(self):
-        if self._layout is not None:
-            return self._layout
-        return self.get_mapping().get_mandated_layout(self)
+        if self._layout is None:
+            self._layout = self.get_mapping().get_mandated_layout(self)
+        return self._layout
 
     def get_guessed_layout(self):
         return self.get_mapping().get_guessed_layout(self)

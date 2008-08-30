@@ -15,7 +15,7 @@
 
 from bzrlib import errors
 
-from bzrlib.plugins.svn import mapping
+from bzrlib.plugins.svn import layout, mapping
 
 supported_features = set()
 
@@ -137,4 +137,5 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
         else:
             self.fileprops.import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
 
-
+    def get_mandated_layout(self, repository):
+        return layout.ConfigBasedLayout(repository)

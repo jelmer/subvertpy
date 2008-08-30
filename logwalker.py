@@ -32,11 +32,13 @@ class lazy_dict(object):
         self.create_fn = create_fn
         self.args = args
         self.dict = None
+        self.is_loaded = False
 
     def _ensure_init(self):
         if self.dict is None:
             self.dict = self.create_fn(*self.args)
             self.create_fn = None
+            self.is_loaded = True
 
     def __len__(self):
         self._ensure_init()
