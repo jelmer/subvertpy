@@ -629,9 +629,7 @@ class BzrSvnMappingRevProps(object):
 
     def get_rhs_parents(self, branch_path, svn_revprops, 
                         fileprops):
-        if svn_revprops[SVN_REVPROP_BZR_ROOT] != branch:
-            return []
-        return svn_revprops.get(SVN_REVPROP_BZR_MERGE, "").splitlines()
+        return tuple(svn_revprops.get(SVN_REVPROP_BZR_MERGE, "").splitlines())
 
     def get_branch_root(self, revprops):
         return revprops[SVN_REVPROP_BZR_ROOT]

@@ -18,9 +18,7 @@ from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn import mapping, properties
-from bzrlib.plugins.svn.core import SubversionException, NODE_DIR
-from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND
-from bzrlib.plugins.svn.layout import RepositoryLayout
+from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
 from bzrlib.plugins.svn.mapping3.scheme import (BranchingScheme, guess_scheme_from_branch_path, 
                              guess_scheme_from_history, ListBranchingScheme, 
                              parse_list_scheme_text, NoBranchingScheme,
@@ -32,49 +30,6 @@ SVN_PROP_BZR_BRANCHING_SCHEME = 'bzr:branching-scheme'
 
 # Number of revisions to evaluate when guessing the branching scheme
 SCHEME_GUESS_SAMPLE_SIZE = 2000
-
-def expand_branch_pattern(begin, todo, check_path, get_children, project=None):
-    """Find the paths in the repository that match the expected branch pattern.
-
-    :param begin: List of path elements currently opened.
-    :param todo: List of path elements to still evaluate (including wildcards)
-    :param check_path: Function for checking a path exists
-    :param get_children: Function for retrieving the children of a path
-    """
-    mutter('expand branches: %r, %r', begin, todo)
-    path = "/".join(begin)
-    if (project is not None and 
-        not project.startswith(path) and 
-        not path.startswith(project)):
-        return []
-    # If all elements have already been handled, just check the path exists
-    if len(todo) == 0:
-        if check_path(path):
-            return [path]
-        else:
-            return []
-    # Not a wildcard? Just expand next bits
-    if todo[0] != "*":
-        return expand_branch_pattern(begin+[todo[0]], todo[1:], check_path, 
-                                     get_children, project)
-    children = get_children(path)
-    if children is None:
-        return []
-    ret = []
-    pb = ui.ui_factory.nested_progress_bar()
-    try:
-        for idx, c in enumerate(children):
-            pb.update("browsing branches", idx, len(children))
-            if len(todo) == 1:
-                # Last path element, so return directly
-                ret.append("/".join(begin+[c]))
-            else:
-                ret += expand_branch_pattern(begin+[c], todo[1:], check_path, 
-                                             get_children, project)
-    finally:
-        pb.finished()
-    return ret
-
 
 class SchemeDerivedLayout(RepositoryLayout):
     def __init__(self, repository, scheme):
@@ -92,32 +47,11 @@ class SchemeDerivedLayout(RepositoryLayout):
     def get_tag_name(self, path, project=None):
         return path.split("/")[-1]
 
-    def _get_root_paths(self, itemlist, revnum, verify_fn, project=None, pb=None):
-        def check_path(path):
-            return self.repository.transport.check_path(path, revnum) == NODE_DIR
-        def find_children(path):
-            try:
-                assert not path.startswith("/")
-                dirents = self.repository.transport.get_dir(path, revnum, DIRENT_KIND)[0]
-            except SubversionException, (msg, num):
-                if num in (ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND):
-                    return None
-                raise
-            return [d for d in dirents if dirents[d]['kind'] == NODE_DIR]
-
-        for idx, pattern in enumerate(itemlist):
-            if pb is not None:
-                pb.update("finding branches", idx, len(itemlist))
-            for bp in expand_branch_pattern([], pattern.split("/"), check_path,
-                    find_children, project):
-                if verify_fn(bp, project):
-                    yield "", bp, bp.split("/")[-1]
-
     def get_branches(self, revnum, project=None, pb=None):
-        return self._get_root_paths(self.scheme.branch_list, revnum, self.scheme.is_branch, project, pb)
+        return get_root_paths(self.repository, self.scheme.branch_list, revnum, self.scheme.is_branch, project, pb)
 
     def get_tags(self, revnum, project=None, pb=None):
-        return self._get_root_paths(self.scheme.tag_list, revnum, self.scheme.is_tag, project, pb)
+        return get_root_paths(self.repository, self.scheme.tag_list, revnum, self.scheme.is_tag, project, pb)
 
     def get_tag_path(self, name, project=""):
         return self.scheme.get_tag_path(name, project)

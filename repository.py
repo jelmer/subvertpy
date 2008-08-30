@@ -223,6 +223,7 @@ class SvnRepository(Repository):
         self.base = transport.base
         assert self.base is not None
         self._serializer = xml7.serializer_v7
+        self._config = None
         self.get_config().add_location(self.base)
         self._log = logwalker.LogWalker(transport=transport)
         self.fileid_map = FileIdMap(simple_apply_changes, self)
@@ -276,9 +277,9 @@ class SvnRepository(Repository):
             self._lock_mode = None
             self._clear_cached_state()
 
-    def _clear_cached_state(self):
+    def _clear_cached_state(self, revnum=None):
         self._cached_tags = {}
-        self._cached_revnum = None
+        self._cached_revnum = revnum
         self._layout = None
         self._parents_provider = CachingParentsProvider(self._real_parents_provider)
 
@@ -776,7 +777,9 @@ class SvnRepository(Repository):
             yield self._revmeta(bp, paths, revnum, revprops, svn_fileprops)
 
     def get_config(self):
-        return SvnRepositoryConfig(self.uuid)
+        if self._config is None:
+            self._config = SvnRepositoryConfig(self.uuid)
+        return self._config
 
     def has_signature_for_revision_id(self, revision_id):
         """Check whether a signature exists for a particular revision id.

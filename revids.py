@@ -60,23 +60,24 @@ class RevidMap(object):
         except InvalidRevisionId:
             pass
 
-        for entry_revid, branch, revno, mapping in self.discover_revprop_revids(0, self.repos.get_latest_revnum()):
+        last_revnum = self.repos.get_latest_revnum()
+        for entry_revid, branch, revno, mapping in self.discover_revprop_revids(0, last_revnum):
             if revid == entry_revid:
                 return (branch, revno, mapping.name)
 
-        for entry_revid, branch, revno, mapping in self.discover_fileprop_revids(layout, 0, self.repos.get_latest_revnum(), project):
+        for entry_revid, branch, revno, mapping in self.discover_fileprop_revids(layout, 0, last_revnum, project):
             if revid == entry_revid:
                 (bp, revnum, mapping_name) = self.bisect_revid_revnum(revid, branch, 0, revno)
                 return (bp, revnum, mapping_name)
         raise NoSuchRevision(self, revid)
 
     def discover_revprop_revids(self, from_revnum, to_revnum):
-        for (_, revno, revprops) in self.repos._log.iter_revs(None, from_revnum, to_revnum):
+        for (_, revno, revprops) in self.repos._log.iter_changes(None, from_revnum, to_revnum):
             if is_bzr_revision_revprops(revprops):
                 mapping = find_mapping(revprops, {})
                 (_, revid) = mapping.get_revision_id(None, revprops, {})
                 if revid is not None:
-                    yield (revid, mapping.get_branch_root(revprops), revno, mapping)
+                    yield (revid, mapping.get_branch_root(revprops).strip("/"), revno, mapping)
 
     def discover_fileprop_revids(self, layout, from_revnum, to_revnum, project=None):
         reuse_policy = self.repos.get_config().get_reuse_revisions()
@@ -191,7 +192,7 @@ class CachingRevidMap(object):
                 # check again.
                 raise e
             found = None
-            for entry_revid, branch, revno, mapping in self.discover_revprop_revids(0, self.repos.get_latest_revnum()):
+            for entry_revid, branch, revno, mapping in self.actual.discover_revprop_revids(last_checked, last_revnum):
                 if entry_revid == revid:
                     found = (branch, revno, revno, mapping)
                 if entry_revid not in self.revid_seen:

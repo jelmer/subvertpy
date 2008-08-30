@@ -204,7 +204,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         self._svnprops = lazy_dict({}, lambda: dict(self._base_branch_props.items()))
         self.base_mapping.export_revision(
             self.branch.get_branch_path(), timestamp, timezone, committer, revprops, 
-            revision_id, self.base_revno+1, merges, self._svn_revprops, self._svnprops)
+            revision_id, self.base_revno+1, parents, self._svn_revprops, self._svnprops)
 
         if len(merges) > 0:
             new_svk_merges = update_svk_features(self._base_branch_props.get(SVN_PROP_SVK_MERGE, ""), merges)
@@ -558,9 +558,9 @@ class SvnCommitBuilder(RootCommitBuilder):
 
         assert self.revision_metadata is not None
 
-        self.repository._clear_cached_state()
-
         (result_revision, result_date, result_author) = self.revision_metadata
+
+        self.repository._clear_cached_state(result_revision)
 
         revid = self.branch.generate_revision_id(result_revision)
 

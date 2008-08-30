@@ -79,6 +79,9 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     def __eq__(self, other):
         return type(self) == type(other)
 
+    def get_branch_root(self, revprops):
+        return self.revprops.get_branch_root(revprops)
+
     def get_lhs_parent(self, branch_path, svn_revprops, fileprops):
         return self.revprops.get_lhs_parent(branch_path, svn_revprops, fileprops)
 
