@@ -290,6 +290,9 @@ class Mappingv3FilePropTests(MappingTestAdapter, TestCase):
         self.assertEqual("2@uuid:bp:mypath%2C%C2%8A",
                          self.mapping.generate_file_id("uuid", 2, "bp", u"mypath\x2c\x8a"))
 
+    def test_generate_file_id_spaces(self):
+        self.assertFalse(" " in self.mapping.generate_file_id("uuid", 1, "b p", u"my path"))
+
     def test_generate_svn_file_id(self):
         self.assertEqual("2@uuid:bp:path", 
                 self.mapping.generate_file_id("uuid", 2, "bp", u"path"))

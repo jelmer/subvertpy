@@ -68,7 +68,7 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
         return "svn-v4:%s:%s:%d" % (uuid, path, revnum)
 
     def generate_file_id(self, uuid, revnum, branch, inv_path):
-        return "%d@%s:%s/%s" % (revnum, uuid, branch, inv_path.encode("utf-8"))
+        return "%d@%s:%s" % (revnum, uuid, mapping.escape_svn_path("%s/%s" % (branch, inv_path.encode("utf-8"))))
 
     def is_branch(self, branch_path):
         return True
