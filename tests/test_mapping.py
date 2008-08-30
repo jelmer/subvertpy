@@ -155,7 +155,7 @@ class MappingTestAdapter(object):
         fileids = {"": "some-id", "bla/blie": "other-id"}
         revprops = {}
         fileprops = {}
-        self.mapping.export_revision(True, "branchp", 432432432.0, 0, "somebody", {}, "arevid", 4, ["merge1"], revprops, fileprops)
+        self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", {}, "arevid", 4, ["merge1"], revprops, fileprops)
         self.mapping.export_fileid_map(fileids, revprops, fileprops)
         revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
         self.assertEquals(fileids, 
@@ -176,7 +176,7 @@ class MappingTestAdapter(object):
             raise TestNotApplicable
         revprops = {}
         fileprops = {}
-        self.mapping.export_revision(True, "branchp", 432432432.0, 0, "somebody", 
+        self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", 
                                      {"arevprop": "val"}, "arevid", 4, ["merge1"], revprops, fileprops)
         revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
         try:
@@ -192,7 +192,7 @@ class MappingTestAdapter(object):
             raise TestNotApplicable
         revprops = {}
         fileprops = {}
-        self.mapping.export_revision(True, "branchp", 432432432.0, 0, "somebody", 
+        self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", 
                                      {"arevprop": "val" }, "arevid", 4, ["parent", "merge1"], revprops, fileprops)
         targetrev = Revision(None)
         revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
