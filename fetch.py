@@ -655,7 +655,7 @@ class InterFromSvnRepository(InterRepository):
             checked = set()
         if revision_id in checked:
             return []
-        extra = []
+        extra = list()
         def check_revid(revision_id):
             revs = []
             meta_map = {}
@@ -678,7 +678,7 @@ class InterFromSvnRepository(InterRepository):
                 if revid in checked:
                     # This revision (and its ancestry) has already been checked
                     break
-                extra.append(parent_ids[1:])
+                extra.extend(parent_ids[1:])
                 if not self.target.has_revision(revid):
                     revs.append(revid)
                 elif not find_ghosts:
