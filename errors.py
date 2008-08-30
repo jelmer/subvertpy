@@ -68,7 +68,7 @@ class InvalidBzrSvnRevision(NoSuchRevision):
 class NotSvnBranchPath(NotBranchError):
     """Error raised when a path was specified that did not exist."""
     _fmt = """%(path)s is not a valid Subversion branch path. 
-See 'bzr help svn-branching-schemes' for details."""
+See 'bzr help svn-repository-layout' for details."""
 
     def __init__(self, branch_path, mapping=None):
         NotBranchError.__init__(self, urllib.quote(branch_path))

@@ -32,6 +32,9 @@ Cloning a large Subversion branch is very slow
 There is no way around this at the moment, because Bazaar has to import all 
 the history from the Subversion branch.
 
+bzr-svn will work significantly faster against a Subversion 1.5 server, so if 
+you have control over the server it may be worthwhile to upgrade it.
+
 Alternatively, you may want to just check out the tip of the Subversion branch
 and access the earlier revisions only when necessary by using stacked branches,
 e.g.::
@@ -66,7 +69,12 @@ See hooks/pre-revprop-change in the Subversion repository for
 more information about how to do this.
 
 You also need to enable support for this in bzr-svn by setting 
-``override-svn-revprops`` to True in ~/.bazaar/bazaar.conf.
+``override-svn-revprops`` in ~/.bazaar/bazaar.conf to a comma-separated 
+list of Subversion revision properties you would like to override. 
+
+For example::
+
+  override-svn-revprops = svn:log, svn:author
 
 I converted my Subversion repository using svn-import, but now all branches are empty!
 --------------------------------------------------------------------------------------
@@ -100,12 +108,18 @@ pushing to.
 
 bzr-svn sets all kinds of file properties when pushing revisions into Subversion. Is this really necessary?
 -----------------------------------------------------------------------------------------------------------
-Yes, this is because bzr-svn actually supports pushing to Subversion
+Yes, this is because bzr-svn pushes to Subversion while
 retaining the exact same history that is in the Bazaar branch 
-you're pushing. These properties are used for storing Bazaar metadata that 
+you're pushing. 
+
+These properties are used for storing Bazaar metadata that 
 can not be losslessly mapped to existing Subversion metadata. 
 
-It is possible to push changes to Subversion without
+bzr-svn can and will use revision properties rather than file properties 
+if the Subversion server is running Subversion 1.5 or higher. These custom 
+revision properties don't show up in commit notifications or trac.
+
+Alternatively, it is possible to push changes to Subversion without
 setting that metadata by using the ``bzr dpush`` command. 
 Since revisions created in Subversion this way are actually (slightly) 
 different from the matching revisions in the local branch, it is necessary for 
@@ -113,12 +127,6 @@ the dpush command to rebase your branch to the remote branch after pushing.
 
 You would get a DivergedBranches error when pulling from a svn branch you have 
 just pushed to. 
-
-We have considered setting revision properties with this metadata
-rather than file properties so they don't show up in "svn diff" but
-that requires more work in bzr-svn. Being able to set custom revision
-properties also depends on Subversion 1.5 on the server or modification of the 
-default repository hooks.
 
 If you are using trac, you can get it to ignore these file properties by 
 setting	the ``hide_properties`` setting in the browser section of your 
