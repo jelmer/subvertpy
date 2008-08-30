@@ -633,14 +633,15 @@ class BzrSvnMappingRevProps(object):
             return []
         return svn_revprops.get(SVN_REVPROP_BZR_MERGE, "").splitlines()
 
+    def get_branch_root(self, revprops):
+        return revprops[SVN_REVPROP_BZR_ROOT]
+
     def get_revision_id(self, branch_path, revprops, fileprops):
         if not is_bzr_revision_revprops(revprops):
             return (None, None)
-        if revprops[SVN_REVPROP_BZR_ROOT] == branch_path:
-            revid = revprops[SVN_REVPROP_BZR_REVISION_ID]
-            revno = int(revprops[SVN_REVPROP_BZR_REVNO])
-            return (revno, revid)
-        return (None, None)
+        revid = revprops[SVN_REVPROP_BZR_REVISION_ID]
+        revno = int(revprops[SVN_REVPROP_BZR_REVNO])
+        return (revno, revid)
 
     def export_message(self, message, revprops, fileprops):
         revprops[SVN_REVPROP_BZR_LOG] = message.encode("utf-8")

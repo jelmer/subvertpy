@@ -24,7 +24,7 @@ from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import InvalidPropertyValue, ERR_FS_NO_SUCH_REVISION, InvalidBzrSvnRevision
 from bzrlib.plugins.svn.mapping import (parse_revision_id, BzrSvnMapping, 
                      SVN_PROP_BZR_REVISION_ID, parse_revid_property,
-                     parse_mapping_name)
+                     find_mapping, parse_mapping_name, is_bzr_revision_revprops)
 
 class RevidMap(object):
     def __init__(self, repos):
@@ -60,13 +60,25 @@ class RevidMap(object):
         except InvalidRevisionId:
             pass
 
-        for entry_revid, branch, revno, mapping in self.discover_revids(layout, 0, self.repos.get_latest_revnum(), project):
+        for entry_revid, branch, revno, mapping in self.discover_revprop_revids(0, self.repos.get_latest_revnum()):
+            if revid == entry_revid:
+                return (branch, revno, mapping.name)
+
+        for entry_revid, branch, revno, mapping in self.discover_fileprop_revids(layout, 0, self.repos.get_latest_revnum(), project):
             if revid == entry_revid:
                 (bp, revnum, mapping_name) = self.bisect_revid_revnum(revid, branch, 0, revno)
                 return (bp, revnum, mapping_name)
         raise NoSuchRevision(self, revid)
 
-    def discover_revids(self, layout, from_revnum, to_revnum, project=None):
+    def discover_revprop_revids(self, from_revnum, to_revnum):
+        for (_, revno, revprops) in self.repos._log.iter_revs(None, from_revnum, to_revnum):
+            if is_bzr_revision_revprops(revprops):
+                mapping = find_mapping(revprops, {})
+                (_, revid) = mapping.get_revision_id(None, revprops, {})
+                if revid is not None:
+                    yield (revid, mapping.get_branch_root(revprops), revno, mapping)
+
+    def discover_fileprop_revids(self, layout, from_revnum, to_revnum, project=None):
         reuse_policy = self.repos.get_config().get_reuse_revisions()
         assert reuse_policy in ("other-branches", "removed-branches", "none") 
         check_removed = (reuse_policy == "removed-branches")
@@ -178,10 +190,16 @@ class CachingRevidMap(object):
                 # layout have already been discovered. No need to 
                 # check again.
                 raise e
-            found = False
-            for entry_revid, branch, revno, mapping in self.actual.discover_revids(layout, last_checked, last_revnum, project):
+            found = None
+            for entry_revid, branch, revno, mapping in self.discover_revprop_revids(0, self.repos.get_latest_revnum()):
                 if entry_revid == revid:
-                    found = True
+                    found = (branch, revno, revno, mapping)
+                if entry_revid not in self.revid_seen:
+                    self.cache.insert_revid(entry_revid, branch, revno, revno, mapping.name)
+                    self.revid_seen.add(entry_revid)
+            for entry_revid, branch, revno, mapping in self.actual.discover_fileprop_revids(layout, last_checked, last_revnum, project):
+                if entry_revid == revid:
+                    found = (branch, last_checked, revno, mapping)
                 if entry_revid not in self.revid_seen:
                     self.cache.insert_revid(entry_revid, branch, last_checked, revno, mapping.name)
                     self.revid_seen.add(entry_revid)
@@ -190,9 +208,9 @@ class CachingRevidMap(object):
             # repository, so no need to check again unless new revisions got 
             # added
             self.cache.set_last_revnum_checked(repr((layout, project)), last_revnum)
-            if not found:
+            if found is None:
                 raise e
-            (branch_path, min_revnum, max_revnum, mapping) = self.cache.lookup_revid(revid)
+            (branch_path, min_revnum, max_revnum, mapping) = found
             assert min_revnum <= max_revnum
             assert isinstance(branch_path, str)
 
