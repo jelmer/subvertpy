@@ -34,8 +34,9 @@ import bzrlib
 from bzrlib import log
 from bzrlib.bzrdir import BzrDirFormat, format_registry
 from bzrlib.errors import BzrError
-from bzrlib.commands import Command, register_command, display_command, Option
+from bzrlib.commands import Command, register_command, display_command
 from bzrlib.help_topics import topic_registry
+from bzrlib.option import Option, RegistryOption
 from bzrlib.revisionspec import SPEC_TYPES
 from bzrlib.trace import warning, mutter
 from bzrlib.transport import register_lazy_transport, register_transport_proto
@@ -235,7 +236,7 @@ class cmd_svn_import(Command):
             incremental=False):
         from bzrlib.bzrdir import BzrDir
         from bzrlib.errors import BzrCommandError, NoRepositoryPresent
-        from bzrlib import urlutils
+        from bzrlib import osutils, urlutils
         from bzrlib.plugins.svn.convert import convert_repository
         from bzrlib.plugins.svn.mapping3 import repository_guess_scheme
         from bzrlib.plugins.svn.repository import SvnRepository
@@ -299,7 +300,6 @@ class cmd_svn_import(Command):
                                keep=keep, incremental=incremental)
 
             if tmp_repos is not None:
-                from bzrlib import osutils
                 osutils.rmtree(tmp_repos)
         finally:
             from_repos.unlock()
@@ -313,11 +313,16 @@ class cmd_svn_upgrade(Command):
     This will change the revision ids of revisions whose parents 
     were mapped from svn revisions.
     """
+    from bzrlib.plugins.svn.mapping import mapping_registry, get_default_mapping
     takes_args = ['from_repository?']
-    takes_options = ['verbose']
+    takes_options = ['verbose', RegistryOption('mapping', 
+                                 help="New mapping to upgrade to.",
+                                 registry=mapping_registry,
+                                 title="Subversion mapping",
+                                 value_switches=True)]
 
     @display_command
-    def run(self, from_repository=None, verbose=False):
+    def run(self, from_repository=None, verbose=False, mapping=None):
         from bzrlib.plugins.svn.upgrade import (upgrade_branch, 
                                                 upgrade_workingtree)
         from bzrlib.branch import Branch
@@ -346,11 +351,18 @@ class cmd_svn_upgrade(Command):
         else:
             from_repository = Repository.open(from_repository)
 
+        if mapping is None:
+            mapping = get_default_mapping()
+
+        new_mapping = mapping.from_repository(from_repository)
+
         if wt_to is not None:
             renames = upgrade_workingtree(wt_to, from_repository, 
+                                          new_mapping=new_mapping,
                                           allow_changes=True, verbose=verbose)
         else:
             renames = upgrade_branch(branch_to, from_repository, 
+                                     new_mapping=new_mapping,
                                      allow_changes=True, verbose=verbose)
 
         if renames == {}:
@@ -427,70 +439,8 @@ class cmd_svn_push(Command):
 
 register_command(cmd_svn_push)
 
-class cmd_dpush(Command):
-    """Push diffs into Subversion without any Bazaar-specific properties set.
-
-    This will afterwards rebase the local Bazaar branch on the Subversion 
-    branch unless the --no-rebase option is used, in which case 
-    the two branches will be out of sync. 
-    """
-    takes_args = ['location?']
-    takes_options = ['remember', Option('directory',
-            help='Branch to push from, '
-                 'rather than the one containing the working directory.',
-            short_name='d',
-            type=unicode,
-            ),
-            Option('no-rebase', help="Don't rebase after push")]
-
-    def run(self, location=None, remember=False, directory=None, 
-            no_rebase=False):
-        from bzrlib import urlutils
-        from bzrlib.bzrdir import BzrDir
-        from bzrlib.branch import Branch
-        from bzrlib.errors import BzrCommandError, NoWorkingTree
-        from bzrlib.workingtree import WorkingTree
-
-        from bzrlib.plugins.svn.commit import dpush
-
-        if directory is None:
-            directory = "."
-        try:
-            source_wt = WorkingTree.open_containing(directory)[0]
-            source_branch = source_wt.branch
-        except NoWorkingTree:
-            source_branch = Branch.open_containing(directory)[0]
-            source_wt = None
-        stored_loc = source_branch.get_push_location()
-        if location is None:
-            if stored_loc is None:
-                raise BzrCommandError("No push location known or specified.")
-            else:
-                display_url = urlutils.unescape_for_display(stored_loc,
-                        self.outf.encoding)
-                self.outf.write("Using saved location: %s\n" % display_url)
-                location = stored_loc
-
-        bzrdir = BzrDir.open(location)
-        target_branch = bzrdir.open_branch()
-        target_branch.lock_write()
-        revid_map = dpush(target_branch, source_branch)
-        # We successfully created the target, remember it
-        if source_branch.get_push_location() is None or remember:
-            source_branch.set_push_location(target_branch.base)
-        if not no_rebase:
-            _, old_last_revid = source_branch.last_revision_info()
-            new_last_revid = revid_map[old_last_revid]
-            if source_wt is not None:
-                source_wt.pull(target_branch, overwrite=True, 
-                               stop_revision=new_last_revid)
-            else:
-                source_branch.pull(target_branch, overwrite=True, 
-                                   stop_revision=new_last_revid)
-
-
-register_command(cmd_dpush)
-
+from bzrlib.plugins.svn import foreign
+register_command(foreign.cmd_dpush)
 
 class cmd_svn_branching_scheme(Command):
     """Show or change the branching scheme for a Subversion repository.
@@ -551,10 +501,29 @@ class cmd_svn_set_revprops(Command):
     To change these permissions, edit the hooks/pre-revprop-change 
     file in the Subversion repository.
     """
-    takes_args = ['location']
+    takes_args = ['location?']
+    from bzrlib.plugins.svn.mapping import mapping_registry
+    takes_options = [RegistryOption('mapping', 
+                                 help="New mapping to upgrade to.",
+                                 registry=mapping_registry,
+                                 title="Subversion mapping",
+                                 value_switches=True)]
 
-    def run(self, location="."):
-        raise NotImplementedError(self.run)
+    def run(self, location=".", mapping=None):
+        from bzrlib.errors import BzrCommandError
+        from bzrlib.repository import Repository
+        from bzrlib.plugins.svn.upgrade import set_revprops
+        from bzrlib.plugins.svn.mapping import get_default_mapping
+        repos = Repository.open(location) 
+        if not repos.transport.has_capability("commit-revprops"):
+            raise BzrCommandError("Please upgrade the Subversion server to 1.5 or higher.")
+        if mapping is None:
+            mapping = get_default_mapping()
+        new_mapping = mapping.from_repository(repos)
+        if not new_mapping.supports_custom_revprops():
+            raise BzrCommandError("Please specify a different mapping, %s doesn't support revision properties." % new_mapping.name)
+
+        set_revprops(repos, new_mapping)
 
 
 register_command(cmd_svn_set_revprops)

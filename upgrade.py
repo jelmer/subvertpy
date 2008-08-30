@@ -15,11 +15,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Upgrading revisions made with older versions of the mapping."""
 
+from bzrlib import ui
 from bzrlib.errors import BzrError, InvalidRevisionId
+from bzrlib.revision import Revision
 from bzrlib.trace import info
 
 import itertools
+from bzrlib.plugins.svn import changes, logwalker, mapping, properties
 from bzrlib.plugins.svn.mapping import parse_revision_id
+from bzrlib.plugins.svn.repository import RevisionMetadata
 
 class UpgradeChangesContent(BzrError):
     """Inconsistency was found upgrading the mapping of a revision."""
@@ -44,19 +48,22 @@ def create_upgraded_revid(revid, mapping_suffix, upgrade_suffix="-upgrade"):
         return revid + mapping_suffix + upgrade_suffix
 
 
-def upgrade_workingtree(wt, svn_repository, allow_changes=False, verbose=False):
+def upgrade_workingtree(wt, svn_repository, new_mapping=None, 
+                        allow_changes=False, verbose=False):
     """Upgrade a working tree.
 
     :param svn_repository: Subversion repository object
     """
-    renames = upgrade_branch(wt.branch, svn_repository, allow_changes=allow_changes, verbose=verbose)
+    renames = upgrade_branch(wt.branch, svn_repository, new_mapping=new_mapping,
+                             allow_changes=allow_changes, verbose=verbose)
     last_revid = wt.branch.last_revision()
     wt.set_parent_trees([(last_revid, wt.branch.repository.revision_tree(last_revid))])
     # TODO: Should also adjust file ids in working tree if necessary
     return renames
 
 
-def upgrade_branch(branch, svn_repository, allow_changes=False, verbose=False):
+def upgrade_branch(branch, svn_repository, new_mapping=None, 
+                   allow_changes=False, verbose=False):
     """Upgrade a branch to the current mapping version.
     
     :param branch: Branch to upgrade.
@@ -66,7 +73,8 @@ def upgrade_branch(branch, svn_repository, allow_changes=False, verbose=False):
     """
     revid = branch.last_revision()
     renames = upgrade_repository(branch.repository, svn_repository, 
-              revision_id=revid, allow_changes=allow_changes, verbose=verbose)
+              revision_id=revid, new_mapping=new_mapping,
+              allow_changes=allow_changes, verbose=verbose)
     if len(renames) > 0:
         branch.generate_revision_history(renames[revid])
     return renames
@@ -101,7 +109,7 @@ def generate_upgrade_map(new_mapping, revs):
         except InvalidRevisionId:
             # Not a bzr-svn revision, nothing to do
             continue
-        newrevid = new_mapping.generate_revision_id(uuid, rev, bp)
+        newrevid = new_mapping.revision_id_foreign_to_bzr((uuid, rev, bp))
         if revid == newrevid:
             continue
         rename_map[revid] = newrevid
@@ -199,7 +207,7 @@ def upgrade_repository(repository, svn_repository, new_mapping=None,
                 (uuid, bp, rev, mapping) = parse_revision_id(revid)
             except InvalidRevisionId:
                 return revid
-            return new_mapping.generate_revision_id(uuid, rev, bp)
+            return new_mapping.revision_id_foreign_to_bzr((uuid, rev, bp))
         def replay(repository, oldrevid, newrevid, new_parents):
             return replay_snapshot(repository, oldrevid, newrevid, new_parents,
                                    revid_renames, fix_revid)
@@ -208,3 +216,58 @@ def upgrade_repository(repository, svn_repository, new_mapping=None,
     finally:
         repository.unlock()
         svn_repository.unlock()
+
+
+def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
+    """Set bzr-svn revision properties for existing bzr-svn revisions.
+
+    :param repository: Subversion Repository object.
+    :param new_mapping: Mapping to upgrade to
+    """
+    if to_revnum is None:
+        to_revnum = repository.get_latest_revnum()
+    graph = repository.get_graph()
+    assert from_revnum <= to_revnum
+    pb = ui.ui_factory.nested_progress_bar()
+    logcache = getattr(repository._log, "cache", None)
+    try:
+        for (paths, revnum, revprops) in repository._log.iter_changes(None, to_revnum, from_revnum, pb=pb):
+            if revnum == 0:
+                # Never a bzr-svn revision
+                continue
+            # Find the root path of the change
+            bp = changes.changes_root(paths.keys())
+            if bp is None:
+                fileprops = {}
+            else:
+                fileprops = logwalker.lazy_dict({}, repository.branchprop_list.get_properties, bp, revnum)
+            old_mapping = mapping.find_mapping(revprops, fileprops)
+            if old_mapping is None:
+                # Not a bzr-svn revision
+                if not mapping.SVN_REVPROP_BZR_SKIP in revprops:
+                    repository.transport.change_rev_prop(revnum, mapping.SVN_REVPROP_BZR_SKIP, "")
+                continue
+            if old_mapping == new_mapping:
+                # Already the latest mapping
+                continue
+            assert old_mapping.supports_custom_revprops() or bp is not None
+            new_revprops = dict(revprops.items())
+            revmeta = repository._revmeta(bp, changes, revnum, revprops, fileprops)
+            rev = revmeta.get_revision(old_mapping)
+            revno = graph.find_distance_to_null(rev.revision_id, [])
+            assert bp is not None
+            new_mapping.export_revision(bp, rev.timestamp, rev.timezone, rev.committer, rev.properties, rev.revision_id, revno, rev.parent_ids, new_revprops, None)
+            new_mapping.export_fileid_map(old_mapping.import_fileid_map(revprops, fileprops), 
+                new_revprops, None)
+            new_mapping.export_text_parents(old_mapping.import_text_parents(revprops, fileprops),
+                new_revprops, None)
+            if rev.message != mapping.parse_svn_log(revprops.get(properties.PROP_REVISION_LOG)):
+                new_mapping.export_message(rev.message, new_revprops, None)
+            changed_revprops = dict(filter(lambda (k,v): k not in revprops or revprops[k] != v, new_revprops.items()))
+            if logcache is not None:
+                logcache.drop_revprops(revnum)
+            for k, v in changed_revprops.items():
+                repository.transport.change_rev_prop(revnum, k, v)
+            # Might as well update the cache while we're at it
+    finally:
+        pb.finished()

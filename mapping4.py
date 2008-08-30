@@ -15,12 +15,12 @@
 
 from bzrlib import errors
 
-from bzrlib.plugins.svn import mapping
+from bzrlib.plugins.svn import layout, mapping
 
 supported_features = set()
 
 
-class BzrSvnMappingv4(mapping.BzrSvnMappingRevProps):
+class BzrSvnMappingv4(mapping.BzrSvnMapping):
     """Mapping between Subversion and Bazaar, introduced in bzr-svn 0.5.
 
     Tries to use revision properties when possible.
@@ -28,25 +28,28 @@ class BzrSvnMappingv4(mapping.BzrSvnMappingRevProps):
     TODO: Add variable with required features.
     """
     revid_prefix = "svn-v4"
+    upgrade_suffix = "-svn4"
     experimental = True
+
+    def __init__(self):
+        self.name = "v4"
+        self.revprops = mapping.BzrSvnMappingRevProps()
+        self.fileprops = mapping.BzrSvnMappingFileProps(self.name)
 
     @staticmethod
     def supports_roundtripping():
         return True
 
-    def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
-        super(BzrSvnMappingv4, self).import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
-        if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES):
-            features = set(svn_revprops[mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES].split(","))
-            assert features.issubset(supported_features), "missing feature: %r" % features.difference(supported_features)
+    @classmethod
+    def from_revprops(cls, revprops):
+        return cls()
 
-    def export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops):
-        (revprops, fileprops) = mapping.BzrSvnMappingRevProps.export_revision(self, can_use_custom_revprops, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, merges, fileprops)
-        revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "4"
-        return (revprops, fileprops)
+    @staticmethod
+    def supports_custom_revprops():
+        return True
 
     @classmethod
-    def parse_revision_id(cls, revid):
+    def revision_id_bzr_to_foreign(cls, revid):
         assert isinstance(revid, str)
 
         if not revid.startswith(cls.revid_prefix):
@@ -61,7 +64,7 @@ class BzrSvnMappingv4(mapping.BzrSvnMappingRevProps):
 
         return (uuid, branch_path, int(srevnum), cls())
 
-    def generate_revision_id(self, uuid, revnum, path):
+    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
         return "svn-v4:%s:%s:%d" % (uuid, path, revnum)
 
     def generate_file_id(self, uuid, revnum, branch, inv_path):
@@ -76,5 +79,66 @@ class BzrSvnMappingv4(mapping.BzrSvnMappingRevProps):
     def __eq__(self, other):
         return type(self) == type(other)
 
+    def get_branch_root(self, revprops):
+        return self.revprops.get_branch_root(revprops)
 
+    def get_lhs_parent(self, branch_path, svn_revprops, fileprops):
+        return self.revprops.get_lhs_parent(branch_path, svn_revprops, fileprops)
 
+    def get_rhs_parents(self, branch_path, svn_revprops, fileprops):
+        if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_MAPPING_VERSION):
+            return self.revprops.get_rhs_parents(branch_path, svn_revprops, fileprops)
+        else:
+            return self.fileprops.get_rhs_parents(branch_path, svn_revprops, fileprops)
+
+    def get_revision_id(self, branch_path, revprops, fileprops):
+        if revprops.has_key(mapping.SVN_REVPROP_BZR_MAPPING_VERSION):
+            return self.revprops.get_revision_id(branch_path, revprops, fileprops)
+        else:
+            return self.fileprops.get_revision_id(branch_path, revprops, fileprops)
+
+    def import_text_parents(self, svn_revprops, fileprops):
+        if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_TEXT_PARENTS):
+            return self.revprops.import_text_parents(svn_revprops, fileprops)
+        else:
+            return self.fileprops.import_text_parents(svn_revprops, fileprops)
+
+    def import_fileid_map(self, svn_revprops, fileprops):
+        if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_MAPPING_VERSION):
+            return self.revprops.import_fileid_map(svn_revprops, fileprops)
+        else:
+            return self.fileprops.import_fileid_map(svn_revprops, fileprops)
+
+    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, 
+                        revno, parent_ids, svn_revprops, svn_fileprops):
+        if svn_revprops is not None:
+            self.revprops.export_revision(branch_root, timestamp, timezone, committer, 
+                                          revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops)
+            svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "v4"
+        else:
+            self.fileprops.export_revision(branch_root, timestamp, timezone, committer, 
+                                      revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops)
+
+    def export_fileid_map(self, fileids, revprops, fileprops):
+        if revprops is not None:
+            self.revprops.export_fileid_map(fileids, revprops, fileprops)
+        else:
+            self.fileprops.export_fileid_map(fileids, revprops, fileprops)
+
+    def export_text_parents(self, text_parents, revprops, fileprops):
+        if revprops is not None:
+            self.revprops.export_text_parents(text_parents, revprops, fileprops)
+        else:
+            self.fileprops.export_text_parents(text_parents, revprops, fileprops)
+
+    def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
+        if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES):
+            features = set(svn_revprops[mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES].split(","))
+            assert features.issubset(supported_features), "missing feature: %r" % features.difference(supported_features)
+        if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_MAPPING_VERSION):
+            self.revprops.import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
+        else:
+            self.fileprops.import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
+
+    def get_mandated_layout(self, repository):
+        return layout.ConfigBasedLayout(repository)

@@ -27,7 +27,7 @@ from bzrlib.trace import mutter, warning
 
 from cStringIO import StringIO
 
-from bzrlib.plugins.svn import core, properties
+from bzrlib.plugins.svn import core, mapping, properties
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.delta import send_stream
 from bzrlib.plugins.svn.errors import ChangesRootLHSHistory, MissingPrefix, RevpropChangeFailed, ERR_FS_TXN_OUT_OF_DATE
@@ -129,8 +129,7 @@ class SvnCommitBuilder(RootCommitBuilder):
 
     def __init__(self, repository, branch, parents, config, timestamp, 
                  timezone, committer, revprops, revision_id, old_inv=None,
-                 push_metadata=True,
-                 graph=None):
+                 push_metadata=True, graph=None, opt_signature=None):
         """Instantiate a new SvnCommitBuilder.
 
         :param repository: SvnRepository to commit to.
@@ -187,20 +186,32 @@ class SvnCommitBuilder(RootCommitBuilder):
         self.visit_dirs = set()
         self.modified_files = {}
         if self.base_revid == NULL_REVISION:
-            base_branch_props = {}
+            self._base_branch_props = {}
         else:
-            base_branch_props = lazy_dict({}, self.repository.branchprop_list.get_properties, self.base_path, self.base_revnum)
+            self._base_branch_props = lazy_dict({}, self.repository.branchprop_list.get_properties, self.base_path, self.base_revnum)
         self.supports_custom_revprops = self.repository.transport.has_capability("commit-revprops")
-        (self._svn_revprops, self._svnprops) = self.base_mapping.export_revision(self.supports_custom_revprops, 
+        if (self.supports_custom_revprops is None and 
+            self.base_mapping.supports_custom_revprops() and 
+            self.repository.seen_bzr_revprops()):
+            raise BzrError("Please upgrade your Subversion client libraries to 1.5 or higher to be able to commit with Subversion mapping %s" % self.base_mapping.name)
+
+        if self.supports_custom_revprops == True:
+            self._svn_revprops = {}
+            if opt_signature is not None:
+                self._svn_revprops[mapping.SVN_REVPROP_BZR_SIGNATURE] = opt_signature
+        else:
+            self._svn_revprops = None
+        self._svnprops = lazy_dict({}, lambda: dict(self._base_branch_props.items()))
+        self.base_mapping.export_revision(
             self.branch.get_branch_path(), timestamp, timezone, committer, revprops, 
-            revision_id, self.base_revno+1, merges, base_branch_props)
+            revision_id, self.base_revno+1, parents, self._svn_revprops, self._svnprops)
 
         if len(merges) > 0:
-            new_svk_merges = update_svk_features(base_branch_props.get(SVN_PROP_SVK_MERGE, ""), merges)
+            new_svk_merges = update_svk_features(self._base_branch_props.get(SVN_PROP_SVK_MERGE, ""), merges)
             if new_svk_merges is not None:
                 self._svnprops[SVN_PROP_SVK_MERGE] = new_svk_merges
 
-            new_mergeinfo = update_mergeinfo(self.repository, graph, base_branch_props.get(properties.PROP_MERGEINFO, ""), self.base_revid, merges)
+            new_mergeinfo = update_mergeinfo(self.repository, graph, self._base_branch_props.get(properties.PROP_MERGEINFO, ""), self.base_revid, merges)
             if new_mergeinfo is not None:
                 self._svnprops[properties.PROP_MERGEINFO] = new_mergeinfo
 
@@ -474,17 +485,15 @@ class SvnCommitBuilder(RootCommitBuilder):
         repository_latest_revnum = self.repository.get_latest_revnum()
         lock = self.repository.transport.lock_write(".")
 
-        (fileids, text_parents) = self._determine_texts_identity()
+        if self.push_metadata:
+            (fileids, text_parents) = self._determine_texts_identity()
 
-        self.base_mapping.export_text_parents(self.supports_custom_revprops, text_parents, 
-                                              self._svn_revprops, self._svnprops)
-        self.base_mapping.export_fileid_map(self.supports_custom_revprops, fileids, 
-                                            self._svn_revprops, self._svnprops)
-        if self._config.get_log_strip_trailing_newline():
-            self.base_mapping.export_message(self.supports_custom_revprops, message, 
-                                             self._svn_revprops, self._svnprops)
-            message = message.rstrip("\n")
-        if not self.push_metadata:
+            self.base_mapping.export_text_parents(text_parents, self._svn_revprops, self._svnprops)
+            self.base_mapping.export_fileid_map(fileids, self._svn_revprops, self._svnprops)
+            if self._config.get_log_strip_trailing_newline():
+                self.base_mapping.export_message(message, self._svn_revprops, self._svnprops)
+                message = message.rstrip("\n")
+        if not self.supports_custom_revprops:
             self._svn_revprops = {}
         self._svn_revprops[properties.PROP_REVISION_LOG] = message.encode("utf-8")
 
@@ -525,8 +534,10 @@ class SvnCommitBuilder(RootCommitBuilder):
                     branch_editors[-1])
 
                 # Set all the revprops
-                if self.push_metadata:
+                if self.push_metadata and self._svnprops.is_loaded:
                     for prop, value in self._svnprops.items():
+                        if value == self._base_branch_props.get(prop):
+                            continue
                         if not properties.is_valid_property_name(prop):
                             warning("Setting property %r with invalid characters in name", prop)
                         assert isinstance(value, str)
@@ -547,9 +558,9 @@ class SvnCommitBuilder(RootCommitBuilder):
 
         assert self.revision_metadata is not None
 
-        self.repository._clear_cached_state()
-
         (result_revision, result_date, result_author) = self.revision_metadata
+
+        self.repository._clear_cached_state(result_revision)
 
         revid = self.branch.generate_revision_id(result_revision)
 
@@ -737,13 +748,18 @@ def push_revision_tree(graph, target, config, source_repo, base_revid,
     else:
         base_revids = [base_revid]
 
+    try:
+        opt_signature = source_repo.get_signature_text(rev.revision_id)
+    except NoSuchRevision:
+        opt_signature = None
     builder = SvnCommitBuilder(target.repository, target, 
                                base_revids,
                                config, rev.timestamp,
                                rev.timezone, rev.committer, rev.properties, 
                                revision_id, base_tree.inventory, 
                                push_metadata=push_metadata,
-                               graph=graph)
+                               graph=graph,
+                               opt_signature=opt_signature)
                          
     replay_delta(builder, base_tree, old_tree)
     try:
@@ -755,8 +771,6 @@ def push_revision_tree(graph, target, config, source_repo, base_revid,
     except ChangesRootLHSHistory:
         raise BzrError("Unable to push revision %r because it would change the ordering of existing revisions on the Subversion repository root. Use rebase and try again or push to a non-root path" % revision_id)
     
-    if source_repo.has_signature_for_revision_id(revision_id):
-        pass # FIXME: Copy revision signature for rev
 
     return revid
 

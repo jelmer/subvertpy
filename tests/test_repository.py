@@ -32,8 +32,7 @@ from bzrlib.tests import TestCase, TestSkipped
 import os
 
 from bzrlib.plugins.svn import format, ra
-from bzrlib.plugins.svn.mapping import (escape_svn_path, unescape_svn_path, 
-                     SVN_PROP_BZR_REVISION_ID)
+from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_REVISION_ID)
 from bzrlib.plugins.svn.mapping3 import (SVN_PROP_BZR_BRANCHING_SCHEME, set_branching_scheme,
                       set_property_scheme, BzrSvnMappingv3)
 from bzrlib.plugins.svn.mapping3.scheme import (TrunkBranchingScheme, NoBranchingScheme, 
@@ -121,7 +120,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repos_url = self.make_repository("a")
         repos = Repository.open(repos_url)
         mapping = repos.get_mapping()
-        self.assertEqual({u"": (mapping.generate_file_id(repos.uuid, 0, "", u""), mapping.generate_revision_id(repos.uuid, 0, ""))}, repos.get_fileid_map(0, "", mapping))
+        self.assertEqual({u"": (mapping.generate_file_id(repos.uuid, 0, "", u""), mapping.revision_id_foreign_to_bzr((repos.uuid, 0, "")))}, repos.get_fileid_map(0, "", mapping))
 
     def test_generate_revision_id_forced_revid(self):
         repos_url = self.make_repository("a")
@@ -145,7 +144,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repos = Repository.open(repos_url)
         revid = repos.generate_revision_id(1, "", repos.get_mapping())
         self.assertEquals(
-                repos.get_mapping().generate_revision_id(repos.uuid, 1, ""),
+                repos.get_mapping().revision_id_foreign_to_bzr((repos.uuid, 1, "")),
                 revid)
 
     def test_add_revision(self):
@@ -165,7 +164,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         cb = self.get_commit_editor(repos_url)
         cb.add_file("foo").modify("bar")
         cb.close()
-        revid = repos.get_mapping().generate_revision_id(repos.uuid, 1, "")
+        revid = repos.get_mapping().revision_id_foreign_to_bzr((repos.uuid, 1, ""))
         repos.add_signature_text(revid, "TEXT")
         self.assertTrue(repos.has_signature_for_revision_id(revid))
         self.assertEquals(repos.get_signature_text(revid), "TEXT")
@@ -650,7 +649,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         bzrdir = self.make_client_and_bzrdir('d', 'dc')
         repository = bzrdir.find_repository()
         self.assertFalse(repository.has_revision(
-            repository.get_mapping().generate_revision_id(repository.uuid, 5, "")))
+            repository.get_mapping().revision_id_foreign_to_bzr((repository.uuid, 5, ""))))
 
     def test_get_parent_map(self):
         repos_url = self.make_client('d', 'dc')
@@ -789,7 +788,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         (num, date, author) = self.client_commit("dc", "Second Message")
         repository = Repository.open("svn+%s" % repos_url)
         mapping = repository.get_mapping()
-        revid = mapping.generate_revision_id(repository.uuid, 2, "")
+        revid = mapping.revision_id_foreign_to_bzr((repository.uuid, 2, ""))
         rev = repository.get_revision("myrevid")
         self.assertEqual((repository.generate_revision_id(1, "", mapping),),
                 rev.parent_ids)
@@ -946,14 +945,14 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repository = Repository.open("svn+%s" % repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(
-               mapping.generate_revision_id(repository.uuid, 1, "bla/bloe"), 
+               mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "bla/bloe")), 
             repository.generate_revision_id(1, "bla/bloe", mapping))
 
     def test_generate_revision_id_zero(self):
         repos_url = self.make_client('d', 'dc')
         repository = Repository.open("svn+%s" % repos_url)
         mapping = repository.get_mapping()
-        self.assertEqual(mapping.generate_revision_id(repository.uuid, 0, ""), 
+        self.assertEqual(mapping.revision_id_foreign_to_bzr((repository.uuid, 0, "")), 
                 repository.generate_revision_id(0, "", mapping))
 
     def test_lookup_revision_id(self):
@@ -979,7 +978,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repository = Repository.open("svn+%s" % repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(("", 1), repository.lookup_revision_id( 
-            mapping.generate_revision_id(repository.uuid, 1, ""))[:2])
+            mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
         self.assertEqual(("", 1), 
                 repository.lookup_revision_id("myid")[:2])
 
@@ -994,7 +993,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repository = Repository.open("svn+%s" % repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(("", 1), repository.lookup_revision_id( 
-            mapping.generate_revision_id(repository.uuid, 1, ""))[:2])
+            mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
         self.assertRaises(NoSuchRevision, repository.lookup_revision_id, 
             "corrupt-entry")
 
@@ -1013,9 +1012,9 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         repository = Repository.open("svn+%s" % repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(("", 2), repository.lookup_revision_id( 
-            mapping.generate_revision_id(repository.uuid, 2, ""))[:2])
+            mapping.revision_id_foreign_to_bzr((repository.uuid, 2, "")))[:2])
         self.assertEqual(("", 1), repository.lookup_revision_id( 
-            mapping.generate_revision_id(repository.uuid, 1, ""))[:2])
+            mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
         self.assertEqual(("", 2), repository.lookup_revision_id( 
             "corrupt-entry")[:2])
 
@@ -1056,7 +1055,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
         mapping = repository.get_mapping()
         self.assertRaises(NoSuchRevision, 
             repository.lookup_revision_id, 
-                mapping.generate_revision_id("invaliduuid", 0, ""))
+                mapping.revision_id_foreign_to_bzr(("invaliduuid", 0, "")))
         
     def test_check(self):
         repos_url = self.make_client('d', 'dc')
@@ -1343,38 +1342,6 @@ class TestSvnRevisionTree(TestCaseWithSubversionRepository):
     def test_not_executable(self):
         self.assertFalse(self.inventory[
             self.inventory.path2id("foo/bla")].executable)
-
-
-class EscapeTest(TestCase):
-    def test_escape_svn_path_none(self):      
-        self.assertEqual("", escape_svn_path(""))
-
-    def test_escape_svn_path_simple(self):
-        self.assertEqual("ab", escape_svn_path("ab"))
-
-    def test_escape_svn_path_percent(self):
-        self.assertEqual("a%25b", escape_svn_path("a%b"))
-
-    def test_escape_svn_path_whitespace(self):
-        self.assertEqual("foobar%20", escape_svn_path("foobar "))
-
-    def test_escape_svn_path_slash(self):
-        self.assertEqual("foobar%2F", escape_svn_path("foobar/"))
-
-    def test_escape_svn_path_special_char(self):
-        self.assertEqual("foobar%8A", escape_svn_path("foobar\x8a"))
-
-    def test_unescape_svn_path_slash(self):
-        self.assertEqual("foobar/", unescape_svn_path("foobar%2F"))
-
-    def test_unescape_svn_path_none(self):
-        self.assertEqual("foobar", unescape_svn_path("foobar"))
-
-    def test_unescape_svn_path_percent(self):
-        self.assertEqual("foobar%b", unescape_svn_path("foobar%25b"))
-
-    def test_escape_svn_path_nordic(self):
-        self.assertEqual("foobar%C3%A6", escape_svn_path(u"foobar\xe6".encode("utf-8")))
 
 
 class SvnRepositoryFormatTests(TestCase):

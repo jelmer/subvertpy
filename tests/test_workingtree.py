@@ -460,7 +460,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         
         tree = WorkingTree.open("dc")
         tree.set_pending_merges([
-            tree.branch.mapping.generate_revision_id("a-uuid-foo", 1, "branch/fpath"), "c"])
+            tree.branch.mapping.revision_id_foreign_to_bzr(("a-uuid-foo", 1, "branch/fpath")), "c"])
         self.assertEqual(
                 "svn-v3-none:a-uuid-foo:branch%2Ffpath:1\tc\n",
                 self.client_get_prop("dc", "bzr:ancestry:v3-none"))
@@ -472,7 +472,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         
         tree = WorkingTree.open("dc")
         tree.set_pending_merges([
-            tree.branch.mapping.generate_revision_id("a-uuid-foo", 1, "branch/path"), "c"])
+            tree.branch.mapping.revision_id_foreign_to_bzr(("a-uuid-foo", 1, "branch/path")), "c"])
         self.assertEqual("a-uuid-foo:/branch/path:1\n", 
                          self.client_get_prop("dc", "svk:merge"))
 

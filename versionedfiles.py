@@ -18,6 +18,7 @@ from bzrlib.versionedfile import FulltextContentFactory, VersionedFiles, Virtual
 
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import ERR_FS_NOT_FILE
+from bzrlib.plugins.svn.foreign.versionedfiles import VirtualSignatureTexts, VirtualRevisionTexts, VirtualInventoryTexts
 
 from cStringIO import StringIO
 
@@ -49,6 +50,7 @@ class SvnTexts(VersionedFiles):
                     try:
                         stream = StringIO()
                         self.repository.transport.get_file(urlutils.join(branch, k), stream, revnum)
+                        stream.seek(0)
                         lines = stream.readlines()
                     except SubversionException, (_, num):
                         if num == ERR_FS_NOT_FILE:
@@ -75,38 +77,4 @@ class SvnTexts(VersionedFiles):
     # TODO: annotate, get_sha1s, iter_lines_added_or_present_in_keys, keys
 
 
-class VirtualRevisionTexts(VirtualVersionedFiles):
-    """Virtual revisions backend."""
-    def __init__(self, repository):
-        self.repository = repository
-        super(VirtualRevisionTexts, self).__init__(self.repository._make_parents_provider().get_parent_map, self.get_lines)
-
-    def get_lines(self, key):
-        return osutils.split_lines(self.repository.get_revision_xml(key))
-
-    # TODO: annotate, iter_lines_added_or_present_in_keys, keys
-
-
-class VirtualInventoryTexts(VirtualVersionedFiles):
-    """Virtual inventories backend."""
-    def __init__(self, repository):
-        self.repository = repository
-        super(VirtualInventoryTexts, self).__init__(self.repository._make_parents_provider().get_parent_map, self.get_lines)
-
-    def get_lines(self, key):
-        return osutils.split_lines(self.repository.get_inventory_xml(key))
-
-    # TODO: annotate, iter_lines_added_or_present_in_keys, keys
-
-
-class VirtualSignatureTexts(VirtualVersionedFiles):
-    """Virtual signatures backend."""
-    def __init__(self, repository):
-        self.repository = repository
-        super(VirtualSignatureTexts, self).__init__(self.repository._make_parents_provider().get_parent_map, self.get_lines)
-
-    def get_lines(self, key):
-        return osutils.split_lines(self.repository.get_signature_text(key))
-
-    # TODO: annotate, iter_lines_added_or_present_in_keys, keys
 

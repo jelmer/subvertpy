@@ -28,27 +28,13 @@ from bzrlib.plugins.svn.commit import push, push_ancestors
 from bzrlib.plugins.svn.config import BranchConfig
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import NotSvnBranchPath, ERR_FS_NO_SUCH_REVISION
+from bzrlib.plugins.svn.foreign import FakeControlFiles
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.repository import SvnRepository
 from bzrlib.plugins.svn.tags import SubversionTags
 from bzrlib.plugins.svn.transport import bzr_to_svn_url
 
 import os
-
-class FakeControlFiles(object):
-    """Dummy implementation of ControlFiles.
-    
-    This is required as some code relies on controlfiles being 
-    available."""
-    def get_utf8(self, name):
-        raise NoSuchFile(name)
-
-    def get(self, name):
-        raise NoSuchFile(name)
-
-    def break_lock(self):
-        pass
-
 
 class SvnBranch(Branch):
     """Maps to a Branch in a Subversion repository """
@@ -352,6 +338,10 @@ class SvnBranch(Branch):
         # on large branches.
         return self.generate_revision_id(self.get_revnum())
 
+    def dpull(self, source, stop_revision=None):
+        from bzrlib.plugins.svn.commit import dpush
+        return dpush(source, self, stop_revision)
+
     def pull(self, source, overwrite=False, stop_revision=None, 
              _hook_master=None, run_hooks=True, _push_merged=None):
         """See Branch.pull()."""
@@ -515,7 +505,7 @@ class SvnBranchFormat(BranchFormat):
 
     def __get_matchingbzrdir(self):
         """See BranchFormat.__get_matchingbzrdir()."""
-        from remote import SvnRemoteFormat
+        from bzrlib.plugins.svn.remote import SvnRemoteFormat
         return SvnRemoteFormat()
 
     _matchingbzrdir = property(__get_matchingbzrdir)

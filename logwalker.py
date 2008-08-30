@@ -32,11 +32,13 @@ class lazy_dict(object):
         self.create_fn = create_fn
         self.args = args
         self.dict = None
+        self.is_loaded = False
 
     def _ensure_init(self):
         if self.dict is None:
             self.dict = self.create_fn(*self.args)
             self.create_fn = None
+            self.is_loaded = True
 
     def __len__(self):
         self._ensure_init()
@@ -97,6 +99,10 @@ class lazy_dict(object):
     def __eq__(self, other):
         self._ensure_init()
         return self.dict.__eq__(other)
+
+    def update(self, other):
+        self._ensure_init()
+        return self.dict.update(other)
 
 
 class LogCache(CacheTable):
@@ -203,6 +209,9 @@ class LogCache(CacheTable):
         assert action in ("A", "R", "D", "M")
         assert not path.startswith("/")
         self.cachedb.execute("replace into changed_path (rev, path, action, copyfrom_path, copyfrom_rev) values (?, ?, ?, ?, ?)", (rev, path, action, copyfrom_path, copyfrom_rev))
+
+    def drop_revprops(self, revnum):
+        self.cachedb.execute("update revinfo set all_revprops = 0 where rev = ?", (revnum,))
 
     def get_revprops(self, revnum):
         """Retrieve all the cached revision properties.
@@ -394,8 +403,7 @@ class CachingLogWalker(CacheTable):
         return self.cache.get_change(path, revnum)
 
     def revprop_list(self, revnum):
-        self.mutter("revprop list: %r", revnum)
-
+        self.mutter('revprop list: %d' % revnum)
         self.fetch_revisions(revnum)
 
         if revnum > 0:
@@ -585,6 +593,9 @@ class LogWalker(object):
 
     def changes_path(self, path, revnum):
         return self._get_revision_paths(revnum).has_key(path)
+
+    def get_change(self, path, revnum):
+        return self._get_revision_paths(revnum).get(path)
         
     def find_children(self, path, revnum):
         """Find all children of path in revnum.

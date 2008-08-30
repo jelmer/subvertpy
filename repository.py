@@ -41,6 +41,7 @@ from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
                      BzrSvnMapping,
                      get_default_mapping, 
+                     is_bzr_revision_revprops, is_bzr_revision_fileprops,
                      parse_svn_dateprop)
 from bzrlib.plugins.svn.parents import DiskCachingParentsProvider
 from bzrlib.plugins.svn.revids import CachingRevidMap, RevidMap
@@ -74,7 +75,25 @@ class RevisionMetadata(object):
         return self.repository.generate_revision_id(self.revnum, self.branch_path, mapping, self.revprops, self.fileprops)
 
     def get_lhs_parent(self, mapping):
-        return self.repository.lhs_revision_parent(self.branch_path, self.revnum, mapping)
+        lhs_parent = mapping.get_lhs_parent(self.branch_path, self.revprops, self.fileprops)
+        if lhs_parent is None:
+            # Determine manually
+            lhs_parent = self.repository.lhs_revision_parent(self.branch_path, self.revnum, mapping)
+        return lhs_parent
+
+    def is_bzr_revision(self):
+        # If the server already sent us all revprops, look at those first
+        if self.repository.transport.has_capability("log-revprops"):
+            order = [lambda: is_bzr_revision_revprops(self.revprops),
+                     lambda: is_bzr_revision_fileprops(self.fileprops)]
+        else:
+            order = [lambda: is_bzr_revision_fileprops(self.fileprops),
+                     lambda: is_bzr_revision_revprops(self.revprops)]
+        for fn in order:
+            ret = fn()
+            if ret is not None:
+                return ret
+        return None
 
     def get_rhs_parents(self, mapping):
         extra_rhs_parents = mapping.get_rhs_parents(self.branch_path, self.revprops, self.fileprops)
@@ -82,7 +101,7 @@ class RevisionMetadata(object):
         if extra_rhs_parents != ():
             return extra_rhs_parents
 
-        if mapping.is_bzr_revision(self.revprops, self.fileprops):
+        if self.is_bzr_revision():
             return ()
 
         (prev_path, prev_revnum) = self.repository._log.get_previous(self.branch_path, 
@@ -113,6 +132,23 @@ class RevisionMetadata(object):
 
         return parent_ids
 
+    def get_revision(self, mapping):
+        parent_ids = self.get_parent_ids(mapping)
+        if parent_ids == (NULL_REVISION,):
+            parent_ids = ()
+        rev = Revision(revision_id=self.get_revision_id(mapping), 
+                       parent_ids=parent_ids,
+                       inventory_sha1="")
+
+        rev.svn_meta = self
+        rev.svn_mapping = mapping
+
+        mapping.import_revision(self.revprops, self.fileprops, self.repository.uuid, self.branch_path, 
+                                self.revnum, rev)
+
+        return rev
+
+
     def __hash__(self):
         return hash((self.__class__, self.repository.uuid, self.branch_path, self.revnum))
 
@@ -129,7 +165,7 @@ def svk_feature_to_revision_id(feature, mapping):
         return None
     if not mapping.is_branch(bp) and not mapping.is_tag(bp):
         return None
-    return mapping.generate_revision_id(uuid, revnum, bp)
+    return mapping.revision_id_foreign_to_bzr((uuid, revnum, bp))
 
 
 class SvnRepositoryFormat(RepositoryFormat):
@@ -187,6 +223,7 @@ class SvnRepository(Repository):
         self.base = transport.base
         assert self.base is not None
         self._serializer = xml7.serializer_v7
+        self._config = None
         self.get_config().add_location(self.base)
         self._log = logwalker.LogWalker(transport=transport)
         self.fileid_map = FileIdMap(simple_apply_changes, self)
@@ -195,6 +232,7 @@ class SvnRepository(Repository):
         self._hinted_branch_path = branch_path
         self._real_parents_provider = self
         self._cached_tags = {}
+        self._revmeta_cache = {}
 
         cache = self.get_config().get_use_cache()
 
@@ -239,9 +277,10 @@ class SvnRepository(Repository):
             self._lock_mode = None
             self._clear_cached_state()
 
-    def _clear_cached_state(self):
+    def _clear_cached_state(self, revnum=None):
         self._cached_tags = {}
-        self._cached_revnum = None
+        self._cached_revnum = revnum
+        self._layout = None
         self._parents_provider = CachingParentsProvider(self._real_parents_provider)
 
     def lock_write(self):
@@ -366,9 +405,9 @@ class SvnRepository(Repository):
         self._layout = layout
 
     def get_layout(self):
-        if self._layout is not None:
-            return self._layout
-        return self.get_mapping().get_mandated_layout(self)
+        if self._layout is None:
+            self._layout = self.get_mapping().get_mandated_layout(self)
+        return self._layout
 
     def get_guessed_layout(self):
         return self.get_mapping().get_guessed_layout(self)
@@ -425,7 +464,7 @@ class SvnRepository(Repository):
                                 svn_fileprops = {}
                             else:
                                 svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum)
-                            yield RevisionMetadata(self, bp, paths, revnum, revprops, svn_fileprops)
+                            yield self._revmeta(bp, paths, revnum, revprops, svn_fileprops)
 
     def all_revision_ids(self, layout=None, mapping=None):
         if mapping is None:
@@ -547,9 +586,7 @@ class SvnRepository(Repository):
             except NoSuchRevision:
                 continue
 
-            svn_fileprops = self.branchprop_list.get_changed_properties(branch, revnum)
-            svn_revprops = self._log.revprop_list(revnum)
-            revmeta = RevisionMetadata(self, branch, None, revnum, svn_revprops, svn_fileprops)
+            revmeta = self._revmeta(branch, None, revnum)
 
             parent_map[revision_id] = revmeta.get_parent_ids(mapping)
         return parent_map
@@ -573,6 +610,21 @@ class SvnRepository(Repository):
             if revid is not None:
                 yield revid
 
+    def _revmeta(self, path, changes, revnum, revprops=None, fileprops=None):
+        if (path, revnum) in self._revmeta_cache:
+            if changes is not None:
+                self._revmeta_cache[path,revnum].paths = changes
+            return self._revmeta_cache[path,revnum]
+
+        if revprops is None:
+            revprops = self._log.revprop_list(revnum)
+        if fileprops is None:
+            fileprops = self.branchprop_list.get_changed_properties(path, revnum)
+
+        revmeta = RevisionMetadata(self, path, changes, revnum, revprops, fileprops)
+        self._revmeta_cache[path,revnum] = revmeta
+        return revmeta
+
     def get_revision(self, revision_id):
         """See Repository.get_revision."""
         if not revision_id or not isinstance(revision_id, str):
@@ -580,25 +632,9 @@ class SvnRepository(Repository):
 
         (path, revnum, mapping) = self.lookup_revision_id(revision_id)
         
-        svn_revprops = self._log.revprop_list(revnum)
-        svn_fileprops = self.branchprop_list.get_changed_properties(path, revnum)
+        revmeta = self._revmeta(path, None, revnum)
 
-        revmeta = RevisionMetadata(self, path, None, revnum, svn_revprops, svn_fileprops)
-
-        parent_ids = revmeta.get_parent_ids(mapping)
-        if parent_ids == (NULL_REVISION,):
-            parent_ids = ()
-        rev = Revision(revision_id=revision_id, 
-                       parent_ids=parent_ids,
-                       inventory_sha1="")
-
-        rev.svn_meta = revmeta
-        rev.svn_mapping = mapping
-
-        mapping.import_revision(svn_revprops, svn_fileprops, self.uuid, path, 
-                                revnum, rev)
-
-        return rev
+        return revmeta.get_revision(mapping)
 
     def get_revisions(self, revision_ids):
         """See Repository.get_revisions()."""
@@ -715,6 +751,16 @@ class SvnRepository(Repository):
             else:
                 bp = next[0]
 
+    def seen_bzr_revprops(self):
+        """Check whether bzr-specific custom revision properties are present on this 
+        repository.
+
+        """
+        for revmeta in self._log.iter_all_changes():
+            if revmeta.is_bzr_revision():
+                return True
+        return False
+
     def iter_reverse_branch_changes(self, branch_path, from_revnum, to_revnum, 
                                     mapping=None, pb=None, limit=0):
         """Return all the changes that happened in a branch 
@@ -730,10 +776,12 @@ class SvnRepository(Repository):
             else:
                 svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum)
 
-            yield RevisionMetadata(self, bp, paths, revnum, revprops, svn_fileprops)
+            yield self._revmeta(bp, paths, revnum, revprops, svn_fileprops)
 
     def get_config(self):
-        return SvnRepositoryConfig(self.uuid)
+        if self._config is None:
+            self._config = SvnRepositoryConfig(self.uuid)
+        return self._config
 
     def has_signature_for_revision_id(self, revision_id):
         """Check whether a signature exists for a particular revision id.
