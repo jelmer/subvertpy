@@ -222,9 +222,9 @@ class FileTreeEditor(object):
 class SvnBasisTree(RevisionTree):
     """Optimized version of SvnRevisionTree."""
     def __init__(self, workingtree):
+        mutter("opening basistree for %r at %d; %s" % (workingtree, workingtree.base_revnum, workingtree.base_revid))
         self.workingtree = workingtree
-        self._revision_id = workingtree.branch.generate_revision_id(
-                                      workingtree.base_revnum)
+        self._revision_id = workingtree.base_revid
         self.id_map = workingtree.branch.repository.get_fileid_map(
                 workingtree.base_revnum, 
                 workingtree.branch.get_branch_path(workingtree.base_revnum), 

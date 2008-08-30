@@ -474,7 +474,7 @@ def parse_fileid_property(text):
     ret = {}
     for line in text.splitlines():
         (path, key) = line.split("\t", 1)
-        ret[urllib.unquote(path)] = osutils.safe_file_id(key)
+        ret[urllib.unquote(path).decode("utf-8")] = osutils.safe_file_id(key)
     return ret
 
 

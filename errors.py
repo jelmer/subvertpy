@@ -155,11 +155,6 @@ def convert_svn_error(unbound):
     return convert
 
 
-class LocalCommitsUnsupported(BzrError):
-
-    _fmt = 'Local commits are not supported for lightweight Subversion checkouts.'
-
-
 class InvalidPropertyValue(BzrError):
     _fmt = 'Invalid property value for Subversion property %(property)s: %(msg)s'
 

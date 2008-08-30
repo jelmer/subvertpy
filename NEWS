@@ -1,7 +1,5 @@
 bzr-svn-0.5			UNRELEASED
 
-bzr-svn 0.4.12	UNRELEASED
-
   CHANGES
 
    * Implement set-revprops command.
@@ -22,13 +20,23 @@ bzr-svn 0.4.12	UNRELEASED
 
   BUG FIXES
 
+   * Set bzr signature revision property during commit if possible.
+
+  INTERNALS
+
+   * Remove custom commit code for working tree. 
+
+    + Standard commit code provides commit notification. (#79333)
+
+bzr-svn 0.4.12	UNRELEASED
+
+  BUG FIXES
+
    * Cope with svn+ prefix when setting tags. (#261748)
 
    * Fix contents of files when using stacked branching. (#262314)
 
    * Fix compatibility with Bazaar 1.7.
-
-   * Set bzr signature revision property during commit if possible.
 
 bzr-svn 0.4.11	2008-08-26
 

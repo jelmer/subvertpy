@@ -35,7 +35,7 @@ from bzrlib.plugins.svn.branch import SvnBranch
 from bzrlib.plugins.svn.client import Client
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.core import SubversionException
-from bzrlib.plugins.svn.errors import LocalCommitsUnsupported, ERR_FS_TXN_OUT_OF_DATE, ERR_ENTRY_EXISTS, ERR_WC_PATH_NOT_FOUND, ERR_WC_NOT_DIRECTORY, NotSvnBranchPath
+from bzrlib.plugins.svn.errors import ERR_FS_TXN_OUT_OF_DATE, ERR_ENTRY_EXISTS, ERR_WC_PATH_NOT_FOUND, ERR_WC_NOT_DIRECTORY, NotSvnBranchPath
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.mapping import escape_svn_path
 from bzrlib.plugins.svn.remote import SvnRemoteAccess
@@ -93,8 +93,8 @@ class SvnWorkingTree(WorkingTree):
         self._get_wc()
         max_rev = revision_status(self.basedir, None, True)[1]
         self.base_revnum = max_rev
-        self.base_tree = SvnBasisTree(self)
         self.base_revid = branch.generate_revision_id(self.base_revnum)
+        self.base_tree = SvnBasisTree(self)
 
         self.read_working_inventory()
 
@@ -354,12 +354,14 @@ class SvnWorkingTree(WorkingTree):
                 if entry.kind == core.NODE_DIR:
                     subwc = WorkingCopy(wc, self.abspath(subrelpath))
                     try:
+                        assert isinstance(subrelpath, unicode)
                         add_dir_to_inv(subrelpath, subwc, id)
                     finally:
                         subwc.close()
                 else:
                     (subid, subrevid) = find_ids(entry, rootwc)
                     if subid:
+                        assert isinstance(subrelpath, unicode)
                         add_file_to_inv(subrelpath, subid, subrevid, id)
                     else:
                         mutter('no id for %r', entry.url)
@@ -389,6 +391,7 @@ class SvnWorkingTree(WorkingTree):
         # TODO: Implement more efficient version
         newrev = self.branch.repository.get_revision(revid)
         newrevtree = self.branch.repository.revision_tree(revid)
+        svn_revprops = self.branch.repository._log.revprop_list(rev)
 
         def update_settings(wc, path):
             id = newrevtree.inventory.path2id(path)
@@ -396,111 +399,38 @@ class SvnWorkingTree(WorkingTree):
             revnum = self.branch.lookup_revision_id(
                     newrevtree.inventory[id].revision)
 
-            wc.process_committed(self.abspath(path).rstrip("/"), 
-                          False, revnum, 
-                          properties.time_to_cstring(newrev.timestamp), 
-                          newrev.committer)
-
             if newrevtree.inventory[id].kind != 'directory':
                 return
 
             entries = wc.entries_read(True)
-            for entry in entries:
-                if entry == "":
+            for name, entry in entries.items():
+                if name == "":
                     continue
 
-                subwc = WorkingCopy(wc, os.path.join(self.basedir, path, entry), 
-                                   write_lock=True)
-                try:
-                    update_settings(subwc, os.path.join(path, entry))
-                finally:
-                    subwc.close()
+                wc.process_committed(self.abspath(path).rstrip("/"), 
+                              False, self.branch.lookup_revision_id(newrevtree.inventory[id].revision),
+                              svn_revprops[properties.PROP_REVISION_DATE], 
+                              svn_revprops[properties.PROP_REVISION_AUTHOR])
+
+                child_path = os.path.join(path, name.decode("utf-8"))
+
+                if newrevtree.inventory[newrevtree.inventory.path2id(child_path)].kind == 'directory':
+                    subwc = WorkingCopy(wc, self.abspath(child_path).rstrip("/"), write_lock=True)
+                    try:
+                        update_settings(subwc, child_path)
+                    finally:
+                        subwc.close()
 
         # Set proper version for all files in the wc
         wc = self._get_wc(write_lock=True)
         try:
+            wc.process_committed(self.basedir,
+                          False, self.branch.lookup_revision_id(newrevtree.inventory.root.revision),
+                          svn_revprops[properties.PROP_REVISION_DATE], 
+                          svn_revprops[properties.PROP_REVISION_AUTHOR])
             update_settings(wc, "")
         finally:
             wc.close()
-        self.base_revid = revid
-
-    def commit(self, message=None, message_callback=None, revprops=None, 
-               timestamp=None, timezone=None, committer=None, rev_id=None, 
-               allow_pointless=True, strict=False, verbose=False, local=False, 
-               reporter=None, config=None, specific_files=None, author=None, exclude=None):
-        if author is not None:
-            revprops['author'] = author
-        # FIXME: Use allow_pointless
-        # FIXME: Use verbose
-        # FIXME: Use reporter
-        # FIXME: Use strict
-        # FIXME: Use exclude
-        if local:
-            raise LocalCommitsUnsupported()
-
-        if specific_files:
-            specific_files = [self.abspath(x).encode('utf8') for x in specific_files]
-        else:
-            specific_files = [self.basedir.encode('utf8')]
-
-        if message_callback is not None:
-            def log_message_func(items):
-                """ Simple log message provider for unit tests. """
-                return message_callback(self).encode("utf-8")
-        else:
-            assert isinstance(message, basestring)
-            def log_message_func(items):
-                """ Simple log message provider for unit tests. """
-                return message.encode("utf-8")
-
-        self.client_ctx.log_msg_func = log_message_func
-        if rev_id is not None:
-            extra = "%d %s\n" % (self.branch.revno()+1, rev_id)
-        else:
-            extra = ""
-        original_props = self._get_base_branch_props()
-        svn_fileprops = dict(original_props.items())
-        wc = self._get_wc(write_lock=True)
-        svn_revprops = {}
-        self.branch.mapping.export_revision(self.branch.get_branch_path(), 
-                                            timestamp, timezone, committer, revprops, 
-                                            rev_id, self.branch.revno()+1, 
-                                            self.get_parent_ids(),
-                                            svn_revprops,
-                                            svn_fileprops)
-        try:
-            self._set_branch_props(wc, svn_fileprops)
-        finally:
-            wc.close()
-
-        try:
-            try:
-                (revision, _, _) = self.client_ctx.commit(specific_files, True, False)
-            except SubversionException, (_, num):
-                if num == ERR_FS_TXN_OUT_OF_DATE:
-                    raise OutOfDateTree(self)
-                raise
-        except:
-            # Reset properties so the next subversion commit won't 
-            # accidently set these properties.
-            wc = self._get_wc(write_lock=True)
-            try:
-                self._set_branch_props(wc, original_props)
-            finally:
-                wc.close()
-            raise
-
-        self.client_ctx.log_msg_func = None
-
-        revid = self.branch.generate_revision_id(revision)
-
-        self.base_revid = revid
-        self.base_revnum = revision
-        self.base_tree = SvnBasisTree(self)
-
-        self.branch.repository._clear_cached_state()
-        self.branch._clear_cached_state()
-        return revid
 
     def smart_add(self, file_list, recurse=True, action=None, save=True):
         assert isinstance(recurse, bool)
@@ -690,6 +620,11 @@ class SvnWorkingTree(WorkingTree):
 
     def get_parent_ids(self):
         return (self.base_revid,) + self.pending_merges()
+
+    def set_parent_ids(self, revision_ids, allow_lefmost_as_ghost=False):
+        self.set_last_revision(revision_ids[0])
+        if self.pending_merges() != revision_ids[1:]:
+            self.set_pending_merges(revision_ids[1:])
 
     def pending_merges(self):
         wc = self._get_wc()
