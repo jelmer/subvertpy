@@ -27,6 +27,7 @@ from bzrlib.lockable_files import LockableFiles
 from bzrlib.lockdir import LockDir
 from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter
+from bzrlib.transport import get_transport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
 from bzrlib.plugins.svn import core, properties
@@ -98,8 +99,9 @@ class SvnWorkingTree(WorkingTree):
 
         self.read_working_inventory()
 
-        self.controldir = os.path.join(self.basedir, get_adm_dir(), 
-                                       'bzr')
+        self._detect_case_handling()
+        self._transport = bzrdir.get_workingtree_transport(None)
+        self.controldir = os.path.join(bzrdir.svn_controldir, 'bzr')
         try:
             os.makedirs(self.controldir)
             os.makedirs(os.path.join(self.controldir, 'lock'))
@@ -592,6 +594,9 @@ class SvnWorkingTree(WorkingTree):
     def _get_svk_merges(self, base_branch_props):
         return base_branch_props.get(SVN_PROP_SVK_MERGE, "")
 
+    def apply_inventory_delta(self, delta):
+        assert delta == []
+
     def set_pending_merges(self, merges):
         """See MutableTree.set_pending_merges()."""
         wc = self._get_wc(write_lock=True)
@@ -724,6 +729,7 @@ class SvnCheckout(BzrDir):
 
         self._remote_transport = None
         self._remote_bzrdir = None
+        self.svn_controldir = os.path.join(self.local_path, get_adm_dir())
         self.root_transport = self.transport = transport
 
     def get_remote_bzrdir(self):
@@ -772,6 +778,10 @@ class SvnCheckout(BzrDir):
         if format is None:
             format = BzrDirFormat.get_default_format()
         return not isinstance(self._format, format.__class__)
+
+    def get_workingtree_transport(self, format):
+        assert format is None
+        return get_transport(self.svn_controldir)
 
     def create_workingtree(self, revision_id=None, hardlink=None):
         """See BzrDir.create_workingtree().

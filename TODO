@@ -6,24 +6,20 @@ mappingv4:
  - add options in commit for create_root, create_prefix
   - if create_root=False: skip _check_dirs_exist
 
-todo:
 - generate deltas rather than fulltexts when creating file id maps
-- tests for http-specific SvnRaTransport._request_path() code
+- transform file ids in workingtree in svn-upgrade
+
+tests:
 - more blackbox tests
  - svn-import without scheme specified should guess
  - bzr missing
-- transform file ids in workingtree in svn-upgrade
 - lookup_revision_id()'s result depends on the current branching scheme, 
   causing weird errors when pushing
+- add tests for objects returned by WorkingTree.pull(), Branch.pull()
 
 .svn working trees:
 - implement apply_inventory_delta()
 - support merge without requiring revisions to be added to svn repository
-- add tests for objects returned by WorkingTree.pull(), Branch.pull()
-- don't update all entries to the same revnum when opening working tree
-- when committing specific files in a lightweight checkout, make sure to 
-  also commit the file property changes for the tree root
-- faster "bzr status"
 
 pushmerge:
  - create branches/ dir automatically

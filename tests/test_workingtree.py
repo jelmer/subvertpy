@@ -264,7 +264,6 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         self.client_update("dc")
         tree = WorkingTree.open("dc")
         os.remove("dc/bl")
-        raise KnownFailure("revert not supported yet")
         tree.revert(["bl"])
         self.assertEqual("data", open('dc/bl').read())
 

@@ -318,3 +318,8 @@ class SvnBasisTree(RevisionTree):
     def annotate_iter(self, file_id,
                       default_revision=CURRENT_REVISION):
         raise NotImplementedError(self.annotate_iter)
+
+    def iter_files_bytes(self, file_ids):
+        for file_id, identifier in file_ids:
+            cur_file = (self.get_file_text(file_id),)
+            yield identifier, cur_file

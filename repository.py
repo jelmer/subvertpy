@@ -172,6 +172,7 @@ class SvnRepositoryFormat(RepositoryFormat):
     """Repository format for Subversion repositories (accessed using svn_ra).
     """
     rich_root_data = True
+    supports_tree_reference = False
 
     def __get_matchingbzrdir(self):
         from remote import SvnRemoteFormat
