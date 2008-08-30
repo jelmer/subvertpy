@@ -22,7 +22,7 @@ from bzrlib.bzrdir import BzrDir
 from bzrlib.errors import NoSuchFile, OutOfDateTree
 from bzrlib.inventory import Inventory
 from bzrlib.osutils import has_symlinks, supports_executable
-from bzrlib.tests import KnownFailure, TestCase
+from bzrlib.tests import TestCase
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
@@ -265,6 +265,7 @@ class TestWorkingTree(TestCaseWithSubversionRepository):
         tree = WorkingTree.open("dc")
         os.remove("dc/bl")
         tree.revert(["bl"])
+        self.assertFalse(tree.changes_from(tree.basis_tree()).has_changed())
         self.assertEqual("data", open('dc/bl').read())
 
     def test_rename_one(self):

@@ -49,6 +49,7 @@ SVN_REVPROP_BZR_TEXT_PARENTS = 'bzr:text-parents'
 SVN_REVPROP_BZR_REQUIRED_FEATURES = 'bzr:required-features'
 SVN_REVPROP_BZR_BASE_REVISION = 'bzr:base-revision'
 SVN_REVPROP_BZR_SKIP = 'bzr:skip'
+SVN_REVPROP_BZR_TAGS = 'bzr:tags'
 
 
 def escape_svn_path(x):
@@ -191,6 +192,24 @@ def parse_revision_metadata(text, rev):
         else:
             raise errors.InvalidPropertyValue(SVN_PROP_BZR_REVISION_INFO, 
                     "Invalid key %r" % key)
+
+
+def parse_tags_property(text):
+    for name, revid in [line.split("\t") for line in text.splitlines()]:
+        if revid == "":
+            yield name.decode("utf-8"), None
+        else:
+            yield name.decode("utf-8"), revid
+
+
+def generate_tags_property(tags):
+    ret = ""
+    for name in sorted(tags):
+        ret += "%s\t" % name.encode("utf-8")
+        if tags[name] is not None:
+            ret += tags[name]
+        ret += "\n"
+    return ret
 
 
 def parse_revid_property(line):
@@ -734,12 +753,14 @@ def find_mapping(revprops, fileprops):
             return parse_mapping_name(k[len(SVN_PROP_BZR_REVISION_ID):])
     return None
 
+
 def is_bzr_revision_revprops(revprops):
     if revprops.has_key(SVN_REVPROP_BZR_MAPPING_VERSION):
         return True
     if revprops.has_key(SVN_REVPROP_BZR_SKIP):
         return False
     return None
+
 
 def is_bzr_revision_fileprops(fileprops):
     for k in fileprops:

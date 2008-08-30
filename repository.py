@@ -39,6 +39,9 @@ from bzrlib.plugins.svn.changes import changes_path, find_prev_location
 from bzrlib.plugins.svn.config import SvnRepositoryConfig
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
+                     SVN_REVPROP_BZR_TAGS,
+                     SVN_REVPROP_BZR_SKIP,
+                     parse_tags_property,
                      BzrSvnMapping,
                      get_default_mapping, 
                      is_bzr_revision_revprops, is_bzr_revision_fileprops,
@@ -885,6 +888,14 @@ class SvnRepository(Repository):
         pb = ui.ui_factory.nested_progress_bar()
         try:
             for (paths, revnum, revprops) in self._log.iter_changes(None, from_revnum, to_revnum, pb=pb):
+                if (self.transport.has_capability("log-revprops") and 
+                    SVN_REVPROP_BZR_TAGS in revprops):
+                    for name, revid in parse_tags_property(revprops[SVN_REVPROP_BZR_TAGS]):
+                        if revid is None:
+                            del tags[name]
+                        else:
+                            tags[name] = revid
+                    continue
                 for p in sorted(paths):
                     (action, cf, cr) = paths[p]
                     if layout.is_tag_parent(p, project) and cf is not None:
@@ -972,6 +983,8 @@ class SvnRepository(Repository):
         try:
             for (paths, i, revprops) in self._log.iter_changes([""], from_revnum, to_revnum):
                 pb.update("finding branches", i, to_revnum)
+                if self.transport.has_capability("log-revprops") and is_bzr_revision_revprops(revprops) is not None:
+                    continue
                 for p in sorted(paths.keys()):
                     if check_path(p, project):
                         if paths[p][0] in ('R', 'D') and p in created_branches:

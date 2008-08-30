@@ -24,14 +24,18 @@ class SubversionTags(BasicTags):
     def __init__(self, branch):
         self.branch = branch
         self.repository = branch.repository
+        self._parent_exists = False
 
     def _ensure_tag_parent_exists(self, parent):
+        if self._parent_exists:
+            return
         assert isinstance(parent, str)
         bp_parts = parent.split("/")
         existing_bp_parts = commit._check_dirs_exist(
                 self.repository.transport, 
                 bp_parts, self.repository.get_latest_revnum())
         if existing_bp_parts == bp_parts:
+            self._parent_exists = True
             return
         conn = self.repository.transport.get_connection()
         try:
@@ -60,6 +64,7 @@ class SubversionTags(BasicTags):
             ci.close()
         finally:
             self.repository.transport.add_connection(conn)
+        self._parent_exists = True
 
     def set_tag(self, tag_name, tag_target):
         path = self.branch.layout.get_tag_path(tag_name, self.branch.project)
@@ -76,7 +81,8 @@ class SubversionTags(BasicTags):
         conn = self.repository.transport.get_connection(parent)
         deletefirst = (conn.check_path(urlutils.basename(path), self.repository.get_latest_revnum()) != core.NODE_NONE)
         try:
-            ci = conn.get_commit_editor(self._revprops("Add tag %s" % tag_name.encode("utf-8")))
+            ci = conn.get_commit_editor(self._revprops("Add tag %s" % tag_name.encode("utf-8"),
+                                        {tag_name.encode("utf-8"): tag_target}))
             try:
                 root = ci.open_root()
                 if deletefirst:
@@ -90,14 +96,16 @@ class SubversionTags(BasicTags):
         finally:
             self.repository.transport.add_connection(conn)
 
-    def _revprops(self, message):
+    def _revprops(self, message, tags_dict=None):
         """Create a revprops dictionary.
 
         Optionally sets bzr:skip to slightly optimize fetching of this revision later.
         """
-        revprops = {properties.PROP_REVISION_LOG: message}
+        revprops = {properties.PROP_REVISION_LOG: message, }
         if self.repository.transport.has_capability("commit-revprops"):
             revprops[mapping.SVN_REVPROP_BZR_SKIP] = ""
+            if tags_dict is not None:
+                revprops[mapping.SVN_REVPROP_BZR_TAGS] = mapping.generate_tags_property(tags_dict)
         return revprops
 
     def lookup_tag(self, tag_name):
@@ -130,7 +138,8 @@ class SubversionTags(BasicTags):
         try:
             if conn.check_path(urlutils.basename(path), self.repository.get_latest_revnum()) != core.NODE_DIR:
                 raise NoSuchTag(tag_name)
-            ci = conn.get_commit_editor(self._revprops("Remove tag %s" % tag_name.encode("utf-8")))
+            ci = conn.get_commit_editor(self._revprops("Remove tag %s" % tag_name.encode("utf-8"),
+                                        {tag_name: ""}))
             try:
                 root = ci.open_root()
                 root.delete_entry(urlutils.basename(path))
