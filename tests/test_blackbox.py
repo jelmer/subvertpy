@@ -22,11 +22,11 @@ from bzrlib.tests import KnownFailure
 
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 
 import os, sys
 
-class TestBranch(ExternalBase, TestCaseWithSubversionRepository):
+class TestBranch(ExternalBase, SubversionTestCase):
     def test_branch_empty(self):
         repos_url = self.make_repository('d')
         self.run_bzr("branch %s dc" % repos_url)

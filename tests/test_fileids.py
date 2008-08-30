@@ -24,7 +24,7 @@ from bzrlib.tests import TestCase
 from bzrlib.plugins.svn.fileids import simple_apply_changes
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps, set_branching_scheme
 from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme, NoBranchingScheme
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class MockRepo(object):
     def __init__(self, mapping, uuid="uuid"):
@@ -35,7 +35,7 @@ class MockRepo(object):
         return ret[1], ret[2], ret[3]
 
 
-class TestComplexFileids(TestCaseWithSubversionRepository):
+class TestComplexFileids(SubversionTestCase):
     # branchtagcopy.dump
     # changeaftercp.dump
     # combinedbranch.dump
@@ -266,7 +266,7 @@ class TestFileMapping(TestCase):
         self.assertEqual((1, ""), map["foo"][1])
 
 
-class GetMapTests(TestCaseWithSubversionRepository):
+class GetMapTests(SubversionTestCase):
     def setUp(self):
         super(GetMapTests, self).setUp()
         self.repos_url = self.make_repository("d")

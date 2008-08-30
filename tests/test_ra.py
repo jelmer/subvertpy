@@ -17,14 +17,14 @@
 
 from bzrlib.tests import TestCase, TestSkipped
 from bzrlib.plugins.svn import core, ra
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class VersionTest(TestCase):
     def test_version_length(self):
         self.assertEquals(4, len(ra.version()))
 
 
-class TestRemoteAccess(TestCaseWithSubversionRepository):
+class TestRemoteAccess(SubversionTestCase):
     def setUp(self):
         super(TestRemoteAccess, self).setUp()
         self.repos_url = self.make_repository("d")

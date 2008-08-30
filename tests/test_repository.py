@@ -37,11 +37,11 @@ from bzrlib.plugins.svn.mapping3 import (SVN_PROP_BZR_BRANCHING_SCHEME, set_bran
                       set_property_scheme, BzrSvnMappingv3)
 from bzrlib.plugins.svn.mapping3.scheme import (TrunkBranchingScheme, NoBranchingScheme, 
                     ListBranchingScheme, SingleBranchingScheme)
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.repository import SvnRepositoryFormat
 
 
-class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
+class TestSubversionRepositoryWorks(SubversionTestCase):
     def test_format(self):
         """ Test repository format is correct """
         bzrdir = self.make_local_bzrdir('a', 'ac')
@@ -1275,7 +1275,7 @@ class TestSubversionRepositoryWorks(TestCaseWithSubversionRepository):
             ('revisions', None, [revid])], ch)
 
 
-class TestSvnRevisionTree(TestCaseWithSubversionRepository):
+class TestSvnRevisionTree(SubversionTestCase):
     def setUp(self):
         super(TestSvnRevisionTree, self).setUp()
         repos_url = self.make_client('d', 'dc')

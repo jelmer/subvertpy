@@ -23,7 +23,7 @@ from bzrlib.errors import BzrError, InvalidRevisionSpec
 from bzrlib.revisionspec import RevisionSpec, RevisionInfo
 from bzrlib.tests import TestCase
 
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 
 
 class TestRevSpec(TestCase):
@@ -37,7 +37,7 @@ class TestRevSpec(TestCase):
         self.assertIs(None, RevisionSpec.from_string("svn:foo").get_branch())
 
 
-class TestRevSpecsBySubversion(TestCaseWithSubversionRepository):
+class TestRevSpecsBySubversion(SubversionTestCase):
     def test_by_single_revno(self):
         revspec = RevisionSpec.from_string("svn:2")
         repos_url = self.make_repository("a")

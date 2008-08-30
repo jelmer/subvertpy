@@ -24,7 +24,7 @@ from bzrlib.plugins.svn.errors import RebaseNotPresent
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.upgrade import (upgrade_repository, upgrade_branch,
                      upgrade_workingtree, UpgradeChangesContent, 
                      create_upgraded_revid, generate_upgrade_map)
@@ -56,7 +56,7 @@ def skip_no_rebase(unbound):
     return check_error
 
 
-class UpgradeTests(TestCaseWithSubversionRepository):
+class UpgradeTests(SubversionTestCase):
     @skip_no_rebase
     def test_no_custom(self):
         repos_url = self.make_repository("a")

@@ -31,9 +31,9 @@ from bzrlib.plugins.svn import core, format, ra
 from bzrlib.plugins.svn.errors import MissingPrefix
 from bzrlib.plugins.svn.commit import push, dpush
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 
-class TestDPush(TestCaseWithSubversionRepository):
+class TestDPush(SubversionTestCase):
     def setUp(self):
         super(TestDPush, self).setUp()
         self.repos_url = self.make_repository('d')
@@ -114,7 +114,7 @@ class TestDPush(TestCaseWithSubversionRepository):
                           self.bzrdir.open_branch())
 
 
-class TestPush(TestCaseWithSubversionRepository):
+class TestPush(SubversionTestCase):
     def setUp(self):
         super(TestPush, self).setUp()
         self.repos_url = self.make_repository('d')
@@ -446,7 +446,7 @@ class TestPush(TestCaseWithSubversionRepository):
         self.assertEquals("/branches/mybranch", 
             self.client_log("%s/trunk" % self.repos_url, 0, 5)[5][0]['/trunk'][1])
 
-class PushNewBranchTests(TestCaseWithSubversionRepository):
+class PushNewBranchTests(SubversionTestCase):
     def test_single_revision(self):
         repos_url = self.make_repository("a")
         bzrwt = BzrDir.create_standalone_workingtree("c", 
@@ -990,7 +990,7 @@ class PushNewBranchTests(TestCaseWithSubversionRepository):
                                      c.get_latest_revnum()))
 
 
-class TestPushTwice(TestCaseWithSubversionRepository):
+class TestPushTwice(SubversionTestCase):
     def test_push_twice(self):
         # bug 208566
         repos_url = self.make_repository('d')

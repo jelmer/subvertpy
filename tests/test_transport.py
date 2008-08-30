@@ -20,12 +20,12 @@ from bzrlib.errors import NoSuchFile, FileExists, InvalidURL
 from bzrlib import urlutils
 
 from bzrlib.plugins.svn import core, ra
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.transport import SvnRaTransport, bzr_to_svn_url, _url_unescape_uri
 
 from unittest import TestCase
 
-class SvnRaTest(TestCaseWithSubversionRepository):
+class SvnRaTest(SubversionTestCase):
     def test_open_nonexisting(self):
         self.assertRaises(InvalidURL, SvnRaTransport, 
                           "svn+nonexisting://foo/bar")

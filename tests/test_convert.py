@@ -30,7 +30,7 @@ from bzrlib.plugins.svn.convert import convert_repository, NotDumpFile, load_dum
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.mapping3 import set_branching_scheme
 from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme, NoBranchingScheme
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class TestLoadDumpfile(TestCaseInTempDir):
     def test_loaddumpfile(self):
@@ -61,7 +61,7 @@ PROPS-END
         self.assertRaises(NotDumpFile, load_dumpfile, dumpfile, "d")
 
 
-class TestConversion(TestCaseWithSubversionRepository):
+class TestConversion(SubversionTestCase):
     def setUp(self):
         super(TestConversion, self).setUp()
         self.repos_url = self.make_repository('d')
@@ -290,7 +290,7 @@ class TestConversion(TestCaseWithSubversionRepository):
 
         self.assertRaises(NotBranchError, Repository.open, "e")
 
-class TestConversionFromDumpfile(TestCaseWithSubversionRepository):
+class TestConversionFromDumpfile(SubversionTestCase):
     def test_dumpfile_open_empty(self):
         dumpfile = os.path.join(self.test_dir, "dumpfile")
         open(dumpfile, 'w').write(

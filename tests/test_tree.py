@@ -24,11 +24,11 @@ from bzrlib.workingtree import WorkingTree
 
 from bzrlib.plugins.svn import errors
 from bzrlib.plugins.svn.core import SubversionException
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.tree import SvnBasisTree, inventory_add_external
 
 
-class TestBasisTree(TestCaseWithSubversionRepository):
+class TestBasisTree(SubversionTestCase):
     def test_executable(self):
         repos_url = self.make_client("d", "dc")
 
@@ -171,7 +171,7 @@ class TestBasisTree(TestCaseWithSubversionRepository):
         self.assertFalse(wt.inventory[wt.inventory.path2id("file")].executable)
 
 
-class TestInventoryExternals(TestCaseWithSubversionRepository):
+class TestInventoryExternals(SubversionTestCase):
     def test_add_nested_norev(self):
         """Add a nested tree with no specific revision referenced."""
         repos_url = self.make_client('d', 'dc')

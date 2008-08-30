@@ -123,12 +123,12 @@ class TestCommitEditor(TestDirEditor):
         self.editor.close()
 
 
-class TestCaseWithSubversionRepository(TestCaseInTempDir):
+class SubversionTestCase(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion 
     repositories."""
 
     def setUp(self):
-        super(TestCaseWithSubversionRepository, self).setUp()
+        super(SubversionTestCase, self).setUp()
         self.client_ctx = Client()
         self.client_ctx.auth = Auth([ra.get_simple_provider(), 
                                      ra.get_username_provider(),

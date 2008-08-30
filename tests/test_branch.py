@@ -33,9 +33,9 @@ from bzrlib.plugins.svn.convert import load_dumpfile
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 
-class WorkingSubversionBranch(TestCaseWithSubversionRepository):
+class WorkingSubversionBranch(SubversionTestCase):
     def test_last_rev_rev_hist(self):
         repos_url = self.make_repository("a")
         branch = Branch.open(repos_url)

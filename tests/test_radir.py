@@ -24,10 +24,10 @@ from bzrlib.errors import (NoRepositoryPresent, NotLocalUrl,
 
 from bzrlib.plugins.svn import core
 from bzrlib.plugins.svn.format import SvnRemoteFormat
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.transport import SvnRaTransport
 
-class TestRemoteAccess(TestCaseWithSubversionRepository):
+class TestRemoteAccess(SubversionTestCase):
     def test_clone(self):
         repos_url = self.make_client("d", "dc")
 

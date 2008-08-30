@@ -31,12 +31,12 @@ from bzrlib.plugins.svn.convert import load_dumpfile
 from bzrlib.plugins.svn.errors import InvalidFileName
 from bzrlib.plugins.svn.mapping3 import set_branching_scheme
 from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.transport import SvnRaTransport
 
 import os, sys
 
-class TestFetchWorks(TestCaseWithSubversionRepository):
+class TestFetchWorks(SubversionTestCase):
     def test_fetch_fileid_renames(self):
         repos_url = self.make_repository('d')
 

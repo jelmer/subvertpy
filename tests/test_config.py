@@ -19,7 +19,7 @@
 from bzrlib.branch import Branch
 from bzrlib.plugins.svn.config import SvnRepositoryConfig, BranchConfig
 from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 
 from bzrlib.tests import TestCaseInTempDir
 
@@ -99,7 +99,7 @@ class ReposConfigTests(TestCaseInTempDir):
         self.assertEquals(False, c.get_supports_change_revprop())
 
 
-class BranchConfigTests(TestCaseWithSubversionRepository):
+class BranchConfigTests(SubversionTestCase):
     def setUp(self):
         super(BranchConfigTests, self).setUp()
         self.repos_url = self.make_repository("d")

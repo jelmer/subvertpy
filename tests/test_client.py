@@ -16,9 +16,9 @@
 """Subversion client library tests."""
 
 from bzrlib.plugins.svn import client
-from bzrlib.plugins.svn.tests import TestCaseWithSubversionRepository
+from bzrlib.plugins.svn.tests import SubversionTestCase
 
-class TestClient(TestCaseWithSubversionRepository):
+class TestClient(SubversionTestCase):
     def setUp(self):
         super(TestClient, self).setUp()
         self.repos_url = self.make_client("d", "dc")
