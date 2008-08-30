@@ -93,8 +93,8 @@ class SvnWorkingTree(WorkingTree):
         self._get_wc()
         max_rev = revision_status(self.basedir, None, True)[1]
         self.base_revnum = max_rev
-        self.base_tree = SvnBasisTree(self)
         self.base_revid = branch.generate_revision_id(self.base_revnum)
+        self.base_tree = SvnBasisTree(self)
 
         self.read_working_inventory()
 
