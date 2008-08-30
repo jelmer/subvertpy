@@ -2,10 +2,14 @@ bzr-svn-0.5			UNRELEASED
 
 bzr-svn 0.4.12	UNRELEASED
 
-
   CHANGES
 
    * Implement set-revprops command.
+
+   * Introduces a new Bzr<->Svn mapping format. Please 
+     read UPGRADING for details.
+	 
+	 + Uses revision properties where possible. (#127736)
 
   FEATURES
 
