@@ -320,7 +320,7 @@ class BzrSvnMapping(foreign.VcsMapping):
 
         :param revid: The revision id.
         :raises: InvalidRevisionId
-        :return: Tuple with uuid, branch path, revision number and scheme.
+        :return: Tuple with uuid, branch path, revision number and mapping.
         """
         raise NotImplementedError(self.revision_id_bzr_to_foreign)
 
@@ -708,7 +708,7 @@ mapping_registry.register_lazy('v3', 'bzrlib.plugins.svn.mapping3',
 mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4', 
                                'BzrSvnMappingv4',
                                'Fourth format (bzr-svn 0.5.x)')
-mapping_registry.set_default('v3')
+mapping_registry.set_default('v4')
 
 def parse_mapping_name(name):
     assert isinstance(name, str)

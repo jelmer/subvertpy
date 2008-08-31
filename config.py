@@ -83,6 +83,13 @@ class SvnRepositoryConfig(IniBasedConfig):
             return BranchingScheme.find_scheme(schemename.encode('ascii'))
         return None
 
+    def get_default_mapping(self):
+        """Get the default mapping.
+
+        :return Mapping name.
+        """
+        return self._get_user_option("default-mapping", use_global=True)
+
     def get_guessed_branching_scheme(self):
         """Get the guessed branching scheme.
 
