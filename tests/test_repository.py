@@ -42,6 +42,7 @@ from bzrlib.plugins.svn.repository import SvnRepositoryFormat
 
 
 class TestSubversionRepositoryWorks(SubversionTestCase):
+    """Generic Subversion Repository tests."""
 
     def test_get_config_global_set(self):
         repos_url = self.make_repository("a")
@@ -102,8 +103,6 @@ class TestSubversionRepositoryWorks(SubversionTestCase):
         repository = Repository.open(repos_url)
         self.assertTrue(repository.is_shared())
 
-
-class TestSubversionMappingRepositoryWorks(SubversionTestCase):
     def test_format(self):
         """ Test repository format is correct """
         bzrdir = self.make_local_bzrdir('a', 'ac')
@@ -112,6 +111,20 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         
         self.assertEqual(bzrdir._format.get_format_description(), \
                 "Subversion Local Checkout")
+
+    def test_make_working_trees(self):
+        repos_url = self.make_repository("a")
+        repos = Repository.open(repos_url)
+        self.assertFalse(repos.make_working_trees())
+
+    def test_get_physical_lock_status(self):
+        repos_url = self.make_repository("a")
+        repos = Repository.open(repos_url)
+        self.assertFalse(repos.get_physical_lock_status())
+
+
+class TestSubversionMappingRepositoryWorks(SubversionTestCase):
+    """Mapping-dependent tests for Subversion repositories."""
 
     def test_get_branch_log(self):
         repos_url = self.make_repository("a")
@@ -124,17 +137,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.assertEqual([
             ('', {'foo': ('A', None, -1)}, 1), 
             ('', {'': ('A', None, -1)}, 0)],
-            [(l.branch_path, l.paths, l.revnum) for l in repos.iter_reverse_branch_changes("", 1, 0, NoBranchingScheme())])
-
-    def test_make_working_trees(self):
-        repos_url = self.make_repository("a")
-        repos = Repository.open(repos_url)
-        self.assertFalse(repos.make_working_trees())
-
-    def test_get_physical_lock_status(self):
-        repos_url = self.make_repository("a")
-        repos = Repository.open(repos_url)
-        self.assertFalse(repos.get_physical_lock_status())
+            [(l.branch_path, l.paths, l.revnum) for l in repos.iter_reverse_branch_changes("", 1, 0, repos.get_mapping())])
 
     def test_iter_changes_parent_rename(self):
         repos_url = self.make_repository("a")
