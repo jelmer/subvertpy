@@ -1,6 +1,4 @@
 mappingv4:
- - skip looking for fileprops for v4 if revprops have been found in earlier revisions \
-   AND server supports revprops AND mapping.supports_custom_revprops()
  - implement layout functions, including command
  - integrate svn-set-revprops into svn-upgrade ?
  - add options in commit for create_root, create_prefix
@@ -9,7 +7,7 @@ mappingv4:
 
 - generate deltas rather than fulltexts when creating file id maps
 - transform file ids in workingtree in svn-upgrade
-- only look for fileprops until the first custom revprop that appears in revhistory
+- only look for fileprops until the first custom revprop that appears in revhistory and mapping.supports_custom_revprops()
 
 tests:
 - more blackbox tests
@@ -21,7 +19,6 @@ tests:
 
 .svn working trees:
 - implement apply_inventory_delta()
-- support merge without requiring revisions to be added to svn repository
 
 pushmerge:
  - create branches/ dir automatically
