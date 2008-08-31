@@ -1,13 +1,15 @@
 mappingv4:
- - skip looking for fileprops if revprops have been found in earlier revisions \
+ - skip looking for fileprops for v4 if revprops have been found in earlier revisions \
    AND server supports revprops AND mapping.supports_custom_revprops()
  - implement layout functions, including command
  - integrate svn-set-revprops into svn-upgrade ?
  - add options in commit for create_root, create_prefix
   - if create_root=False: skip _check_dirs_exist
+ - allow skipping a revision completely - to allow creating branches using "svn cp"
 
 - generate deltas rather than fulltexts when creating file id maps
 - transform file ids in workingtree in svn-upgrade
+- only look for fileprops until the first custom revprop that appears in revhistory
 
 tests:
 - more blackbox tests

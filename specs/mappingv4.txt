@@ -19,6 +19,27 @@ Mapping version 3 has several problems.
 Changes compared to version 3
 -----------------------------
 
+Removal of branching schemes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Branching schemes will no longer be part of the revision id, since they 
+are irrelevant. All paths will be allowed as valid branch paths.
+
+Optional file properties
+~~~~~~~~~~~~~~~~~~~~~~~~
+While newer versions (>= 0.4.11) implementing v3 mappings would already set some 
+custom revision properties when possible, but not use them, v4 will rely solely 
+on revision properties if supported by the server.
+
+Version 4 will always prefer revision properties and use them if available. File 
+properties will only be used if the server is running a version of Subversion older 
+than 1.5 or if no revision properties have been used yet.
+
+Once revision properties have been used for version 4 in a repository, bzr-svn 
+clients will refuse to set file properties. 
+
+Revision properties can, as of svn 1.5, be retrieved very efficiently since 
+they can be returned by svn_ra_get_log(). 
+
 Revision properties
 -------------------
 
@@ -71,10 +92,36 @@ Revision properties
  * bzr:tags
    Dictionary of tags set in this revision.
 
-Removal of branching schemes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Branching schemes will no longer be part of the revision id, since they 
-are irrelevant. All paths will be allowed as valid branch paths.
+Corner cases in mixed environments
+==================================
+Several scenarios can occur while both v3 and v4 mappings are in use.
+
+ * v3 client commits revision based on v4 mapped revision
+   the two clients would each consider this revision to have a different 
+   lhs parent.
+
+ * v4 client commits fileprop-based revision based on v3 mapped revision
+
+ * v4 client commits revprop-based revision based on v3 mapped revision, 
+   which follows revprop based v4 revisions early in the repo.
+
+ * svn client commits revision based on v3 mapped revision
+
+-> only try to interpret parent metadata with own mapping or older
+-> only look for fileprops until the first revprop that appears in revhistory
+
+Upgrade
+=======
+A new command, svn-set-revprops is provided to set revision properties for 
+existing revisions that are already present using file properties.
+
+FIXME: bzr-svn should warn the user to run svn-set-revprops 
+if this would help performance.
+
+Mapping 3 revisions will still be retrievable.
+
+Unless otherwise specified, new revisions will be pushed with v4 mappings.
+
 
 
 .. vim: ft=rest
