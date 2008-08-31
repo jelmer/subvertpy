@@ -40,6 +40,20 @@ bzr-svn 0.4.12	UNRELEASED
 
    * Fix compatibility with Bazaar 1.7.
 
+   * Use local application data directory on Windows for bzr-svn cache.
+     (#231041)
+
+   * No longer show backtrace when a generic DAV error occurs, as 
+     this is usually a sign of a server-side error rather than a bug.
+	 (#255159)
+
+   * Fix forward declarations of Python types, fixes 
+     compilation on mingw. (#263284)
+
+  FEATURES
+
+   * Use native Windows password prompter on Windows. (#263287)
+
 bzr-svn 0.4.11	2008-08-26
 
 bzr-svn 0.4.11~rc2	2008-08-26
