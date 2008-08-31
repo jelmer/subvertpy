@@ -322,6 +322,7 @@ def test_suite():
             'test_errors',
             'test_fetch',
             'test_fileids', 
+            'test_layout',
             'test_log',
             'test_logwalker',
             'test_mapping',

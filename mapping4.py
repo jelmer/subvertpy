@@ -31,10 +31,18 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     upgrade_suffix = "-svn4"
     experimental = True
 
-    def __init__(self):
+    def __init__(self, layout=None):
         self.name = "v4"
+        self.layout = layout
         self.revprops = mapping.BzrSvnMappingRevProps()
         self.fileprops = mapping.BzrSvnMappingFileProps(self.name)
+
+    @classmethod
+    def from_repository(cls, repository, _hinted_branch_path=None):
+        if _hinted_branch_path == "":
+            return cls(layout.RootLayout())
+        else:
+            return cls(layout.TrunkLayout(repository))
 
     @staticmethod
     def supports_roundtripping():
@@ -145,4 +153,4 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
             self.fileprops.import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
 
     def get_mandated_layout(self, repository):
-        return layout.TrunkLayout(repository)
+        return self.layout
