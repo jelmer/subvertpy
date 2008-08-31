@@ -145,6 +145,8 @@ class SvnCommitBuilder(RootCommitBuilder):
             the commit is happening
         :param push_metadata: Whether or not to push all bazaar metadata
                               (in svn file properties, etc).
+        :param graph: Optional graph object
+        :param opt_signature: Optional signature to write.
         """
         super(SvnCommitBuilder, self).__init__(repository, parents, 
             config, timestamp, timezone, committer, revprops, revision_id)
