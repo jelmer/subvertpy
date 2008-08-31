@@ -10,5 +10,4 @@ set, ordered alphabetically by directory path.
 
 Ignores are only recognized on directories.
 
-
-.. vim: ft=rst
+.. vim: ft=rest

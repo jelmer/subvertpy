@@ -6,24 +6,75 @@ Bzr <-> Svn mappings version 4
 Rationale
 ---------
 
+Mapping version 3 has several problems. 
+
+ * Branching schemes are part of the revision ids; this means that changing 
+   the branching scheme changes the identity of the revisions, even if they
+   are not directly affected.
+
+ * It relies solely on file properties that can grow very large. Subversion 
+   1.5 supports revision properties that can be used for storing bzr-svn-specific 
+   metadata as well and are more hidden. They can also be retrieved more easily.
+
 Changes compared to version 3
 -----------------------------
+
+Revision properties
+-------------------
+
+ * bzr:committer
+   Bazaar committer
+
+ * bzr:file-ids
+   Map from path to file ids.
+
+ * bzr:mapping-version
+   Mapping version ("v4" at the moment)
+
+ * bzr:merge
+   Right hand side parent ids.
+
+ * bzr:revision-id
+   Revision id of this revision.
+
+ * bzr:revno
+   Revision number (distance to NULL_REVISION)
+
+ * bzr:revprop:*
+   Bazaar revision property.
+
+ * bzr:root
+   Path in the repository to branch root.
+
+ * bzr:gpg-signature
+   GPG signature
+
+ * bzr:timestamp
+   Timestamp of the commit
+
+ * bzr:log
+   Log message (overrides svn:log), optional.
+
+ * bzr:text-parents
+   Dictionary of text revision ids if not easily predictable.
+
+ * bzr:required-features
+   Comma-separated list of features required to interpret the data 
+   set in these revision properties.
+
+ * bzr:base-revision
+   Revision id of the left hand side parent - the diff parent.
+
+ * bzr:skip
+   If present, this revision will not be checked for a bzr revision.
+
+ * bzr:tags
+   Dictionary of tags set in this revision.
 
 Removal of branching schemes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Branching schemes will no longer be part of the revision id, since they 
 are irrelevant. All paths will be allowed as valid branch paths.
 
-Ignores
-~~~~~~~
-
-Keywords
-~~~~~~~~
-
-By-reference nested trees
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Considering empty directories empty branches
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. vim: ft=rest
