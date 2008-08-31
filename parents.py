@@ -20,6 +20,8 @@ from bzrlib.revision import NULL_REVISION
 from bzrlib.versionedfile import ConstantMapper
 
 class DiskCachingParentsProvider(object):
+    """Parents provider that caches parents in a SQLite database."""
+
     def __init__(self, actual, cachetransport):
         self._cache = ParentsCache(cachetransport)
         self.actual = actual
@@ -33,7 +35,7 @@ class DiskCachingParentsProvider(object):
                 todo.add(k)
             else:
                 ret[k] = parents
-        if len(todo):
+        if len(todo) > 0:
             newfound = self.actual.get_parent_map(todo)
             for revid, parents in newfound.items():
                 if revid == NULL_REVISION:

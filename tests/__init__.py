@@ -326,6 +326,7 @@ def test_suite():
             'test_log',
             'test_logwalker',
             'test_mapping',
+            'test_parents',
             'test_properties',
             'test_push',
             'test_ra',
