@@ -145,4 +145,4 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
             self.fileprops.import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
 
     def get_mandated_layout(self, repository):
-        return layout.ConfigBasedLayout(repository)
+        return layout.TrunkLayout(repository)

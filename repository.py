@@ -924,6 +924,8 @@ class SvnRepository(Repository):
                             (pt, proj, bp, rp) = layout.parse(p)
                         except errors.InvalidSvnBranchPath:
                             continue
+                        except NotBranchError:
+                            continue
                         if pt != "tag" or (project is not None and proj != project):
                             continue
                         if action == "D" and rp == "":

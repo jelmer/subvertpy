@@ -23,6 +23,9 @@ from bzrlib.plugins.svn.ra import DIRENT_KIND
 class RepositoryLayout(object):
     """Describes a repository layout."""
 
+    def __init__(self, repository):
+        self.repository = repository
+
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
 
@@ -114,12 +117,8 @@ class RepositoryLayout(object):
         raise NotImplementedError
 
 
-class ConfigBasedLayout(RepositoryLayout):
-
-    def __init__(self, repository):
-        self.repository = repository
-        self._config = repository.get_config()
-
+class TrunkLayout(RepositoryLayout):
+    
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
 
@@ -127,7 +126,7 @@ class ConfigBasedLayout(RepositoryLayout):
         :param project: Optional name of the project the tag is for. Can include slashes.
         :return: Path of the tag."
         """
-        return urlutils.join(project, "tags", name).strip("/")
+        return urlutils.join(project, "tags", name.encode("utf-8")).strip("/")
 
     def get_tag_name(self, path, project=""):
         """Determine the tag name from a tag path.
@@ -175,22 +174,100 @@ class ConfigBasedLayout(RepositoryLayout):
                 return (t, "/".join(parts[:j-1]).strip("/"), "/".join(parts[:i]).strip("/"), "/".join(parts[i+1:]).strip("/"))
         raise NotBranchError(path)
 
+    def _add_project(self, path, project=None):
+        if project is None:
+            return path
+        return urlutils.join(project, path)
+
     def get_branches(self, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to branches in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
         """
-        return get_root_paths(self.repository, ["branches/*", "trunk"], revnum, self.is_tag, project)
+        return get_root_paths(self.repository, 
+             [self._add_project(x, project) for x in "branches/*", "trunk"], 
+             revnum, self.is_tag, project)
 
     def get_tags(self, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to tags in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
         """
-        return get_root_paths(self.repository, ["tags/*"], revnum, self.is_tag, project)
+        return get_root_paths(self.repository, [self._add_project("tags/*", project)], revnum, self.is_tag, project)
 
     def __repr__(self):
         return "%s()" % self.__class__.__name__
+
+
+class RootLayout(RepositoryLayout):
+    """Layout where the root of the repository is a branch."""
+    
+    def get_tag_path(self, name, project=""):
+        """Return the path at which the tag with specified name should be found.
+
+        :param name: Name of the tag. 
+        :param project: Optional name of the project the tag is for. Can include slashes.
+        :return: Path of the tag."
+        """
+        return None
+
+    def get_tag_name(self, path, project=""):
+        """Determine the tag name from a tag path.
+
+        :param path: Path inside the repository.
+        """
+        raise AssertionError("should never be reached, there can't be any tag paths in this layout")
+
+    def push_merged_revisions(self, project=""):
+        """Determine whether or not right hand side (merged) revisions should be pushed.
+
+        Defaults to False.
+        
+        :param project: Name of the project.
+        """
+        return False
+
+    def get_branch_path(self, name, project=""):
+        """Return the path at which the branch with specified name should be found.
+
+        :param name: Name of the branch. 
+        :param project: Optional name of the project the branch is for. Can include slashes.
+        :return: Path of the branch.
+        """
+        return None
+
+    def parse(self, path):
+        """Parse a path.
+
+        :return: Tuple with type ('tag', 'branch'), project name, branch path and path 
+            inside the branch
+        """
+        return ('branch', '', '', path)
+
+    def get_branches(self, revnum, project=None, pb=None):
+        """Retrieve a list of paths that refer to branches in a specific revision.
+
+        :result: Iterator over tuples with (project, branch path)
+        """
+        return []
+
+    def get_tags(self, revnum, project=None, pb=None):
+        """Retrieve a list of paths that refer to tags in a specific revision.
+
+        :result: Iterator over tuples with (project, branch path)
+        """
+        return []
+
+    def __repr__(self):
+        return "%s()" % self.__class__.__name__
+
+
+class ConfigBasedLayout(RepositoryLayout):
+
+    def __init__(self, repository):
+        self.repository = repository
+        self._config = repository.get_config()
+
 
 def expand_branch_pattern(begin, todo, check_path, get_children, project=None):
     """Find the paths in the repository that match the expected branch pattern.
@@ -234,7 +311,17 @@ def expand_branch_pattern(begin, todo, check_path, get_children, project=None):
         pb.finished()
     return ret
 
+
 def get_root_paths(repository, itemlist, revnum, verify_fn, project=None, pb=None):
+    """Find all the paths in the repository matching a list of items.
+
+    :param repository: Repository to search in.
+    :param itemlist: List of glob-items to match on.
+    :param revnum: Revision number in repository to analyse.
+    :param verify_fn: Function that checks if a path is acceptable.
+    :param project: Optional project branch/tag should be in.
+    :param pb: OPtional progress bar.
+    """
     def check_path(path):
         return repository.transport.check_path(path, revnum) == NODE_DIR
     def find_children(path):

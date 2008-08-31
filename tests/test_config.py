@@ -98,6 +98,12 @@ class ReposConfigTests(TestCaseInTempDir):
         c.set_user_option("supports-change-revprop", "False")
         self.assertEquals(False, c.get_supports_change_revprop())
 
+    def test_default_mapping(self):
+        c = SvnRepositoryConfig("blabla2")
+        self.assertEquals(None, c.get_default_mapping())
+        c.set_user_option("default-mapping", "v8")
+        self.assertEquals("v8", c.get_default_mapping())
+
 
 class BranchConfigTests(SubversionTestCase):
     def setUp(self):

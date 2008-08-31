@@ -61,17 +61,23 @@ class RevidMap(object):
             pass
 
         last_revnum = self.repos.get_latest_revnum()
+        fileprops_to_revnum = last_revnum
         for entry_revid, branch, revno, mapping in self.discover_revprop_revids(0, last_revnum):
             if revid == entry_revid:
                 return (branch, revno, mapping.name)
+            fileprops_to_revnum = min(fileprops_to_revnum, revno)
 
-        for entry_revid, branch, revno, mapping in self.discover_fileprop_revids(layout, 0, last_revnum, project):
+        for entry_revid, branch, revno, mapping in self.discover_fileprop_revids(layout, 0, fileprops_to_revnum, project):
             if revid == entry_revid:
                 (bp, revnum, mapping_name) = self.bisect_revid_revnum(revid, branch, 0, revno)
                 return (bp, revnum, mapping_name)
         raise NoSuchRevision(self, revid)
 
     def discover_revprop_revids(self, from_revnum, to_revnum):
+        """Discover bzr-svn revision properties between from_revnum and to_revnum.
+
+        :return: First revision number on which a revision property was found, or None
+        """
         for (_, revno, revprops) in self.repos._log.iter_changes(None, from_revnum, to_revnum):
             if is_bzr_revision_revprops(revprops):
                 mapping = find_mapping(revprops, {})
@@ -192,13 +198,15 @@ class CachingRevidMap(object):
                 # check again.
                 raise e
             found = None
+            fileprops_to_revnum = last_revnum
             for entry_revid, branch, revno, mapping in self.actual.discover_revprop_revids(last_checked, last_revnum):
+                fileprops_to_revnum = min(fileprops_to_revnum, revno)
                 if entry_revid == revid:
                     found = (branch, revno, revno, mapping)
                 if entry_revid not in self.revid_seen:
                     self.cache.insert_revid(entry_revid, branch, revno, revno, mapping.name)
                     self.revid_seen.add(entry_revid)
-            for entry_revid, branch, revno, mapping in self.actual.discover_fileprop_revids(layout, last_checked, last_revnum, project):
+            for entry_revid, branch, revno, mapping in self.actual.discover_fileprop_revids(layout, last_checked, fileprops_to_revnum, project):
                 if entry_revid == revid:
                     found = (branch, last_checked, revno, mapping)
                 if entry_revid not in self.revid_seen:
