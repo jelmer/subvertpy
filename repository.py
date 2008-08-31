@@ -904,6 +904,7 @@ class SvnRepository(Repository):
                         else:
                             tags[name] = revid
                     continue
+                tag_changes = {}
                 for p in sorted(paths):
                     (action, cf, cr) = paths[p]
                     if layout.is_tag_parent(p, project) and cf is not None:
@@ -914,7 +915,7 @@ class SvnRepository(Repository):
                                 for c in self.transport.get_dir(p, revnum)[0].keys():
                                     n = p+"/"+c
                                     if layout.is_tag(n, project):
-                                        tags[n] = self.generate_revision_id(revnum, n, mapping, revprops=revprops)
+                                        tag_changes[n] = self.generate_revision_id(revnum, n, mapping, revprops=revprops)
                                     elif layout.is_tag_parent(n, project):
                                         parents.append(n)
                             except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
@@ -929,7 +930,7 @@ class SvnRepository(Repository):
                         if pt != "tag" or (project is not None and proj != project):
                             continue
                         if action == "D" and rp == "":
-                            tags[p] = None
+                            tag_changes[p] = None
                         elif rp == "" and cf is not None:
                             # This tag was (recreated) here, so unless anything else under this 
                             # tag changed
@@ -940,13 +941,19 @@ class SvnRepository(Repository):
                             if not changes.changes_path(newpaths, p, False) and layout.is_branch(cf):
                                 tp = cf
                                 tr = int(self.transport.get_dir(cf, cr)[2][properties.PROP_ENTRY_COMMITTED_REV])
-                            tags[p] = self.generate_revision_id(tr, tp, mapping)
+                            tag_changes[p] = self.generate_revision_id(tr, tp, mapping)
                         else:
-                            tags[bp] = self.generate_revision_id(revnum, bp, mapping, revprops=revprops)
+                            tag_changes[bp] = self.generate_revision_id(revnum, bp, mapping, revprops=revprops)
+                for path, revid in tag_changes.items():
+                    name = layout.get_tag_name(path, project)
+                    if revid is None:
+                        del tags[name]
+                    else:
+                        tags[name] = revid
         finally:
             pb.finished()
 
-        return dict([(layout.get_tag_name(p, project), revid) for (p, revid) in tags.items() if revid is not None])
+        return tags
 
     @needs_read_lock
     def find_tags(self, project, layout=None, mapping=None, revnum=None):
