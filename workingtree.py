@@ -412,7 +412,7 @@ class SvnWorkingTree(WorkingTree):
                 wc.process_committed(self.abspath(path).rstrip("/"), 
                               False, self.branch.lookup_revision_id(newrevtree.inventory[id].revision),
                               svn_revprops[properties.PROP_REVISION_DATE], 
-                              svn_revprops[properties.PROP_REVISION_AUTHOR])
+                              svn_revprops.get(properties.PROP_REVISION_AUTHOR, ""))
 
                 child_path = os.path.join(path, name.decode("utf-8"))
 
@@ -429,10 +429,14 @@ class SvnWorkingTree(WorkingTree):
             wc.process_committed(self.basedir,
                           False, self.branch.lookup_revision_id(newrevtree.inventory.root.revision),
                           svn_revprops[properties.PROP_REVISION_DATE], 
-                          svn_revprops[properties.PROP_REVISION_AUTHOR])
+                          svn_revprops.get(properties.PROP_REVISION_AUTHOR, ""))
             update_settings(wc, "")
         finally:
             wc.close()
+
+    def set_parent_trees(self, parents_list, allow_leftmost_as_ghost=False):
+        """See MutableTree.set_parent_trees."""
+        self.set_parent_ids([rev for (rev, tree) in parents_list])
 
     def smart_add(self, file_list, recurse=True, action=None, save=True):
         assert isinstance(recurse, bool)
@@ -567,14 +571,6 @@ class SvnWorkingTree(WorkingTree):
         finally:
             wc.close()
 
-    def _get_changed_branch_props(self):
-        wc = self._get_wc()
-        try:
-            (prop_changes, orig_props) = wc.get_prop_diffs(self.basedir)
-            return dict(prop_changes)
-        finally:
-            wc.close()
-
     def _set_branch_props(self, wc, fileprops):
         for k,v in fileprops.items():
             wc.prop_set(k, v, self.basedir)
@@ -597,47 +593,8 @@ class SvnWorkingTree(WorkingTree):
     def apply_inventory_delta(self, delta):
         assert delta == []
 
-    def set_pending_merges(self, merges):
-        """See MutableTree.set_pending_merges()."""
-        wc = self._get_wc(write_lock=True)
-        try:
-            base_fileprops = self._get_base_branch_props()
-            fileprops = self.branch.mapping.record_merges(merges, base_fileprops)
-           
-            svk_merges = parse_svk_features(self._get_svk_merges(base_fileprops))
-
-            # Set svk:merge
-            for merge in merges:
-                try:
-                    svk_merges.add(_revision_id_to_svk_feature(merge))
-                except InvalidRevisionId:
-                    pass
-
-            fileprops[SVN_PROP_SVK_MERGE] = serialize_svk_features(svk_merges)
-            self._set_branch_props(wc, fileprops)
-        finally:
-            wc.close()
-
-    def add_pending_merge(self, revid):
-        merges = self.pending_merges()
-        merges.append(revid)
-        self.set_pending_merges(merges)
-
-    def get_parent_ids(self):
-        return (self.base_revid,) + self.pending_merges()
-
-    def set_parent_ids(self, revision_ids, allow_lefmost_as_ghost=False):
-        self.set_last_revision(revision_ids[0])
-        if self.pending_merges() != revision_ids[1:]:
-            self.set_pending_merges(revision_ids[1:])
-
-    def pending_merges(self):
-        wc = self._get_wc()
-        try:
-            return self.branch.mapping.get_rhs_parents(self.branch.get_branch_path(), {}, 
-                                                self._get_changed_branch_props())
-        finally:
-            wc.close()
+    def _last_revision(self):
+        return self.base_revid
 
     def path_content_summary(self, path, _lstat=os.lstat,
         _mapper=osutils.file_kind_from_stat_mode):

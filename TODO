@@ -13,8 +13,6 @@ tests:
 - more blackbox tests
  - svn-import without scheme specified should guess
  - bzr missing
-- lookup_revision_id()'s result depends on the current branching scheme, 
-  causing weird errors when pushing
 - add tests for objects returned by WorkingTree.pull(), Branch.pull()
 
 .svn working trees:

@@ -570,7 +570,7 @@ class BzrSvnMappingFileProps(object):
             return {}
         return parse_fileid_property(fileids)
 
-    def record_merges(self, merges, fileprops):
+    def _record_merges(self, merges, fileprops):
         """Store the extra merges (non-LHS parents) in a file property.
 
         :param merges: List of parents.
@@ -588,7 +588,7 @@ class BzrSvnMappingFileProps(object):
             timestamp, timezone, committer, revprops)
 
         if len(parent_ids) > 1:
-            svn_fileprops.update(self.record_merges(parent_ids[1:], svn_fileprops))
+            svn_fileprops.update(self._record_merges(parent_ids[1:], svn_fileprops))
 
         # Set appropriate property if revision id was specified by 
         # caller
@@ -658,7 +658,7 @@ class BzrSvnMappingRevProps(object):
         return revprops[SVN_REVPROP_BZR_ROOT]
 
     def get_revision_id(self, branch_path, revprops, fileprops):
-        if not is_bzr_revision_revprops(revprops):
+        if not is_bzr_revision_revprops(revprops) or not SVN_REVPROP_BZR_REVISION_ID in revprops:
             return (None, None)
         revid = revprops[SVN_REVPROP_BZR_REVISION_ID]
         revno = int(revprops[SVN_REVPROP_BZR_REVNO])

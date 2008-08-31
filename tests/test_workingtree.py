@@ -333,7 +333,7 @@ class TestWorkingTree(SubversionTestCase):
         repos_url = self.make_client('a', 'dc')
         self.build_tree({"dc/bl": "data"})
         tree = WorkingTree.open("dc")
-        self.assertEqual((Branch.open(repos_url).last_revision(),), tree.get_parent_ids())
+        self.assertEqual([Branch.open(repos_url).last_revision()], tree.get_parent_ids())
  
     def test_delta(self):
         self.make_client('a', 'dc')
@@ -449,9 +449,9 @@ class TestWorkingTree(SubversionTestCase):
 
         tree = WorkingTree.open("dc")
         tree.set_pending_merges(["a", "c"])
-        self.assertEqual((lhs_parent_id, "a", "c"), tree.get_parent_ids())
+        self.assertEqual([lhs_parent_id, "a", "c"], tree.get_parent_ids())
         tree.set_pending_merges([])
-        self.assertEqual((lhs_parent_id,), tree.get_parent_ids())
+        self.assertEqual([lhs_parent_id], tree.get_parent_ids())
 
     def test_set_pending_merges_prop(self):
         self.make_client('a', 'dc')

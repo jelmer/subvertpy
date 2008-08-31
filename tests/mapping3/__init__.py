@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import sha1
+
 from bzrlib.tests import TestCase
 
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps

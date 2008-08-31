@@ -56,6 +56,15 @@ from bzrlib.plugins.svn.versionedfiles import (SvnTexts, VirtualRevisionTexts,
                                                VirtualInventoryTexts, VirtualSignatureTexts)
 
 def full_paths(find_children, paths, bp, from_bp, from_rev):
+    """Generate the changes creating a specified branch path.
+
+    :param find_children: Function that recursively lists all children 
+                          of a path in a revision.
+    :param paths: Paths dictionary to update
+    :param bp: Branch path to create.
+    :param from_bp: Path to look up children in
+    :param from_rev: Revision to look up children in.
+    """
     for c in find_children(from_bp, from_rev):
         path = c.replace(from_bp, bp+"/", 1).replace("//", "/")
         paths[path] = ('A', None, -1)
@@ -151,7 +160,6 @@ class RevisionMetadata(object):
                                 self.revnum, rev)
 
         return rev
-
 
     def __hash__(self):
         return hash((self.__class__, self.repository.uuid, self.branch_path, self.revnum))
