@@ -585,11 +585,6 @@ class TreeDeltaBuildEditor(DeltaBuildEditor):
 def report_inventory_contents(reporter, inv, revnum, start_empty):
     try:
         reporter.set_path("", revnum, start_empty)
-
-        # Report status of existing paths
-        for path, entry in inv.iter_entries():
-            if path != "":
-                reporter.set_path(path.encode("utf-8"), revnum, start_empty)
     except:
         reporter.abort()
         raise
@@ -761,10 +756,12 @@ class InterFromSvnRepository(InterRepository):
                             assert revmeta.revnum > parent_revnum or start_empty
 
                             if parent_branch != revmeta.branch_path:
+                                self.source.transport.mutter("svn switch -r%d:%d -> %s" % (parent_revnum, revmeta.revnum, revmeta.branch_path))
                                 reporter = conn.do_switch(revmeta.revnum, "", True, 
                                     _url_escape_uri(urlutils.join(repos_root, revmeta.branch_path)), 
                                     editor)
                             else:
+                                self.source.transport.mutter("svn update -r%d:%d" % (parent_revnum, revmeta.revnum))
                                 reporter = conn.do_update(revmeta.revnum, "", True, editor)
 
                             report_inventory_contents(reporter, parent_inv, parent_revnum, start_empty)
