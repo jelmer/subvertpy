@@ -346,4 +346,3 @@ def get_root_paths(repository, itemlist, revnum, verify_fn, project=None, pb=Non
                 yield "", bp, bp.split("/")[-1]
 
 
-

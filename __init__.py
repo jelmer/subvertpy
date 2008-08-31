@@ -499,7 +499,7 @@ class cmd_svn_set_revprops(Command):
     revision properties on the repository.
 
     To change these permissions, edit the hooks/pre-revprop-change 
-    file in the Subversion repository.
+    file in the Subversion repository. 
     """
     takes_args = ['location?']
     from bzrlib.plugins.svn.mapping import mapping_registry
@@ -524,7 +524,9 @@ class cmd_svn_set_revprops(Command):
             raise BzrCommandError("Please specify a different mapping, %s doesn't support revision properties." % new_mapping.name)
 
         set_revprops(repos, new_mapping)
-
+        self.outf.write("Revision properties set.")
+        self.outf.write("Please restore the hooks/pre-revprop-change script "
+                        "to refuse changes to most revision properties.")
 
 register_command(cmd_svn_set_revprops)
 
