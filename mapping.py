@@ -33,6 +33,7 @@ SVN_PROP_BZR_REVISION_INFO = 'bzr:revision-info'
 SVN_PROP_BZR_REVISION_ID = 'bzr:revision-id:'
 SVN_PROP_BZR_TEXT_PARENTS = 'bzr:text-parents'
 SVN_PROP_BZR_LOG = 'bzr:log'
+SVN_PROP_BZR_REQUIRED_FEATURES = 'bzr:required-features'
 
 SVN_REVPROP_BZR_COMMITTER = 'bzr:committer'
 SVN_REVPROP_BZR_FILEIDS = 'bzr:file-ids'
@@ -274,6 +275,9 @@ def parse_bzr_svn_revprops(props, rev):
         if name.startswith(SVN_REVPROP_BZR_REVPROP_PREFIX):
             rev.properties[name[len(SVN_REVPROP_BZR_REVPROP_PREFIX):]] = value
 
+
+def parse_required_features_property(text):
+    return set(text.split(","))
 
 class BzrSvnMapping(foreign.VcsMapping):
     """Class that maps between Subversion and Bazaar semantics."""

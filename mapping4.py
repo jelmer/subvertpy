@@ -114,7 +114,7 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
         if svn_revprops is not None:
             self.revprops.export_revision(branch_root, timestamp, timezone, committer, 
                                           revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops)
-            svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "v4"
+            svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = self.name
         else:
             self.fileprops.export_revision(branch_root, timestamp, timezone, committer, 
                                       revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops)
@@ -133,11 +133,15 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
 
     def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
         if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES):
-            features = set(svn_revprops[mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES].split(","))
+            features = mapping.parse_required_features_property(svn_revprops[mapping.SVN_REVPROP_BZR_REQUIRED_FEATURES])
             assert features.issubset(supported_features), "missing feature: %r" % features.difference(supported_features)
         if svn_revprops.has_key(mapping.SVN_REVPROP_BZR_MAPPING_VERSION):
+            assert svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] == self.name, "unknown mapping: %s" % svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION]
             self.revprops.import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
         else:
+            if fileprops.has_key(mapping.SVN_PROP_BZR_REQUIRED_FEATURES):
+                features = mapping.parse_required_features_property(fileprops[mapping.SVN_PROP_BZR_REQUIRED_FEATURES])
+                assert features.issubset(supported_features), "missing feature: %r" % features.difference(supported_features)
             self.fileprops.import_revision(svn_revprops, fileprops, uuid, branch, revnum, rev)
 
     def get_mandated_layout(self, repository):
