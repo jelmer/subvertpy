@@ -416,7 +416,9 @@ class SvnWorkingTree(WorkingTree):
 
                 child_path = os.path.join(path, name.decode("utf-8"))
 
-                if newrevtree.inventory[newrevtree.inventory.path2id(child_path)].kind == 'directory':
+                fileid = newrevtree.inventory.path2id(child_path)
+
+                if newrevtree.inventory[fileid].kind == 'directory':
                     subwc = WorkingCopy(wc, self.abspath(child_path).rstrip("/"), write_lock=True)
                     try:
                         update_settings(subwc, child_path)

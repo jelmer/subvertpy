@@ -63,6 +63,23 @@ class TestBranch(ExternalBase, SubversionTestCase):
         self.run_bzr("push -d dc %s" % repos_url)
         self.check_output("", "status dc")
 
+    def test_missing(self):
+        repos_url = self.make_repository('d')
+        
+        self.run_bzr("init dc")
+
+        os.chdir("dc")
+        output, err = self.run_bzr("missing %s" % repos_url, retcode=1)
+        self.assertContainsRe(output, "You are missing 1 revision\\(s\\):")
+
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.add_dir('trunk')
+        trunk.add_file("trunk/foo").modify()
+        dc.close()
+
+        output, err = self.run_bzr("missing %s" % repos_url, retcode=1)
+        self.assertContainsRe(output, "You are missing 2 revision\\(s\\):")
+
     def test_push_overwrite(self):
         repos_url = self.make_repository('d')
         

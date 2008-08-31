@@ -12,7 +12,6 @@ mappingv4:
 tests:
 - more blackbox tests
  - svn-import without scheme specified should guess
- - bzr missing
 - add tests for objects returned by WorkingTree.pull(), Branch.pull()
 
 .svn working trees:
