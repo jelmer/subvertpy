@@ -218,3 +218,72 @@ class TestInventoryExternals(SubversionTestCase):
         self.assertEqual(mapping.revision_id_foreign_to_bzr((repos.uuid, 1, "")), 
                          ie.revision)
         self.assertEqual(expected_ie, inv[inv.path2id('bla')])
+
+
+class TestSvnRevisionTree(SubversionTestCase):
+    def setUp(self):
+        super(TestSvnRevisionTree, self).setUp()
+        repos_url = self.make_client('d', 'dc')
+        self.build_tree({'dc/foo/bla': "data"})
+        self.client_add("dc/foo")
+        self.client_commit("dc", "My Message")
+        self.repos = Repository.open(repos_url)
+        mapping = self.repos.get_mapping()
+        self.inventory = self.repos.get_inventory(
+                self.repos.generate_revision_id(1, "", mapping))
+        self.tree = self.repos.revision_tree(
+                self.repos.generate_revision_id(1, "", mapping))
+
+    def test_inventory(self):
+        self.assertIsInstance(self.tree.inventory, Inventory)
+        self.assertEqual(self.inventory, self.tree.inventory)
+
+    def test_get_parent_ids(self):
+        mapping = self.repos.get_mapping()
+        self.assertEqual((self.repos.generate_revision_id(0, "", mapping),), self.tree.get_parent_ids())
+
+    def test_get_parent_ids_zero(self):
+        mapping = self.repos.get_mapping()
+        tree = self.repos.revision_tree(
+                self.repos.generate_revision_id(0, "", mapping))
+        self.assertEqual((), tree.get_parent_ids())
+
+    def test_get_revision_id(self):
+        mapping = self.repos.get_mapping()
+        self.assertEqual(self.repos.generate_revision_id(1, "", mapping),
+                         self.tree.get_revision_id())
+
+    def test_get_file_lines(self):
+        self.assertEqual(["data"], 
+                self.tree.get_file_lines(self.inventory.path2id("foo/bla")))
+
+    def test_executable(self):
+        self.client_set_prop("dc/foo/bla", "svn:executable", "*")
+        self.client_commit("dc", "My Message")
+
+        mapping = self.repos.get_mapping()
+        
+        inventory = self.repos.get_inventory(
+                self.repos.generate_revision_id(2, "", mapping))
+
+        self.assertTrue(inventory[inventory.path2id("foo/bla")].executable)
+
+    def test_symlink(self):
+        if not has_symlinks():
+            return
+        os.symlink('foo/bla', 'dc/bar')
+        self.client_add('dc/bar')
+        self.client_commit("dc", "My Message")
+
+        mapping = self.repos.get_mapping()
+        
+        inventory = self.repos.get_inventory(
+                self.repos.generate_revision_id(2, "", mapping))
+
+        self.assertEqual('symlink', inventory[inventory.path2id("bar")].kind)
+        self.assertEqual('foo/bla', 
+                inventory[inventory.path2id("bar")].symlink_target)
+
+    def test_not_executable(self):
+        self.assertFalse(self.inventory[
+            self.inventory.path2id("foo/bla")].executable)
