@@ -15,6 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Basis and revision tree tests."""
 
+import os
+
 from bzrlib.inventory import Inventory, TreeReference
 from bzrlib.osutils import has_symlinks
 from bzrlib.repository import Repository
