@@ -238,8 +238,6 @@ def sha1(text):
     return sha.new(text).hexdigest()
 
 
-
-
 class Mappingv4TestAdapter(MappingTestAdapter, TestCase):
     def setUp(self):
         self.mapping = BzrSvnMappingv4()

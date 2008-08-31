@@ -13,13 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sha
-
 from bzrlib.tests import TestCase
 
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme
-from bzrlib.plugins.svn.tests.test_mapping import MappingTestAdapter
+from bzrlib.plugins.svn.tests.test_mapping import MappingTestAdapter, sha1
 
 class Mappingv3FilePropTests(MappingTestAdapter, TestCase):
     def setUp(self):

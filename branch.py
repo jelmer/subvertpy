@@ -18,6 +18,7 @@
 from bzrlib import ui, urlutils
 from bzrlib.branch import Branch, BranchFormat, BranchCheckResult, PullResult
 from bzrlib.bzrdir import BzrDir
+from bzrlib.decorators import needs_write_lock
 from bzrlib.errors import (NoSuchFile, DivergedBranches, NoSuchRevision, 
                            NotBranchError, UnstackableBranchFormat)
 from bzrlib.revision import is_null, ensure_null
@@ -338,9 +339,10 @@ class SvnBranch(Branch):
         # on large branches.
         return self.generate_revision_id(self.get_revnum())
 
+    @needs_write_lock
     def dpull(self, source, stop_revision=None):
         from bzrlib.plugins.svn.commit import dpush
-        return dpush(source, self, stop_revision)
+        return dpush(self, source, stop_revision)
 
     def pull(self, source, overwrite=False, stop_revision=None, 
              _hook_master=None, run_hooks=True, _push_merged=None):
