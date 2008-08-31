@@ -708,7 +708,7 @@ mapping_registry.register('v2', BzrSvnMappingv2,
         'Second format (bzr-svn 0.3.x)')
 mapping_registry.register_lazy('v3', 'bzrlib.plugins.svn.mapping3', 
                                'BzrSvnMappingv3FileProps', 
-                               'Default third format (bzr-svn 0.4.x)')
+                               'Third format (bzr-svn 0.4.x)')
 mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4', 
                                'BzrSvnMappingv4',
                                'Fourth format (bzr-svn 0.5.x)')

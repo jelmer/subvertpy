@@ -166,6 +166,7 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
         else:
             self.scheme = scheme
         self.guessed_scheme = guessed_scheme
+        self.name = "v3-" + str(scheme)
 
     @classmethod
     def from_revprops(cls, revprops):
@@ -282,7 +283,6 @@ class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
 
     def __init__(self, scheme, guessed_scheme=None):
         BzrSvnMappingv3.__init__(self, scheme, guessed_scheme)
-        self.name = "v3-" + str(scheme)
         self.revprop_map = mapping.BzrSvnMappingRevProps()
 
     def export_text_parents(self, text_parents, svn_revprops, fileprops):
@@ -304,12 +304,4 @@ class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
         mapping.BzrSvnMappingFileProps.export_message(self, log, revprops, fileprops)
         if revprops is not None:
             self.revprop_map.export_message(log, revprops, fileprops)
-
-
-class BzrSvnMappingv3RevProps(mapping.BzrSvnMappingRevProps, BzrSvnMappingv3):
-    def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops):
-        mapping.BzrSvnMappingRevProps.export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops)
-        svn_revprops[mapping.SVN_REVPROP_BZR_MAPPING_VERSION] = "3"
-
-
 

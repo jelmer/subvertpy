@@ -438,7 +438,7 @@ class TestFetchWorks(SubversionTestCase):
         tmp.add_dir("branches/tmp/abranch", "trunk/mydir")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         set_branching_scheme(oldrepos, TrunkBranchingScheme())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
@@ -1491,7 +1491,7 @@ Node-copyfrom-path: x
         branches.add_dir("branches/foobranch", "trunk")
         dc.close()
 
-        repos = remote.SvnRemoteAccess(SvnRaTransport("svn+"+repos_url), format.SvnRemoteFormat()).find_repository()
+        repos = remote.SvnRemoteAccess(SvnRaTransport(repos_url), format.SvnRemoteFormat()).find_repository()
         set_branching_scheme(repos, TrunkBranchingScheme())
 
         mapping = repos.get_mapping()
@@ -1550,7 +1550,7 @@ Node-copyfrom-path: x
         f.change_prop("svn:executable", "*")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir1 = BzrDir.create("f", format.get_rich_root_format())
         dir2 = BzrDir.create("g", format.get_rich_root_format())
         newrepos1 = dir1.create_repository()
@@ -1576,7 +1576,7 @@ Node-copyfrom-path: x
         blie.change_prop("svn:executable", "")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1601,7 +1601,7 @@ Node-copyfrom-path: x
         dc.open_file("bla").modify("data2")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1625,7 +1625,7 @@ Node-copyfrom-path: x
         l.change_prop("svn:special", "*")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1650,7 +1650,7 @@ Node-copyfrom-path: x
         l.change_prop("svn:special", "*")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1693,7 +1693,7 @@ Node-copyfrom-path: x
         dc = self.get_commit_editor(repos_url)
         dc.open_file("mylink").change_prop("svn:special", "*")
         dc.close()
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1719,7 +1719,7 @@ Node-copyfrom-path: x
         dc.open_file("bla").change_prop("svn:executable", "*")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1743,7 +1743,7 @@ Node-copyfrom-path: x
         dc.change_prop("bzr:ancestry:v3-none", "aghost\n")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1766,7 +1766,7 @@ Node-copyfrom-path: x
         foo.open_file("branches/foo/bla").modify("more data")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
 
         dc = self.get_commit_editor(repos_url)
         dc.open_dir("trunk").change_prop("svk:merge", 
@@ -1791,7 +1791,7 @@ Node-copyfrom-path: x
         dc.change_prop("bzr:ancestry:v3-none", "a ghost\n")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1820,7 +1820,7 @@ Node-copyfrom-path: x
         dc.change_prop("some:property", "some data4\n")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1855,7 +1855,7 @@ Node-copyfrom-path: x
         trunk.change_prop("some:property", "some data3\n")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         set_branching_scheme(oldrepos, TrunkBranchingScheme())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
@@ -1899,7 +1899,7 @@ Node-copyfrom-path: x
         stationary.add_file("branches/abranch/bdir/stationary/traveller").modify("data")
         dc.close()
 
-        oldrepos = Repository.open("svn+"+repos_url)
+        oldrepos = Repository.open(repos_url)
         set_branching_scheme(oldrepos, TrunkBranchingScheme())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()

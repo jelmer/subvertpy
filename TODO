@@ -1,8 +1,8 @@
 mappingv4:
  - implement layout functions, including command
- - integrate svn-set-revprops into svn-upgrade ?
  - add options in commit for create_root, create_prefix
   - if create_root=False: skip _check_dirs_exist
+  - create branches/ dir automatically
  - allow skipping a revision completely - to allow creating branches using "svn cp"
 
 - generate deltas rather than fulltexts when creating file id maps
@@ -20,8 +20,6 @@ tests:
 .svn working trees:
 - implement apply_inventory_delta()
 
-pushmerge:
- - create branches/ dir automatically
 
 - Needs more tests
  - parents cache
