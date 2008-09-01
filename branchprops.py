@@ -26,6 +26,7 @@ from bzrlib.plugins.svn.errors import ERR_FS_NO_SUCH_REVISION
 class PathPropertyProvider(object):
     def __init__(self, log):
         self.log = log
+        self._props_cache = {}
 
     def get_properties(self, path, revnum):
         """Obtain all the directory properties set on a path/revnum pair.
@@ -37,6 +38,9 @@ class PathPropertyProvider(object):
         assert isinstance(path, str)
         path = path.lstrip("/")
 
+        if (path, revnum) in self._props_cache:
+            return self._props_cache[path, revnum]
+
         try:
             (_, _, props) = self.log._transport.get_dir(path, 
                 revnum)
@@ -45,6 +49,7 @@ class PathPropertyProvider(object):
                 raise NoSuchRevision(self, revnum)
             raise
 
+        self._props_cache[path, revnum] = props
         return props
 
     def get_changed_properties(self, path, revnum):
