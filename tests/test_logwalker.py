@@ -448,56 +448,6 @@ class TestLogWalker(SubversionTestCase):
 
         self.assertEqual(("trunk", 1), walker.get_previous("trunk", 2))
 
-    def test_get_previous_added(self):
-        repos_url = self.make_repository("a")
-
-        cb = self.get_commit_editor(repos_url)
-        t = cb.add_dir("trunk")
-        t.add_file("trunk/afile").modify()
-        cb.close()
-
-        cb = self.get_commit_editor(repos_url)
-        t = cb.open_dir("trunk")
-        t.open_file("trunk/afile").modify()
-        t.change_prop("myprop", "mydata")
-        cb.close()
-
-        walker = self.get_log_walker(transport=SvnRaTransport(repos_url))
-
-        self.assertEqual((None, -1), walker.get_previous("trunk", 1))
-
-    def test_get_previous_copy(self):
-        repos_url = self.make_repository("a")
-
-        cb = self.get_commit_editor(repos_url)
-        t = cb.add_dir("trunk")
-        t.add_file("trunk/afile")
-        cb.close()
-
-        cb = self.get_commit_editor(repos_url)
-        cb.add_dir("anotherfile", "trunk")
-        cb.close()
-
-        walker = self.get_log_walker(transport=SvnRaTransport(repos_url))
-
-        self.assertEqual(("trunk", 1), walker.get_previous("anotherfile", 2))
-
-    def test_get_previous_replace(self):
-        repos_url = self.make_repository("a")
-
-        cb = self.get_commit_editor(repos_url)
-        cb.add_dir("trunk")
-        cb.close()
-
-        cb = self.get_commit_editor(repos_url)
-        cb.delete("trunk")
-        cb.add_dir("trunk")
-        cb.close()
-
-        walker = self.get_log_walker(transport=SvnRaTransport(repos_url))
-
-        self.assertEqual((None, -1), walker.get_previous("trunk", 2))
-
     def test_find_children_empty(self):
         repos_url = self.make_repository("a")
 
@@ -721,10 +671,3 @@ class TestLogCache(TestCase):
         self.assertEquals(42, self.cache.path_added("foo", 41, 43))
         self.assertEquals(None, self.cache.path_added("foo", 42, 43))
         self.assertEquals(None, self.cache.path_added("foo", 44, 49))
-
-    def test_get_change(self):
-        self.cache.insert_path(41, "foo", "A", "bla", 32)
-        self.cache.insert_path(42, "foo", "A")
-        self.assertEquals(("A", None, -1), self.cache.get_change("foo", 42))
-        self.assertEquals(("A", "bla", 32), self.cache.get_change("foo", 41))
-

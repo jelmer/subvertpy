@@ -140,40 +140,6 @@ class LogCache(CacheTable):
                      and action in ('A', 'R')))
         """, (revnum, path, path + "/*", path)).fetchone()[0]
 
-    def path_added(self, path, from_revnum, to_revnum):
-        """Determine whether a path was recently added. 
-        
-        It returns the latest revision number before to_revnum in which the 
-        path was added or replaced, or None if the path was neither added nor
-        replaced after from_revnum but before to_revnum.
-        """
-        assert from_revnum < to_revnum
-        return self.cachedb.execute("""
-            select max(rev) from changed_path
-            where rev > ? and rev <= ?
-            and (?=path or ? glob (path || '/*'))
-            and action in ('A', 'R')
-        """, (from_revnum, to_revnum, path, path)).fetchone()[0]
-    
-    def get_change(self, path, revnum):
-        return self.cachedb.execute("""
-            select action, copyfrom_path, copyfrom_rev
-            from changed_path
-            where path=? and rev=?
-        """, (path, revnum)).fetchone()
-
-    def get_previous(self, path, revnum):
-        """Determine the change that created the given path or its
-        nearest ancestor, in order to determine where it came from."""
-        return self.cachedb.execute("""
-            select path, action, copyfrom_path, copyfrom_rev
-            from changed_path
-            where rev=? and action in ('A', 'R')
-            and (path=? or path='' or ? glob (path || '/*'))
-            order by path desc
-            limit 1
-        """, (revnum, path, path)).fetchone()
-
     def get_revision_paths(self, revnum):
         """Return all history information for a given revision number.
         
@@ -187,16 +153,6 @@ class LogCache(CacheTable):
             paths[p.encode("utf-8")] = (act, cf, cr)
         return paths
     
-    def changes_path(self, path, revnum):
-        """Check whether a path was changed in a particular revision:
-
-        :param path: path to check for
-        :param revnum: revision number to fetch
-        """
-        if path == '':
-            return self.cachedb.execute("select count(*) from changed_path where rev=?", (revnum,)).fetchone()[0] > 0
-        return self.cachedb.execute("select count(*) from changed_path where rev=? and (path=? or path glob (? || '/*'))", (revnum, path, path)).fetchone()[0] > 0
-
     def insert_path(self, rev, path, action, copyfrom_path=None, copyfrom_rev=-1):
         """Insert new history information into the cache.
         
@@ -327,7 +283,7 @@ class CachingLogWalker(CacheTable):
                 else:
                     pb.update("determining changes", from_revnum-revnum, from_revnum)
             assert revnum > 0 or path == "", "Inconsistent path,revnum: %r,%r" % (revnum, path)
-            revpaths = self._get_revision_paths(revnum)
+            revpaths = self.get_revision_paths(revnum)
 
             if ascending:
                 next = (path, revnum+1)
@@ -352,55 +308,12 @@ class CachingLogWalker(CacheTable):
             assert isinstance(path, str)
             assert isinstance(revnum, int)
 
-    def get_previous(self, path, revnum):
-        """Return path,revnum pair specified pair was derived from.
-
-        :param path:  Path to check
-        :param revnum:  Revision to check
-        """
-        assert revnum >= 0
-        self.fetch_revisions(revnum)
-        self.mutter("get previous %r:%r", path, revnum)
-        if path == "":
-            if revnum == 0:
-                return (None, -1)
-            return (path, revnum - 1)
-        row = self.cache.get_previous(path, revnum)
-        if row is None:
-            return (path, revnum-1)
-        (branch_path, action, copyfrom_path, copyfrom_rev) = row
-        branch_path = branch_path.encode('utf-8')
-        if copyfrom_path is not None:
-            copyfrom_path = copyfrom_path.encode('utf-8')
-        assert path == branch_path or path.startswith(branch_path + "/")
-        if copyfrom_rev == -1:
-            assert path == branch_path
-            return (None, -1) # newly added
-        return (copyfrom_path + path[len(branch_path):], copyfrom_rev)
-
-    def _get_revision_paths(self, revnum):
+    def get_revision_paths(self, revnum):
         if revnum == 0:
             return {'': ('A', None, -1)}
         self.fetch_revisions(revnum)
 
         return self.cache.get_revision_paths(revnum)
-
-    def get_change(self, path, revnum):
-        """Return action,copyfrom_path,copyfrom_revnum tuple for given
-        path, or None if no modification occurred in given revision.
-
-        :param path:  Path to check
-        :param revnum:  Revision to check
-        """
-        assert revnum >= 0
-        self.fetch_revisions(revnum)
-        
-        self.mutter("get previous %r:%r", path, revnum)
-        if revnum == 0:
-            if path == "":
-                return ('A', None, -1)
-            return None
-        return self.cache.get_change(path, revnum)
 
     def revprop_list(self, revnum):
         self.mutter('revprop list: %d' % revnum)
@@ -424,10 +337,6 @@ class CachingLogWalker(CacheTable):
         self.cache.insert_revinfo(revnum, True)
         self.cache.commit()
         return revprops
-
-    def changes_path(self, path, revnum):
-        self.fetch_revisions(revnum)
-        return self.cache.changes_path(path, revnum)
 
     def fetch_revisions(self, to_revnum=None, pb=None):
         """Fetch information about all revisions in the remote repository
@@ -485,7 +394,7 @@ class CachingLogWalker(CacheTable):
         self.cache.commit()
 
 
-def struct_revpaths_to_tuples(changed_paths):
+def strip_slashes(changed_paths):
     assert isinstance(changed_paths, dict)
     revpaths = {}
     for k, (action, copyfrom_path, copyfrom_rev) in changed_paths.items():
@@ -557,7 +466,7 @@ class LogWalker(object):
                 if revnum == 0 and changed_paths is None:
                     revpaths = {"": ('A', None, -1)}
                 elif isinstance(changed_paths, dict):
-                    revpaths = struct_revpaths_to_tuples(changed_paths)
+                    revpaths = strip_slashes(changed_paths)
                 else:
                     revpaths = {}
                 if todo_revprops is None:
@@ -571,7 +480,7 @@ class LogWalker(object):
                     revision="Revision number %d" % from_revnum)
             raise
 
-    def _get_revision_paths(self, revnum):
+    def get_revision_paths(self, revnum):
         """Obtain dictionary with all the changes in a particular revision.
 
         :param revnum: Subversion revision number
@@ -583,7 +492,7 @@ class LogWalker(object):
             return {'': ('A', None, -1)}
 
         try:
-            return struct_revpaths_to_tuples(
+            return strip_slashes(
                 self._transport.iter_log([""], revnum, revnum, 1, True, True, False, []).next()[0])
         except SubversionException, (_, num):
             if num == ERR_FS_NO_SUCH_REVISION:
@@ -591,12 +500,6 @@ class LogWalker(object):
                     revision="Revision number %d" % revnum)
             raise
 
-    def changes_path(self, path, revnum):
-        return self._get_revision_paths(revnum).has_key(path)
-
-    def get_change(self, path, revnum):
-        return self._get_revision_paths(revnum).get(path)
-        
     def find_children(self, path, revnum):
         """Find all children of path in revnum.
 
@@ -625,32 +528,3 @@ class LogWalker(object):
         finally:
             self._transport.connections.add(conn)
         return results
-
-    def get_previous(self, path, revnum):
-        """Return path,revnum pair specified pair was derived from.
-
-        :param path:  Path to check
-        :param revnum:  Revision to check
-        """
-        assert revnum >= 0
-        if revnum == 0:
-            return (None, -1)
-
-        try:
-            paths = struct_revpaths_to_tuples(self._transport.iter_log([path], revnum, revnum, 1, True, False, False, []).next()[0])
-        except SubversionException, (_, num):
-            if num == ERR_FS_NO_SUCH_REVISION:
-                raise NoSuchRevision(branch=self, 
-                    revision="Revision number %d" % revnum)
-            raise
-
-        if not path in paths:
-            return (None, -1)
-
-        if paths[path][2] == -1:
-            if paths[path][0] in ('A', 'R'):
-                return (None, -1)
-            return (path, revnum-1)
-
-        return (paths[path][1], paths[path][2])
-

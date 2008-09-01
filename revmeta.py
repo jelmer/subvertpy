@@ -24,7 +24,7 @@ class RevisionMetadata(object):
     def __init__(self, repository, branch_path, revnum, paths, revprops, changed_fileprops=None, consider_fileprops=True):
         self.repository = repository
         self.branch_path = branch_path
-        self.paths = paths
+        self._paths = paths
         self.revnum = revnum
         self.revprops = revprops
         self._changed_fileprops = changed_fileprops
@@ -34,6 +34,11 @@ class RevisionMetadata(object):
     def __repr__(self):
         return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, self.repository.uuid)
 
+    def get_paths(self):
+        if self._paths is None:
+            self._paths = self.repository._log.get_revision_paths(self.revnum)
+        return self._paths
+
     def get_revision_id(self, mapping):
         return self.repository.get_revmap().get_revision_id(self.revnum, self.branch_path, mapping, 
                                                             self.revprops, self.get_changed_fileprops())
@@ -42,7 +47,7 @@ class RevisionMetadata(object):
         return self.repository.branchprop_list.get_properties(self.branch_path, self.revnum)
 
     def get_previous_fileprops(self):
-        prev = changes.find_prev_location(self.paths, self.branch_path, self.revnum)
+        prev = changes.find_prev_location(self.get_paths(), self.branch_path, self.revnum)
         if prev is None:
             return {}
         (prev_path, prev_revnum) = prev
@@ -50,9 +55,7 @@ class RevisionMetadata(object):
 
     def get_changed_fileprops(self):
         if self._changed_fileprops is None:
-            if self.paths is None:
-                self._changed_fileprops = self.repository.branchprop_list.get_changed_properties(self.branch_path, self.revnum)
-            elif self.branch_path in self.paths:
+            if self.branch_path in self.get_paths():
                 self._changed_fileprops = properties.diff(self.get_fileprops(), self.get_previous_fileprops())
             else:
                 self._changed_fileprops = {}

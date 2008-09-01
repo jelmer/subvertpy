@@ -281,10 +281,7 @@ class SvnRaTransport(Transport):
             def next(self):
                 self.semaphore.acquire()
                 ret = self.pending.pop(0)
-                if ret is None:
-                    self.transport.add_connection(self.conn)
-                elif isinstance(ret, Exception):
-                    self.transport.add_connection(self.conn)
+                if isinstance(ret, Exception):
                     raise ret
                 return ret
 
@@ -303,6 +300,7 @@ class SvnRaTransport(Transport):
                 finally:
                     self.pending.append(Exception("Some exception was not handled"))
                     self.semaphore.release()
+                    self.transport.add_connection(self.conn)
 
         if paths is None:
             newpaths = None

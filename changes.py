@@ -22,7 +22,6 @@ def path_is_child(branch_path, path):
 
 
 def find_prev_location(paths, branch_path, revnum):
-    assert isinstance(paths, dict)
     assert isinstance(branch_path, str)
     assert isinstance(revnum, int)
     if revnum == 0:
