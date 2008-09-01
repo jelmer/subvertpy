@@ -23,6 +23,8 @@ bzr-svn-0.5			UNRELEASED
    * Create branches/ directory automatically if it didn't exist
      when pushing merged revisions.
 
+   * Only fetch signatures if they can be cheaply copied.
+
   BUG FIXES
 
    * Set bzr signature revision property during commit if possible.

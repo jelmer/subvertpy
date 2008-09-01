@@ -407,7 +407,11 @@ class RevisionBuildEditor(DeltaBuildEditor):
                                      self.revmeta.uuid, self.revmeta.branch_path,
                                      self.revmeta.revnum, rev)
 
-        signature = self.revmeta.revprops.get(SVN_REVPROP_BZR_SIGNATURE)
+        # Only fetch if it's cheap
+        if self.source.transport.has_capability("log-revprops"):
+            signature = self.revmeta.revprops.get(SVN_REVPROP_BZR_SIGNATURE)
+        else:
+            signature = None
 
         return (rev, signature)
 
