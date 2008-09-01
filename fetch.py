@@ -122,9 +122,9 @@ class DirectoryBuildEditor(object):
     def change_prop(self, name, value):
         if self.path == "":
             # Replay lazy_dict, since it may be more expensive
-            if type(self.editor.revmeta.changed_fileprops) != dict:
-                self.editor.revmeta.changed_fileprops = {}
-            self.editor.revmeta.changed_fileprops[name] = value
+            if type(self.editor.revmeta._changed_fileprops) != dict:
+                self.editor.revmeta._changed_fileprops = {}
+            self.editor.revmeta._changed_fileprops[name] = value
 
         if name in (properties.PROP_ENTRY_COMMITTED_DATE,
                     properties.PROP_ENTRY_COMMITTED_REV,
@@ -403,7 +403,7 @@ class RevisionBuildEditor(DeltaBuildEditor):
         rev = Revision(revision_id=revid, 
                        parent_ids=parent_ids)
 
-        self.mapping.import_revision(self.revmeta.revprops, self.revmeta.changed_fileprops, 
+        self.mapping.import_revision(self.revmeta.revprops, self.revmeta.get_changed_fileprops(), 
                                      self.revmeta.uuid, self.revmeta.branch_path,
                                      self.revmeta.revnum, rev)
 
@@ -494,7 +494,7 @@ class RevisionBuildEditor(DeltaBuildEditor):
     def _get_text_revid(self, path):
         if self._text_revids is None:
             self._text_revids = self.mapping.import_text_parents(self.revmeta.revprops, 
-                                                                 self.revmeta.changed_fileprops)
+                                                                 self.revmeta.get_changed_fileprops())
         return self._text_revids.get(path)
 
 

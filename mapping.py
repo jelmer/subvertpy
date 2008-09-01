@@ -768,3 +768,10 @@ def is_bzr_revision_fileprops(fileprops):
         if k.startswith(SVN_PROP_BZR_REVISION_ID):
             return True
     return None
+
+
+def contains_bzr_fileprops(fileprops):
+    for k in fileprops:
+        if k.startswith(SVN_PROP_BZR_PREFIX):
+            return True
+    return False
