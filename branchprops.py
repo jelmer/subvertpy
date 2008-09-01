@@ -41,6 +41,9 @@ class PathPropertyProvider(object):
         if (path, revnum) in self._props_cache:
             return self._props_cache[path, revnum]
 
+        return logwalker.lazy_dict({}, self._real_get_properties, path, revnum)
+
+    def _real_get_properties(self, path, revnum):
         try:
             (_, _, props) = self.log._transport.get_dir(path, 
                 revnum)
@@ -52,7 +55,7 @@ class PathPropertyProvider(object):
         self._props_cache[path, revnum] = props
         return props
 
-    def get_changed_properties(self, path, revnum):
+    def get_changed_properties(self, path, revnum, skip_check=False):
         """Get the contents of a Subversion file property.
 
         Will use the cache.
@@ -63,10 +66,10 @@ class PathPropertyProvider(object):
         """
         assert isinstance(revnum, int)
         assert isinstance(path, str)
-        return logwalker.lazy_dict({}, self._real_get_changed_properties, path, revnum)
+        return logwalker.lazy_dict({}, self._real_get_changed_properties, path, revnum, skip_check)
 
-    def _real_get_changed_properties(self, path, revnum):
-        if self.log.get_change(path, revnum) is None:
+    def _real_get_changed_properties(self, path, revnum, skip_check):
+        if skip_check or self.log.get_change(path, revnum) is None:
             return {}
         current = self.get_properties(path, revnum)
         if current == {}:

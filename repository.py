@@ -134,7 +134,7 @@ class RevisionMetadata(object):
         if prev_path is None and prev_revnum == -1:
             previous_fileprops = {}
         else:
-            previous_fileprops = logwalker.lazy_dict({}, self.repository.branchprop_list.get_properties, prev_path.encode("utf-8"), prev_revnum)
+            previous_fileprops = self.repository.branchprop_list.get_lazy_properties(prev_path.encode("utf-8"), prev_revnum)
 
         previous = previous_fileprops.get(SVN_PROP_SVK_MERGE, "")
 
@@ -503,7 +503,8 @@ class SvnRepository(Repository):
                             if not bp in paths:
                                 svn_fileprops = {}
                             else:
-                                svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum)
+                                svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum, 
+                                                                                            skip_check=True)
                             yield self._revmeta(bp, paths, revnum, revprops, svn_fileprops)
 
     def all_revision_ids(self, layout=None, mapping=None):
@@ -814,7 +815,7 @@ class SvnRepository(Repository):
             if not bp in paths:
                 svn_fileprops = {}
             else:
-                svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum)
+                svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum, skip_check=True)
 
             yield self._revmeta(bp, paths, revnum, revprops, svn_fileprops)
 
