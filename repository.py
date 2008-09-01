@@ -73,7 +73,7 @@ def full_paths(find_children, paths, bp, from_bp, from_rev):
 
 class RevisionMetadata(object):
 
-    def __init__(self, repository, branch_path, revnum, paths, revprops, changed_fileprops=None, consider_fileprops=False):
+    def __init__(self, repository, branch_path, revnum, paths, revprops, changed_fileprops=None, consider_fileprops=True):
         self.repository = repository
         self.branch_path = branch_path
         self.paths = paths
