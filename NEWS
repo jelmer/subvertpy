@@ -20,6 +20,9 @@ bzr-svn-0.5			UNRELEASED
 
    * "bzr revert" in a Subversion working tree now works.
 
+   * Create branches/ directory automatically if it didn't exist
+     when pushing merged revisions.
+
   BUG FIXES
 
    * Set bzr signature revision property during commit if possible.

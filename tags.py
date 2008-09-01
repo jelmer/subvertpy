@@ -37,33 +37,8 @@ class SubversionTags(BasicTags):
         if existing_bp_parts == bp_parts:
             self._parent_exists = True
             return
-        conn = self.repository.transport.get_connection()
-        try:
-            ci = conn.get_commit_editor(self._revprops("Add tags base directory."))
-            try:
-                root = ci.open_root()
-                name = None
-                batons = [root]
-                for p in existing_bp_parts:
-                    if name is None:
-                        name = p
-                    else:
-                        name += "/" + p
-                    batons.append(batons[-1].open_directory(name))
-                for p in bp_parts[len(existing_bp_parts):]:
-                    if name is None:
-                        name = p
-                    else:
-                        name += "/" + p
-                    batons.append(batons[-1].add_directory(name))
-                for baton in reversed(batons):
-                    baton.close()
-            except:
-                ci.abort()
-                raise
-            ci.close()
-        finally:
-            self.repository.transport.add_connection(conn)
+        commit.create_branch_prefix(self.repository, self._revprops("Add tags base directory."),
+                             bp_parts, existing_bp_parts)
         self._parent_exists = True
 
     def set_tag(self, tag_name, tag_target):

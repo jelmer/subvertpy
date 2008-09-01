@@ -89,9 +89,10 @@ class ChangesRootLHSHistory(BzrError):
 class MissingPrefix(BzrError):
     _fmt = """Prefix missing for %(path)s; please create it before pushing. """
 
-    def __init__(self, path):
+    def __init__(self, path, existing_path):
         BzrError.__init__(self)
         self.path = path
+        self.existing_path = existing_path
 
 
 class RaRequestFailed(BzrError):

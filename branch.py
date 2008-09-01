@@ -430,7 +430,9 @@ class SvnBranch(Branch):
                           len(todo))
                 if push_merged:
                     parent_revids = other_graph.get_parent_map([revid])[revid]
-                    push_ancestors(self.repository, other.repository, self.layout, self.project, parent_revids, other_graph)
+                    push_ancestors(self.repository, other.repository, self.layout, 
+                                   self.project, parent_revids, other_graph,
+                                   create_prefix=True)
                 push(my_graph, self, other.repository, revid)
                 self._clear_cached_state()
         finally:

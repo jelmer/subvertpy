@@ -2,12 +2,10 @@ mappingv4:
  - implement layout functions, including command
  - add options in commit for create_root, create_prefix
   - if create_root=False: skip _check_dirs_exist
-  - create branches/ dir automatically
  - allow skipping a revision completely - to allow creating branches using "svn cp"
 
 - generate deltas rather than fulltexts when creating file id maps
 - transform file ids in workingtree in svn-upgrade
-- only look for fileprops until the first custom revprop that appears in revhistory and mapping.supports_custom_revprops()
 
 tests:
 - more blackbox tests

@@ -402,7 +402,7 @@ class SvnCommitBuilder(RootCommitBuilder):
 
         if (len(existing_elements) != len(elements) and
             len(existing_elements)+1 != len(elements)):
-            raise MissingPrefix("/".join(elements))
+            raise MissingPrefix("/".join(elements), "/".join(existing_elements))
 
         # Branch already exists and stayed at the same location, open:
         # TODO: What if the branch didn't change but the new revision 
@@ -871,7 +871,8 @@ class InterToSvnRepository(InterRepository):
                     target_branch.set_branch_path(bp)
 
                 if layout.push_merged_revisions(target_branch.project) and len(rev.parent_ids) > 1:
-                    push_ancestors(self.target, self.source, layout, "", rev.parent_ids, graph)
+                    push_ancestors(self.target, self.source, layout, "", rev.parent_ids, graph,
+                                   create_prefix=True)
 
                 target_config = target_branch.get_config()
                 push_revision_tree(graph, target_branch, target_config, 
@@ -890,7 +891,7 @@ class InterToSvnRepository(InterRepository):
         return isinstance(target, SvnRepository)
 
 
-def push_ancestors(target_repo, source_repo, layout, project, parent_revids, graph):
+def push_ancestors(target_repo, source_repo, layout, project, parent_revids, graph, create_prefix=False):
     for parent_revid in parent_revids[1:]:
         if target_repo.has_revision(parent_revid):
             continue
@@ -902,4 +903,43 @@ def push_ancestors(target_repo, source_repo, layout, project, parent_revids, gra
             rev = source_repo.get_revision(x)
             nick = (rev.properties.get('branch-nick') or "merged").encode("utf-8").replace("/","_")
             rhs_branch_path = layout.get_branch_path(nick, project)
-            push_new(target_repo, rhs_branch_path, source_repo, x)
+            try:
+                push_new(target_repo, rhs_branch_path, source_repo, x)
+            except MissingPrefix, e:
+                if not create_prefix:
+                    raise
+                revprops = {properties.PROP_REVISION_LOG: "Add branches directory."}
+                if target_repo.transport.has_capability("commit-revprops"):
+                    revprops[mapping.SVN_REVPROP_BZR_SKIP] = ""
+                create_branch_prefix(target_repo, revprops, e.path.split("/")[:-1], filter(lambda x: x != "", e.existing_path.split("/")))
+                push_new(target_repo, rhs_branch_path, source_repo, x)
+
+
+def create_branch_prefix(repository, revprops, bp_parts, existing_bp_parts):
+    conn = repository.transport.get_connection()
+    try:
+        ci = conn.get_commit_editor(revprops)
+        try:
+            root = ci.open_root()
+            name = None
+            batons = [root]
+            for p in existing_bp_parts:
+                if name is None:
+                    name = p
+                else:
+                    name += "/" + p
+                batons.append(batons[-1].open_directory(name))
+            for p in bp_parts[len(existing_bp_parts):]:
+                if name is None:
+                    name = p
+                else:
+                    name += "/" + p
+                batons.append(batons[-1].add_directory(name))
+            for baton in reversed(batons):
+                baton.close()
+        except:
+            ci.abort()
+            raise
+        ci.close()
+    finally:
+        repository.transport.add_connection(conn)
