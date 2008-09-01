@@ -126,7 +126,7 @@ class LogCache(CacheTable):
             create unique index if not exists revprop_rev_name on revprop(rev, name);
             create unique index if not exists revinfo_rev on revinfo(rev);
         """)
-        self._commit_interval = 1000
+        self._commit_interval = 5000
     
     def find_latest_change(self, path, revnum):
         if path == "":
