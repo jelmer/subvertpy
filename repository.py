@@ -73,13 +73,13 @@ def full_paths(find_children, paths, bp, from_bp, from_rev):
 
 class RevisionMetadata(object):
 
-    def __init__(self, repository, branch_path, paths, revnum, revprops, fileprops, consider_fileprops=False):
+    def __init__(self, repository, branch_path, paths, revnum, revprops, changed_fileprops=None, consider_fileprops=False):
         self.repository = repository
         self.branch_path = branch_path
         self.paths = paths
         self.revnum = revnum
         self.revprops = revprops
-        self.fileprops = fileprops
+        self.changed_fileprops = fileprops
         self.uuid = repository.uuid
         self.consider_fileprops = consider_fileprops
 
@@ -87,10 +87,10 @@ class RevisionMetadata(object):
         return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, self.repository.uuid)
 
     def get_revision_id(self, mapping):
-        return self.repository.generate_revision_id(self.revnum, self.branch_path, mapping, self.revprops, self.fileprops)
+        return self.repository.generate_revision_id(self.revnum, self.branch_path, mapping, self.revprops, self.changed_fileprops)
 
     def get_lhs_parent(self, mapping):
-        lhs_parent = mapping.get_lhs_parent(self.branch_path, self.revprops, self.fileprops)
+        lhs_parent = mapping.get_lhs_parent(self.branch_path, self.revprops, self.changed_fileprops)
         if lhs_parent is None:
             # Determine manually
             lhs_parent = self.repository.lhs_revision_parent(self.branch_path, self.revnum, mapping)
@@ -105,7 +105,7 @@ class RevisionMetadata(object):
         if self.repository.quick_log_revprops:
             order.append(lambda: is_bzr_revision_revprops(self.revprops))
         if self.consider_fileprops:
-            order.append(lambda: is_bzr_revision_fileprops(self.fileprops))
+            order.append(lambda: is_bzr_revision_fileprops(self.changed_fileprops))
         # Only look for revprops if they could've been committed
         if (not self.repository.quick_log_revprops and 
                 self.repository.check_revprops):
@@ -117,7 +117,7 @@ class RevisionMetadata(object):
         return None
 
     def get_rhs_parents(self, mapping):
-        extra_rhs_parents = mapping.get_rhs_parents(self.branch_path, self.revprops, self.fileprops)
+        extra_rhs_parents = mapping.get_rhs_parents(self.branch_path, self.revprops, self.changed_fileprops)
 
         if extra_rhs_parents != ():
             return extra_rhs_parents
@@ -125,7 +125,7 @@ class RevisionMetadata(object):
         if self.is_bzr_revision():
             return ()
 
-        current = self.fileprops.get(SVN_PROP_SVK_MERGE, "")
+        current = self.changed_fileprops.get(SVN_PROP_SVK_MERGE, "")
         if current == "":
             return ()
 
@@ -170,13 +170,13 @@ class RevisionMetadata(object):
         rev.svn_meta = self
         rev.svn_mapping = mapping
 
-        mapping.import_revision(self.revprops, self.fileprops, self.repository.uuid, self.branch_path, 
+        mapping.import_revision(self.revprops, self.changed_fileprops, self.repository.uuid, self.branch_path, 
                                 self.revnum, rev)
 
         return rev
 
     def get_fileid_map(self, mapping):
-        return mapping.import_fileid_map(self.revprops, self.fileprops)
+        return mapping.import_fileid_map(self.revprops, self.changed_fileprops)
 
     def __hash__(self):
         return hash((self.__class__, self.repository.uuid, self.branch_path, self.revnum))
@@ -660,7 +660,7 @@ class SvnRepository(Repository):
             fileprops = self.branchprop_list.get_changed_properties(path, revnum)
 
         revmeta = RevisionMetadata(self, path, changes, revnum, revprops, 
-                                   fileprops, consider_fileprops)
+                                   fileprops, consider_fileprops=consider_fileprops)
         self._revmeta_cache[path,revnum] = revmeta
         return revmeta
 

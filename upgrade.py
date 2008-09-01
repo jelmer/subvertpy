@@ -23,7 +23,6 @@ from bzrlib.trace import info
 import itertools
 from bzrlib.plugins.svn import changes, logwalker, mapping, properties
 from bzrlib.plugins.svn.mapping import parse_revision_id
-from bzrlib.plugins.svn.repository import RevisionMetadata
 
 class UpgradeChangesContent(BzrError):
     """Inconsistency was found upgrading the mapping of a revision."""
