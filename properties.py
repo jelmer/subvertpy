@@ -213,3 +213,10 @@ PROP_ENTRY_UUID = 'svn:entry:uuid'
 PROP_REVISION_LOG = "svn:log"
 PROP_REVISION_AUTHOR = "svn:author"
 PROP_REVISION_DATE = "svn:date"
+
+def diff(current, previous):
+    ret = {}
+    for key, val in current.items():
+        if previous.get(key) != val:
+            ret[key] = val
+    return ret

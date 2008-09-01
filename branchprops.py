@@ -18,7 +18,7 @@
 
 from bzrlib.errors import NoSuchRevision
 
-from bzrlib.plugins.svn import logwalker
+from bzrlib.plugins.svn import logwalker, properties
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import ERR_FS_NO_SUCH_REVISION
 
@@ -80,8 +80,4 @@ class PathPropertyProvider(object):
         else:
             assert isinstance(prev_path, str)
             previous = self.get_properties(prev_path, prev_revnum)
-        ret = {}
-        for key, val in current.items():
-            if previous.get(key) != val:
-                ret[key] = val
-        return ret
+        return properties.diff(current, previous)
