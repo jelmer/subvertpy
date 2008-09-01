@@ -520,21 +520,12 @@ class SvnWorkingTree(WorkingTree):
         # FIXME: Use delta_reporter
         # FIXME: Use source
         # FIXME: Use overwrite
-        result = PullResult()
-        result.source_branch = source
-        result.master_branch = None
-        result.target_branch = self.branch
-        (result.old_revno, result.old_revid) = self.branch.last_revision_info()
-        if stop_revision is None:
-            stop_revision = self.branch.last_revision()
-        revnumber = self.branch.lookup_revision_id(stop_revision)
-        fetched = self._update(revnumber)
+        result = self.branch.pull(source, overwrite=overwrite, stop_revision=stop_revision)
+        fetched = self._update(self.branch.get_revnum())
         self.base_revnum = fetched
         self.base_revid = self.branch.generate_revision_id(fetched)
         self.base_tree = None
         self.read_working_inventory()
-        result.new_revid = self.base_revid
-        result.new_revno = self.branch.revision_id_to_revno(result.new_revid)
         return result
 
     def get_file_sha1(self, file_id, path=None, stat_value=None):

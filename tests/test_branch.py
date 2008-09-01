@@ -141,6 +141,30 @@ class WorkingSubversionBranch(SubversionTestCase):
         self.assertEqual("trunk2", branch.get_branch_path(2))
         self.assertEqual("trunk", branch.get_branch_path(1))
 
+    def test_pull_internal(self):
+        repos_url = self.make_repository("a")
+
+        dc = self.get_commit_editor(repos_url)
+        dc.add_dir("trunk")
+        dc.close()
+
+        dc = self.get_commit_editor(repos_url)
+        branches = dc.add_dir("branches")
+        branches.add_dir("branches/foo", "trunk", 1)
+        dc.close()
+
+        otherbranch = Branch.open(urlutils.join(repos_url, "branches", "foo"))
+        branch = Branch.open(urlutils.join(repos_url, "trunk"))
+        result = branch.pull(otherbranch)
+        self.assertEquals(branch.last_revision(), otherbranch.last_revision())
+        self.assertEquals(result.new_revid, otherbranch.last_revision())
+        self.assertEquals(result.old_revid, branch.revision_history()[0])
+        self.assertEquals(result.old_revno, 1)
+        self.assertEquals(result.new_revno, 2)
+        self.assertEquals(result.master_branch, None)
+        self.assertEquals(result.source_branch, otherbranch)
+        self.assertEquals(result.target_branch, branch)
+
     def test_get_branch_path_subdir(self):
         repos_url = self.make_repository("a")
 

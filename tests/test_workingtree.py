@@ -351,13 +351,28 @@ class TestWorkingTree(SubversionTestCase):
         repos_url = self.make_client('a', 'dc')
 
         dc = self.get_commit_editor(repos_url)
-        dc.add_dir("bar")
+        dc.add_dir("trunk")
         dc.close()
 
-        tree = WorkingTree.open("dc")
-        br = Branch.open(repos_url)
-        tree.pull(br)
+        self.client_update("dc")
+
+        dc = self.get_commit_editor(repos_url)
+        branches = dc.add_dir("branches")
+        foo = branches.add_dir("branches/foo", "trunk")
+        dc.close()
+
+        tree = WorkingTree.open("dc/trunk")
+        old_revid = tree.last_revision()
+        br = Branch.open("%s/branches/foo" % repos_url)
+        result = tree.pull(br)
         self.assertEquals(tree.last_revision(), br.last_revision())
+        self.assertEquals(tree.last_revision(), result.new_revid)
+        self.assertEquals(2, result.new_revno)
+        self.assertEquals(old_revid, result.old_revid)
+        self.assertEquals(1, result.old_revno)
+        self.assertEquals(None, result.master_branch)
+        self.assertEquals(tree.branch, result.target_branch)
+        self.assertEquals(br, result.source_branch)
  
     def test_working_inventory(self):
         self.make_client('a', 'dc')
