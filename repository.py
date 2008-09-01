@@ -109,7 +109,7 @@ class RevisionMetadata(object):
         # Only look for revprops if they could've been committed
         if (not self.repository.quick_log_revprops and 
                 self.repository.check_revprops):
-                order.append(lambda: is_bzr_revision_revprops(self.revprops))
+            order.append(lambda: is_bzr_revision_revprops(self.revprops))
         for fn in order:
             ret = fn()
             if ret is not None:
@@ -287,7 +287,7 @@ class SvnRepository(Repository):
         self.branchprop_list = PathPropertyProvider(self._log)
 
         self.check_revprops = self.transport.has_capability("commit-revprops") in (True, None)
-        self.quick_log_revprops = self.transport.has_capability("log-revprops") == True
+        self.quick_log_revprops = (self.transport.has_capability("log-revprops") == True)
 
     def get_revmap(self):
         return self.revmap
@@ -811,11 +811,15 @@ class SvnRepository(Repository):
         """
         history_iter = self.iter_changes(branch_path, from_revnum, to_revnum, 
                                          mapping, pb=pb, limit=limit)
+        consider_fileprops = True
         for (bp, paths, revnum, revprops) in history_iter:
             if not bp in paths:
                 svn_fileprops = {}
             else:
                 svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum, skip_check=True)
+
+            if consider_fileprops:
+                consider_fileprops = is_bzr_revision_fileprops(svn_fileprops)
 
             yield self._revmeta(bp, paths, revnum, revprops, svn_fileprops)
 
