@@ -96,12 +96,13 @@ class RevisionMetadata(object):
 
     def is_bzr_revision(self):
         # If the server already sent us all revprops, look at those first
-        if self.repository.transport.has_capability("log-revprops"):
+        if self.repository.quick_log_revprops:
             order = [lambda: is_bzr_revision_revprops(self.revprops),
                      lambda: is_bzr_revision_fileprops(self.fileprops)]
         else:
-            order = [lambda: is_bzr_revision_fileprops(self.fileprops),
-                     lambda: is_bzr_revision_revprops(self.revprops)]
+            order = [lambda: is_bzr_revision_fileprops(self.fileprops)]
+            if self.repository.check_revprops:
+                order.append(lambda: is_bzr_revision_revprops(self.revprops))
         for fn in order:
             ret = fn()
             if ret is not None:
@@ -271,6 +272,9 @@ class SvnRepository(Repository):
         self.signatures = VirtualSignatureTexts(self)
 
         self.branchprop_list = PathPropertyProvider(self._log)
+
+        self.check_revprops = self.repository.transport.has_capability("commit-revprops") in (True, None)
+        self.quick_log_revprops = self.repository.transport.has_capability("log-revprops")
 
     def get_revmap(self):
         return self.revmap
