@@ -105,6 +105,11 @@ class RevisionMetadata(object):
         return lhs_parent
 
     def has_bzr_fileprop_ancestors(self):
+        """Check whether there are any bzr file properties present in this revision.
+
+        This can tell us whether one of the ancestors of this revision is a 
+        fileproperty-based bzr revision.
+        """
         if not self.consider_fileprops:
             # This revisions descendant doesn't have bzr fileprops set, so this one can't have them either.
             return False
@@ -654,7 +659,7 @@ class SvnRepository(Repository):
             if revid is not None:
                 yield revid
 
-    def _revmeta(self, path, revnum, changes, revprops=None, fileprops=None, 
+    def _revmeta(self, path, revnum, changes=None, revprops=None, fileprops=None, 
                  consider_fileprops=True):
         if (path, revnum) in self._revmeta_cache:
             if changes is not None:
