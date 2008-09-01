@@ -273,8 +273,8 @@ class SvnRepository(Repository):
 
         self.branchprop_list = PathPropertyProvider(self._log)
 
-        self.check_revprops = self.repository.transport.has_capability("commit-revprops") in (True, None)
-        self.quick_log_revprops = self.repository.transport.has_capability("log-revprops")
+        self.check_revprops = self.transport.has_capability("commit-revprops") in (True, None)
+        self.quick_log_revprops = self.transport.has_capability("log-revprops")
 
     def get_revmap(self):
         return self.revmap
