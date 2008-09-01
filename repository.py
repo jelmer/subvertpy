@@ -95,12 +95,16 @@ class RevisionMetadata(object):
         return lhs_parent
 
     def is_bzr_revision(self):
+        """Determine (with as few network requests as possible) if this is a bzr revision.
+
+        """
         # If the server already sent us all revprops, look at those first
         if self.repository.quick_log_revprops:
             order = [lambda: is_bzr_revision_revprops(self.revprops),
                      lambda: is_bzr_revision_fileprops(self.fileprops)]
         else:
             order = [lambda: is_bzr_revision_fileprops(self.fileprops)]
+            # Only look for revprops if they could've been committed
             if self.repository.check_revprops:
                 order.append(lambda: is_bzr_revision_revprops(self.revprops))
         for fn in order:
@@ -118,14 +122,20 @@ class RevisionMetadata(object):
         if self.is_bzr_revision():
             return ()
 
+        current = self.fileprops.get(SVN_PROP_SVK_MERGE, "")
+        if current == "":
+            return
+
         (prev_path, prev_revnum) = self.repository._log.get_previous(self.branch_path, 
                                                           self.revnum)
         if prev_path is None and prev_revnum == -1:
-            previous = {}
+            previous_fileprops = {}
         else:
-            previous = logwalker.lazy_dict({}, self.repository.branchprop_list.get_properties, prev_path.encode("utf-8"), prev_revnum)
+            previous_fileprops = logwalker.lazy_dict({}, self.repository.branchprop_list.get_properties, prev_path.encode("utf-8"), prev_revnum)
 
-        return tuple(self.repository._svk_merged_revisions(self.branch_path, self.revnum, mapping, self.fileprops, previous))
+        previous = previous_fileprops.get(SVN_PROP_SVK_MERGE, "")
+
+        return tuple(self.repository._svk_merged_revisions(self.branch_path, self.revnum, mapping, current, previous))
 
     def get_parent_ids(self, mapping):
         parents_cache = getattr(self.repository._real_parents_provider, "_cache", None)
@@ -617,14 +627,10 @@ class SvnRepository(Repository):
         return parent_map
 
     def _svk_merged_revisions(self, branch, revnum, mapping, 
-                              current_fileprops, previous_fileprops):
+                              current, previous):
         """Find out what SVK features were merged in a revision.
 
         """
-        current = current_fileprops.get(SVN_PROP_SVK_MERGE, "")
-        if current == "":
-            return
-        previous = previous_fileprops.get(SVN_PROP_SVK_MERGE, "")
         for feature in svk_features_merged_since(current, previous):
             # We assume svk:merge is only relevant on non-bzr-svn revisions. 
             # If this is a bzr-svn revision, the bzr-svn properties 
