@@ -33,7 +33,7 @@ bzr-svn-0.5			UNRELEASED
 
     + Standard commit code provides commit notification. (#79333)
 
-bzr-svn 0.4.12	UNRELEASED
+bzr-svn 0.4.12	2008-09-01
 
   BUG FIXES
 
@@ -63,6 +63,8 @@ bzr-svn 0.4.12	UNRELEASED
 
    * Properly encode cache file path in case it contains non-ascii 
      characters. (#262923)
+
+   * Don't link explicitly against apr libraries. (#262711)
 
   FEATURES
 
