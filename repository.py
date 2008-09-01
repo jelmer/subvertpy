@@ -200,7 +200,7 @@ class SvnRepository(Repository):
         return (self._lock_mode == 'w')
 
     def get_latest_revnum(self):
-        if self._lock_mode in ('r','w') and self._cached_revnum:
+        if self._lock_mode in ('r','w') and self._cached_revnum is not None:
             return self._cached_revnum
         self._cached_revnum = self.transport.get_latest_revnum()
         return self._cached_revnum
