@@ -73,13 +73,21 @@ def full_paths(find_children, paths, bp, from_bp, from_rev):
 
 class RevisionMetadata(object):
 
-    def __init__(self, repository, branch_path, paths, revnum, revprops, changed_fileprops=None, consider_fileprops=False):
+    def __init__(self, repository, branch_path, revnum, paths, revprops, changed_fileprops=None, consider_fileprops=False):
         self.repository = repository
         self.branch_path = branch_path
         self.paths = paths
         self.revnum = revnum
         self.revprops = revprops
-        self.changed_fileprops = fileprops
+        if changed_fileprops is None:
+            if paths is None:
+                self.changed_fileprops = self.repository.branchprop_list.get_changed_properties(branch_path, revnum)
+            elif branch_path in paths:
+                self.changed_fileprops = self.repository.branchprop_list.get_changed_properties(branch_path, revnum, skip_check=True)
+            else:
+                self.changed_fileprops = {}
+        else:
+            self.changed_fileprops = changed_fileprops
         self.uuid = repository.uuid
         self.consider_fileprops = consider_fileprops
 
@@ -95,6 +103,12 @@ class RevisionMetadata(object):
             # Determine manually
             lhs_parent = self.repository.lhs_revision_parent(self.branch_path, self.revnum, mapping)
         return lhs_parent
+
+    def has_bzr_fileprop_ancestors(self):
+        if not self.consider_fileprops:
+            # This revisions descendant doesn't have bzr fileprops set, so this one can't have them either.
+            return False
+        return is_bzr_revision_fileprops(self.repository.branchprop_list.get_properties(self.branch_path, self.revnum))
 
     def is_bzr_revision(self):
         """Determine (with as few network requests as possible) if this is a bzr revision.
@@ -500,12 +514,7 @@ class SvnRepository(Repository):
                         if not bp in paths or paths[bp][0] != 'D':
                             assert revnum > 0 or bp == "", "%r:%r" % (bp, revnum)
                             yielded_paths.add(bp)
-                            if not bp in paths:
-                                svn_fileprops = {}
-                            else:
-                                svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum, 
-                                                                                            skip_check=True)
-                            yield self._revmeta(bp, paths, revnum, revprops, svn_fileprops)
+                            yield self._revmeta(bp, revnum, paths, revprops)
 
     def all_revision_ids(self, layout=None, mapping=None):
         if mapping is None:
@@ -625,7 +634,7 @@ class SvnRepository(Repository):
             except NoSuchRevision:
                 continue
 
-            revmeta = self._revmeta(branch, None, revnum)
+            revmeta = self._revmeta(branch, revnum)
 
             parent_map[revision_id] = revmeta.get_parent_ids(mapping)
         return parent_map
@@ -645,7 +654,7 @@ class SvnRepository(Repository):
             if revid is not None:
                 yield revid
 
-    def _revmeta(self, path, changes, revnum, revprops=None, fileprops=None, 
+    def _revmeta(self, path, revnum, changes, revprops=None, fileprops=None, 
                  consider_fileprops=True):
         if (path, revnum) in self._revmeta_cache:
             if changes is not None:
@@ -656,10 +665,8 @@ class SvnRepository(Repository):
 
         if revprops is None:
             revprops = self._log.revprop_list(revnum)
-        if fileprops is None:
-            fileprops = self.branchprop_list.get_changed_properties(path, revnum)
 
-        revmeta = RevisionMetadata(self, path, changes, revnum, revprops, 
+        revmeta = RevisionMetadata(self, path, revnum, changes, revprops, 
                                    fileprops, consider_fileprops=consider_fileprops)
         self._revmeta_cache[path,revnum] = revmeta
         return revmeta
@@ -671,7 +678,7 @@ class SvnRepository(Repository):
 
         (path, revnum, mapping) = self.lookup_revision_id(revision_id)
         
-        revmeta = self._revmeta(path, None, revnum)
+        revmeta = self._revmeta(path, revnum)
 
         return revmeta.get_revision(mapping)
 
@@ -813,15 +820,12 @@ class SvnRepository(Repository):
                                          mapping, pb=pb, limit=limit)
         consider_fileprops = True
         for (bp, paths, revnum, revprops) in history_iter:
-            if not bp in paths:
-                svn_fileprops = {}
-            else:
-                svn_fileprops = self.branchprop_list.get_changed_properties(bp, revnum, skip_check=True)
+            ret = self._revmeta(bp, revnum, paths, revprops, consider_fileprops=consider_fileprops)
 
             if consider_fileprops:
-                consider_fileprops = is_bzr_revision_fileprops(svn_fileprops)
+                consider_fileprops = ret.has_bzr_fileprop_ancestors()
 
-            yield self._revmeta(bp, paths, revnum, revprops, svn_fileprops)
+            yield ret
 
     def get_config(self):
         if self._config is None:
