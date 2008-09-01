@@ -1,6 +1,8 @@
 mappingv4:
  - implement layout functions, including command
  - allow skipping a revision completely - to allow creating branches using "svn cp"
+ - create schemes from layouts rather than the other way around
+  + remove Mapping.get_guessed_layout()
 
 - generate deltas rather than fulltexts when creating file id maps
 - transform file ids in workingtree in svn-upgrade

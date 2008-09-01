@@ -536,6 +536,14 @@ def scheme_from_branch_list(branch_list):
     return ListBranchingScheme(branch_list) 
 
 
+def scheme_from_layout(layout):
+    if isinstance(layout, TrunkLayout):
+        return TrunkBranchingScheme()
+    if isinstance(layout, RootLayout):
+        return NoBranchingScheme()
+    return TrunkBranchingScheme()
+
+
 help_schemes = """Subversion Branching Schemes
 
 Subversion is basically a versioned file system. It does not have 

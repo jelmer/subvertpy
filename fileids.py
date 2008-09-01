@@ -120,7 +120,7 @@ class FileIdMap(object):
         :param renames: List of renames (known file ids for particular paths)
         :param mapping: Mapping
         """
-        renames = mapping.import_fileid_map(revmeta.revprops, revmeta.fileprops)
+        renames = revmeta.get_fileid_map(mapping)
         assert revmeta.paths is not None
         changes = get_local_changes(revmeta.paths, revmeta.branch_path, mapping,
                     self.repos.get_layout(),
@@ -129,7 +129,7 @@ class FileIdMap(object):
             def get_children(path, revid):
                 (bp, revnum, mapping) = self.repos.lookup_revision_id(revid)
                 for p in find_children(bp+"/"+path, revnum):
-                    yield mapping.unprefix(bp, p)
+                    yield p[len(bp):].strip("/")
         else:
             get_children = None
 

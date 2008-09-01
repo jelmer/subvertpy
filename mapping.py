@@ -433,9 +433,6 @@ class BzrSvnMapping(foreign.VcsMapping):
     def get_revision_id(self, branch_path, revprops, fileprops):
         raise NotImplementedError(self.get_revision_id)
 
-    def unprefix(self, branch_path, repos_path):
-        raise NotImplementedError(self.unprefix)
-
 
 class BzrSvnMappingv1(BzrSvnMapping):
     """This was the initial version of the mappings as used by bzr-svn
@@ -712,7 +709,7 @@ mapping_registry.register_lazy('v3', 'bzrlib.plugins.svn.mapping3',
 mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4', 
                                'BzrSvnMappingv4',
                                'Fourth format (bzr-svn 0.5.x)')
-mapping_registry.set_default('v3')
+mapping_registry.set_default('v4')
 
 def parse_mapping_name(name):
     assert isinstance(name, str)

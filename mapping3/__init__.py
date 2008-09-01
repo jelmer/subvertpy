@@ -267,11 +267,6 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
     def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
         return self._generate_revision_id(uuid, revnum, path, self.scheme)
 
-    def unprefix(self, branch_path, repos_path):
-        (proj, bp, np) = self.scheme.unprefix(repos_path)
-        assert branch_path == bp
-        return np
-
     def __eq__(self, other):
         return type(self) == type(other) and self.scheme == other.scheme
 

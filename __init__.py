@@ -30,7 +30,7 @@ bzr-svn also adds two new commands to Bazaar:
 For more information about bzr-svn, see the bzr-svn FAQ.
 
 """
-import bzrlib
+import bzrlib, bzrlib.repository
 from bzrlib import log
 from bzrlib.bzrdir import BzrDirFormat, format_registry
 from bzrlib.errors import BzrError
@@ -128,7 +128,7 @@ def check_rebase_version(min_version):
 
 check_subversion_version()
 
-from bzrlib.plugins.svn import format, revspec
+from bzrlib.plugins.svn import format, revspec, repository
 
 register_transport_proto('svn+ssh://', 
     help="Access using the Subversion smart server tunneled over SSH.")
@@ -157,6 +157,7 @@ format_registry.register("subversion-wc", format.SvnWorkingTreeDirFormat,
                          "Subversion working copy. ", 
                          native=False, hidden=True)
 SPEC_TYPES.append(revspec.RevisionSpec_svn)
+bzrlib.repository.SvnRepositoryFormat = repository.SvnRepositoryFormat
 
 log.properties_handler_registry.register_lazy("subversion",
                                               "bzrlib.plugins.svn.log",

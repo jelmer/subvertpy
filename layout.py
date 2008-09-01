@@ -25,6 +25,7 @@ class RepositoryLayout(object):
 
     def __init__(self, repository):
         self.repository = repository
+        self._config = repository.get_config()
 
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
@@ -159,6 +160,7 @@ class TrunkLayout(RepositoryLayout):
         :return: Tuple with type ('tag', 'branch'), project name, branch path and path 
             inside the branch
         """
+        assert isinstance(path, str)
         parts = path.split("/")
         for i, p in enumerate(parts):
             if (i > 0 and parts[i-1] in ("branches", "tags")) or p == "trunk":

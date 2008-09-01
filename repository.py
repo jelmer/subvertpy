@@ -161,6 +161,9 @@ class RevisionMetadata(object):
 
         return rev
 
+    def get_fileid_map(self, mapping):
+        return mapping.import_fileid_map(self.revprops, self.fileprops)
+
     def __hash__(self):
         return hash((self.__class__, self.repository.uuid, self.branch_path, self.revnum))
 
