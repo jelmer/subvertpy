@@ -72,7 +72,8 @@ def full_paths(find_children, paths, bp, from_bp, from_rev):
 
 
 class RevisionMetadata(object):
-    def __init__(self, repository, branch_path, paths, revnum, revprops, fileprops):
+
+    def __init__(self, repository, branch_path, paths, revnum, revprops, fileprops, consider_fileprops=False):
         self.repository = repository
         self.branch_path = branch_path
         self.paths = paths
@@ -80,6 +81,7 @@ class RevisionMetadata(object):
         self.revprops = revprops
         self.fileprops = fileprops
         self.uuid = repository.uuid
+        self.consider_fileprops = consider_fileprops
 
     def __repr__(self):
         return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, self.repository.uuid)
@@ -99,13 +101,14 @@ class RevisionMetadata(object):
 
         """
         # If the server already sent us all revprops, look at those first
+        order = []
         if self.repository.quick_log_revprops:
-            order = [lambda: is_bzr_revision_revprops(self.revprops),
-                     lambda: is_bzr_revision_fileprops(self.fileprops)]
-        else:
-            order = [lambda: is_bzr_revision_fileprops(self.fileprops)]
-            # Only look for revprops if they could've been committed
-            if self.repository.check_revprops:
+            order.append(lambda: is_bzr_revision_revprops(self.revprops))
+        if self.consider_fileprops:
+            order.append(lambda: is_bzr_revision_fileprops(self.fileprops))
+        # Only look for revprops if they could've been committed
+        if (not self.repository.quick_log_revprops and 
+                self.repository.check_revprops):
                 order.append(lambda: is_bzr_revision_revprops(self.revprops))
         for fn in order:
             ret = fn()
@@ -124,7 +127,7 @@ class RevisionMetadata(object):
 
         current = self.fileprops.get(SVN_PROP_SVK_MERGE, "")
         if current == "":
-            return
+            return ()
 
         (prev_path, prev_revnum) = self.repository._log.get_previous(self.branch_path, 
                                                           self.revnum)
@@ -641,10 +644,13 @@ class SvnRepository(Repository):
             if revid is not None:
                 yield revid
 
-    def _revmeta(self, path, changes, revnum, revprops=None, fileprops=None):
+    def _revmeta(self, path, changes, revnum, revprops=None, fileprops=None, 
+                 consider_fileprops=True):
         if (path, revnum) in self._revmeta_cache:
             if changes is not None:
                 self._revmeta_cache[path,revnum].paths = changes
+            if not consider_fileprops:
+                self._revmeta_cache[path,revnum].consider_fileprops = False
             return self._revmeta_cache[path,revnum]
 
         if revprops is None:
@@ -652,7 +658,8 @@ class SvnRepository(Repository):
         if fileprops is None:
             fileprops = self.branchprop_list.get_changed_properties(path, revnum)
 
-        revmeta = RevisionMetadata(self, path, changes, revnum, revprops, fileprops)
+        revmeta = RevisionMetadata(self, path, changes, revnum, revprops, 
+                                   fileprops, consider_fileprops)
         self._revmeta_cache[path,revnum] = revmeta
         return revmeta
 
