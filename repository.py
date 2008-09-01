@@ -274,7 +274,7 @@ class SvnRepository(Repository):
         self.branchprop_list = PathPropertyProvider(self._log)
 
         self.check_revprops = self.transport.has_capability("commit-revprops") in (True, None)
-        self.quick_log_revprops = self.transport.has_capability("log-revprops")
+        self.quick_log_revprops = self.transport.has_capability("log-revprops") == True
 
     def get_revmap(self):
         return self.revmap
@@ -781,6 +781,8 @@ class SvnRepository(Repository):
         repository.
 
         """
+        if self.check_revprops == False:
+            return False
         for revmeta in self._log.iter_all_changes():
             if revmeta.is_bzr_revision():
                 return True
