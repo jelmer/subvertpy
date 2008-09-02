@@ -201,7 +201,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         dc.close()
 
         repos = Repository.open(repos_url)
-        changes = repos.i_revmeta_provider.ter_reverse_branch_changes("pygments", 2, 0, SingleBranchingScheme("pygments"))
+        changes = repos._revmeta_provider.iter_reverse_branch_changes("pygments", 2, 0, SingleBranchingScheme("pygments"))
         self.assertEquals([('pygments',
               {'pygments/bla': ('A', None, -1), 'pygments': ('A', None, -1)},
                 2)],

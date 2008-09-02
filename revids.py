@@ -100,7 +100,8 @@ class RevidMap(object):
             # Look at their bzr:revision-id-vX
             revids = set()
             try:
-                props = self.repos.branchprop_list.get_properties(branch, revno)
+                revmeta = self.repos._revmeta_provider.get_revision(branch, revno)
+                props = revmeta.get_fileprops()
                 for propname, propvalue in props.items():
                     if not propname.startswith(SVN_PROP_BZR_REVISION_ID):
                         continue

@@ -40,7 +40,8 @@ def full_paths(find_children, paths, bp, from_bp, from_rev):
 class RevisionMetadata(object):
     """Object describing a revision with bzr semantics in a Subversion repository."""
 
-    def __init__(self, repository, check_revprops, get_fileprops_fn, logwalker, uuid, branch_path, revnum, paths, revprops, changed_fileprops=None, metabranch=None):
+    def __init__(self, repository, check_revprops, get_fileprops_fn, logwalker, uuid, 
+                 branch_path, revnum, paths, revprops, changed_fileprops=None, metabranch=None):
         self.repository = repository
         self.check_revprops = check_revprops
         self._get_fileprops_fn = get_fileprops_fn
@@ -378,7 +379,7 @@ class RevisionMetadataProvider(object):
             metabranch.append(ret)
             yield ret
 
-    def iter_all_changes(self, latest_revnum, layout, pb=None):
+    def iter_all_changes(self, layout, latest_revnum, pb=None):
         for (paths, revnum, revprops) in self._log.iter_changes(None, 0, latest_revnum, pb=pb):
             if pb:
                 pb.update("discovering revisions", revnum, latest_revnum)
