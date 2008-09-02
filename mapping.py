@@ -441,6 +441,8 @@ class BzrSvnMappingv1(BzrSvnMapping):
     It does not support pushing revisions to Subversion as-is, but only 
     as part of a merge.
     """
+    name = "v1"
+
     @classmethod
     def revision_id_bzr_to_foreign(cls, revid):
         if not revid.startswith("svn-v1:"):
@@ -465,6 +467,8 @@ class BzrSvnMappingv2(BzrSvnMapping):
     """The second version of the mappings as used in the 0.3.x series.
 
     """
+    name = "v2"
+
     @classmethod
     def revision_id_bzr_to_foreign(cls, revid):
         if not revid.startswith("svn-v2:"):
