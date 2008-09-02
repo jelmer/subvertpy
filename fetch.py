@@ -694,7 +694,7 @@ class InterFromSvnRepository(InterRepository):
         :param revids: Revision ids to copy.
         :param pb: Optional progress bar
         """
-        raise NotImplementedError(self._copy_revisions_replay)
+        raise NotImplementedError(self._fetch_replay)
 
     def _fetch_switch(self, repos_root, revids, pb=None):
         """Copy a set of related revisions using svn.ra.switch.

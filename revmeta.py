@@ -15,7 +15,7 @@
 
 from bzrlib.revision import NULL_REVISION, Revision
 
-from bzrlib.plugins.svn import changes, errors, properties
+from bzrlib.plugins.svn import changes, errors, logwalker, properties
 from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors, SVN_REVPROP_BZR_SIGNATURE
 from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
                  parse_svk_feature, estimate_svk_ancestors)
@@ -69,7 +69,7 @@ class RevisionMetadata(object):
     def get_changed_fileprops(self):
         if self._changed_fileprops is None:
             if self.branch_path in self.get_paths():
-                self._changed_fileprops = properties.diff(self.get_fileprops(), self.get_previous_fileprops())
+                self._changed_fileprops = logwalker.lazy_dict({}, properties.diff, self.get_fileprops(), self.get_previous_fileprops())
             else:
                 self._changed_fileprops = {}
         return self._changed_fileprops
@@ -156,6 +156,9 @@ class RevisionMetadata(object):
         return tuple(ret)
 
     def get_rhs_parents(self, mapping):
+        """Determine the right hand side parents for this revision.
+
+        """
         if self.is_bzr_revision():
             return self.get_bzr_merges(mapping)
 

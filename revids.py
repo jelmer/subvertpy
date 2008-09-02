@@ -251,7 +251,7 @@ class RevisionIdMapCache(CacheTable):
         create unique index if not exists layout on revids_seen (layout);
         """)
         # Revisions ids are quite expensive
-        self._commit_interval = 1000
+        self._commit_interval = 100
 
     def set_last_revnum_checked(self, layout, revnum):
         """Remember the latest revision number that has been checked

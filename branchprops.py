@@ -38,10 +38,9 @@ class PathPropertyProvider(object):
         assert isinstance(path, str)
         path = path.lstrip("/")
 
-        if (path, revnum) in self._props_cache:
-            return self._props_cache[path, revnum]
-
-        return logwalker.lazy_dict({}, self._real_get_properties, path, revnum)
+        if not (path, revnum) in self._props_cache:
+            self._props_cache[(path, revnum)] = logwalker.lazy_dict({}, self._real_get_properties, path, revnum)
+        return self._props_cache[path, revnum]
 
     def _real_get_properties(self, path, revnum):
         try:
@@ -52,5 +51,4 @@ class PathPropertyProvider(object):
                 raise NoSuchRevision(self, revnum)
             raise
 
-        self._props_cache[path, revnum] = props
         return props
