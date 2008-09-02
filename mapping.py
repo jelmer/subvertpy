@@ -354,7 +354,7 @@ class BzrSvnMapping(foreign.VcsMapping):
         :param branch: Branch path of the branch in which the file was introduced.
         :param inv_path: Original path of the file within the inventory
         """
-        raise NotImplementedError(self.generate_file_id)
+        raise NotImplementedError
 
     def import_revision(self, revprops, fileprops, uuid, branch, revnum, rev):
         """Update a Revision object from Subversion revision and branch 
