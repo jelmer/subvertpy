@@ -261,7 +261,7 @@ class CachingRevisionMetadata(RevisionMetadata):
         myrevid = self.get_revision_id(mapping)
 
         if self._parents_cache is not None:
-            parent_ids = self._parents_cache.lookup_parents(mapping)
+            parent_ids = self._parents_cache.lookup_parents(myrevid)
             if parent_ids is not None:
                 return parent_ids
 
@@ -346,7 +346,7 @@ class RevisionMetadataProvider(object):
                 cached._changed_fileprops = changed_fileprops
             return self._revmeta_cache[path,revnum]
 
-        ret = RevisionMetadata(self.repository, self.check_revprops, self._get_fileprops_fn,
+        ret = CachingRevisionMetadata(self.repository, self.check_revprops, self._get_fileprops_fn,
                                self._log, self.repository.uuid, path, revnum, changes, revprops, 
                                changed_fileprops=changed_fileprops, 
                                metabranch=metabranch)
@@ -412,10 +412,17 @@ class RevisionMetadataProvider(object):
         history_iter = self.iter_changes(branch_path, from_revnum, to_revnum, 
                                          mapping, pb=pb, limit=limit)
         metabranch = RevisionMetadataBranch(mapping)
+        prev = None
+        # Always make sure there is one more revision in the metabranch
+        # so the yielded rev can find its left hand side parent.
         for (bp, paths, revnum, revprops) in history_iter:
             ret = self.get_revision(bp, revnum, paths, revprops, metabranch=metabranch)
             metabranch.append(ret)
-            yield ret
+            if prev is not None:
+                yield prev
+            prev = ret
+        if prev is not None:
+            yield prev
 
     def iter_all_changes(self, layout, latest_revnum, pb=None):
         for (paths, revnum, revprops) in self._log.iter_changes(None, 0, latest_revnum, pb=pb):
