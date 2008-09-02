@@ -31,13 +31,16 @@ class RevidMap(object):
         self.repos = repos
 
     def get_revision_id(self, revnum, path, mapping, revprops, fileprops):
-        # See if there is a bzr:revision-id revprop set
-        try:
-            (bzr_revno, revid) = mapping.get_revision_id(path, revprops, fileprops)
-        except SubversionException, (_, num):
-            if num == ERR_FS_NO_SUCH_REVISION:
-                raise NoSuchRevision(path, revnum)
-            raise
+        if mapping.supports_roundtripping():
+            # See if there is a bzr:revision-id revprop set
+            try:
+                (bzr_revno, revid) = mapping.get_revision_id(path, revprops, fileprops)
+            except SubversionException, (_, num):
+                if num == ERR_FS_NO_SUCH_REVISION:
+                    raise NoSuchRevision(path, revnum)
+                raise
+        else:
+            revid = None
 
         # Or generate it
         if revid is None:

@@ -22,7 +22,7 @@ from bzrlib.inventory import Inventory
 from bzrlib.osutils import has_symlinks
 from bzrlib.repository import Repository
 from bzrlib.revision import NULL_REVISION
-from bzrlib.tests import TestCase, TestSkipped
+from bzrlib.tests import TestCase, TestSkipped, TestNotApplicable
 
 import os
 
@@ -723,6 +723,8 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         (num, date, author) = self.client_commit("dc", "Second Message")
         repository = Repository.open(repos_url)
         mapping = repository.get_mapping()
+        if not mapping.supports_roundtripping():
+            raise TestNotApplicable
         revid = mapping.revision_id_foreign_to_bzr((repository.uuid, 2, ""))
         rev = repository.get_revision("myrevid")
         self.assertEqual((repository.generate_revision_id(1, "", mapping),),
