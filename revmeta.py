@@ -114,6 +114,9 @@ class RevisionMetadata(object):
         if self.is_bzr_revision():
             return ()
 
+        if not self.branch_path in self.get_paths():
+            return ()
+
         current = self.get_fileprops().get(SVN_PROP_SVK_MERGE, "")
         if current == "":
             return ()

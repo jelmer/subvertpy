@@ -669,22 +669,23 @@ class SvnRepository(Repository):
                                 consider_svk_fileprops=consider_svk_fileprops)
 
             if ((consider_bzr_fileprops or consider_svk_fileprops) and 
-                    fileprops_backoff <= 0):
-                ancestors = 0
+                    fileprops_backoff <= 0 and bp in paths):
+                fileprops_backoff = 0
                 if consider_bzr_fileprops:
                     bzr_ancestors = ret.estimate_bzr_fileprop_ancestors()
                     if bzr_ancestors == 0:
                         consider_bzr_fileprops = False
                     else:
-                        ancestors = max(ancestors, bzr_ancestors)
+                        fileprops_backoff = max(fileprops_backoff, bzr_ancestors)
                 if consider_svk_fileprops:
                     svk_ancestors = ret.estimate_svk_fileprop_ancestors()
                     if svk_ancestors == 0:
                         consider_svk_fileprops = False
                     else:
-                        ancestors = max(ancestors, svk_ancestors)
+                        fileprops_backoff = max(fileprops_backoff, svk_ancestors)
 
-            fileprops_backoff -= 1
+            if bp in paths:
+                fileprops_backoff -= 1
             yield ret
 
     def get_config(self):
