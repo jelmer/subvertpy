@@ -16,7 +16,7 @@
 from bzrlib.revision import NULL_REVISION, Revision
 
 from bzrlib.plugins.svn import changes, errors, properties
-from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, contains_bzr_fileprops
+from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors
 from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
                  parse_svk_feature)
 
@@ -69,16 +69,14 @@ class RevisionMetadata(object):
             lhs_parent = self.repository.lhs_revision_parent(self.branch_path, self.revnum, mapping)
         return lhs_parent
 
-    def has_bzr_fileprop_ancestors(self):
-        """Check whether there are any bzr file properties present in this revision.
+    def estimate_bzr_fileprop_ancestors(self):
+        """Estimate how many ancestors with bzr file properties this revision has.
 
-        This can tell us whether one of the ancestors of this revision is a 
-        fileproperty-based bzr revision.
         """
         if not self.consider_fileprops:
             # This revisions descendant doesn't have bzr fileprops set, so this one can't have them either.
-            return False
-        return contains_bzr_fileprops(self.get_fileprops())
+            return 0
+        return estimate_bzr_ancestors(self.get_fileprops())
 
     def is_bzr_revision(self):
         """Determine (with as few network requests as possible) if this is a bzr revision.

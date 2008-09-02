@@ -659,11 +659,16 @@ class SvnRepository(Repository):
         history_iter = self.iter_changes(branch_path, from_revnum, to_revnum, 
                                          mapping, pb=pb, limit=limit)
         consider_fileprops = True
+        fileprops_backoff = 0
         for (bp, paths, revnum, revprops) in history_iter:
             ret = self._revmeta(bp, revnum, paths, revprops, consider_fileprops=consider_fileprops)
 
-            if consider_fileprops:
-                consider_fileprops = ret.has_bzr_fileprop_ancestors()
+            if consider_fileprops and fileprops_backoff == 0:
+                ancestors = ret.estimate_bzr_ancestors()
+                if ancestors == 0:
+                    consider_fileprops = False
+                else:
+                    fileprops_backoff = ancestors - 1
 
             yield ret
 

@@ -101,6 +101,8 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         dc.close()
 
         repos = Repository.open(repos_url)
+        if mapping.supports_roundtripping():
+            raise TestNotApplicable()
         revid = repos.generate_revision_id(1, "", repos.get_mapping())
         self.assertEquals("someid", revid)
 
@@ -112,6 +114,8 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         dc.close()
 
         repos = Repository.open(repos_url)
+        if mapping.supports_roundtripping():
+            raise TestNotApplicable()
         revid = repos.generate_revision_id(1, "", repos.get_mapping())
         self.assertEquals(
                 repos.get_mapping().revision_id_foreign_to_bzr((repos.uuid, 1, "")),

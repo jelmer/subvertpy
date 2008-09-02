@@ -774,8 +774,14 @@ def is_bzr_revision_fileprops(fileprops):
     return None
 
 
-def contains_bzr_fileprops(fileprops):
+def estimate_bzr_ancestors(fileprops):
+    found = []
+    for k, v in fileprops.items():
+        if k.startswith(SVN_PROP_BZR_REVISION_ID):
+            found.append(len(v.splitlines()))
+    if found != []:
+        return sorted(found, reverse=True)[0]
     for k in fileprops:
         if k.startswith(SVN_PROP_BZR_PREFIX):
-            return True
-    return False
+            return 1
+    return 0
