@@ -40,6 +40,7 @@ from bzrlib.plugins.svn.config import SvnRepositoryConfig
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
                      SVN_REVPROP_BZR_TAGS,
+                     SVN_REVPROP_BZR_SKIP,
                      parse_tags_property,
                      BzrSvnMapping,
                      get_default_mapping, 
@@ -48,25 +49,11 @@ from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
                      parse_svn_dateprop)
 from bzrlib.plugins.svn.parents import DiskCachingParentsProvider
 from bzrlib.plugins.svn.revids import CachingRevidMap, RevidMap
+from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
+                 parse_svk_feature)
 from bzrlib.plugins.svn.tree import SvnRevisionTree
 from bzrlib.plugins.svn.versionedfiles import (SvnTexts, VirtualRevisionTexts, 
                                                VirtualInventoryTexts, VirtualSignatureTexts)
-
-def full_paths(find_children, paths, bp, from_bp, from_rev):
-    """Generate the changes creating a specified branch path.
-
-    :param find_children: Function that recursively lists all children 
-                          of a path in a revision.
-    :param paths: Paths dictionary to update
-    :param bp: Branch path to create.
-    :param from_bp: Path to look up children in
-    :param from_rev: Revision to look up children in.
-    """
-    for c in find_children(from_bp, from_rev):
-        path = c.replace(from_bp, bp+"/", 1).replace("//", "/")
-        paths[path] = ('A', None, -1)
-    return paths
-
 
 class SvnRepositoryFormat(RepositoryFormat):
     """Repository format for Subversion repositories (accessed using svn_ra).
@@ -133,7 +120,6 @@ class SvnRepository(Repository):
         self._hinted_branch_path = branch_path
         self._real_parents_provider = self
         self._cached_tags = {}
-        self._revmeta_provider = revmeta.RevisionMetadataProvider(self)
 
         cache = self.get_config().get_use_cache()
 
@@ -157,7 +143,8 @@ class SvnRepository(Repository):
 
         self.branchprop_list = PathPropertyProvider(self._log)
 
-        self.check_revprops = self.transport.has_capability("commit-revprops") in (True, None)
+        self._revmeta_provider = revmeta.RevisionMetadataProvider(self, 
+                self.transport.has_capability("commit-revprops") in (True, None))
 
     def get_revmap(self):
         return self.revmap
@@ -350,34 +337,12 @@ class SvnRepository(Repository):
     def transform_fileid_map(self, revmeta, mapping):
         return self.fileid_map.apply_changes(revmeta, mapping)[0]
 
-    def iter_all_changes(self, layout=None, pb=None):
-        if layout is None:
-            layout = self.get_layout()
-    
-        latest_revnum = self.get_latest_revnum()
-
-        for (paths, revnum, revprops) in self._log.iter_changes(None, 0, latest_revnum, pb=pb):
-            if pb:
-                pb.update("discovering revisions", revnum, latest_revnum)
-            yielded_paths = set()
-            for p in paths:
-                try:
-                    bp = layout.parse(p)[2]
-                except NotBranchError:
-                    pass
-                else:
-                    if not bp in yielded_paths:
-                        if not bp in paths or paths[bp][0] != 'D':
-                            assert revnum > 0 or bp == "", "%r:%r" % (bp, revnum)
-                            yielded_paths.add(bp)
-                            yield self._revmeta(bp, revnum, paths, revprops)
-
     def all_revision_ids(self, layout=None, mapping=None):
         if mapping is None:
             mapping = self.get_mapping()
         if layout is None:
             layout = self.get_layout()
-        for revmeta in self.iter_all_changes(layout):
+        for revmeta in self._revmeta_provider.iter_all_changes(layout, self.get_latest_revnum()):
             yield revmeta.get_revision_id(mapping)
 
     def set_make_working_trees(self, new_value):
@@ -401,7 +366,7 @@ class SvnRepository(Repository):
         if revision_id in (None, NULL_REVISION):
             return
         (branch_path, revnum, mapping) = self.lookup_revision_id(revision_id)
-        for revmeta in self.iter_reverse_branch_changes(branch_path, revnum, to_revnum=0, 
+        for revmeta in self._revmeta_provider.iter_reverse_branch_changes(branch_path, revnum, to_revnum=0, 
                                                         mapping=mapping, pb=pb, 
                                                         limit=limit):
             yield revmeta.get_revision_id(mapping)
@@ -454,7 +419,7 @@ class SvnRepository(Repository):
         assert isinstance(path, str)
         assert isinstance(revnum, int)
 
-        iterator = self.iter_reverse_branch_changes(path, revnum, to_revnum=0,
+        iterator = self._revmeta_provider.iter_reverse_branch_changes(path, revnum, to_revnum=0,
                                                     mapping=mapping, limit=2)
         revmeta = iterator.next()
         assert revmeta.branch_path == path
@@ -476,13 +441,10 @@ class SvnRepository(Repository):
             except NoSuchRevision:
                 continue
 
-            revmeta = self._revmeta(branch, revnum)
+            revmeta = self._revmeta_provider.get_revision(branch, revnum)
 
             parent_map[revision_id] = revmeta.get_parent_ids(mapping)
         return parent_map
-
-    def _revmeta(self, *args, **kwargs):
-        return self._revmeta_provider.get_revision(*args, **kwargs)
 
     def get_revision(self, revision_id):
         """See Repository.get_revision."""
@@ -491,9 +453,7 @@ class SvnRepository(Repository):
 
         (path, revnum, mapping) = self.lookup_revision_id(revision_id)
         
-        revmeta = self._revmeta(path, revnum)
-
-        return revmeta.get_revision(mapping)
+        return self._revmeta_provider.get_revision(path, revnum).get_revision(mapping)
 
     def get_revisions(self, revision_ids):
         """See Repository.get_revisions()."""
@@ -503,8 +463,7 @@ class SvnRepository(Repository):
     def add_revision(self, rev_id, rev, inv=None, config=None):
         raise NotImplementedError(self.add_revision)
 
-    def generate_revision_id(self, revnum, path, mapping, revprops=None, 
-                             changed_fileprops=None):
+    def generate_revision_id(self, revnum, path, mapping):
         """Generate an unambiguous revision id. 
         
         :param revnum: Subversion revision number.
@@ -517,7 +476,7 @@ class SvnRepository(Repository):
         assert isinstance(revnum, int)
         assert isinstance(mapping, BzrSvnMapping)
 
-        return self._revmeta(path, revnum, revprops=revprops, changed_fileprops=changed_fileprops).get_revision_id(mapping)
+        return self._revmeta_provider.get_revision(path, revnum).get_revision_id(mapping)
 
     def lookup_revision_id(self, revid, layout=None, ancestry=None, 
                            project=None):
@@ -558,52 +517,6 @@ class SvnRepository(Repository):
         return self._serializer.write_revision_to_string(
             self.get_revision(revision_id))
 
-    def iter_changes(self, branch_path, from_revnum, to_revnum, mapping=None, pb=None, limit=0):
-        """Iterate over all revisions backwards.
-        
-        :return: iterator that returns tuples with branch path, 
-            changed paths, revision number, changed file properties and 
-        """
-        assert isinstance(branch_path, str)
-        assert mapping is None or mapping.is_branch(branch_path) or mapping.is_tag(branch_path), \
-                "Mapping %r doesn't accept %s as branch or tag" % (mapping, branch_path)
-        assert from_revnum >= to_revnum
-
-        bp = branch_path
-        i = 0
-
-        # Limit can't be passed on directly to LogWalker.iter_changes() 
-        # because we're skipping some revs
-        # TODO: Rather than fetching everything if limit == 2, maybe just 
-        # set specify an extra X revs just to be sure?
-        for (paths, revnum, revprops) in self._log.iter_changes([branch_path], from_revnum, to_revnum, 
-                                                                pb=pb):
-            assert bp is not None
-            next = find_prev_location(paths, bp, revnum)
-            assert revnum > 0 or bp == ""
-            assert mapping is None or mapping.is_branch(bp) or mapping.is_tag(bp), "%r is not a valid path" % bp
-
-            if (next is not None and 
-                not (mapping is None or mapping.is_branch(next[0]) or mapping.is_tag(next[0]))):
-                # Make it look like the branch started here if the mapping 
-                # doesn't support weird paths as branches
-                lazypaths = logwalker.lazy_dict(paths, full_paths, self._log.find_children, paths, bp, next[0], next[1])
-                paths[bp] = ('A', None, -1)
-
-                yield (bp, lazypaths, revnum, revprops)
-                return
-                     
-            if changes_path(paths, bp, False):
-                yield (bp, paths, revnum, revprops)
-                i += 1
-                if limit != 0 and limit == i:
-                    break
-
-            if next is None:
-                bp = None
-            else:
-                bp = next[0]
-
     def seen_bzr_revprops(self):
         """Check whether bzr-specific custom revision properties are present on this 
         repository.
@@ -611,25 +524,10 @@ class SvnRepository(Repository):
         """
         if self.check_revprops == False:
             return False
-        for revmeta in self._log.iter_all_changes():
-            if revmeta.is_bzr_revision():
+        for revmeta in self._revmeta_provider.iter_all_changes(self.get_layout(), self.get_latest_revnum()):
+            if revmeta.is_bzr_revision_revprops():
                 return True
         return False
-
-    def iter_reverse_branch_changes(self, branch_path, from_revnum, to_revnum, 
-                                    mapping=None, pb=None, limit=0):
-        """Return all the changes that happened in a branch 
-        until branch_path,revnum. 
-
-        :return: iterator that returns RevisionMetadata objects.
-        """
-        history_iter = self.iter_changes(branch_path, from_revnum, to_revnum, 
-                                         mapping, pb=pb, limit=limit)
-        metabranch = revmeta.RevisionMetadataBranch(mapping)
-        for (bp, paths, revnum, revprops) in history_iter:
-            ret = self._revmeta(bp, revnum, paths, revprops, metabranch=metabranch)
-            metabranch.append(ret)
-            yield ret
 
     def get_config(self):
         if self._config is None:
@@ -756,7 +654,7 @@ class SvnRepository(Repository):
                                 for c in self.transport.get_dir(p, revnum)[0].keys():
                                     n = p+"/"+c
                                     if layout.is_tag(n, project):
-                                        tag_changes[n] = self.generate_revision_id(revnum, n, mapping, revprops=revprops)
+                                        tag_changes[n] = self._revmeta_provider.get_revision(n, revnum, revprops=revprops).generate_revision_id(mapping)
                                     elif layout.is_tag_parent(n, project):
                                         parents.append(n)
                             except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
@@ -784,7 +682,7 @@ class SvnRepository(Repository):
                                 tr = int(self.transport.get_dir(cf, cr)[2][properties.PROP_ENTRY_COMMITTED_REV])
                             tag_changes[p] = self.generate_revision_id(tr, tp, mapping)
                         else:
-                            tag_changes[bp] = self.generate_revision_id(revnum, bp, mapping, revprops=revprops)
+                            tag_changes[bp] = self._revmeta_provider.get_revision(bp, revnum, revprops=revprops).get_revision_id(mapping)
                 for path, revid in tag_changes.items():
                     name = layout.get_tag_name(path, project)
                     if revid is None:

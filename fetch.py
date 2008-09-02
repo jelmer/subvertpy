@@ -603,7 +603,7 @@ class InterFromSvnRepository(InterRepository):
         meta_map = {}
         graph = self.source.get_graph()
         available_revs = set()
-        for revmeta in self.source.iter_all_changes(pb=pb):
+        for revmeta in self.source._revmeta_provider.iter_all_changes(self.source.get_latest_revnum(), self.source.get_layout(), pb=pb):
             revid = revmeta.get_revision_id(mapping)
             available_revs.add(revid)
             meta_map[revid] = revmeta
@@ -654,7 +654,7 @@ class InterFromSvnRepository(InterRepository):
                     self.source.lookup_revision_id(revision_id)
             except NoSuchRevision:
                 return [] # Ghost
-            for revmeta in self.source.iter_reverse_branch_changes(
+            for revmeta in self.source._revmeta_provider.iter_reverse_branch_changes(
                 branch_path, revnum, to_revnum=0, mapping=mapping):
                 if pb:
                     pb.update("determining revisions to fetch", 

@@ -13,29 +13,48 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from bzrlib import errors
 from bzrlib.revision import NULL_REVISION, Revision
 
-from bzrlib.plugins.svn import changes, errors, logwalker, properties
+from bzrlib.plugins.svn import changes, errors as svn_errors, logwalker, properties
 from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors, SVN_REVPROP_BZR_SIGNATURE
 from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
                  parse_svk_feature, estimate_svk_ancestors)
 
+def full_paths(find_children, paths, bp, from_bp, from_rev):
+    """Generate the changes creating a specified branch path.
+
+    :param find_children: Function that recursively lists all children 
+                          of a path in a revision.
+    :param paths: Paths dictionary to update
+    :param bp: Branch path to create.
+    :param from_bp: Path to look up children in
+    :param from_rev: Revision to look up children in.
+    """
+    for c in find_children(from_bp, from_rev):
+        path = c.replace(from_bp, bp+"/", 1).replace("//", "/")
+        paths[path] = ('A', None, -1)
+    return paths
+
+
 class RevisionMetadata(object):
     """Object describing a revision with bzr semantics in a Subversion repository."""
 
-    def __init__(self, repository, branch_path, revnum, paths, revprops, changed_fileprops=None, metabranch=None):
+    def __init__(self, repository, check_revprops, get_fileprops_fn, logwalker, uuid, branch_path, revnum, paths, revprops, changed_fileprops=None, metabranch=None):
         self.repository = repository
-        self.uuid = repository.uuid
-        self._log = repository._log
+        self.check_revprops = check_revprops
+        self._get_fileprops_fn = get_fileprops_fn
+        self._log = logwalker
         self.branch_path = branch_path
         self._paths = paths
         self.revnum = revnum
         self._revprops = revprops
         self._changed_fileprops = changed_fileprops
         self.metabranch = metabranch
+        self.uuid = uuid
 
     def __repr__(self):
-        return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, self.uuid)
+        return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, repr(self.uuid))
 
     def get_paths(self):
         if self._paths is None:
@@ -47,7 +66,7 @@ class RevisionMetadata(object):
                                                             self.get_revprops(), self.get_changed_fileprops())
 
     def get_fileprops(self):
-        return self.repository.branchprop_list.get_properties(self.branch_path, self.revnum)
+        return self._get_fileprops_fn(self.branch_path, self.revnum)
 
     def get_revprops(self):
         if self._revprops is None:
@@ -64,7 +83,7 @@ class RevisionMetadata(object):
         if prev is None:
             return {}
         (prev_path, prev_revnum) = prev
-        return self.repository.branchprop_list.get_properties(prev_path, prev_revnum)
+        return self._get_fileprops_fn(prev_path, prev_revnum)
 
     def get_changed_fileprops(self):
         if self._changed_fileprops is None:
@@ -109,6 +128,12 @@ class RevisionMetadata(object):
             return 0
         return estimate_svk_ancestors(self.get_fileprops())
 
+    def is_bzr_revision_revprops(self):
+        return is_bzr_revision_revprops(self.get_revprops())
+
+    def is_bzr_revision_fileprops(self):
+        return is_bzr_revision_fileprops(self.get_changed_fileprops())
+
     def is_bzr_revision(self):
         """Determine (with as few network requests as possible) if this is a bzr revision.
 
@@ -116,13 +141,12 @@ class RevisionMetadata(object):
         order = []
         # If the server already sent us all revprops, look at those first
         if self._log.quick_revprops:
-            order.append(lambda: is_bzr_revision_revprops(self.get_revprops()))
+            order.append(self.is_bzr_revision_revprops)
         if self.metabranch is None or self.metabranch.consider_bzr_fileprops(self) == True:
-            order.append(lambda: is_bzr_revision_fileprops(self.get_changed_fileprops()))
+            order.append(self.is_bzr_revision_fileprops)
         # Only look for revprops if they could've been committed
-        if (not self._log.quick_revprops and 
-                self.repository.check_revprops):
-            order.append(lambda: is_bzr_revision_revprops(self.get_revprops()))
+        if (not self._log.quick_revprops and self.check_revprops):
+            order.append(self.is_bzr_revision_revprops)
         for fn in order:
             ret = fn()
             if ret is not None:
@@ -217,7 +241,7 @@ def svk_feature_to_revision_id(feature, mapping):
     """
     try:
         (uuid, bp, revnum) = parse_svk_feature(feature)
-    except errors.InvalidPropertyValue:
+    except svn_errors.InvalidPropertyValue:
         return None
     if not mapping.is_branch(bp) and not mapping.is_tag(bp):
         return None
@@ -266,9 +290,12 @@ class RevisionMetadataBranch(object):
 
 class RevisionMetadataProvider(object):
 
-    def __init__(self, repository):
+    def __init__(self, repository, check_revprops):
         self._revmeta_cache = {}
         self.repository = repository
+        self._get_fileprops_fn = self.repository.branchprop_list.get_properties
+        self._log = repository._log
+        self.check_revprops = check_revprops
 
     def get_revision(self, path, revnum, changes=None, revprops=None, changed_fileprops=None, 
                      metabranch=None):
@@ -280,9 +307,91 @@ class RevisionMetadataProvider(object):
                 cached._changed_fileprops = changed_fileprops
             return self._revmeta_cache[path,revnum]
 
-        ret = RevisionMetadata(self.repository, path, revnum, changes, revprops, 
-                                   changed_fileprops=changed_fileprops, 
-                                   metabranch=metabranch)
+        ret = RevisionMetadata(self.repository, self.check_revprops, self._get_fileprops_fn,
+                               self._log, self.repository.uuid, path, revnum, changes, revprops, 
+                               changed_fileprops=changed_fileprops, 
+                               metabranch=metabranch)
         self._revmeta_cache[path,revnum] = ret
         return ret
+
+    def iter_changes(self, branch_path, from_revnum, to_revnum, mapping=None, pb=None, limit=0):
+        """Iterate over all revisions backwards.
+        
+        :return: iterator that returns tuples with branch path, 
+            changed paths, revision number, changed file properties and 
+        """
+        assert isinstance(branch_path, str)
+        assert mapping is None or mapping.is_branch(branch_path) or mapping.is_tag(branch_path), \
+                "Mapping %r doesn't accept %s as branch or tag" % (mapping, branch_path)
+        assert from_revnum >= to_revnum
+
+        bp = branch_path
+        i = 0
+
+        # Limit can't be passed on directly to LogWalker.iter_changes() 
+        # because we're skipping some revs
+        # TODO: Rather than fetching everything if limit == 2, maybe just 
+        # set specify an extra X revs just to be sure?
+        for (paths, revnum, revprops) in self._log.iter_changes([branch_path], from_revnum, to_revnum, 
+                                                                pb=pb):
+            assert bp is not None
+            next = changes.find_prev_location(paths, bp, revnum)
+            assert revnum > 0 or bp == ""
+            assert mapping is None or mapping.is_branch(bp) or mapping.is_tag(bp), "%r is not a valid path" % bp
+
+            if (next is not None and 
+                not (mapping is None or mapping.is_branch(next[0]) or mapping.is_tag(next[0]))):
+                # Make it look like the branch started here if the mapping 
+                # doesn't support weird paths as branches
+                lazypaths = logwalker.lazy_dict(paths, full_paths, self._log.find_children, paths, bp, next[0], next[1])
+                paths[bp] = ('A', None, -1)
+
+                yield (bp, lazypaths, revnum, revprops)
+                return
+                     
+            if changes.changes_path(paths, bp, False):
+                yield (bp, paths, revnum, revprops)
+                i += 1
+                if limit != 0 and limit == i:
+                    break
+
+            if next is None:
+                bp = None
+            else:
+                bp = next[0]
+
+    def get_mainline(self, branch_path, revnum, mapping, pb=None):
+        return list(self.iter_reverse_branch_changes(branch_path, revnum, to_revnum=0, mapping=mapping, pb=pb))
+
+    def iter_reverse_branch_changes(self, branch_path, from_revnum, to_revnum, 
+                                    mapping=None, pb=None, limit=0):
+        """Return all the changes that happened in a branch 
+        until branch_path,revnum. 
+
+        :return: iterator that returns RevisionMetadata objects.
+        """
+        history_iter = self.iter_changes(branch_path, from_revnum, to_revnum, 
+                                         mapping, pb=pb, limit=limit)
+        metabranch = RevisionMetadataBranch(mapping)
+        for (bp, paths, revnum, revprops) in history_iter:
+            ret = self.get_revision(bp, revnum, paths, revprops, metabranch=metabranch)
+            metabranch.append(ret)
+            yield ret
+
+    def iter_all_changes(self, latest_revnum, layout, pb=None):
+        for (paths, revnum, revprops) in self._log.iter_changes(None, 0, latest_revnum, pb=pb):
+            if pb:
+                pb.update("discovering revisions", revnum, latest_revnum)
+            yielded_paths = set()
+            for p in paths:
+                try:
+                    bp = layout.parse(p)[2]
+                except errors.NotBranchError:
+                    pass
+                else:
+                    if not bp in yielded_paths:
+                        if not bp in paths or paths[bp][0] != 'D':
+                            assert revnum > 0 or bp == "", "%r:%r" % (bp, revnum)
+                            yielded_paths.add(bp)
+                            yield self.get_revision(bp, revnum, paths, revprops)
 

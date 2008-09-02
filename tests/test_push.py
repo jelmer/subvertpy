@@ -616,7 +616,7 @@ class PushNewBranchTests(SubversionTestCase):
         self.assertTrue(os.path.exists("bzrco1/bar2.txt"))
         wt1.branch.push(Branch.open(repos_url+"/trunk"))
         r = Repository.open(repos_url)
-        props = r._revmeta("trunk", 3).get_changed_fileprops()
+        props = r._revmeta_provider.get_revision("trunk", 3).get_changed_fileprops()
         self.assertEquals(props['bzr:text-parents'], 'bar2.txt\tside1\n')
 
         os.mkdir("cpy")

@@ -155,9 +155,7 @@ class FileIdMap(object):
             map = {}
 
         # No history -> empty map
-        for revmeta in self.repos.iter_reverse_branch_changes(branch, revnum, to_revnum=0, mapping=mapping):
-            revid = revmeta.get_revision_id(mapping)
-            todo.append(revmeta)
+        todo = self.repos._revmeta_provider.get_mainline(branch, revnum, mapping)
    
         pb = ui.ui_factory.nested_progress_bar()
 
@@ -255,7 +253,7 @@ class CachingFileIdMap(object):
         # No history -> empty map
         try:
             pb = ui.ui_factory.nested_progress_bar()
-            for revmeta in self.repos.iter_reverse_branch_changes(branch, revnum, to_revnum=0, mapping=mapping):
+            for revmeta in self.repos._revmeta_provider.iter_reverse_branch_changes(branch, revnum, to_revnum=0, mapping=mapping):
                 pb.update("fetching changes for file ids", revnum-revmeta.revnum, revnum)
                 revid = revmeta.get_revision_id(mapping)
                 try:
