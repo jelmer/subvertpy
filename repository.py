@@ -158,7 +158,6 @@ class SvnRepository(Repository):
         self.branchprop_list = PathPropertyProvider(self._log)
 
         self.check_revprops = self.transport.has_capability("commit-revprops") in (True, None)
-        self.quick_log_revprops = (self.transport.has_capability("log-revprops") == True)
 
     def get_revmap(self):
         return self.revmap
@@ -465,20 +464,6 @@ class SvnRepository(Repository):
         except StopIteration:
             return None
 
-    def lhs_revision_parent(self, path, revnum, mapping):
-        """Find the mainline parent of the specified revision.
-
-        :param path: Path of the revision in Subversion
-        :param revnum: Subversion revision number
-        :param mapping: Mapping.
-        :return: Revision id of the left-hand-side parent or None if 
-                  this is the first revision
-        """
-        parentrevmeta = self.branch_prev_location(path, revnum, mapping)
-        if parentrevmeta is None:
-            return NULL_REVISION
-        return parentrevmeta.get_revision_id(mapping)
-
     def get_parent_map(self, revids):
         parent_map = {}
         for revision_id in revids:
@@ -497,26 +482,18 @@ class SvnRepository(Repository):
         return parent_map
 
     def _revmeta(self, path, revnum, changes=None, revprops=None, changed_fileprops=None, 
-                 consider_bzr_fileprops=True, consider_svk_fileprops=True):
+                 metabranch=None):
         if (path, revnum) in self._revmeta_cache:
             cached = self._revmeta_cache[path,revnum]
             if changes is not None:
                 cached.paths = changes
-            if not consider_bzr_fileprops:
-                cached.consider_bzr_fileprops = False
-            if not consider_svk_fileprops:
-                cached.consider_svk_fileprops = False
             if cached._changed_fileprops is None:
                 cached._changed_fileprops = changed_fileprops
             return self._revmeta_cache[path,revnum]
 
-        if revprops is None:
-            revprops = self._log.revprop_list(revnum)
-
         ret = revmeta.RevisionMetadata(self, path, revnum, changes, revprops, 
                                    changed_fileprops=changed_fileprops, 
-                                   consider_bzr_fileprops=consider_bzr_fileprops,
-                                   consider_svk_fileprops=consider_svk_fileprops)
+                                   metabranch=metabranch)
         self._revmeta_cache[path,revnum] = ret
         return ret
 
@@ -661,31 +638,10 @@ class SvnRepository(Repository):
         """
         history_iter = self.iter_changes(branch_path, from_revnum, to_revnum, 
                                          mapping, pb=pb, limit=limit)
-        consider_bzr_fileprops = True
-        fileprops_backoff = 0
-        consider_svk_fileprops = True
+        metabranch = revmeta.RevisionMetadataBranch(mapping)
         for (bp, paths, revnum, revprops) in history_iter:
-            ret = self._revmeta(bp, revnum, paths, revprops, consider_bzr_fileprops=consider_bzr_fileprops,
-                                consider_svk_fileprops=consider_svk_fileprops)
-
-            if ((consider_bzr_fileprops or consider_svk_fileprops) and 
-                    fileprops_backoff <= 0 and bp in paths):
-                fileprops_backoff = 0
-                if consider_bzr_fileprops:
-                    bzr_ancestors = ret.estimate_bzr_fileprop_ancestors()
-                    if bzr_ancestors == 0:
-                        consider_bzr_fileprops = False
-                    else:
-                        fileprops_backoff = max(fileprops_backoff, bzr_ancestors)
-                if consider_svk_fileprops:
-                    svk_ancestors = ret.estimate_svk_fileprop_ancestors()
-                    if svk_ancestors == 0:
-                        consider_svk_fileprops = False
-                    else:
-                        fileprops_backoff = max(fileprops_backoff, svk_ancestors)
-
-            if bp in paths:
-                fileprops_backoff -= 1
+            ret = self._revmeta(bp, revnum, paths, revprops, metabranch=metabranch)
+            metabranch.append(ret)
             yield ret
 
     def get_config(self):

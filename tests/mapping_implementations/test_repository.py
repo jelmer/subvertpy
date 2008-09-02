@@ -114,11 +114,12 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         dc.close()
 
         repos = Repository.open(repos_url)
+        mapping = repos.get_mapping()
         if mapping.supports_roundtripping():
             raise TestNotApplicable()
         revid = repos.generate_revision_id(1, "", repos.get_mapping())
         self.assertEquals(
-                repos.get_mapping().revision_id_foreign_to_bzr((repos.uuid, 1, "")),
+                mapping.revision_id_foreign_to_bzr((repos.uuid, 1, "")),
                 revid)
 
     def test_add_revision(self):

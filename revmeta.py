@@ -16,36 +16,48 @@
 from bzrlib.revision import NULL_REVISION, Revision
 
 from bzrlib.plugins.svn import changes, errors, properties
-from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors
+from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors, SVN_REVPROP_BZR_SIGNATURE
 from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
                  parse_svk_feature, estimate_svk_ancestors)
 
 class RevisionMetadata(object):
-    def __init__(self, repository, branch_path, revnum, paths, revprops, changed_fileprops=None, consider_bzr_fileprops=True, consider_svk_fileprops=True):
+    """Object describing a revision with bzr semantics in a Subversion repository."""
+
+    def __init__(self, repository, branch_path, revnum, paths, revprops, changed_fileprops=None, metabranch=None):
         self.repository = repository
+        self.uuid = repository.uuid
+        self._log = repository._log
         self.branch_path = branch_path
         self._paths = paths
         self.revnum = revnum
-        self.revprops = revprops
+        self._revprops = revprops
         self._changed_fileprops = changed_fileprops
-        self.uuid = repository.uuid
-        self.consider_bzr_fileprops = consider_bzr_fileprops
-        self.consider_svk_fileprops = consider_svk_fileprops
+        self.metabranch = metabranch
 
     def __repr__(self):
-        return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, self.repository.uuid)
+        return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, self.uuid)
 
     def get_paths(self):
         if self._paths is None:
-            self._paths = self.repository._log.get_revision_paths(self.revnum)
+            self._paths = self._log.get_revision_paths(self.revnum)
         return self._paths
 
     def get_revision_id(self, mapping):
         return self.repository.get_revmap().get_revision_id(self.revnum, self.branch_path, mapping, 
-                                                            self.revprops, self.get_changed_fileprops())
+                                                            self.get_revprops(), self.get_changed_fileprops())
 
     def get_fileprops(self):
         return self.repository.branchprop_list.get_properties(self.branch_path, self.revnum)
+
+    def get_revprops(self):
+        if self._revprops is None:
+            self._revprops = self._log.revprop_list(self.revnum)
+
+        return self._revprops
+
+    def knows_fileprops(self):
+        fileprops = self.get_fileprops()
+        return isinstance(fileprops, dict) or fileprops.is_loaded
 
     def get_previous_fileprops(self):
         prev = changes.find_prev_location(self.get_paths(), self.branch_path, self.revnum)
@@ -62,25 +74,37 @@ class RevisionMetadata(object):
                 self._changed_fileprops = {}
         return self._changed_fileprops
 
+    def get_lhs_parent_revmeta(self, mapping):
+        if self.metabranch is not None and self.metabranch.mapping == mapping:
+            # Perhaps the metabranch already has the parent?
+            parentrevmeta = self.metabranch.get_lhs_parent(self)
+            if parentrevmeta is not None:
+                return parentrevmeta
+        # FIXME: Don't use self.repository.branch_prev_location,
+        #        since it browses history
+        return self.repository.branch_prev_location(self.branch_path, self.revnum, mapping)
+
     def get_lhs_parent(self, mapping):
-        lhs_parent = mapping.get_lhs_parent(self.branch_path, self.revprops, self.get_changed_fileprops())
-        if lhs_parent is None:
-            # FIXME: Avoid calling lhs_revision_parent but use paths
-            # Determine manually
-            lhs_parent = self.repository.lhs_revision_parent(self.branch_path, self.revnum, mapping)
-        return lhs_parent
+        # Sometimes we can retrieve the lhs parent from the revprop data
+        lhs_parent = mapping.get_lhs_parent(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
+        if lhs_parent is not None:
+            return lhs_parent
+        parentrevmeta = self.get_lhs_parent_revmeta(mapping)
+        if parentrevmeta is None:
+            return NULL_REVISION
+        return parentrevmeta.get_revision_id(mapping)
 
     def estimate_bzr_fileprop_ancestors(self):
         """Estimate how many ancestors with bzr file properties this revision has.
 
         """
-        if not self.consider_bzr_fileprops:
+        if self.metabranch is not None and not self.metabranch.consider_bzr_fileprops(self):
             # This revisions descendant doesn't have bzr fileprops set, so this one can't have them either.
             return 0
         return estimate_bzr_ancestors(self.get_fileprops())
 
     def estimate_svk_fileprop_ancestors(self):
-        if not self.consider_svk_fileprops:
+        if self.metabranch is not None and not self.metabranch.consider_svk_fileprops(self):
             # This revisions descendant doesn't have svk fileprops set, so this one can't have them either.
             return 0
         return estimate_svk_ancestors(self.get_fileprops())
@@ -89,31 +113,26 @@ class RevisionMetadata(object):
         """Determine (with as few network requests as possible) if this is a bzr revision.
 
         """
-        # If the server already sent us all revprops, look at those first
         order = []
-        if self.repository.quick_log_revprops:
-            order.append(lambda: is_bzr_revision_revprops(self.revprops))
-        if self.consider_bzr_fileprops:
+        # If the server already sent us all revprops, look at those first
+        if self._log.quick_revprops:
+            order.append(lambda: is_bzr_revision_revprops(self.get_revprops()))
+        if self.metabranch is None or self.metabranch.consider_bzr_fileprops(self) == True:
             order.append(lambda: is_bzr_revision_fileprops(self.get_changed_fileprops()))
         # Only look for revprops if they could've been committed
-        if (not self.repository.quick_log_revprops and 
+        if (not self._log.quick_revprops and 
                 self.repository.check_revprops):
-            order.append(lambda: is_bzr_revision_revprops(self.revprops))
+            order.append(lambda: is_bzr_revision_revprops(self.get_revprops()))
         for fn in order:
             ret = fn()
             if ret is not None:
                 return ret
         return None
 
-    def get_rhs_parents(self, mapping):
-        extra_rhs_parents = mapping.get_rhs_parents(self.branch_path, self.revprops, self.get_changed_fileprops())
+    def get_bzr_merges(self, mapping):
+        return mapping.get_rhs_parents(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
 
-        if extra_rhs_parents != ():
-            return extra_rhs_parents
-
-        if self.is_bzr_revision():
-            return ()
-
+    def get_svk_merges(self, mapping):
         if not self.branch_path in self.get_paths():
             return ()
 
@@ -123,7 +142,24 @@ class RevisionMetadata(object):
 
         previous = self.get_previous_fileprops().get(SVN_PROP_SVK_MERGE, "")
 
-        return tuple(self._svk_merged_revisions(mapping, current, previous))
+        ret = []
+        for feature in svk_features_merged_since(current, previous):
+            # We assume svk:merge is only relevant on non-bzr-svn revisions. 
+            # If this is a bzr-svn revision, the bzr-svn properties 
+            # would be parsed instead.
+            #
+            # This saves one svn_get_dir() call.
+            revid = svk_feature_to_revision_id(feature, mapping)
+            if revid is not None:
+                ret.append(revid)
+
+        return tuple(ret)
+
+    def get_rhs_parents(self, mapping):
+        if self.is_bzr_revision():
+            return self.get_bzr_merges(mapping)
+
+        return self.get_svk_merges(mapping)
 
     def get_parent_ids(self, mapping):
         parents_cache = getattr(self.repository._real_parents_provider, "_cache", None)
@@ -144,6 +180,9 @@ class RevisionMetadata(object):
 
         return parent_ids
 
+    def get_signature(self):
+        return self.get_revprops().get(SVN_REVPROP_BZR_SIGNATURE)
+
     def get_revision(self, mapping):
         parent_ids = self.get_parent_ids(mapping)
         if parent_ids == (NULL_REVISION,):
@@ -155,31 +194,16 @@ class RevisionMetadata(object):
         rev.svn_meta = self
         rev.svn_mapping = mapping
 
-        mapping.import_revision(self.revprops, self.get_changed_fileprops(), self.repository.uuid, self.branch_path, 
+        mapping.import_revision(self.get_revprops(), self.get_changed_fileprops(), self.uuid, self.branch_path, 
                                 self.revnum, rev)
 
         return rev
 
     def get_fileid_map(self, mapping):
-        return mapping.import_fileid_map(self.revprops, self.get_changed_fileprops())
+        return mapping.import_fileid_map(self.get_revprops(), self.get_changed_fileprops())
 
     def __hash__(self):
-        return hash((self.__class__, self.repository.uuid, self.branch_path, self.revnum))
-
-    def _svk_merged_revisions(self, mapping, current, previous):
-        """Find out what SVK features were merged in a revision.
-
-        """
-        for feature in svk_features_merged_since(current, previous):
-            # We assume svk:merge is only relevant on non-bzr-svn revisions. 
-            # If this is a bzr-svn revision, the bzr-svn properties 
-            # would be parsed instead.
-            #
-            # This saves one svn_get_dir() call.
-            revid = svk_feature_to_revision_id(feature, mapping)
-            if revid is not None:
-                yield revid
-
+        return hash((self.__class__, self.uuid, self.branch_path, self.revnum))
 
 
 def svk_feature_to_revision_id(feature, mapping):
@@ -197,4 +221,42 @@ def svk_feature_to_revision_id(feature, mapping):
     return mapping.revision_id_foreign_to_bzr((uuid, revnum, bp))
 
 
+class RevisionMetadataBranch(object):
+    """Describes a Bazaar-like branch in a Subversion repository."""
+
+    def __init__(self, mapping):
+        self._revs = []
+        self.mapping = mapping
+
+    def consider_bzr_fileprops(self, revmeta):
+        """Check whether bzr file properties should be analysed for 
+        this revmeta.
+        """
+        i = self._revs.index(revmeta)
+        for desc in self._revs[i+1:]:
+            if desc.knows_fileprops():
+                return (desc.estimate_bzr_fileprop_ancestors() > 0)
+        # assume the worst
+        return True
+
+    def consider_svk_fileprops(self, revmeta):
+        """Check whether svk file propertise should be analysed for 
+        this revmeta.
+        """
+        i = self._revs.index(revmeta)
+        for desc in self._revs[i+1:]:
+            if desc.knows_fileprops():
+                return (desc.estimate_svk_fileprop_ancestors() > 0)
+        # assume the worst
+        return True
+
+    def get_lhs_parent(self, revmeta):
+        i = self._revs.index(revmeta)
+        try:
+            return self._revs[i+1]
+        except IndexError:
+            return None
+
+    def append(self, revmeta):
+        self._revs.append(revmeta)
 

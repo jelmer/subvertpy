@@ -224,6 +224,7 @@ class CachingLogWalker(CacheTable):
     def __init__(self, actual, cache_db=None):
         self.cache = LogCache(cache_db)
         self.actual = actual
+        self.quick_revprops = actual.quick_revprops
         self._transport = actual._transport
         self.find_children = actual.find_children
 
@@ -395,6 +396,8 @@ class CachingLogWalker(CacheTable):
 
 
 def strip_slashes(changed_paths):
+    if changed_paths is None:
+        return {}
     assert isinstance(changed_paths, dict)
     revpaths = {}
     for k, (action, copyfrom_path, copyfrom_rev) in changed_paths.items():
@@ -416,6 +419,7 @@ class LogWalker(object):
         assert isinstance(transport, SvnRaTransport)
 
         self._transport = transport
+        self.quick_revprops = (self._transport.has_capability("log-revprops") == True)
 
     def find_latest_change(self, path, revnum):
         """Find latest revision that touched path.

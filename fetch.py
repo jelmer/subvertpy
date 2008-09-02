@@ -28,7 +28,7 @@ import md5
 from bzrlib.plugins.svn import properties
 from bzrlib.plugins.svn.delta import apply_txdelta_handler
 from bzrlib.plugins.svn.errors import InvalidFileName
-from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_PREFIX, SVN_REVPROP_BZR_SIGNATURE)
+from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_PREFIX)
 from bzrlib.plugins.svn.repository import SvnRepository, SvnRepositoryFormat
 from bzrlib.plugins.svn.transport import _url_escape_uri
 
@@ -394,22 +394,11 @@ class RevisionBuildEditor(DeltaBuildEditor):
 
         :param revid: Revision id of the revision to create.
         """
-
-        # Commit SVN revision properties to a Revision object
-        parent_ids = self.revmeta.get_parent_ids(self.mapping)
-        if parent_ids == (NULL_REVISION,):
-            parent_ids = ()
-        assert not NULL_REVISION in parent_ids, "parents: %r" % parent_ids
-        rev = Revision(revision_id=revid, 
-                       parent_ids=parent_ids)
-
-        self.mapping.import_revision(self.revmeta.revprops, self.revmeta.get_changed_fileprops(), 
-                                     self.revmeta.uuid, self.revmeta.branch_path,
-                                     self.revmeta.revnum, rev)
+        rev = self.revmeta.get_revision(self.mapping)
 
         # Only fetch if it's cheap
         if self.source.transport.has_capability("log-revprops"):
-            signature = self.revmeta.revprops.get(SVN_REVPROP_BZR_SIGNATURE)
+            signature = self.revmeta.get_signature()
         else:
             signature = None
 
@@ -493,7 +482,7 @@ class RevisionBuildEditor(DeltaBuildEditor):
 
     def _get_text_revid(self, path):
         if self._text_revids is None:
-            self._text_revids = self.mapping.import_text_parents(self.revmeta.revprops, 
+            self._text_revids = self.mapping.import_text_parents(self.revmeta.get_revprops(), 
                                                                  self.revmeta.get_changed_fileprops())
         return self._text_revids.get(path)
 
