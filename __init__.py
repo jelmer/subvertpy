@@ -30,9 +30,9 @@ bzr-svn also adds two new commands to Bazaar:
 For more information about bzr-svn, see the bzr-svn FAQ.
 
 """
-import bzrlib, bzrlib.repository
-from bzrlib import log
-from bzrlib.bzrdir import BzrDirFormat, format_registry
+import bzrlib
+from bzrlib import bzrdir, log, repository
+from bzrlib.bzrdir import BzrDirFormat
 from bzrlib.errors import BzrError
 from bzrlib.commands import Command, register_command, display_command
 from bzrlib.help_topics import topic_registry
@@ -128,7 +128,7 @@ def check_rebase_version(min_version):
 
 check_subversion_version()
 
-from bzrlib.plugins.svn import format, revspec, repository
+from bzrlib.plugins.svn import format, revspec
 
 register_transport_proto('svn+ssh://', 
     help="Access using the Subversion smart server tunneled over SSH.")
@@ -150,14 +150,13 @@ topic_registry.register_lazy('svn-branching-schemes',
 
 BzrDirFormat.register_control_format(format.SvnRemoteFormat)
 BzrDirFormat.register_control_format(format.SvnWorkingTreeDirFormat)
-format_registry.register("subversion", format.SvnRemoteFormat, 
+bzrdir.format_registry.register("subversion", format.SvnRemoteFormat, 
                          "Subversion repository. ", 
                          native=False)
-format_registry.register("subversion-wc", format.SvnWorkingTreeDirFormat, 
+bzrdir.format_registry.register("subversion-wc", format.SvnWorkingTreeDirFormat, 
                          "Subversion working copy. ", 
                          native=False, hidden=True)
 SPEC_TYPES.append(revspec.RevisionSpec_svn)
-bzrlib.repository.SvnRepositoryFormat = repository.SvnRepositoryFormat
 
 log.properties_handler_registry.register_lazy("subversion",
                                               "bzrlib.plugins.svn.log",

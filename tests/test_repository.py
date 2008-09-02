@@ -137,7 +137,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.assertEqual([
             ('', {'foo': ('A', None, -1)}, 1), 
             ('', {'': ('A', None, -1)}, 0)],
-            [(l.branch_path, l.paths, l.revnum) for l in repos.iter_reverse_branch_changes("", 1, 0, repos.get_mapping())])
+            [(l.branch_path, l.get_paths(), l.revnum) for l in repos.iter_reverse_branch_changes("", 1, 0, repos.get_mapping())])
 
     def test_iter_changes_parent_rename(self):
         repos_url = self.make_repository("a")
@@ -234,7 +234,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.client_update("dc")
         self.client_commit("dc", "commit")
         repos = Repository.open(repos_url)
-        results = [(l.branch_path, l.paths, l.revnum) for l in repos.iter_reverse_branch_changes("pygments/trunk", 3, 0, TrunkBranchingScheme(1))]
+        results = [(l.branch_path, l.get_paths(), l.revnum) for l in repos.iter_reverse_branch_changes("pygments/trunk", 3, 0, TrunkBranchingScheme(1))]
 
         # Results differ per Subversion version, yay
         # For <= 1.4:
@@ -276,7 +276,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.assertEquals([('pygments',
               {'pygments/bla': ('A', None, -1), 'pygments': ('A', None, -1)},
                 2)],
-                [(l.branch_path, l.paths, l.revnum) for l in changes])
+                [(l.branch_path, l.get_paths(), l.revnum) for l in changes])
 
     def test_history_all(self):
         repos_url = self.make_repository("a")
@@ -1119,7 +1119,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.assertEquals([('trunk', {'trunk': (u'M', None, -1)}, 3), 
                            ('trunk', {'trunk': (u'M', None, -1)}, 2), 
                            ('trunk', {'trunk/bla': (u'A', None, -1), 'trunk': (u'A', None, -1)}, 1)], 
-                   [(l.branch_path, l.paths, l.revnum) for l in oldrepos.iter_reverse_branch_changes("trunk", 3, 0, TrunkBranchingScheme())])
+                   [(l.branch_path, l.get_paths(), l.revnum) for l in oldrepos.iter_reverse_branch_changes("trunk", 3, 0, TrunkBranchingScheme())])
 
     def test_control_code_msg(self):
         if ra.version()[1] >= 5:

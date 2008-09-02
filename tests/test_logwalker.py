@@ -423,31 +423,6 @@ class TestLogWalker(SubversionTestCase):
                                      'trunk/afile': ('A', None, -1), 
                                      'trunk': (u'A', None, -1)}, 1)], items)
 
-    def test_get_previous_root(self):
-        repos_url = self.make_repository("a")
-
-        walker = self.get_log_walker(transport=SvnRaTransport(repos_url))
-
-        self.assertEqual((None, -1), walker.get_previous("", 0))
-
-    def test_get_previous_simple(self):
-        repos_url = self.make_repository("a")
-
-        cb = self.get_commit_editor(repos_url)
-        t = cb.add_dir("trunk")
-        t.add_file("trunk/file").modify()
-        cb.close()
-
-        cb = self.get_commit_editor(repos_url)
-        t = cb.open_dir("trunk")
-        t.add_file("trunk/afile").modify()
-        t.change_prop("myprop", "mydata")
-        cb.close()
-
-        walker = self.get_log_walker(transport=SvnRaTransport(repos_url))
-
-        self.assertEqual(("trunk", 1), walker.get_previous("trunk", 2))
-
     def test_find_children_empty(self):
         repos_url = self.make_repository("a")
 
@@ -660,14 +635,3 @@ class TestLogCache(TestCase):
         self.cache.insert_path(42, "foo", "A")
         self.assertEquals(42, self.cache.find_latest_change("foo", 42))
         self.assertEquals(42, self.cache.find_latest_change("foo", 45))
-
-    def test_changes_path(self):
-        self.cache.insert_path(42, "foo", "A")
-        self.assertTrue(self.cache.changes_path("foo", 42))
-        self.assertFalse(self.cache.changes_path("foo", 41))
-
-    def test_path_added(self):
-        self.cache.insert_path(42, "foo", "A")
-        self.assertEquals(42, self.cache.path_added("foo", 41, 43))
-        self.assertEquals(None, self.cache.path_added("foo", 42, 43))
-        self.assertEquals(None, self.cache.path_added("foo", 44, 49))
