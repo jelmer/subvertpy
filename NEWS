@@ -35,6 +35,8 @@ bzr-svn-0.5			UNRELEASED
 
     + Standard commit code provides commit notification. (#79333)
 
+bzr-svn 0.4.13	UNRELEASED
+
 bzr-svn 0.4.12	2008-09-01
 
   BUG FIXES

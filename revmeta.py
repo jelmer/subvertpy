@@ -64,6 +64,7 @@ class RevisionMetadata(object):
     def get_lhs_parent(self, mapping):
         lhs_parent = mapping.get_lhs_parent(self.branch_path, self.revprops, self.get_changed_fileprops())
         if lhs_parent is None:
+            # FIXME: Avoid calling lhs_revision_parent but use paths
             # Determine manually
             lhs_parent = self.repository.lhs_revision_parent(self.branch_path, self.revnum, mapping)
         return lhs_parent
