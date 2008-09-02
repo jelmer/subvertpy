@@ -497,13 +497,15 @@ class SvnRepository(Repository):
         return parent_map
 
     def _revmeta(self, path, revnum, changes=None, revprops=None, changed_fileprops=None, 
-                 consider_fileprops=True):
+                 consider_bzr_fileprops=True, consider_svk_fileprops=True):
         if (path, revnum) in self._revmeta_cache:
             cached = self._revmeta_cache[path,revnum]
             if changes is not None:
                 cached.paths = changes
-            if not consider_fileprops:
-                cached.consider_fileprops = False
+            if not consider_bzr_fileprops:
+                cached.consider_bzr_fileprops = False
+            if not consider_svk_fileprops:
+                cached.consider_svk_fileprops = False
             if cached._changed_fileprops is None:
                 cached._changed_fileprops = changed_fileprops
             return self._revmeta_cache[path,revnum]
@@ -513,7 +515,8 @@ class SvnRepository(Repository):
 
         ret = revmeta.RevisionMetadata(self, path, revnum, changes, revprops, 
                                    changed_fileprops=changed_fileprops, 
-                                   consider_fileprops=consider_fileprops)
+                                   consider_bzr_fileprops=consider_bzr_fileprops,
+                                   consider_svk_fileprops=consider_svk_fileprops)
         self._revmeta_cache[path,revnum] = ret
         return ret
 
@@ -658,18 +661,30 @@ class SvnRepository(Repository):
         """
         history_iter = self.iter_changes(branch_path, from_revnum, to_revnum, 
                                          mapping, pb=pb, limit=limit)
-        consider_fileprops = True
+        consider_bzr_fileprops = True
         fileprops_backoff = 0
+        consider_svk_fileprops = True
         for (bp, paths, revnum, revprops) in history_iter:
-            ret = self._revmeta(bp, revnum, paths, revprops, consider_fileprops=consider_fileprops)
+            ret = self._revmeta(bp, revnum, paths, revprops, consider_bzr_fileprops=consider_bzr_fileprops,
+                                consider_svk_fileprops=consider_svk_fileprops)
 
-            if consider_fileprops and fileprops_backoff == 0:
-                ancestors = ret.estimate_bzr_ancestors()
-                if ancestors == 0:
-                    consider_fileprops = False
-                else:
-                    fileprops_backoff = ancestors - 1
+            if ((consider_bzr_fileprops or consider_svk_fileprops) and 
+                    fileprops_backoff <= 0):
+                ancestors = 0
+                if consider_bzr_fileprops:
+                    bzr_ancestors = ret.estimate_bzr_fileprop_ancestors()
+                    if bzr_ancestors == 0:
+                        consider_bzr_fileprops = False
+                    else:
+                        ancestors = max(ancestors, bzr_ancestors)
+                if consider_svk_fileprops:
+                    svk_ancestors = ret.estimate_svk_fileprop_ancestors()
+                    if svk_ancestors == 0:
+                        consider_svk_fileprops = False
+                    else:
+                        ancestors = max(ancestors, svk_ancestors)
 
+            fileprops_backoff -= 1
             yield ret
 
     def get_config(self):

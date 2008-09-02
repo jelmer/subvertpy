@@ -18,10 +18,10 @@ from bzrlib.revision import NULL_REVISION, Revision
 from bzrlib.plugins.svn import changes, errors, properties
 from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors
 from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
-                 parse_svk_feature)
+                 parse_svk_feature, estimate_svk_ancestors)
 
 class RevisionMetadata(object):
-    def __init__(self, repository, branch_path, revnum, paths, revprops, changed_fileprops=None, consider_fileprops=True):
+    def __init__(self, repository, branch_path, revnum, paths, revprops, changed_fileprops=None, consider_bzr_fileprops=True, consider_svk_fileprops=True):
         self.repository = repository
         self.branch_path = branch_path
         self._paths = paths
@@ -29,7 +29,8 @@ class RevisionMetadata(object):
         self.revprops = revprops
         self._changed_fileprops = changed_fileprops
         self.uuid = repository.uuid
-        self.consider_fileprops = consider_fileprops
+        self.consider_bzr_fileprops = consider_bzr_fileprops
+        self.consider_svk_fileprops = consider_svk_fileprops
 
     def __repr__(self):
         return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, self.repository.uuid)
@@ -73,10 +74,16 @@ class RevisionMetadata(object):
         """Estimate how many ancestors with bzr file properties this revision has.
 
         """
-        if not self.consider_fileprops:
+        if not self.consider_bzr_fileprops:
             # This revisions descendant doesn't have bzr fileprops set, so this one can't have them either.
             return 0
         return estimate_bzr_ancestors(self.get_fileprops())
+
+    def estimate_svk_fileprop_ancestors(self):
+        if not self.consider_svk_fileprops:
+            # This revisions descendant doesn't have svk fileprops set, so this one can't have them either.
+            return 0
+        return estimate_svk_ancestors(self.get_fileprops())
 
     def is_bzr_revision(self):
         """Determine (with as few network requests as possible) if this is a bzr revision.
@@ -86,7 +93,7 @@ class RevisionMetadata(object):
         order = []
         if self.repository.quick_log_revprops:
             order.append(lambda: is_bzr_revision_revprops(self.revprops))
-        if self.consider_fileprops:
+        if self.consider_bzr_fileprops:
             order.append(lambda: is_bzr_revision_fileprops(self.get_changed_fileprops()))
         # Only look for revprops if they could've been committed
         if (not self.repository.quick_log_revprops and 

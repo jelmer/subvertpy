@@ -59,3 +59,5 @@ def generate_svk_feature(uuid, branch, revnum):
     return "%s:/%s:%d" % (uuid, branch, revnum)
 
 
+def estimate_svk_ancestors(fileprops):
+    return len(fileprops.get(SVN_PROP_SVK_MERGE,"").splitlines())
