@@ -16,7 +16,7 @@
 from bzrlib import errors
 from bzrlib.revision import NULL_REVISION, Revision
 
-from bzrlib.plugins.svn import changes, errors as svn_errors, logwalker, properties
+from bzrlib.plugins.svn import changes, core, errors as svn_errors, logwalker, properties
 from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors, SVN_REVPROP_BZR_SIGNATURE
 from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
                  parse_svk_feature, estimate_svk_ancestors)
@@ -63,8 +63,22 @@ class RevisionMetadata(object):
         return self._paths
 
     def get_revision_id(self, mapping):
-        return self.repository.get_revmap().get_revision_id(self.revnum, self.branch_path, mapping, 
-                                                            self.get_revprops(), self.get_changed_fileprops())
+        if mapping.supports_roundtripping():
+            # See if there is a bzr:revision-id revprop set
+            try:
+                (bzr_revno, revid) = mapping.get_revision_id(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
+            except core.SubversionException, (_, num):
+                if num == svn_errors.ERR_FS_NO_SUCH_REVISION:
+                    raise errors.NoSuchRevision(path, revnum)
+                raise
+        else:
+            revid = None
+
+        # Or generate it
+        if revid is None:
+            return mapping.revision_id_foreign_to_bzr((self.uuid, self.revnum, self.branch_path))
+
+        return revid
 
     def get_fileprops(self):
         return self._get_fileprops_fn(self.branch_path, self.revnum)
@@ -232,6 +246,20 @@ class RevisionMetadata(object):
 
     def __hash__(self):
         return hash((self.__class__, self.uuid, self.branch_path, self.revnum))
+
+class CachingRevisionMetadata(RevisionMetadata):
+
+    def get_revision_id(self, mapping):
+        # Look in the cache to see if it already has a revision id
+        revid = self._revid_cache.lookup_branch_revnum(self.revnum, self.branch_path, mapping.name)
+        if revid is not None:
+            return revid
+
+        revid = super(CachingRevisionMetadata, self).get_revision_id(mapping)
+
+        self.cache.insert_revid(revid, path, revnum, revnum, mapping.name)
+        self.cache.commit_conditionally()
+        return revid
 
 
 def svk_feature_to_revision_id(feature, mapping):

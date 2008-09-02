@@ -30,24 +30,6 @@ class RevidMap(object):
     def __init__(self, repos):
         self.repos = repos
 
-    def get_revision_id(self, revnum, path, mapping, revprops, fileprops):
-        if mapping.supports_roundtripping():
-            # See if there is a bzr:revision-id revprop set
-            try:
-                (bzr_revno, revid) = mapping.get_revision_id(path, revprops, fileprops)
-            except SubversionException, (_, num):
-                if num == ERR_FS_NO_SUCH_REVISION:
-                    raise NoSuchRevision(path, revnum)
-                raise
-        else:
-            revid = None
-
-        # Or generate it
-        if revid is None:
-            return mapping.revision_id_foreign_to_bzr((self.repos.uuid, revnum, path))
-
-        return revid
-
     def get_branch_revnum(self, revid, layout, project=None):
         """Find the (branch, revnum) tuple for a revision id."""
         # Try a simple parse
@@ -157,19 +139,6 @@ class CachingRevidMap(object):
         self.cache = RevisionIdMapCache(cachedb)
         self.actual = actual
         self.revid_seen = set()
-
-    def get_revision_id(self, revnum, path, mapping, changed_fileprops, revprops):
-        # Look in the cache to see if it already has a revision id
-        revid = self.cache.lookup_branch_revnum(revnum, path, mapping.name)
-        if revid is not None:
-            return revid
-
-        revid = self.actual.get_revision_id(revnum, path, mapping, changed_fileprops, revprops)
-
-        self.cache.insert_revid(revid, path, revnum, revnum, mapping.name)
-        self.cache.commit_conditionally()
-
-        return revid
 
     def get_branch_revnum(self, revid, layout, project=None):
         # Try a simple parse
