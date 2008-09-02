@@ -204,29 +204,19 @@ class RevisionMetadata(object):
         return self.get_svk_merges(mapping)
 
     def get_parent_ids(self, mapping):
-        parents_cache = getattr(self.repository._real_parents_provider, "_cache", None)
-        if parents_cache is not None:
-            parent_ids = parents_cache.lookup_parents(self.get_revision_id(mapping))
-            if parent_ids is not None:
-                return parent_ids
-
         lhs_parent = self.get_lhs_parent(mapping)
+
         if lhs_parent == NULL_REVISION:
-            parent_ids = (NULL_REVISION,)
+            return (NULL_REVISION,)
         else:
-            parent_ids = (lhs_parent,) + self.get_rhs_parents(mapping)
-
-        if parents_cache is not None:
-            parents_cache.insert_parents(self.get_revision_id(mapping), 
-                                         parent_ids)
-
-        return parent_ids
+            return (lhs_parent,) + self.get_rhs_parents(mapping)
 
     def get_signature(self):
         return self.get_revprops().get(SVN_REVPROP_BZR_SIGNATURE)
 
     def get_revision(self, mapping):
         parent_ids = self.get_parent_ids(mapping)
+
         if parent_ids == (NULL_REVISION,):
             parent_ids = ()
         rev = Revision(revision_id=self.get_revision_id(mapping), 
@@ -247,7 +237,13 @@ class RevisionMetadata(object):
     def __hash__(self):
         return hash((self.__class__, self.uuid, self.branch_path, self.revnum))
 
+
 class CachingRevisionMetadata(RevisionMetadata):
+
+    def __init__(self, repository, *args, **kwargs):
+        super(CachingRevisionMetadata, self).__init__(repository, *args, **kwargs)
+        self._parents_cache = getattr(self.repository._real_parents_provider, "_cache", None)
+        self._revid_cache = self.repository.revmap.cache
 
     def get_revision_id(self, mapping):
         # Look in the cache to see if it already has a revision id
@@ -257,9 +253,23 @@ class CachingRevisionMetadata(RevisionMetadata):
 
         revid = super(CachingRevisionMetadata, self).get_revision_id(mapping)
 
-        self.cache.insert_revid(revid, path, revnum, revnum, mapping.name)
-        self.cache.commit_conditionally()
+        self._revid_cache.insert_revid(revid, self.branch_path, self.revnum, self.revnum, mapping.name)
+        self._revid_cache.commit_conditionally()
         return revid
+
+    def get_parent_ids(self, mapping):
+        myrevid = self.get_revision_id(mapping)
+
+        if self._parents_cache is not None:
+            parent_ids = self._parents_cache.lookup_parents(mapping)
+            if parent_ids is not None:
+                return parent_ids
+
+        parent_ids = super(CachingRevisionMetadata, self).get_parent_ids(mapping)
+
+        self._parents_cache.insert_parents(myrevid, parent_ids)
+
+        return parent_ids
 
 
 def svk_feature_to_revision_id(feature, mapping):

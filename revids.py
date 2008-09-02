@@ -83,8 +83,7 @@ class RevidMap(object):
             revids = set()
             try:
                 revmeta = self.repos._revmeta_provider.get_revision(branch, revno)
-                props = revmeta.get_fileprops()
-                for propname, propvalue in props.items():
+                for propname, propvalue in revmeta.get_fileprops().items():
                     if not propname.startswith(SVN_PROP_BZR_REVISION_ID):
                         continue
                     mapping_name = propname[len(SVN_PROP_BZR_REVISION_ID):]
