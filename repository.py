@@ -342,7 +342,7 @@ class SvnRepository(Repository):
             mapping = self.get_mapping()
         if layout is None:
             layout = self.get_layout()
-        for revmeta in self._revmeta_provider.iter_all_changes(layout, self.get_latest_revnum()):
+        for revmeta in self._revmeta_provider.iter_all_changes(layout, mapping, self.get_latest_revnum()):
             yield revmeta.get_revision_id(mapping)
 
     def set_make_working_trees(self, new_value):

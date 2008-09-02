@@ -430,7 +430,7 @@ class RevisionMetadataProvider(object):
         if mapping is None:
             mapping_check_path = lambda x:True
         else:
-            mapping_check_path = mapping.is_branch_or_tag
+            mapping_check_path = lambda x: mapping.is_branch(x) or mapping.is_tag(x)
         # Layout decides which ones to pick up
         # Mapping decides which ones to keep
         unusual = set()

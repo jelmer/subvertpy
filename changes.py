@@ -107,12 +107,12 @@ def apply_reverse_changes(branches, changes):
     for p in sorted(changes):
         (action, cf, cr) = changes[p]
         if action == 'D':
-            for b in branches:
+            for b in list(branches):
                 if path_is_child(p, b):
                     branches.remove(b)
                     yield b, None
         elif cf is not None:
-            for b in branches:
+            for b in list(branches):
                 if path_is_child(p, b):
                     old_b = rebase_path(b, p, cf)
                     yield b, old_b
