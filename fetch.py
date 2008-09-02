@@ -603,7 +603,7 @@ class InterFromSvnRepository(InterRepository):
         meta_map = {}
         graph = self.source.get_graph()
         available_revs = set()
-        for revmeta in self.source._revmeta_provider.iter_all_changes(self.source.get_layout(), self.source.get_latest_revnum(), pb=pb):
+        for revmeta in self.source._revmeta_provider.iter_all_changes(self.source.get_layout(), mapping=None, from_revnum=self.source.get_latest_revnum(), pb=pb):
             revid = revmeta.get_revision_id(mapping)
             available_revs.add(revid)
             meta_map[revid] = revmeta

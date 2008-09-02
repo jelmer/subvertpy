@@ -335,7 +335,6 @@ def test_suite():
             'test_repository', 
             'test_revids',
             'test_revspec',
-            'test_scheme', 
             'test_svk',
             'test_transport',
             'test_tree',

@@ -97,3 +97,29 @@ def changes_root(paths):
         else:
             return None # Mismatch
     return root
+
+def apply_reverse_changes(branches, changes):
+    """
+
+    :return: [(new_name, old_name)]
+    """
+    branches = set(branches)
+    for p in sorted(changes):
+        (action, cf, cr) = changes[p]
+        if action == 'D':
+            for b in branches:
+                if path_is_child(p, b):
+                    branches.remove(b)
+                    yield b, None
+        elif cf is not None:
+            for b in branches:
+                if path_is_child(p, b):
+                    old_b = rebase_path(b, p, cf)
+                    yield b, old_b
+                    branches.remove(b)
+                    branches.add(old_b)
+
+
+def rebase_path(path, orig_parent, new_parent):
+    return (new_parent+"/"+path[len(orig_parent):].strip("/")).strip("/")
+

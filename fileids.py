@@ -60,7 +60,7 @@ def get_local_changes(paths, branch, mapping, layout, generate_revid,
                 if get_children is not None:
                     for c in get_children(data[1], data[2]):
                         mutter('oops: %r child %r', data[1], c)
-                        new_paths[(new_p+"/"+c[len(data[1]):].strip("/")).strip("/")] = (data[0], None, -1)
+                        new_paths[changes.rebase_path(c, data[1], new_p)] = (data[0], None, -1)
                 data = (data[0], None, -1)
 
         new_paths[new_p] = data
