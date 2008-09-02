@@ -263,3 +263,26 @@ class RevisionMetadataBranch(object):
     def append(self, revmeta):
         self._revs.append(revmeta)
 
+
+class RevisionMetadataProvider(object):
+
+    def __init__(self, repository):
+        self._revmeta_cache = {}
+        self.repository = repository
+
+    def get_revision(self, path, revnum, changes=None, revprops=None, changed_fileprops=None, 
+                     metabranch=None):
+        if (path, revnum) in self._revmeta_cache:
+            cached = self._revmeta_cache[path,revnum]
+            if changes is not None:
+                cached.paths = changes
+            if cached._changed_fileprops is None:
+                cached._changed_fileprops = changed_fileprops
+            return self._revmeta_cache[path,revnum]
+
+        ret = RevisionMetadata(self.repository, path, revnum, changes, revprops, 
+                                   changed_fileprops=changed_fileprops, 
+                                   metabranch=metabranch)
+        self._revmeta_cache[path,revnum] = ret
+        return ret
+

@@ -133,7 +133,7 @@ class SvnRepository(Repository):
         self._hinted_branch_path = branch_path
         self._real_parents_provider = self
         self._cached_tags = {}
-        self._revmeta_cache = {}
+        self._revmeta_provider = revmeta.RevisionMetadataProvider(self)
 
         cache = self.get_config().get_use_cache()
 
@@ -481,21 +481,8 @@ class SvnRepository(Repository):
             parent_map[revision_id] = revmeta.get_parent_ids(mapping)
         return parent_map
 
-    def _revmeta(self, path, revnum, changes=None, revprops=None, changed_fileprops=None, 
-                 metabranch=None):
-        if (path, revnum) in self._revmeta_cache:
-            cached = self._revmeta_cache[path,revnum]
-            if changes is not None:
-                cached.paths = changes
-            if cached._changed_fileprops is None:
-                cached._changed_fileprops = changed_fileprops
-            return self._revmeta_cache[path,revnum]
-
-        ret = revmeta.RevisionMetadata(self, path, revnum, changes, revprops, 
-                                   changed_fileprops=changed_fileprops, 
-                                   metabranch=metabranch)
-        self._revmeta_cache[path,revnum] = ret
-        return ret
+    def _revmeta(self, *args, **kwargs):
+        return self._revmeta_provider.get_revision(*args, **kwargs)
 
     def get_revision(self, revision_id):
         """See Repository.get_revision."""
