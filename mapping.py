@@ -486,6 +486,9 @@ class BzrSvnMappingv1(BzrSvnMapping):
     def import_fileid_map(self, revprops, fileprops):
         return {}
 
+    def import_text_parents(self, revprops, fileprops):
+        return {}
+
 
 class BzrSvnMappingv2(BzrSvnMapping):
     """The second version of the mappings as used in the 0.3.x series.
@@ -533,6 +536,9 @@ class BzrSvnMappingv2(BzrSvnMapping):
         return "%s-%s" % (self.revision_id_foreign_to_bzr((uuid, revnum, branch)), escape_svn_path(inv_path))
 
     def import_fileid_map(self, revprops, fileprops):
+        return {}
+
+    def import_text_parents(self, revprops, fileprops):
         return {}
 
 
