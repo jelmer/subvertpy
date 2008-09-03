@@ -119,6 +119,13 @@ class RepositoryLayout(object):
 
 
 class TrunkLayout(RepositoryLayout):
+
+    def __init__(self, repository=None):
+        self.repository = repository
+        if repository is not None:
+            self._config = repository.get_config()
+        else:
+            self._config = None
     
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
@@ -127,7 +134,10 @@ class TrunkLayout(RepositoryLayout):
         :param project: Optional name of the project the tag is for. Can include slashes.
         :return: Path of the tag."
         """
-        return urlutils.join(project, "tags", name.encode("utf-8")).strip("/")
+        subpath = urlutils.join("tags", name.encode("utf-8")).strip("/")
+        if project in (None, ""):
+            return subpath
+        return urlutils.join(project, subpath)
 
     def get_tag_name(self, path, project=""):
         """Determine the tag name from a tag path.
@@ -164,16 +174,19 @@ class TrunkLayout(RepositoryLayout):
         parts = path.split("/")
         for i, p in enumerate(parts):
             if (i > 0 and parts[i-1] in ("branches", "tags")) or p == "trunk":
-                if p == "tags":
+                if parts[i-1] == "tags":
                     t = "tag"
                     j = i-1
-                elif p == "branches":
+                elif parts[i-1] == "branches":
                     t = "branch"
                     j = i-1
                 else:
                     t = "branch"
                     j = i
-                return (t, "/".join(parts[:j-1]).strip("/"), "/".join(parts[:i]).strip("/"), "/".join(parts[i+1:]).strip("/"))
+                return (t, 
+                        "/".join(parts[:j]).strip("/"), 
+                        "/".join(parts[:i+1]).strip("/"), 
+                        "/".join(parts[i+1:]).strip("/"))
         raise NotBranchError(path)
 
     def _add_project(self, path, project=None):

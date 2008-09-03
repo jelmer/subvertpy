@@ -17,6 +17,7 @@
 
 from bzrlib import osutils, registry
 from bzrlib.errors import InvalidRevisionId
+from bzrlib.inventory import ROOT_ID
 from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter
 
@@ -462,8 +463,41 @@ class BzrSvnMappingv1(BzrSvnMapping):
     def __eq__(self, other):
         return type(self) == type(other)
 
+    def is_branch(self, branch_path):
+        if branch_path == "":
+            return True
+        
+        parts = branch_path.split("/")
+        return (parts[-1] == "trunk" or 
+                parts[-2] in ("branches", "tags", "hooks"))
 
-class BzrSvnMappingv2(BzrSvnMapping):
+    def is_tag(self, tag_path):
+        return False
+
+    def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
+        parse_svn_revprops(svn_revprops, rev)
+
+    @staticmethod
+    def generate_file_id(uuid, revnum, branch, inv_path):
+        if inv_path == "":
+            return ROOT_ID
+        return "%s-%s" % (self.revision_id_foreign_to_bzr((uuid, revnum, branch)), escape_svn_path(inv_path))
+
+    def import_fileid_map(self, revprops, fileprops):
+        return {}
+
+    def import_text_parents(self, revprops, fileprops):
+        return {}
+
+    def get_rhs_parents(self, branch_path, revprops, fileprops):
+        value = fileprops.get("bzr:merge", "")
+        if value == "":
+            return ()
+        return (value.splitlines()[-1])
+
+
+
+class BzrSvnMappingv2(BzrSvnMappingv1):
     """The second version of the mappings as used in the 0.3.x series.
 
     """

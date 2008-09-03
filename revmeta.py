@@ -424,20 +424,53 @@ class RevisionMetadataProvider(object):
         if prev is not None:
             yield prev
 
-    def iter_all_changes(self, layout, latest_revnum, pb=None):
-        for (paths, revnum, revprops) in self._log.iter_changes(None, 0, latest_revnum, pb=pb):
+    def iter_all_changes(self, layout, mapping, from_revnum, to_revnum=0, pb=None):
+        assert from_revnum >= to_revnum
+        metabranches = {}
+        if mapping is None:
+            mapping_check_path = lambda x:True
+        else:
+            mapping_check_path = lambda x: mapping.is_branch(x) or mapping.is_tag(x)
+        # Layout decides which ones to pick up
+        # Mapping decides which ones to keep
+        unusual = set()
+        for (paths, revnum, revprops) in self._log.iter_changes(None, from_revnum, to_revnum, pb=pb):
+            bps = {}
             if pb:
-                pb.update("discovering revisions", revnum, latest_revnum)
-            yielded_paths = set()
-            for p in paths:
+                pb.update("discovering revisions", revnum, from_revnum-revnum)
+
+            for p in sorted(paths):
+                action = paths[p][0]
+
                 try:
-                    bp = layout.parse(p)[2]
+                    (_, _, bp, ip) = layout.parse(p)
                 except errors.NotBranchError:
                     pass
+                    for u in unusual:
+                        if p.startswith("%s/" % u):
+                            bps[u] = metabranches[u]
                 else:
-                    if not bp in yielded_paths:
-                        if not bp in paths or paths[bp][0] != 'D':
-                            assert revnum > 0 or bp == "", "%r:%r" % (bp, revnum)
-                            yielded_paths.add(bp)
-                            yield self.get_revision(bp, revnum, paths, revprops)
+                    if action != 'D' or ip != "":
+                        if not bp in metabranches:
+                            metabranches[bp] = RevisionMetadataBranch(mapping)
+                        bps[bp] = metabranches[bp]
+            
+            # Apply renames and the like for the next round
+            for new_name, old_name in changes.apply_reverse_changes(metabranches.keys(), paths):
+                if new_name in unusual:
+                    unusual.remove(new_name)
+                if old_name is None: 
+                    # didn't exist previously
+                    del metabranches[new_name]
+                else:
+                    data = metabranches[new_name]
+                    del metabranches[new_name]
+                    if mapping_check_path(old_name):
+                        metabranches[old_name] = data
+                        if not layout.is_branch_or_tag(old_name):
+                            unusual.add(old_name)
 
+            for bp in bps:
+                revmeta = self.get_revision(bp, revnum, paths, revprops, metabranch=bps[bp])
+                bps[bp].append(revmeta)
+                yield revmeta

@@ -88,7 +88,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         repos_url = self.make_repository("a")
         repos = Repository.open(repos_url)
         mapping = repos.get_mapping()
-        if mapping.supports_roundtripping():
+        if not mapping.supports_roundtripping():
             raise TestNotApplicable()
         self.assertEqual({u"": (mapping.generate_file_id(repos.uuid, 0, "", u""), mapping.revision_id_foreign_to_bzr((repos.uuid, 0, "")))}, repos.get_fileid_map(0, "", mapping))
 
@@ -101,9 +101,10 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         dc.close()
 
         repos = Repository.open(repos_url)
-        if mapping.supports_roundtripping():
+        mapping = repos.get_mapping()
+        if not mapping.supports_roundtripping():
             raise TestNotApplicable()
-        revid = repos.generate_revision_id(1, "", repos.get_mapping())
+        revid = repos.generate_revision_id(1, "", mapping)
         self.assertEquals("someid", revid)
 
     def test_generate_revision_id_forced_revid_invalid(self):
@@ -115,9 +116,9 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
 
         repos = Repository.open(repos_url)
         mapping = repos.get_mapping()
-        if mapping.supports_roundtripping():
+        if not mapping.supports_roundtripping():
             raise TestNotApplicable()
-        revid = repos.generate_revision_id(1, "", repos.get_mapping())
+        revid = repos.generate_revision_id(1, "", mapping)
         self.assertEquals(
                 mapping.revision_id_foreign_to_bzr((repos.uuid, 1, "")),
                 revid)
@@ -220,13 +221,13 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         repos = Repository.open(repos_url)
 
         self.assertEqual(2, 
-                   len(list(repos.all_revision_ids(repos.get_layout()))))
+                   len(set(repos.all_revision_ids(repos.get_layout()))))
 
     def test_all_revs_empty(self):
         repos_url = self.make_repository("a")
         repos = Repository.open(repos_url)
         set_branching_scheme(repos, TrunkBranchingScheme())
-        self.assertEqual([], list(repos.all_revision_ids()))
+        self.assertEqual(set([]), set(repos.all_revision_ids()))
 
     def test_all_revs(self):
         repos_url = self.make_repository("a")
@@ -252,16 +253,16 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         repos = Repository.open(repos_url)
         set_branching_scheme(repos, TrunkBranchingScheme())
         mapping = repos.get_mapping()
-        self.assertEqual([
+        self.assertEqual(set([
             repos.generate_revision_id(1, "trunk", mapping), 
-            repos.generate_revision_id(2, "branches/somebranch", mapping)],
-            list(repos.all_revision_ids()))
+            repos.generate_revision_id(2, "branches/somebranch", mapping)]),
+            set(repos.all_revision_ids()))
 
     def test_follow_history_empty(self):
         repos_url = self.make_repository("a")
         repos = Repository.open(repos_url)
-        self.assertEqual([repos.generate_revision_id(0, '', repos.get_mapping())], 
-              list(repos.all_revision_ids(repos.get_layout())))
+        self.assertEqual(set([repos.generate_revision_id(0, '', repos.get_mapping())]), 
+              set(repos.all_revision_ids(repos.get_layout())))
 
     def test_follow_history_empty_branch(self):
         repos_url = self.make_repository("a")
@@ -274,8 +275,8 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
 
         repos = Repository.open(repos_url)
         set_branching_scheme(repos, TrunkBranchingScheme())
-        self.assertEqual([repos.generate_revision_id(1, 'trunk', repos.get_mapping())], 
-                list(repos.all_revision_ids(repos.get_layout())))
+        self.assertEqual(set([repos.generate_revision_id(1, 'trunk', repos.get_mapping())]), 
+                set(repos.all_revision_ids(repos.get_layout())))
 
     def test_follow_history_follow(self):
         repos_url = self.make_repository("a")
@@ -294,10 +295,10 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         repos = Repository.open(repos_url)
         set_branching_scheme(repos, TrunkBranchingScheme())
 
-        items = list(repos.all_revision_ids(repos.get_layout()))
-        self.assertEqual([repos.generate_revision_id(1, 'trunk', repos.get_mapping()),
+        items = set(repos.all_revision_ids(repos.get_layout()))
+        self.assertEqual(set([repos.generate_revision_id(1, 'trunk', repos.get_mapping()),
                           repos.generate_revision_id(2, 'branches/abranch', repos.get_mapping())
-                          ], items)
+                          ]), items)
 
     def test_branch_log_specific(self):
         repos_url = self.make_client("a", "dc")
@@ -1112,7 +1113,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         repos_url = self.make_client('d', 'dc')
         repos = Repository.open(repos_url)
         set_branching_scheme(repos, NoBranchingScheme())
-        self.assertEquals(NULL_REVISION, repos.lhs_revision_parent("", 0, NoBranchingScheme()))
+        self.assertEquals(NULL_REVISION, repos._revmeta_provider.get_revision("", 0).get_lhs_parent(repos.get_mapping()))
 
     def testlhs_revision_parent_first(self):
         repos_url = self.make_client('d', 'dc')
@@ -1123,7 +1124,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.client_commit("dc", "Initial commit")
         mapping = repos.get_mapping()
         self.assertEquals(repos.generate_revision_id(0, "", mapping), \
-                repos.lhs_revision_parent("", 1, mapping))
+                repos._revmeta_provider.get_revision("", 1).get_lhs_parent(mapping))
 
     def testlhs_revision_parent_simple(self):
         repos_url = self.make_client('d', 'dc')
@@ -1139,7 +1140,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         set_branching_scheme(repos, TrunkBranchingScheme())
         mapping = repos.get_mapping()
         self.assertEquals(repos.generate_revision_id(1, "trunk", mapping), \
-                repos.lhs_revision_parent("trunk", 2, mapping))
+                repos._revmeta_provider.get_revision("trunk", 2).get_lhs_parent(mapping))
 
     def testlhs_revision_parent_copied(self):
         repos_url = self.make_client('d', 'dc')
@@ -1155,7 +1156,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         set_branching_scheme(repos, TrunkBranchingScheme(1))
         mapping = repos.get_mapping()
         self.assertEquals(repos.generate_revision_id(1, "py/trunk", mapping), \
-                repos.lhs_revision_parent("de/trunk", 3, mapping))
+                repos._revmeta_provider.get_revision("de/trunk", 3).get_lhs_parent(mapping))
 
     def test_mainline_revision_copied(self):
         repos_url = self.make_client('d', 'dc')
@@ -1171,7 +1172,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         set_branching_scheme(repos, TrunkBranchingScheme(1))
         mapping = repos.get_mapping()
         self.assertEquals(repos.generate_revision_id(1, "py/trunk", mapping), \
-                repos.lhs_revision_parent("de/trunk", 2, mapping))
+                repos._revmeta_provider.get_revision("de/trunk", 2).get_lhs_parent(mapping))
 
     def test_mainline_revision_nested_deleted(self):
         repos_url = self.make_client('d', 'dc')
@@ -1187,7 +1188,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         set_branching_scheme(repos, TrunkBranchingScheme(1))
         mapping = repos.get_mapping()
         self.assertEquals(repos.generate_revision_id(1, "py/trunk", mapping), \
-                repos.lhs_revision_parent("de/trunk", 3, mapping))
+                repos._revmeta_provider.get_revision("de/trunk", 3).get_lhs_parent(mapping))
 
     def test_item_keys_introduced_by(self):
         repos_url = self.make_repository('d')

@@ -63,31 +63,4 @@ class TestBranchProps(SubversionTestCase):
         self.assertTrue("svn:entry:last-author" in props)
         self.assertTrue("svn:entry:committed-date" in props)
 
-    def test_get_changed_properties(self):
-        repos_url = self.make_repository('d')
 
-        dc = self.get_commit_editor(repos_url)
-        dc.change_prop("myprop", "data\n")
-        dc.close()
-
-        dc = self.get_commit_editor(repos_url)
-        dc.change_prop("myprop", "newdata\n")
-        dc.close()
-
-        dc = self.get_commit_editor(repos_url)
-        dc.change_prop("myp2", "newdata\n")
-        dc.close()
-
-        logwalk = self.get_log_walker(transport=SvnRaTransport(repos_url))
-
-        bp = PathPropertyProvider(logwalk)
-        self.assertEquals("data\n",
-                          bp.get_changed_properties("", 1)["myprop"])
-
-        bp = PathPropertyProvider(logwalk)
-        self.assertEquals("newdata\n", 
-                          bp.get_changed_properties("", 2)["myprop"])
-
-        bp = PathPropertyProvider(logwalk)
-        self.assertEquals("newdata\n", 
-                          bp.get_changed_properties("", 3)["myp2"])
