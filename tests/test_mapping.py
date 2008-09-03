@@ -17,7 +17,7 @@
 
 import sha
 
-from bzrlib.errors import InvalidRevisionId
+from bzrlib.errors import InvalidRevisionId, NotBranchError
 from bzrlib.tests import TestCase, TestNotApplicable
 from bzrlib.revision import Revision
 
