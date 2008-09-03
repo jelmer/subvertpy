@@ -489,7 +489,7 @@ class BzrSvnMappingv1(BzrSvnMapping):
     def import_text_parents(self, revprops, fileprops):
         return {}
 
-    def get_rhs_parents(self, revprops, fileprops):
+    def get_rhs_parents(self, branch_path, revprops, fileprops):
         value = fileprops.get("bzr:merge", "")
         if value == "":
             return ()
