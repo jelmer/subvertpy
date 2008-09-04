@@ -2764,6 +2764,7 @@ static PyObject *get_windows_simple_provider(PyObject* self)
 	return (PyObject *)auth;
 }
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 static PyObject *get_windows_ssl_server_trust_provider(PyObject *self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
@@ -2774,6 +2775,7 @@ static PyObject *get_windows_ssl_server_trust_provider(PyObject *self)
 	return (PyObject *)auth;
 }
 #endif
+#endif
 
 static PyMethodDef ra_module_methods[] = {
 	{ "version", (PyCFunction)version, METH_NOARGS, NULL },
@@ -2783,7 +2785,9 @@ static PyMethodDef ra_module_methods[] = {
 	{ "get_simple_provider", (PyCFunction)get_simple_provider, METH_NOARGS, NULL },
 #if defined(WIN32)
 	{ "get_windows_simple_provider", (PyCFunction)get_windows_simple_provider, METH_NOARGS, NULL },
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	{ "get_windows_ssl_server_trust_provider", (PyCFunction)get_windows_ssl_server_trust_provider, METH_NOARGS, NULL },
+#endif
 #endif
 	{ "get_username_prompt_provider", (PyCFunction)get_username_prompt_provider, METH_VARARGS, NULL },
 	{ "get_simple_prompt_provider", (PyCFunction)get_simple_prompt_provider, METH_VARARGS, NULL },

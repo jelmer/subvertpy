@@ -77,5 +77,9 @@ Download the latest Subversion DMG from: http://svnbinaries.open.collab.net/serv
 
 bzr-svn DMGs can be found on the bzr-svn download page on Launchpad.
 
+bzr-svn is now also available in MacPorts, and can be installed with::
+
+  $ sudo port install bzr-svn
+
 ..
 	vim: ft=rest
