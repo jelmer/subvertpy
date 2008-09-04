@@ -81,6 +81,7 @@ class SchemeDerivedLayout(RepositoryLayout):
         return "%s(%s)" % (self.__class__.__name__, repr(self.scheme))
 
 
+
 def get_stored_scheme(repository):
     """Retrieve the stored branching scheme, either in the repository 
     or in the configuration file.
@@ -272,6 +273,10 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
 
     def __str__(self):
         return "%s(%s)" % (self.__class__.__name__, repr(self.scheme))
+
+    @classmethod
+    def get_test_instance(cls):
+        return cls(NoBranchingScheme())
 
 
 class BzrSvnMappingv3FileProps(mapping.BzrSvnMappingFileProps, BzrSvnMappingv3):
