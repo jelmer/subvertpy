@@ -13,10 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from bzrlib.repository import Repository
 from bzrlib.tests import TestCase
 
-from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
-from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme
+from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID
+from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps, SVN_PROP_BZR_BRANCHING_SCHEME, set_property_scheme
+from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme, ListBranchingScheme
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.tests.test_mapping import sha1
 

@@ -25,6 +25,8 @@ bzr-svn-0.5			UNRELEASED
 
    * Only fetch signatures if they can be cheaply copied.
 
+   * Also upgrade fileids in workingtree during svn-upgrade.
+
   BUG FIXES
 
    * Set bzr signature revision property during commit if possible.
