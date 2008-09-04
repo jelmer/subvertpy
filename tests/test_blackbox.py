@@ -20,8 +20,7 @@ from bzrlib.repository import Repository
 from bzrlib.tests.blackbox import ExternalBase
 from bzrlib.tests import KnownFailure
 
-from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
-from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme
+from bzrlib.plugins.svn.layout import RootLayout
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 import os, sys
@@ -293,9 +292,9 @@ Node-copyfrom-path: x
 
 
 """)
-        self.check_output("", 'svn-import --scheme=none %s dc' % filename)
+        self.check_output("", 'svn-import --layout=none %s dc' % filename)
         newrepos = Repository.open("dc")
-        mapping = BzrSvnMappingv3FileProps(NoBranchingScheme())
+        newrepos.set_layout(RootLayout())
         self.assertTrue(newrepos.has_revision(
             mapping.revision_id_foreign_to_bzr((uuid, 5, ""))))
         self.assertTrue(newrepos.has_revision(

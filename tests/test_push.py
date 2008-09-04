@@ -464,7 +464,7 @@ class PushNewBranchTests(SubversionTestCase):
         self.assertEquals(revid, newbranch.last_revision())
         self.assertEquals([revid], newbranch.revision_history())
 
-    def test_single_revision_single_branching_scheme(self):
+    def test_single_revision_single_branch(self):
         repos_url = self.make_repository("a")
         bzrwt = BzrDir.create_standalone_workingtree("c", 
             format=format.get_rich_root_format())

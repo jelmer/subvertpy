@@ -217,8 +217,8 @@ class TrunkLayout(RepositoryLayout):
 class RootLayout(RepositoryLayout):
     """Layout where the root of the repository is a branch."""
 
-    def __init__(self):
-        pass
+    def __init__(self, level=None):
+        self.level = level
     
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.

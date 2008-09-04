@@ -298,6 +298,7 @@ class SvnRepository(Repository):
         return editor.delta
 
     def set_layout(self, layout):
+        self.get_mapping().check_layout(self, layout)
         self._layout = layout
 
     def get_layout(self):

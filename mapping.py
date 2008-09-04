@@ -300,6 +300,10 @@ class BzrSvnMapping(foreign.VcsMapping):
     def from_revprops(cls, revprops):
         raise NotImplementedError
 
+    def check_layout(self, repository, layout):
+        """Check whether a layout can be used with this mapping."""
+        pass
+
     def get_mandated_layout(self, repository):
         """Return the repository layout if any is mandated by this mapping, 
         None otherwise."""

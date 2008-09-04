@@ -26,10 +26,9 @@ from bzrlib.tests import TestCaseInTempDir
 import os, sys
 
 from bzrlib.plugins.svn import repos
+from bzrlib.plugins.svn.layout import RootLayout, TrunkLayout
 from bzrlib.plugins.svn.convert import convert_repository, NotDumpFile, load_dumpfile
 from bzrlib.plugins.svn.format import get_rich_root_format
-from bzrlib.plugins.svn.mapping3 import set_branching_scheme
-from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme, NoBranchingScheme
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class TestLoadDumpfile(TestCaseInTempDir):
@@ -84,7 +83,7 @@ class TestConversion(SubversionTestCase):
 
     def test_sets_parent_urls(self):
         convert_repository(Repository.open(self.repos_url), "e", 
-                           TrunkBranchingScheme(), 
+                           TrunkLayout(0), 
                            all=False, create_shared_repo=True)
         self.assertEquals(self.repos_url+"/trunk", 
                 Branch.open("e/trunk").get_parent())
@@ -105,10 +104,10 @@ class TestConversion(SubversionTestCase):
 
         oldrepos = Repository.open(self.repos_url)
         convert_repository(oldrepos, "e", 
-                           TrunkBranchingScheme(), 
+                           TrunkLayout(0), 
                            all=False, create_shared_repo=True)
         newrepos = Repository.open("e")
-        set_branching_scheme(oldrepos, TrunkBranchingScheme())
+        oldrepos.set_layout(TrunkLayout(0))
         self.assertFalse(newrepos.has_revision(oldrepos.generate_revision_id(2, "branches/somebranch", oldrepos.get_mapping())))
 
     def test_fetch_filebranch(self):
@@ -118,9 +117,9 @@ class TestConversion(SubversionTestCase):
         dc.close()
 
         oldrepos = Repository.open(self.repos_url)
-        convert_repository(oldrepos, "e", TrunkBranchingScheme())
+        convert_repository(oldrepos, "e", TrunkLayout(0))
         newrepos = Repository.open("e")
-        set_branching_scheme(oldrepos, TrunkBranchingScheme())
+        oldrepos.set_layout(TrunkLayout(0))
         self.assertFalse(newrepos.has_revision(oldrepos.generate_revision_id(2, "branches/somebranch", oldrepos.get_mapping())))
 
     def test_fetch_dead(self):
@@ -136,7 +135,7 @@ class TestConversion(SubversionTestCase):
         dc.close()
 
         oldrepos = Repository.open(self.repos_url)
-        convert_repository(oldrepos, "e", TrunkBranchingScheme(), 
+        convert_repository(oldrepos, "e", TrunkLayout(0), 
                            all=True, create_shared_repo=True)
         newrepos = Repository.open("e")
         self.assertTrue(newrepos.has_revision(
@@ -156,7 +155,7 @@ class TestConversion(SubversionTestCase):
         dc.close()
 
         oldrepos = Repository.open(self.repos_url)
-        convert_repository(oldrepos, "e", TrunkBranchingScheme(), 
+        convert_repository(oldrepos, "e", TrunkLayout(0), 
             create_shared_repo=True,
             filter_branch=lambda branch: branch.get_branch_path().endswith("somebranch"))
         newrepos = Repository.open("e")
@@ -168,13 +167,13 @@ class TestConversion(SubversionTestCase):
         dir.create_repository(shared=True)
 
         convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), create_shared_repo=True)
+                TrunkLayout(0), create_shared_repo=True)
 
         self.assertTrue(Repository.open("e").is_shared())
 
     def test_shared_import_continue_remove(self):
         convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), create_shared_repo=True)
+                TrunkLayout(0), create_shared_repo=True)
 
         dc = self.get_commit_editor()
         dc.delete("trunk")
@@ -186,11 +185,11 @@ class TestConversion(SubversionTestCase):
         dc.close()
 
         convert_repository(Repository.open(self.repos_url), "e", 
-                           TrunkBranchingScheme(), create_shared_repo=True)
+                           TrunkLayout(0), create_shared_repo=True)
 
     def test_shared_import_remove_nokeep(self):
         convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), create_shared_repo=True)
+                TrunkLayout(0), create_shared_repo=True)
 
         dc = self.get_commit_editor()
         dc.delete("trunk")
@@ -199,29 +198,29 @@ class TestConversion(SubversionTestCase):
         self.assertTrue(os.path.exists("e/trunk"))
 
         convert_repository(Repository.open(self.repos_url), "e", 
-                           TrunkBranchingScheme(), create_shared_repo=True)
+                           TrunkLayout(0), create_shared_repo=True)
 
         self.assertFalse(os.path.exists("e/trunk"))
 
     def test_shared_import_continue_with_wt(self):
         convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), working_trees=True)
+                TrunkLayout(0), working_trees=True)
         convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), working_trees=True)
+                TrunkLayout(0), working_trees=True)
 
-    def test_shared_import_nonescheme_empty(self):
+    def test_shared_import_rootlayout_empty(self):
         dir = BzrDir.create("e", format=get_rich_root_format())
         dir.create_repository(shared=True)
 
         convert_repository(Repository.open(self.repos_url), "e", 
-                NoBranchingScheme(), create_shared_repo=True)
+                RootLayout(), create_shared_repo=True)
 
     def test_shared_import_with_wt(self):
         dir = BzrDir.create("e", format=get_rich_root_format())
         dir.create_repository(shared=True)
 
         convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), create_shared_repo=True, 
+                TrunkLayout(0), create_shared_repo=True, 
                 working_trees=True)
 
         self.assertTrue(os.path.isfile(os.path.join(
@@ -232,7 +231,7 @@ class TestConversion(SubversionTestCase):
         dir.create_repository(shared=True)
 
         convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), create_shared_repo=True, 
+                TrunkLayout(0), create_shared_repo=True, 
                 working_trees=False)
 
         self.assertFalse(os.path.isfile(os.path.join(
@@ -244,13 +243,13 @@ class TestConversion(SubversionTestCase):
 
         self.assertRaises(IncompatibleRepositories, 
             lambda: convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), create_shared_repo=True, 
+                TrunkLayout(0), create_shared_repo=True, 
                 working_trees=False))
 
     def test_shared_import_continue_branch(self):
         oldrepos = Repository.open(self.repos_url)
         convert_repository(oldrepos, "e", 
-                TrunkBranchingScheme(), create_shared_repo=True)
+                TrunkLayout(0), create_shared_repo=True)
 
         mapping = oldrepos.get_mapping()
 
@@ -264,7 +263,7 @@ class TestConversion(SubversionTestCase):
                 Branch.open("e/trunk").last_revision())
 
         convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), create_shared_repo=True)
+                TrunkLayout(0), create_shared_repo=True)
 
         self.assertEqual(Repository.open(self.repos_url).generate_revision_id(3, "trunk", mapping), 
                         Branch.open("e/trunk").last_revision())
@@ -272,21 +271,21 @@ class TestConversion(SubversionTestCase):
  
     def test_shared_import(self):
         convert_repository(Repository.open(self.repos_url), "e", 
-                TrunkBranchingScheme(), create_shared_repo=True)
+                TrunkLayout(0), create_shared_repo=True)
 
         self.assertTrue(Repository.open("e").is_shared())
     
     def test_simple(self):
-        convert_repository(Repository.open(self.repos_url), os.path.join(self.test_dir, "e"), TrunkBranchingScheme())
+        convert_repository(Repository.open(self.repos_url), os.path.join(self.test_dir, "e"), TrunkLayout(0))
         self.assertTrue(os.path.isdir(os.path.join(self.test_dir, "e", "trunk")))
         self.assertTrue(os.path.isdir(os.path.join(self.test_dir, "e", "branches", "abranch")))
 
     def test_convert_to_nonexistant(self):
-        self.assertRaises(NoSuchFile, convert_repository, Repository.open(self.repos_url), os.path.join(self.test_dir, "e", "foo", "bar"), TrunkBranchingScheme())
+        self.assertRaises(NoSuchFile, convert_repository, Repository.open(self.repos_url), os.path.join(self.test_dir, "e", "foo", "bar"), TrunkLayout(0))
 
     def test_notshared_import(self):
         convert_repository(Repository.open(self.repos_url), "e", 
-                           TrunkBranchingScheme(), create_shared_repo=False)
+                           TrunkLayout(0), create_shared_repo=False)
 
         self.assertRaises(NotBranchError, Repository.open, "e")
 
@@ -310,7 +309,7 @@ PROPS-END
 """)
         branch_path = os.path.join(self.test_dir, "f")
         repos = self.load_dumpfile(dumpfile, 'g')
-        convert_repository(repos, branch_path, NoBranchingScheme())
+        convert_repository(repos, branch_path, RootLayout())
         branch = Repository.open(branch_path)
         self.assertEqual(['svn-v3-none:6987ef2d-cd6b-461f-9991-6f1abef3bd59::0'], branch.all_revision_ids())
         Branch.open(branch_path)
@@ -338,7 +337,7 @@ PROPS-END
 """)
         branch_path = os.path.join(self.test_dir, "f")
         repos = self.load_dumpfile(dumpfile, 'g')
-        convert_repository(repos, branch_path, TrunkBranchingScheme())
+        convert_repository(repos, branch_path, TrunkLayout(0))
         repository = Repository.open(branch_path)
         self.assertEqual([], repository.all_revision_ids())
         self.assertRaises(NotBranchError, Branch.open, branch_path)
@@ -402,7 +401,7 @@ data
 """)
         repos = self.load_dumpfile(filename, 'g')
         convert_repository(repos, os.path.join(self.test_dir, "e"), 
-                           TrunkBranchingScheme())
+                           TrunkLayout(0))
         mapping = repos.get_mapping()
         abspath = self.test_dir
         if sys.platform == 'win32':

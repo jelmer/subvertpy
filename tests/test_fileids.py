@@ -22,8 +22,6 @@ from bzrlib.trace import mutter
 from bzrlib.tests import TestCase
 
 from bzrlib.plugins.svn.fileids import simple_apply_changes
-from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps, set_branching_scheme
-from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme, NoBranchingScheme
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class MockRepo(object):
@@ -148,7 +146,6 @@ class TestComplexFileids(SubversionTestCase):
         self.assertNotEqual(inv1.path2id("foo"), inv2.path2id("foo"))
 
     def test_copy_branch(self):
-        scheme = TrunkBranchingScheme()
         repos_url = self.make_repository('d')
 
         dc = self.get_commit_editor(repos_url)
@@ -183,7 +180,7 @@ class TestComplexFileids(SubversionTestCase):
 
 class TestFileMapping(TestCase):
     def setUp(self):
-        self.mapping = BzrSvnMappingv3FileProps(NoBranchingScheme())
+        self.generate_file_id = lambda uuid, revnum, bp, ip: hash((uuid, revnum, bp, ip))
 
     def apply_mappings(self, mappings, find_children=None, renames={}):
         map = {}
@@ -194,7 +191,7 @@ class TestFileMapping(TestCase):
             def new_file_id(x):
                 if renames.has_key(r) and renames[r].has_key(x):
                     return renames[r][x]
-                return self.mapping.generate_file_id("uuid", revnum, branchpath, x)
+                return self.generate_file_id("uuid", revnum, branchpath, x)
             revmap = simple_apply_changes(new_file_id, mappings[r], find_children)
             map.update(dict([(x, (revmap[x], r)) for x in revmap]))
         return map
@@ -273,13 +270,13 @@ class GetMapTests(SubversionTestCase):
         self.repos = Repository.open(self.repos_url)
 
     def test_empty(self):
-        set_branching_scheme(self.repos, NoBranchingScheme())
+        self.repos.set_layout(RootLayout(0))
         self.mapping = self.repos.get_mapping()
         self.assertEqual({"": (self.mapping.generate_file_id(self.repos.uuid, 0, "", u""), self.repos.generate_revision_id(0, "", self.mapping))}, 
                          self.repos.get_fileid_map(0, "", self.mapping))
 
     def test_empty_trunk(self):
-        set_branching_scheme(self.repos, TrunkBranchingScheme())
+        self.repos.set_layout(RootLayout(0))
         self.mapping = self.repos.get_mapping()
         dc = self.get_commit_editor(self.repos_url)
         dc.add_dir("trunk")
@@ -289,7 +286,7 @@ class GetMapTests(SubversionTestCase):
                 self.repos.get_fileid_map(1, "trunk", self.mapping))
 
     def test_change_parent(self):
-        set_branching_scheme(self.repos, TrunkBranchingScheme())
+        self.repos.set_layout(TrunkLayout(0))
         self.mapping = self.repos.get_mapping()
         
         dc = self.get_commit_editor(self.repos_url)
@@ -308,7 +305,7 @@ class GetMapTests(SubversionTestCase):
             self.repos.get_fileid_map(2, "trunk", self.mapping))
 
     def test_change_updates(self):
-        set_branching_scheme(self.repos, TrunkBranchingScheme())
+        self.repos.set_layout(TrunkLayout(0))
         self.mapping = self.repos.get_mapping()
 
         dc = self.get_commit_editor(self.repos_url)
@@ -331,7 +328,7 @@ class GetMapTests(SubversionTestCase):
             self.repos.get_fileid_map(3, "trunk", self.mapping))
 
     def test_sibling_unrelated(self):
-        set_branching_scheme(self.repos, TrunkBranchingScheme())
+        self.repos.set_layout(TrunkLayout(0))
         self.mapping = self.repos.get_mapping()
 
         dc = self.get_commit_editor(self.repos_url)
@@ -359,7 +356,7 @@ class GetMapTests(SubversionTestCase):
             self.repos.get_fileid_map(3, "trunk", self.mapping))
 
     def test_copy(self):
-        set_branching_scheme(self.repos, TrunkBranchingScheme())
+        self.repos.set_layout(TrunkLayout(0))
         self.mapping = self.repos.get_mapping()
 
         dc = self.get_commit_editor(self.repos_url)
@@ -385,7 +382,7 @@ class GetMapTests(SubversionTestCase):
                      self.repos.generate_revision_id(2, "trunk", self.mapping))}, self.repos.get_fileid_map(3, "trunk", self.mapping))
 
     def test_copy_nested_modified(self):
-        set_branching_scheme(self.repos, TrunkBranchingScheme())
+        self.repos.set_layout(TrunkLayout(0))
         self.mapping = self.repos.get_mapping()
 
         dc = self.get_commit_editor(self.repos_url)

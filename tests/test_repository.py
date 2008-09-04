@@ -32,11 +32,6 @@ from bzrlib.tests import TestCase, TestSkipped
 import os
 
 from bzrlib.plugins.svn import format, ra
-from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_REVISION_ID)
-from bzrlib.plugins.svn.mapping3 import (SVN_PROP_BZR_BRANCHING_SCHEME, set_branching_scheme,
-                      set_property_scheme, BzrSvnMappingv3)
-from bzrlib.plugins.svn.mapping3.scheme import (TrunkBranchingScheme, NoBranchingScheme, 
-                    ListBranchingScheme, SingleBranchingScheme)
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.repository import SvnRepositoryFormat
 

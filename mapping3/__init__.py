@@ -144,10 +144,6 @@ def config_set_scheme(repository, scheme, guessed_scheme, mandatory=False):
     repository.get_config().set_branching_scheme(str(scheme), 
                             guessed_scheme_str, mandatory=mandatory)
 
-def set_branching_scheme(repository, scheme, mandatory=False):
-    repository.get_mapping().scheme = scheme
-    config_set_scheme(repository, scheme, scheme, mandatory)
-
 
 class BzrSvnMappingv3(mapping.BzrSvnMapping):
     """The third version of the mappings as used in the 0.4.x series.
@@ -180,6 +176,10 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
 
     def get_guessed_layout(self, repository):
         return SchemeDerivedLayout(repository, self.guessed_scheme or self.scheme)
+
+    def check_layout(self, repository, layout):
+        repository.get_mapping().scheme = scheme_from_layout(layout)
+        config_set_scheme(repository, scheme, scheme)
 
     @classmethod
     def from_repository(cls, repository, _hinted_branch_path=None):

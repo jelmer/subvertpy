@@ -17,6 +17,7 @@ from bzrlib.bzrdir import BzrDir
 from bzrlib.repository import Repository
 from bzrlib.tests import TestCase
 
+from bzrlib.plugins.svn.layout import TrunkLayout
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps, SVN_PROP_BZR_BRANCHING_SCHEME, set_property_scheme
 from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme, ListBranchingScheme
@@ -378,5 +379,12 @@ class RepositoryTests(SubversionTestCase):
         self.assertIs(None, tree.path2id("dir/adir"))
         mutter('entries: %r' % tree.inventory.entries())
         self.assertEquals("bla", tree.path2id("bdir"))
+
+    def test_store_branching_scheme(self):
+        repos_url = self.make_client('d', 'dc')
+        repository = Repository.open(repos_url)
+        repository.set_layout(TrunkLayout(42))
+        repository = Repository.open(repos_url)
+        self.assertEquals("trunk42", str(repository.get_mapping().scheme))
 
 

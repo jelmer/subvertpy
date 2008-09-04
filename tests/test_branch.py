@@ -31,8 +31,6 @@ from bzrlib.plugins.svn import core
 from bzrlib.plugins.svn.branch import FakeControlFiles, SvnBranchFormat
 from bzrlib.plugins.svn.convert import load_dumpfile
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID
-from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
-from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class WorkingSubversionBranch(SubversionTestCase):
@@ -717,7 +715,7 @@ foohosts""")
         newbranch.repository.lock_read()
         texts = newbranch.repository.texts
         host_fileid = tree.inventory.path2id("hosts")
-        mapping = BzrSvnMappingv3FileProps(TrunkBranchingScheme())
+        mapping = oldbranch.repository.get_mapping()
         self.assertVersionsPresentEquals(texts, host_fileid, [
             mapping.revision_id_foreign_to_bzr((uuid, 1, "trunk")),
             mapping.revision_id_foreign_to_bzr((uuid, 2, "trunk")),
