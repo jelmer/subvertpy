@@ -31,6 +31,8 @@ bzr-svn-0.5			UNRELEASED
 
    * Set bzr signature revision property during commit if possible.
 
+   * Provide SvnWorkingTree._transport. (#264548)
+
   INTERNALS
 
    * Remove custom commit code for working tree. 
