@@ -490,7 +490,7 @@ class BzrSvnMappingv1(BzrSvnMapping):
         return {}
 
     def get_rhs_parents(self, branch_path, revprops, fileprops):
-        value = fileprops.get("bzr:merge", "")
+        value = fileprops.get(SVN_PROP_BZR_MERGE, "")
         if value == "":
             return ()
         return (value.splitlines()[-1])
@@ -500,6 +500,8 @@ class BzrSvnMappingv1(BzrSvnMapping):
 class BzrSvnMappingv2(BzrSvnMappingv1):
     """The second version of the mappings as used in the 0.3.x series.
 
+    It does not support pushing revisions to Subversion as-is, but only 
+    as part of a merge.
     """
     name = "v2"
 

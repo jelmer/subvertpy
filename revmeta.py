@@ -433,6 +433,10 @@ class RevisionMetadataProvider(object):
             mapping_check_path = lambda x: mapping.is_branch(x) or mapping.is_tag(x)
         # Layout decides which ones to pick up
         # Mapping decides which ones to keep
+        def get_metabranch(bp):
+            if not bp in metabranches:
+                metabranches[bp] = RevisionMetadataBranch(mapping)
+            return metabranches[bp]
         unusual = set()
         for (paths, revnum, revprops) in self._log.iter_changes(None, from_revnum, to_revnum, pb=pb):
             bps = {}
@@ -451,9 +455,7 @@ class RevisionMetadataProvider(object):
                             bps[u] = metabranches[u]
                 else:
                     if action != 'D' or ip != "":
-                        if not bp in metabranches:
-                            metabranches[bp] = RevisionMetadataBranch(mapping)
-                        bps[bp] = metabranches[bp]
+                        bps[bp] = get_metabranch(bp)
             
             # Apply renames and the like for the next round
             for new_name, old_name in changes.apply_reverse_changes(metabranches.keys(), paths):
@@ -474,3 +476,8 @@ class RevisionMetadataProvider(object):
                 revmeta = self.get_revision(bp, revnum, paths, revprops, metabranch=bps[bp])
                 bps[bp].append(revmeta)
                 yield revmeta
+    
+        # Make sure commit 0 is processed
+        if to_revnum == 0 and layout.is_branch_or_tag(""):
+            bps[""] = get_metabranch("")
+            yield self.get_revision("", 0, {"": ('A', None, -1)}, {}, metabranch=bps[""])

@@ -139,124 +139,30 @@ class ParseMergePropertyTestCase(TestCase):
         self.assertEqual(("bla", "bloe"), parse_merge_property("bla\tbloe"))
 
 
-class MappingTestAdapter(object):
-    def test_roundtrip_revision(self):
-        revid = self.mapping.revision_id_foreign_to_bzr(("myuuid", 42, "path"))
-        (uuid, path, revnum, mapping) = self.mapping.revision_id_bzr_to_foreign(revid)
-        self.assertEquals(uuid, "myuuid")
-        self.assertEquals(revnum, 42)
-        self.assertEquals(path, "path")
-        self.assertEquals(mapping, self.mapping)
-
-    def test_fileid_map(self):
-        if not self.mapping.supports_roundtripping():
-            raise TestNotApplicable
-        fileids = {"": "some-id", "bla/blie": "other-id"}
-        revprops = {}
-        fileprops = {}
-        self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", {}, "arevid", 4, ["merge1"], revprops, fileprops)
-        self.mapping.export_fileid_map(fileids, revprops, fileprops)
-        revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
-        self.assertEquals(fileids, 
-                self.mapping.import_fileid_map(revprops, fileprops))
-
-    def test_text_parents(self):
-        if not self.mapping.supports_roundtripping():
-            raise TestNotApplicable
-        revprops = {}
-        fileprops = {}
-        text_parents = {"bla": "bloe", "ll": "12"}
-        self.mapping.export_text_parents(text_parents, revprops, fileprops)
-        self.assertEquals(text_parents,
-            self.mapping.import_text_parents(revprops, fileprops))
-
-    def test_message(self):
-        if not self.mapping.supports_roundtripping():
-            raise TestNotApplicable
-        revprops = {}
-        fileprops = {}
-        self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", 
-                                     {"arevprop": "val"}, "arevid", 4, ["merge1"], revprops, fileprops)
-        revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
-        try:
-            self.mapping.export_message("My Commit message", revprops, fileprops)
-        except NotImplementedError:
-            raise TestNotApplicable
-        targetrev = Revision(None)
-        self.mapping.import_revision(revprops, fileprops, "someuuid", "somebp", 4, targetrev)
-        self.assertEquals("My Commit message", targetrev.message)
-
-    def test_revision(self):
-        if not self.mapping.supports_roundtripping():
-            raise TestNotApplicable
-        revprops = {}
-        fileprops = {}
-        self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", 
-                                     {"arevprop": "val" }, "arevid", 4, ["parent", "merge1"], revprops, fileprops)
-        targetrev = Revision(None)
-        revprops["svn:date"] = "2008-11-03T09:33:00.716938Z"
-        self.mapping.import_revision(revprops, fileprops, "someuuid", "somebp", 4, targetrev)
-        self.assertEquals(targetrev.committer, "somebody")
-        self.assertEquals(targetrev.properties, {"arevprop": "val"})
-        self.assertEquals(targetrev.timestamp, 432432432.0)
-        self.assertEquals(targetrev.timezone, 0)
-
-    def test_revision_id(self):
-        if not self.mapping.supports_roundtripping():
-            raise TestNotApplicable
-        revprops = {}
-        fileprops = {}
-        self.mapping.export_revision("branchp", 432432432.0, 0, "somebody", {}, "arevid", 4, ["parent", "merge1"], revprops, fileprops)
-        self.assertEquals((4, "arevid"), self.mapping.get_revision_id("branchp", revprops, fileprops))
-    
-    def test_revision_id_none(self):
-        if not self.mapping.supports_roundtripping():
-            raise TestNotApplicable
-        self.assertEquals((None, None), self.mapping.get_revision_id("bp", {}, dict()))
-
-    def test_parse_revision_id_unknown(self):
-        self.assertRaises(InvalidRevisionId, 
-                lambda: self.mapping.revision_id_bzr_to_foreign("bla"))
-
-    def test_parse_revision_id(self):
-        self.assertEquals(("myuuid", "bla", 5, self.mapping), 
-            self.mapping.revision_id_bzr_to_foreign(
-                self.mapping.revision_id_foreign_to_bzr(("myuuid", 5, "bla"))))
-
-
-class Mappingv1Tests(MappingTestAdapter, TestCase):
-    def setUp(self):
-        self.mapping = BzrSvnMappingv1()
-
-
-class Mappingv2Tests(MappingTestAdapter, TestCase):
-    def setUp(self):
-        self.mapping = BzrSvnMappingv2()
-
 
 def sha1(text):
     return sha.new(text).hexdigest()
 
 
-class Mappingv4TestAdapter(MappingTestAdapter, TestCase):
-    def setUp(self):
-        self.mapping = BzrSvnMappingv4()
-
-
 class ParseRevisionIdTests(object):
-    def test_current(self):
+
+    def test_v4(self):
+        self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv4()), 
+                parse_revision_id("svn-v3:uuid:trunk:1"))
+
+    def test_v3(self):
         self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv3FileProps(TrunkBranchingScheme())), 
                 parse_revision_id("svn-v3-trunk0:uuid:trunk:1"))
 
-    def test_current_undefined(self):
+    def test_v3_undefined(self):
         self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv3FileProps(TrunkBranchingScheme())), 
                 parse_revision_id("svn-v3-undefined:uuid:trunk:1"))
 
-    def test_legacy2(self):
+    def test_v2(self):
         self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv2()), 
                          parse_revision_id("svn-v2:1@uuid-trunk"))
 
-    def test_legacy(self):
+    def test_v1(self):
         self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv1()), 
                          parse_revision_id("svn-v1:1@uuid-trunk"))
 

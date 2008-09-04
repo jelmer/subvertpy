@@ -92,37 +92,6 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
             raise TestNotApplicable()
         self.assertEqual({u"": (mapping.generate_file_id(repos.uuid, 0, "", u""), mapping.revision_id_foreign_to_bzr((repos.uuid, 0, "")))}, repos.get_fileid_map(0, "", mapping))
 
-    def test_generate_revision_id_forced_revid(self):
-        repos_url = self.make_repository("a")
-
-        dc = self.get_commit_editor(repos_url)
-        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", 
-                             "2 someid\n")
-        dc.close()
-
-        repos = Repository.open(repos_url)
-        mapping = repos.get_mapping()
-        if not mapping.supports_roundtripping():
-            raise TestNotApplicable()
-        revid = repos.generate_revision_id(1, "", mapping)
-        self.assertEquals("someid", revid)
-
-    def test_generate_revision_id_forced_revid_invalid(self):
-        repos_url = self.make_repository("a")
-
-        dc = self.get_commit_editor(repos_url)
-        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", "corrupt-id\n")
-        dc.close()
-
-        repos = Repository.open(repos_url)
-        mapping = repos.get_mapping()
-        if not mapping.supports_roundtripping():
-            raise TestNotApplicable()
-        revid = repos.generate_revision_id(1, "", mapping)
-        self.assertEquals(
-                mapping.revision_id_foreign_to_bzr((repos.uuid, 1, "")),
-                revid)
-
     def test_add_revision(self):
         repos_url = self.make_repository("a")
         repos = Repository.open(repos_url)
@@ -651,31 +620,6 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.assertEquals("foo", d2.modified[0][0])
         self.assertEquals(0, len(d2.removed))
 
-    def test_revision_ghost_parents(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_file("foo").modify("data")
-        dc.close()
-
-        dc = self.get_commit_editor(repos_url)
-        dc.open_file("foo").modify("data2")
-        dc.change_prop("bzr:ancestry:v3-none", "ghostparent\n")
-        dc.close()
-
-        repository = Repository.open(repos_url)
-        mapping = repository.get_mapping()
-        self.assertEqual((),
-                repository.get_revision(
-                    repository.generate_revision_id(0, "", mapping)).parent_ids)
-        self.assertEqual((repository.generate_revision_id(0, "", mapping),),
-                repository.get_revision(
-                    repository.generate_revision_id(1, "", mapping)).parent_ids)
-        self.assertEqual((repository.generate_revision_id(1, "", mapping),
-            "ghostparent"), 
-                repository.get_revision(
-                    repository.generate_revision_id(2, "", mapping)).parent_ids)
- 
     def test_revision_svk_parent(self):
         repos_url = self.make_client('d', 'dc')
         self.build_tree({'dc/trunk/foo': "data", 'dc/branches/foo': None})
@@ -714,31 +658,6 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
                 rev.parent_ids)
         self.assertEqual(rev.revision_id, 
                 repository.generate_revision_id(2, "", mapping))
-        self.assertEqual(author, rev.committer)
-        self.assertIsInstance(rev.properties, dict)
-
-    def test_get_revision_id_overriden(self):
-        repos_url = self.make_client('d', 'dc')
-        repository = Repository.open(repos_url)
-        self.assertRaises(NoSuchRevision, repository.get_revision, "nonexisting")
-        self.build_tree({'dc/foo': "data"})
-        self.client_add("dc/foo")
-        self.client_commit("dc", "My Message")
-        self.build_tree({'dc/foo': "data2"})
-        self.client_set_prop("dc", "bzr:revision-id:v3-none", 
-                            "3 myrevid\n")
-        self.client_update("dc")
-        (num, date, author) = self.client_commit("dc", "Second Message")
-        repository = Repository.open(repos_url)
-        mapping = repository.get_mapping()
-        if not mapping.supports_roundtripping():
-            raise TestNotApplicable
-        revid = mapping.revision_id_foreign_to_bzr((repository.uuid, 2, ""))
-        rev = repository.get_revision("myrevid")
-        self.assertEqual((repository.generate_revision_id(1, "", mapping),),
-                rev.parent_ids)
-        self.assertEqual(rev.revision_id, 
-                         repository.generate_revision_id(2, "", mapping))
         self.assertEqual(author, rev.committer)
         self.assertIsInstance(rev.properties, dict)
 
@@ -823,31 +742,6 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
                 repository.get_ancestry(
                     repository.generate_revision_id(2, "", mapping)))
 
-    def test_get_ancestry_merged(self):
-        repos_url = self.make_client('d', 'dc')
-        self.build_tree({'dc/foo': "data"})
-        self.client_add("dc/foo")
-        self.client_commit("dc", "My Message")
-        self.client_update("dc")
-        self.client_set_prop("dc", "bzr:ancestry:v3-none", "a-parent\n")
-        self.build_tree({'dc/foo': "data2"})
-        self.client_commit("dc", "Second Message")
-        repository = Repository.open(repos_url)
-        mapping = repository.get_mapping()
-        self.assertEqual([None, repository.generate_revision_id(0, "", mapping)],
-                repository.get_ancestry(
-                    repository.generate_revision_id(0, "", mapping)))
-        self.assertEqual([None, repository.generate_revision_id(0, "", mapping),
-            repository.generate_revision_id(1, "", mapping)],
-                repository.get_ancestry(
-                    repository.generate_revision_id(1, "", mapping)))
-        self.assertEqual([None, 
-            repository.generate_revision_id(0, "", mapping), "a-parent", 
-            repository.generate_revision_id(1, "", mapping), 
-                  repository.generate_revision_id(2, "", mapping)], 
-                repository.get_ancestry(
-                    repository.generate_revision_id(2, "", mapping)))
-
     def test_get_inventory(self):
         repos_url = self.make_client('d', 'dc')
         repository = Repository.open(repos_url)
@@ -912,87 +806,6 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.assertEqual(("bloe", 1), 
             repository.lookup_revision_id(
                 repository.generate_revision_id(1, "bloe", mapping))[:2])
-
-    def test_lookup_revision_id_overridden(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_dir("bloe")
-        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", "2 myid\n")
-        dc.close()
-        repository = Repository.open(repos_url)
-        mapping = repository.get_mapping()
-        self.assertEqual(("", 1), repository.lookup_revision_id( 
-            mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
-        self.assertEqual(("", 1), 
-                repository.lookup_revision_id("myid")[:2])
-
-    def test_lookup_revision_id_overridden_invalid(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_dir("bloe")
-        dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", "corrupt-entry\n")
-        dc.close()
-
-        repository = Repository.open(repos_url)
-        mapping = repository.get_mapping()
-        self.assertEqual(("", 1), repository.lookup_revision_id( 
-            mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
-        self.assertRaises(NoSuchRevision, repository.lookup_revision_id, 
-            "corrupt-entry")
-
-    def test_lookup_revision_id_overridden_invalid_dup(self):
-        repos_url = self.make_client('d', 'dc')
-        self.build_tree({'dc/bloe': None})
-        self.client_add("dc/bloe")
-        self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"v3-none", 
-                             "corrupt-entry\n")
-        self.client_commit("dc", "foobar")
-        self.build_tree({'dc/bla': None})
-        self.client_add("dc/bla")
-        self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"v3-none", 
-                "corrupt-entry\n2 corrupt-entry\n")
-        self.client_commit("dc", "foobar")
-        repository = Repository.open(repos_url)
-        mapping = repository.get_mapping()
-        self.assertEqual(("", 2), repository.lookup_revision_id( 
-            mapping.revision_id_foreign_to_bzr((repository.uuid, 2, "")))[:2])
-        self.assertEqual(("", 1), repository.lookup_revision_id( 
-            mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
-        self.assertEqual(("", 2), repository.lookup_revision_id( 
-            "corrupt-entry")[:2])
-
-    def test_lookup_revision_id_overridden_not_found(self):
-        """Make sure a revision id that is looked up but doesn't exist 
-        doesn't accidently end up in the revid cache."""
-        repos_url = self.make_client('d', 'dc')
-        self.build_tree({'dc/bloe': None})
-        self.client_add("dc/bloe")
-        self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"v3-none", "2 myid\n")
-        self.client_commit("dc", "foobar")
-        repository = Repository.open(repos_url)
-        self.assertRaises(NoSuchRevision, 
-                repository.lookup_revision_id, "foobar")
-
-    def test_set_branching_scheme_property(self):
-        repos_url = self.make_client('d', 'dc')
-        self.client_set_prop("dc", SVN_PROP_BZR_BRANCHING_SCHEME, 
-            "trunk\nbranches/*\nbranches/tmp/*")
-        self.client_commit("dc", "set scheme")
-        repository = Repository.open(repos_url)
-        self.assertEquals(ListBranchingScheme(["trunk", "branches/*", "branches/tmp/*"]).branch_list,
-                          repository.get_mapping().scheme.branch_list)
-
-    def test_set_property_scheme(self):
-        repos_url = self.make_client('d', 'dc')
-        repos = Repository.open(repos_url)
-        set_property_scheme(repos, ListBranchingScheme(["bla/*"]))
-        self.client_update("dc")
-        self.assertEquals("bla/*\n", 
-                   self.client_get_prop("dc", SVN_PROP_BZR_BRANCHING_SCHEME))
-        self.assertEquals("Updating branching scheme for Bazaar.", 
-                self.client_log(repos_url, 1, 1)[1][3])
 
     def test_lookup_revision_id_invalid_uuid(self):
         repos_url = self.make_client('d', 'dc')
