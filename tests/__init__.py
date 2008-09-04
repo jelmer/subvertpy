@@ -28,7 +28,7 @@ from bzrlib.tests import TestCaseInTempDir
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn import properties, ra, repos
+from bzrlib.plugins.svn import cache, properties, ra, repos
 from bzrlib.plugins.svn.delta import send_stream
 from bzrlib.plugins.svn.client import Client
 from bzrlib.plugins.svn.ra import Auth, RemoteAccess
@@ -136,7 +136,13 @@ class SubversionTestCase(TestCaseInTempDir):
                                      ra.get_ssl_client_cert_pw_file_provider(),
                                      ra.get_ssl_server_trust_file_provider()])
         self.client_ctx.log_msg_func = self.log_message_func
+        self._old_connect_cachefile = cache.connect_cachefile
+        cache.connect_cachefile = lambda path: cache.sqlite3.connect(":memory:")
         #self.client_ctx.notify_func = lambda err: mutter("Error: %s" % err)
+
+    def tearDown(self):
+        super(SubversionTestCase, self).tearDown()
+        cache.connect_cachefile = self._old_connect_cachefile
 
     def log_message_func(self, items):
         return self.next_message

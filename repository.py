@@ -32,9 +32,8 @@ from copy import copy
 from itertools import chain
 import os
 
-from bzrlib.plugins.svn import changes, core, errors, logwalker, properties, revmeta
+from bzrlib.plugins.svn import cache, changes, core, errors, logwalker, properties, revmeta
 from bzrlib.plugins.svn.branchprops import PathPropertyProvider
-from bzrlib.plugins.svn.cache import create_cache_dir, sqlite3
 from bzrlib.plugins.svn.changes import changes_path, find_prev_location
 from bzrlib.plugins.svn.config import SvnRepositoryConfig
 from bzrlib.plugins.svn.core import SubversionException
@@ -120,13 +119,13 @@ class SvnRepository(Repository):
         self._real_parents_provider = self
         self._cached_tags = {}
 
-        cache = self.get_config().get_use_cache()
+        use_cache = self.get_config().get_use_cache()
 
-        if cache:
+        if use_cache:
             cache_dir = self.create_cache_dir()
             cache_file = os.path.join(cache_dir, 'cache-v%d' % CACHE_DB_VERSION)
             if not cachedbs.has_key(cache_file):
-                cachedbs[cache_file] = sqlite3.connect(cache_file.encode(osutils._fs_enc))
+                cachedbs[cache_file] = cache.connect_cachefile(cache_file)
             self.cachedb = cachedbs[cache_file]
             self._log = logwalker.CachingLogWalker(self._log, cache_db=self.cachedb)
             cachedir_transport = get_transport(cache_dir)
@@ -319,7 +318,7 @@ class SvnRepository(Repository):
         return '%s(%r)' % (self.__class__.__name__, self.base)
 
     def create_cache_dir(self):
-        cache_dir = create_cache_dir()
+        cache_dir = cache.create_cache_dir()
         dir = os.path.join(cache_dir, self.uuid)
         if not os.path.exists(dir):
             info("Initialising Subversion metadata cache in %s" % dir)

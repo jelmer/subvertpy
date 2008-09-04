@@ -104,11 +104,14 @@ def load_dumpfile(dumpfile, outputdir):
     else:
         file = open(dumpfile)
     try:
-        r.load_fs(file, StringIO(), repos.LOAD_UUID_DEFAULT)
-    except SubversionException, (_, num):
-        if num == ERR_STREAM_MALFORMED_DATA:
-            raise NotDumpFile(dumpfile)
-        raise
+        try:
+            r.load_fs(file, StringIO(), repos.LOAD_UUID_DEFAULT)
+        except SubversionException, (_, num):
+            if num == ERR_STREAM_MALFORMED_DATA:
+                raise NotDumpFile(dumpfile)
+            raise
+    finally:
+        file.close()
     return r
 
 

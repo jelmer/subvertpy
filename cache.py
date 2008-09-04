@@ -83,6 +83,7 @@ except:
             'module')
     raise bzrlib.errors.BzrError("missing sqlite library")
 
+connect_cachefile = sqlite3.connect
 
 class CacheTable(object):
     """Simple base class for SQLite-based caches."""
