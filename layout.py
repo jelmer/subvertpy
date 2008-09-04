@@ -24,7 +24,6 @@ class RepositoryLayout(object):
     """Describes a repository layout."""
 
     def __init__(self, repository):
-        self.repository = repository
         self._config = repository.get_config()
 
     def get_tag_path(self, name, project=""):
@@ -103,14 +102,14 @@ class RepositoryLayout(object):
     def is_branch_or_tag_parent(self, path, project=None):
         return self.is_branch_parent(path, project) or self.is_tag_parent(path, project)
 
-    def get_branches(self, revnum, project="", pb=None):
+    def get_branches(self, repository, revnum, project="", pb=None):
         """Retrieve a list of paths that refer to branches in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
         """
         raise NotImplementedError
 
-    def get_tags(self, revnum, project="", pb=None):
+    def get_tags(self, repository, revnum, project="", pb=None):
         """Retrieve a list of paths that refer to tags in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
@@ -120,12 +119,8 @@ class RepositoryLayout(object):
 
 class TrunkLayout(RepositoryLayout):
 
-    def __init__(self, repository=None):
-        self.repository = repository
-        if repository is not None:
-            self._config = repository.get_config()
-        else:
-            self._config = None
+    def __init__(self, level=None):
+        self.level = level
     
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
@@ -194,21 +189,21 @@ class TrunkLayout(RepositoryLayout):
             return path
         return urlutils.join(project, path)
 
-    def get_branches(self, revnum, project=None, pb=None):
+    def get_branches(self, repository, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to branches in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
         """
-        return get_root_paths(self.repository, 
+        return get_root_paths(repository, 
              [self._add_project(x, project) for x in "branches/*", "trunk"], 
              revnum, self.is_tag, project)
 
-    def get_tags(self, revnum, project=None, pb=None):
+    def get_tags(self, repository, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to tags in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
         """
-        return get_root_paths(self.repository, [self._add_project("tags/*", project)], revnum, self.is_tag, project)
+        return get_root_paths(repository, [self._add_project("tags/*", project)], revnum, self.is_tag, project)
 
     def __repr__(self):
         return "%s()" % self.__class__.__name__
@@ -217,9 +212,9 @@ class TrunkLayout(RepositoryLayout):
 class RootLayout(RepositoryLayout):
     """Layout where the root of the repository is a branch."""
 
-    def __init__(self, level=None):
-        self.level = level
-    
+    def __init__(self):
+        pass
+
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
 
@@ -252,7 +247,7 @@ class RootLayout(RepositoryLayout):
         :param project: Optional name of the project the branch is for. Can include slashes.
         :return: Path of the branch.
         """
-        return None
+        raise AssertionError("can't created branches in this layout")
 
     def parse(self, path):
         """Parse a path.
@@ -267,14 +262,14 @@ class RootLayout(RepositoryLayout):
 
         :result: Iterator over tuples with (project, branch path)
         """
-        return []
+        raise NotImplementedError
 
     def get_tags(self, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to tags in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
         """
-        return []
+        raise NotImplementedError
 
     def __repr__(self):
         return "%s()" % self.__class__.__name__
@@ -360,4 +355,6 @@ def get_root_paths(repository, itemlist, revnum, verify_fn, project=None, pb=Non
             if verify_fn(bp, project):
                 yield "", bp, bp.split("/")[-1]
 
+
+layout_registry = registry.Registry()
 

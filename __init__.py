@@ -189,19 +189,19 @@ def lazy_register_optimizers():
     InterRepository.register_optimiser(commit.InterToSvnRepository)
 
 
-def get_scheme(schemename):
-    """Parse scheme identifier and return a branching scheme.
+def get_layout(layoutname):
+    """Parse layout name and return a layout.
     
-    :param schemename: Name of the scheme to retrieve.
+    :param layout: Name of the layout to retrieve.
     """
-    if isinstance(schemename, unicode):
-        schemename = schemename.encode("ascii")
-    from bzrlib.plugins.svn.mapping3.scheme import BranchingScheme
+    if isinstance(layoutname, unicode):
+        layoutname = layoutname.encode("ascii")
+    from bzrlib.plugins.svn.layout import layout_registry
     from bzrlib.errors import BzrCommandError
     
-    ret = BranchingScheme.find_scheme(schemename)
+    ret = layout_registry.parse(layoutname)
     if ret is None:
-        raise BzrCommandError('No such branching scheme %r' % schemename)
+        raise BzrCommandError('No such repository layout %r' % layoutname)
     return ret
 
 
@@ -218,8 +218,8 @@ class cmd_svn_import(Command):
                      Option('all', 
                          help='Convert all revisions, even those not in '
                               'current branch history (forbids --standalone).'),
-                     Option('scheme', type=get_scheme,
-                         help='Branching scheme (none, trunk, etc). '
+                     Option('layout', type=get_layout,
+                         help='Repository layout (none, trunk, etc). '
                               'Default: auto.'),
                      Option('keep', 
                          help="Don't delete branches removed in Subversion."),
@@ -232,13 +232,13 @@ class cmd_svn_import(Command):
 
     @display_command
     def run(self, from_location, to_location=None, trees=False, 
-            standalone=False, scheme=None, all=False, prefix=None, keep=False,
+            standalone=False, layout=None, all=False, prefix=None, keep=False,
             incremental=False):
         from bzrlib.bzrdir import BzrDir
         from bzrlib.errors import BzrCommandError, NoRepositoryPresent
         from bzrlib import osutils, urlutils
         from bzrlib.plugins.svn.convert import convert_repository
-        from bzrlib.plugins.svn.mapping3 import repository_guess_scheme
+        from bzrlib.plugins.svn.layout import repository_guess_layout
         from bzrlib.plugins.svn.repository import SvnRepository
 
         if to_location is None:
@@ -271,18 +271,21 @@ class cmd_svn_import(Command):
 
         from_repos.lock_read()
         try:
-            (guessed_scheme, scheme) = repository_guess_scheme(from_repos, 
+            (guessed_layout, layout) = repository_guess_layout(from_repos, 
                 from_repos.get_latest_revnum())
 
             if prefix is not None:
                 prefix = prefix.strip("/") + "/"
-                if guessed_scheme.is_branch(prefix):
+                if guessed_layout.is_branch(prefix):
                     raise BzrCommandError("%s appears to contain a branch. " 
                             "For individual branches, use 'bzr branch'." % 
                             from_location)
-
-                self.outf.write("Importing branches with prefix /%s\n" % 
-                    urlutils.unescape_for_display(prefix, self.outf.encoding))
+                elif guessed_layout.is_branch_parent(prefix):
+                    self.outf.write("Importing branches with prefix /%s\n" % 
+                        urlutils.unescape_for_display(prefix, self.outf.encoding))
+                else:
+                    raise BzrCommandError("The specified path is inside a branch. "
+                        "Specify a different URL or a different repository layout.")
 
             if not isinstance(from_repos, SvnRepository):
                 raise BzrCommandError(
@@ -294,7 +297,7 @@ class cmd_svn_import(Command):
                     return False
                 return True
 
-            convert_repository(from_repos, to_location, scheme, None, 
+            convert_repository(from_repos, to_location, layout, 
                                not standalone, trees, all, 
                                filter_branch=filter_branch,
                                keep=keep, incremental=incremental)

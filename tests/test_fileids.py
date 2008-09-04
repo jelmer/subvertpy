@@ -22,6 +22,7 @@ from bzrlib.trace import mutter
 from bzrlib.tests import TestCase
 
 from bzrlib.plugins.svn.fileids import simple_apply_changes
+from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class MockRepo(object):
@@ -180,7 +181,7 @@ class TestComplexFileids(SubversionTestCase):
 
 class TestFileMapping(TestCase):
     def setUp(self):
-        self.generate_file_id = lambda uuid, revnum, bp, ip: hash((uuid, revnum, bp, ip))
+        self.generate_file_id = lambda uuid, revnum, bp, ip: "%d@%s:%s:%s" % (uuid, revnum, bp, ip)
 
     def apply_mappings(self, mappings, find_children=None, renames={}):
         map = {}
@@ -270,13 +271,13 @@ class GetMapTests(SubversionTestCase):
         self.repos = Repository.open(self.repos_url)
 
     def test_empty(self):
-        self.repos.set_layout(RootLayout(0))
+        self.repos.set_layout(RootLayout())
         self.mapping = self.repos.get_mapping()
         self.assertEqual({"": (self.mapping.generate_file_id(self.repos.uuid, 0, "", u""), self.repos.generate_revision_id(0, "", self.mapping))}, 
                          self.repos.get_fileid_map(0, "", self.mapping))
 
     def test_empty_trunk(self):
-        self.repos.set_layout(RootLayout(0))
+        self.repos.set_layout(TrunkLayout(0))
         self.mapping = self.repos.get_mapping()
         dc = self.get_commit_editor(self.repos_url)
         dc.add_dir("trunk")

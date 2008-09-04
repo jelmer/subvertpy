@@ -21,6 +21,7 @@ from bzrlib.plugins.svn import mapping, properties
 from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
 from bzrlib.plugins.svn.mapping3.scheme import (BranchingScheme, guess_scheme_from_branch_path, 
                              guess_scheme_from_history, ListBranchingScheme, 
+                             scheme_from_layout,
                              parse_list_scheme_text, NoBranchingScheme,
                              TrunkBranchingScheme, ListBranchingScheme)
 from bzrlib.plugins.svn.ra import DIRENT_KIND
@@ -47,17 +48,14 @@ class SchemeDerivedLayout(RepositoryLayout):
     def get_tag_name(self, path, project=None):
         return path.split("/")[-1]
 
-    def get_branches(self, revnum, project=None, pb=None):
-        return get_root_paths(self.repository, self.scheme.branch_list, revnum, self.scheme.is_branch, project, pb)
+    def get_branches(self, repository, revnum, project=None, pb=None):
+        return get_root_paths(repository, self.scheme.branch_list, revnum, self.scheme.is_branch, project, pb)
 
-    def get_tags(self, revnum, project=None, pb=None):
-        return get_root_paths(self.repository, self.scheme.tag_list, revnum, self.scheme.is_tag, project, pb)
+    def get_tags(self, repository, revnum, project=None, pb=None):
+        return get_root_paths(repository, self.scheme.tag_list, revnum, self.scheme.is_tag, project, pb)
 
     def get_tag_path(self, name, project=""):
         return self.scheme.get_tag_path(name, project)
-
-    def get_branch_path(self, name, project=""):
-        return self.scheme.get_branch_path(name, project)
 
     def get_branch_path(self, name, project=""):
         return self.scheme.get_branch_path(name, project)
