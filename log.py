@@ -18,6 +18,10 @@ from bzrlib.errors import InvalidRevisionId
 from bzrlib.plugins.svn import mapping
 
 def show_subversion_properties(rev):
+    """Custom log displayer for Subversion revisions.
+
+    :param rev: Revision object.
+    """
     data = None
     ret = {}
     if getattr(rev, "svn_meta", None) is not None:

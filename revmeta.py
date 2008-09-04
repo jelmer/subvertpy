@@ -63,7 +63,7 @@ class RevisionMetadata(object):
         return self._paths
 
     def get_revision_id(self, mapping):
-        if mapping.supports_roundtripping():
+        if mapping.roundtripping:
             # See if there is a bzr:revision-id revprop set
             try:
                 (bzr_revno, revid) = mapping.get_revision_id(self.branch_path, self.get_revprops(), self.get_changed_fileprops())

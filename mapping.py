@@ -282,6 +282,7 @@ class BzrSvnMapping(foreign.VcsMapping):
     """Class that maps between Subversion and Bazaar semantics."""
     experimental = False
     _warned_experimental = False
+    roundtripping = False
 
     def __init__(self):
         if (version_info[3] == 'exp' or self.experimental) and not BzrSvnMapping._warned_experimental:
@@ -296,12 +297,6 @@ class BzrSvnMapping(foreign.VcsMapping):
     @classmethod
     def from_revprops(cls, revprops):
         raise NotImplementedError
-
-    @classmethod
-    def supports_roundtripping(cls):
-        """Whether this mapping supports roundtripping.
-        """
-        return False
 
     @classmethod
     def supports_custom_revprops(cls):

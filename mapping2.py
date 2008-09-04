@@ -28,6 +28,7 @@ class BzrSvnMappingv1(BzrSvnMapping):
     as part of a merge.
     """
     name = "v1"
+    roundtripping = False
 
     def __init__(self, layout=None):
         super(BzrSvnMappingv1, self).__init__()
@@ -104,6 +105,7 @@ class BzrSvnMappingv2(BzrSvnMappingv1):
     as part of a merge.
     """
     name = "v2"
+    roundtripping = False
 
     @classmethod
     def revision_id_bzr_to_foreign(cls, revid):

@@ -159,6 +159,7 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
     experimental = False
     upgrade_suffix = "-svn3"
     revid_prefix = "svn-v3-"
+    roundtripping = True
 
     def __init__(self, scheme, guessed_scheme=None):
         mapping.BzrSvnMapping.__init__(self)
@@ -214,10 +215,6 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
                                 sha.new(inv_path).hexdigest())
         assert isinstance(ret, str)
         return osutils.safe_file_id(ret)
-
-    @staticmethod
-    def supports_roundtripping():
-        return True
 
     @classmethod
     def _parse_revision_id(cls, revid):

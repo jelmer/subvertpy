@@ -30,6 +30,7 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     revid_prefix = "svn-v4"
     upgrade_suffix = "-svn4"
     experimental = True
+    roundtripping = True
 
     def __init__(self, layout=None):
         self.name = "v4"
@@ -43,10 +44,6 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
             return cls(layout.RootLayout())
         else:
             return cls(layout.TrunkLayout(repository))
-
-    @staticmethod
-    def supports_roundtripping():
-        return True
 
     @classmethod
     def from_revprops(cls, revprops):

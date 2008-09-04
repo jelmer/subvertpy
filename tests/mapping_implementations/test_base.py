@@ -34,7 +34,7 @@ class RoundtripMappingTests(TestCase):
         self.assertEquals(mapping, self.mapping)
 
     def test_fileid_map(self):
-        if not self.mapping.supports_roundtripping():
+        if not self.mapping.roundtripping:
             raise TestNotApplicable
         fileids = {"": "some-id", "bla/blie": "other-id"}
         revprops = {}
@@ -46,7 +46,7 @@ class RoundtripMappingTests(TestCase):
                 self.mapping.import_fileid_map(revprops, fileprops))
 
     def test_text_parents(self):
-        if not self.mapping.supports_roundtripping():
+        if not self.mapping.roundtripping:
             raise TestNotApplicable
         revprops = {}
         fileprops = {}
@@ -56,7 +56,7 @@ class RoundtripMappingTests(TestCase):
             self.mapping.import_text_parents(revprops, fileprops))
 
     def test_message(self):
-        if not self.mapping.supports_roundtripping():
+        if not self.mapping.roundtripping:
             raise TestNotApplicable
         revprops = {}
         fileprops = {}
@@ -72,7 +72,7 @@ class RoundtripMappingTests(TestCase):
         self.assertEquals("My Commit message", targetrev.message)
 
     def test_revision(self):
-        if not self.mapping.supports_roundtripping():
+        if not self.mapping.roundtripping:
             raise TestNotApplicable
         revprops = {}
         fileprops = {}
@@ -87,7 +87,7 @@ class RoundtripMappingTests(TestCase):
         self.assertEquals(targetrev.timezone, 0)
 
     def test_revision_id(self):
-        if not self.mapping.supports_roundtripping():
+        if not self.mapping.roundtripping:
             raise TestNotApplicable
         revprops = {}
         fileprops = {}
@@ -95,7 +95,7 @@ class RoundtripMappingTests(TestCase):
         self.assertEquals((4, "arevid"), self.mapping.get_revision_id("branchp", revprops, fileprops))
     
     def test_revision_id_none(self):
-        if not self.mapping.supports_roundtripping():
+        if not self.mapping.roundtripping:
             raise TestNotApplicable
         self.assertEquals((None, None), self.mapping.get_revision_id("bp", {}, dict()))
 
