@@ -13,8 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from bzrlib.errors import InvalidRevisionId
+from bzrlib.errors import InvalidRevisionId, NotBranchError
 from bzrlib.inventory import ROOT_ID
+from bzrlib.plugins.svn.layout import RepositoryLayout
 from bzrlib.plugins.svn.mapping import BzrSvnMapping, escape_svn_path, unescape_svn_path, parse_svn_revprops
 
 SVN_PROP_BZR_MERGE = 'bzr:merge'
@@ -27,6 +28,10 @@ class BzrSvnMappingv1(BzrSvnMapping):
     as part of a merge.
     """
     name = "v1"
+
+    def __init__(self, layout=None):
+        super(BzrSvnMappingv1, self).__init__()
+        self._layout = layout
 
     @classmethod
     def revision_id_bzr_to_foreign(cls, revid):
@@ -48,12 +53,7 @@ class BzrSvnMappingv1(BzrSvnMapping):
         return type(self) == type(other)
 
     def is_branch(self, branch_path):
-        if branch_path == "":
-            return True
-        
-        parts = branch_path.split("/")
-        return (parts[-1] == "trunk" or 
-                parts[-2] in ("branches", "tags", "hooks"))
+        return self._layout.is_branch(branch_path)
 
     def is_tag(self, tag_path):
         return False
@@ -78,6 +78,23 @@ class BzrSvnMappingv1(BzrSvnMapping):
         if value == "":
             return ()
         return (value.splitlines()[-1])
+
+    @classmethod
+    def from_repository(cls, repository, _hinted_branch_path=None):
+        if _hinted_branch_path is None:
+            return cls(TrunkLegacyLayout(repository))
+    
+        parts = _hinted_branch_path.strip("/").split("/")
+        for i in range(0,len(parts)):
+            if parts[i] == "trunk" or \
+               parts[i] == "branches" or \
+               parts[i] == "tags":
+                return cls(TrunkLegacyLayout(repository, level=i))
+
+        return cls(RootLegacyLayout(repository))
+
+    def get_guessed_layout(self, repository):
+        return self._layout
 
 
 class BzrSvnMappingv2(BzrSvnMappingv1):
@@ -108,4 +125,54 @@ class BzrSvnMappingv2(BzrSvnMappingv1):
         return type(self) == type(other)
 
 
+class LegacyLayout(RepositoryLayout):
+
+    def get_tag_path(self, name, project=""):
+        return None
+
+    def get_branch_path(self, name, project=""):
+        return None
+
+
+class TrunkLegacyLayout(LegacyLayout):
+
+    def __init__(self, repository, level=0):
+        super(TrunkLegacyLayout, self).__init__(repository)
+        self.level = level
+    
+    def parse(self, path):
+        parts = path.strip("/").split("/")
+        if len(parts) == 0 or self.level >= len(parts):
+            raise NotBranchError(path=path)
+
+        if parts[self.level] == "trunk" or parts[self.level] == "hooks":
+            return ("branch", "/".join(parts[0:self.level]), "/".join(parts[0:self.level+1]).strip("/"), 
+                    "/".join(parts[self.level+1:]).strip("/"))
+        elif ((parts[self.level] == "tags" or parts[self.level] == "branches") and 
+              len(parts) >= self.level+2):
+            return ("branch", "/".join(parts[0:self.level]), "/".join(parts[0:self.level+2]).strip("/"), 
+                    "/".join(parts[self.level+2:]).strip("/"))
+        else:
+            raise NotBranchError(path=path)
+
+    def is_branch(self, path, project=None):
+        parts = path.strip("/").split("/")
+        if len(parts) == self.level+1 and parts[self.level] == "trunk":
+            return True
+
+        if len(parts) == self.level+2 and \
+           (parts[self.level] == "branches" or parts[self.level] == "tags"):
+            return True
+
+        return False
+
+
+
+class RootLegacyLayout(RepositoryLayout):
+
+    def parse(self, path):
+        return ("branch", "", "", path)
+
+    def is_branch(self, branch_path, project=None):
+        return branch_path == ""
 

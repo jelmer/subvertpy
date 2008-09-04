@@ -304,6 +304,8 @@ class SvnRepository(Repository):
     def get_layout(self):
         if self._layout is None:
             self._layout = self.get_mapping().get_mandated_layout(self)
+            if self._layout is None:
+                self._layout = self.get_guessed_layout()
         return self._layout
 
     def get_guessed_layout(self):

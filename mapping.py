@@ -318,6 +318,11 @@ class BzrSvnMapping(foreign.VcsMapping):
         None otherwise."""
         return None
 
+    def get_guessed_layout(self, repository):
+        """Return the repository layout guessed by this mapping or None.
+        """
+        return None
+
     def revision_id_bzr_to_foreign(self, revid):
         """Parse an existing Subversion-based revision id.
 

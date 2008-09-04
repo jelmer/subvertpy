@@ -58,9 +58,11 @@ class SvnRemoteAccess(BzrDir):
         raise NotImplementedError(SvnRemoteAccess.clone)
 
     def sprout(self, *args, **kwargs):
-        if (self.branch_path == "" and 
-            not self.find_repository().get_guessed_layout().is_branch("")):
-            warning('Cloning Subversion repository as branch. To import the individual branches in the repository, use "bzr svn-import".')
+        if self.branch_path == "":
+            guessed_layout = self.find_repository().get_guessed_layout()
+            if guessed_layout is not None and not guessed_layout.is_branch(""):
+                warning('Cloning Subversion repository as branch. '
+                        'To import the individual branches in the repository, use "bzr svn-import".')
         return super(SvnRemoteAccess, self).sprout(*args, **kwargs)
 
     def open_repository(self, _unsupported=False):

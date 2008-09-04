@@ -73,7 +73,6 @@ class SvnBranch(Branch):
                     raise NotBranchError(self.base)
                 raise
         (type, self.project, _, ip) = self.layout.parse(branch_path)
-        # FIXME: Don't allow tag here
         if type not in ('branch', 'tag') or ip != '':
             raise NotSvnBranchPath(branch_path, mapping=self.mapping)
 
