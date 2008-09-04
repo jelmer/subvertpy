@@ -15,7 +15,7 @@
 
 from bzrlib.errors import InvalidRevisionId, NotBranchError
 from bzrlib.inventory import ROOT_ID
-from bzrlib.plugins.svn.layout import RepositoryLayout
+from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
 from bzrlib.plugins.svn.mapping import BzrSvnMapping, escape_svn_path, unescape_svn_path, parse_svn_revprops
 
 SVN_PROP_BZR_MERGE = 'bzr:merge'
@@ -176,6 +176,14 @@ class TrunkLegacyLayout(LegacyLayout):
             return True
 
         return False
+
+    def get_branches(self, repository, revnum, project="", pb=None):
+        return get_root_paths(repository, 
+             [("*/" * self.level) + x for x in "branches/*", "tags/*", "trunk"], 
+             revnum, self.is_branch, project)
+
+    def get_tags(self, repository, revnum, project="", pb=None):
+        return []
 
 
 class RootLegacyLayout(LegacyLayout):
