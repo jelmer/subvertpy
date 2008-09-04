@@ -280,6 +280,80 @@ class RootLayout(RepositoryLayout):
         return "%s()" % self.__class__.__name__
 
 
+class CustomLayout(RepositoryLayout):
+
+    def __init__(self, branches=[], tags=[]):
+        self.branches = branches
+        self.tags = tags
+    
+    def get_tag_path(self, name, project=""):
+        """Return the path at which the tag with specified name should be found.
+
+        :param name: Name of the tag. 
+        :param project: Optional name of the project the tag is for. Can include slashes.
+        :return: Path of the tag."
+        """
+        return None
+
+    def get_tag_name(self, path, project=""):
+        """Determine the tag name from a tag path.
+
+        :param path: Path inside the repository.
+        """
+        return None
+
+    def push_merged_revisions(self, project=""):
+        """Determine whether or not right hand side (merged) revisions should be pushed.
+
+        Defaults to False.
+        
+        :param project: Name of the project.
+        """
+        return False
+
+    def get_branch_path(self, name, project=""):
+        """Return the path at which the branch with specified name should be found.
+
+        :param name: Name of the branch. 
+        :param project: Optional name of the project the branch is for. Can include slashes.
+        :return: Path of the branch.
+        """
+        return None
+
+    def parse(self, path):
+        """Parse a path.
+
+        :return: Tuple with type ('tag', 'branch'), project name, branch path and path 
+            inside the branch
+        """
+        for bp in sorted(self.branches):
+            if path.startswith("%s/" % bp) or bp == path:
+                return ("branch", bp, bp, path[len(bp):].strip("/"))
+
+        for tp in sorted(self.tags):
+            if path.startswith("%s/" % tp) or tp == path:
+                return ("tag", tp, tp, path[len(tp):].strip("/"))
+
+        raise NotBranchError(path)
+
+    def get_branches(self, repository, revnum, project=None, pb=None):
+        """Retrieve a list of paths that refer to branches in a specific revision.
+
+        :result: Iterator over tuples with (project, branch path)
+        """
+        return self.branches
+
+    def get_tags(self, repository, revnum, project=None, pb=None):
+        """Retrieve a list of paths that refer to tags in a specific revision.
+
+        :result: Iterator over tuples with (project, branch path)
+        """
+        return self.tags
+
+    def __repr__(self):
+        return "%s(%r,%r)" % (self.__class__.__name__, self.branches, self.tags)
+
+
 class ConfigBasedLayout(RepositoryLayout):
 
     def __init__(self, repository):
@@ -362,7 +436,8 @@ def get_root_paths(repository, itemlist, revnum, verify_fn, project=None, pb=Non
 
 
 def repository_guess_layout(repository, revnum):
-    return None # FIXME
+    # FIXME
+    return TrunkLayout(), TrunkLayout()
 
 
 layout_registry = registry.Registry()

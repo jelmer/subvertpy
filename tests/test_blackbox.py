@@ -294,7 +294,6 @@ Node-copyfrom-path: x
 """)
         self.check_output("", 'svn-import --layout=none %s dc' % filename)
         newrepos = Repository.open("dc")
-        newrepos.set_layout(RootLayout())
         self.assertTrue(newrepos.has_revision(
             mapping.revision_id_foreign_to_bzr((uuid, 5, ""))))
         self.assertTrue(newrepos.has_revision(

@@ -25,7 +25,7 @@ from bzrlib.revision import NULL_REVISION
 from bzrlib.tests import TestCase, TestSkipped, TestNotApplicable
 
 from bzrlib.plugins.svn import format, ra
-from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout
+from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout, CustomLayout
 from bzrlib.plugins.svn.mapping import mapping_registry
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
@@ -226,6 +226,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
     def test_follow_history_empty(self):
         repos_url = self.make_repository("a")
         repos = Repository.open(repos_url)
+        repos.set_layout(RootLayout())
         self.assertEqual(set([repos.generate_revision_id(0, '', repos.get_mapping())]), 
               set(repos.all_revision_ids(repos.get_layout())))
 

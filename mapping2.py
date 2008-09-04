@@ -88,6 +88,10 @@ class BzrSvnMappingv1(BzrSvnMapping):
     
         return cls(LegacyLayout.from_branch_path(_hinted_branch_path))
 
+    @classmethod
+    def get_test_instance(cls):
+        return cls(TrunkLegacyLayout())
+
     def get_guessed_layout(self, repository):
         return self._layout
 
