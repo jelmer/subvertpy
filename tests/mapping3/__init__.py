@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from bzrlib.bzrdir import BzrDir
 from bzrlib.repository import Repository
 from bzrlib.tests import TestCase
 
@@ -93,6 +94,7 @@ class RepositoryTests(SubversionTestCase):
 
     def setUp(self):
         super(RepositoryTests, self).setUp()
+        self.repos_url = self.make_repository("d")
         self._old_mapping = mapping_registry._get_default_key()
         mapping_registry.set_default("v3")
 
@@ -101,14 +103,12 @@ class RepositoryTests(SubversionTestCase):
         mapping_registry.set_default("v3")
 
     def test_generate_revision_id_forced_revid(self):
-        repos_url = self.make_repository("a")
-
-        dc = self.get_commit_editor(repos_url)
+        dc = self.get_commit_editor(self.repos_url)
         dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", 
                              "2 someid\n")
         dc.close()
 
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
         mapping = repos.get_mapping()
         if not mapping.roundtripping:
             raise TestNotApplicable()
@@ -116,13 +116,12 @@ class RepositoryTests(SubversionTestCase):
         self.assertEquals("someid", revid)
 
     def test_generate_revision_id_forced_revid_invalid(self):
-        repos_url = self.make_repository("a")
 
-        dc = self.get_commit_editor(repos_url)
+        dc = self.get_commit_editor(self.repos_url)
         dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", "corrupt-id\n")
         dc.close()
 
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
         mapping = repos.get_mapping()
         if not mapping.roundtripping:
             raise TestNotApplicable()
@@ -132,18 +131,16 @@ class RepositoryTests(SubversionTestCase):
                 revid)
 
     def test_revision_ghost_parents(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
+        dc = self.get_commit_editor(self.repos_url)
         dc.add_file("foo").modify("data")
         dc.close()
 
-        dc = self.get_commit_editor(repos_url)
+        dc = self.get_commit_editor(self.repos_url)
         dc.open_file("foo").modify("data2")
         dc.change_prop("bzr:ancestry:v3-none", "ghostparent\n")
         dc.close()
 
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         mapping = repository.get_mapping()
         self.assertEqual((),
                 repository.get_revision(
@@ -157,8 +154,8 @@ class RepositoryTests(SubversionTestCase):
                     repository.generate_revision_id(2, "", mapping)).parent_ids)
  
     def test_get_revision_id_overriden(self):
-        repos_url = self.make_client('d', 'dc')
-        repository = Repository.open(repos_url)
+        self.make_checkout(self.repos_url, 'dc')
+        repository = Repository.open(self.repos_url)
         self.assertRaises(NoSuchRevision, repository.get_revision, "nonexisting")
         self.build_tree({'dc/foo': "data"})
         self.client_add("dc/foo")
@@ -168,7 +165,7 @@ class RepositoryTests(SubversionTestCase):
                             "3 myrevid\n")
         self.client_update("dc")
         (num, date, author) = self.client_commit("dc", "Second Message")
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         mapping = repository.get_mapping()
         if not mapping.roundtripping:
             raise TestNotApplicable
@@ -182,7 +179,7 @@ class RepositoryTests(SubversionTestCase):
         self.assertIsInstance(rev.properties, dict)
 
     def test_get_ancestry_merged(self):
-        repos_url = self.make_client('d', 'dc')
+        self.make_checkout(self.repos_url, 'dc')
         self.build_tree({'dc/foo': "data"})
         self.client_add("dc/foo")
         self.client_commit("dc", "My Message")
@@ -190,7 +187,7 @@ class RepositoryTests(SubversionTestCase):
         self.client_set_prop("dc", "bzr:ancestry:v3-none", "a-parent\n")
         self.build_tree({'dc/foo': "data2"})
         self.client_commit("dc", "Second Message")
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         mapping = repository.get_mapping()
         self.assertEqual([None, repository.generate_revision_id(0, "", mapping)],
                 repository.get_ancestry(
@@ -207,13 +204,11 @@ class RepositoryTests(SubversionTestCase):
                     repository.generate_revision_id(2, "", mapping)))
 
     def test_lookup_revision_id_overridden(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
+        dc = self.get_commit_editor(self.repos_url)
         dc.add_dir("bloe")
         dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", "2 myid\n")
         dc.close()
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(("", 1), repository.lookup_revision_id( 
             mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
@@ -221,14 +216,12 @@ class RepositoryTests(SubversionTestCase):
                 repository.lookup_revision_id("myid")[:2])
 
     def test_lookup_revision_id_overridden_invalid(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
+        dc = self.get_commit_editor(self.repos_url)
         dc.add_dir("bloe")
         dc.change_prop(SVN_PROP_BZR_REVISION_ID+"v3-none", "corrupt-entry\n")
         dc.close()
 
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(("", 1), repository.lookup_revision_id( 
             mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
@@ -236,7 +229,7 @@ class RepositoryTests(SubversionTestCase):
             "corrupt-entry")
 
     def test_lookup_revision_id_overridden_invalid_dup(self):
-        repos_url = self.make_client('d', 'dc')
+        self.make_checkout(self.repos_url, 'dc')
         self.build_tree({'dc/bloe': None})
         self.client_add("dc/bloe")
         self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"v3-none", 
@@ -247,7 +240,7 @@ class RepositoryTests(SubversionTestCase):
         self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"v3-none", 
                 "corrupt-entry\n2 corrupt-entry\n")
         self.client_commit("dc", "foobar")
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(("", 2), repository.lookup_revision_id( 
             mapping.revision_id_foreign_to_bzr((repository.uuid, 2, "")))[:2])
@@ -259,26 +252,26 @@ class RepositoryTests(SubversionTestCase):
     def test_lookup_revision_id_overridden_not_found(self):
         """Make sure a revision id that is looked up but doesn't exist 
         doesn't accidently end up in the revid cache."""
-        repos_url = self.make_client('d', 'dc')
+        self.make_checkout(self.repos_url, 'dc')
         self.build_tree({'dc/bloe': None})
         self.client_add("dc/bloe")
         self.client_set_prop("dc", SVN_PROP_BZR_REVISION_ID+"v3-none", "2 myid\n")
         self.client_commit("dc", "foobar")
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         self.assertRaises(NoSuchRevision, 
                 repository.lookup_revision_id, "foobar")
 
     def test_set_branching_scheme_property(self):
-        repos_url = self.make_client('d', 'dc')
+        self.make_checkout(self.repos_url, 'dc')
         self.client_set_prop("dc", SVN_PROP_BZR_BRANCHING_SCHEME, 
             "trunk\nbranches/*\nbranches/tmp/*")
         self.client_commit("dc", "set scheme")
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         self.assertEquals(ListBranchingScheme(["trunk", "branches/*", "branches/tmp/*"]).branch_list,
                           repository.get_mapping().scheme.branch_list)
 
     def test_set_property_scheme(self):
-        repos_url = self.make_client('d', 'dc')
+        self.make_checkout(self.repos_url, 'dc')
         repos = Repository.open(repos_url)
         set_property_scheme(repos, ListBranchingScheme(["bla/*"]))
         self.client_update("dc")
@@ -286,5 +279,104 @@ class RepositoryTests(SubversionTestCase):
                    self.client_get_prop("dc", SVN_PROP_BZR_BRANCHING_SCHEME))
         self.assertEquals("Updating branching scheme for Bazaar.", 
                 self.client_log(repos_url, 1, 1)[1][3])
+
+    def test_fetch_fileid_renames(self):
+        dc = self.get_commit_editor(self.repos_url)
+        dc.add_file("test").modify("data")
+        dc.change_prop("bzr:file-ids", "test\tbla\n")
+        dc.change_prop("bzr:revision-info", "")
+        dc.close()
+
+        oldrepos = Repository.open(self.repos_url)
+        dir = BzrDir.create("f", format.get_rich_root_format())
+        newrepos = dir.create_repository()
+        oldrepos.copy_content_into(newrepos)
+        mapping = oldrepos.get_mapping()
+        self.assertEqual("bla", newrepos.get_inventory(
+            oldrepos.generate_revision_id(1, "", mapping)).path2id("test"))
+
+    def test_fetch_ghosts(self):
+        dc = self.get_commit_editor(self.repos_url)
+        dc.add_file("bla").modify("data")
+        dc.change_prop("bzr:ancestry:v3-none", "aghost\n")
+        dc.close()
+
+        oldrepos = Repository.open(self.repos_url)
+        dir = BzrDir.create("f", format.get_rich_root_format())
+        newrepos = dir.create_repository()
+        oldrepos.copy_content_into(newrepos)
+        mapping = oldrepos.get_mapping()
+
+        rev = newrepos.get_revision(oldrepos.generate_revision_id(1, "", mapping))
+        self.assertTrue("aghost" in rev.parent_ids)
+
+    def test_fetch_invalid_ghosts(self):
+        dc = self.get_commit_editor(self.repos_url)
+        dc.add_file("bla").modify("data")
+        dc.change_prop("bzr:ancestry:v3-none", "a ghost\n")
+        dc.close()
+
+        oldrepos = Repository.open(self.repos_url)
+        dir = BzrDir.create("f", format.get_rich_root_format())
+        newrepos = dir.create_repository()
+        oldrepos.copy_content_into(newrepos)
+        
+        mapping = oldrepos.get_mapping()
+
+        rev = newrepos.get_revision(oldrepos.generate_revision_id(1, "", mapping))
+        self.assertEqual([oldrepos.generate_revision_id(0, "", mapping)], rev.parent_ids)
+
+    def test_fetch_complex_ids_dirs(self):
+        dc = self.get_commit_editor(self.repos_url)
+        dir = dc.add_dir("dir")
+        dir.add_dir("dir/adir")
+        dc.change_prop("bzr:revision-info", "")
+        dc.change_prop("bzr:file-ids", "dir\tbloe\ndir/adir\tbla\n")
+        dc.close()
+
+        dc = self.get_commit_editor(self.repos_url)
+        dc.add_dir("bdir", "dir/adir")
+        dir = dc.open_dir("dir")
+        dir.delete("dir/adir")
+        dc.change_prop("bzr:revision-info", "properties: \n")
+        dc.change_prop("bzr:file-ids", "bdir\tbla\n")
+        dc.close()
+
+        oldrepos = Repository.open(self.repos_url)
+        dir = BzrDir.create("f", format.get_rich_root_format())
+        newrepos = dir.create_repository()
+        oldrepos.copy_content_into(newrepos)
+        mapping = oldrepos.get_mapping()
+        tree = newrepos.revision_tree(oldrepos.generate_revision_id(2, "", mapping))
+        self.assertEquals("bloe", tree.path2id("dir"))
+        self.assertIs(None, tree.path2id("dir/adir"))
+        self.assertEquals("bla", tree.path2id("bdir"))
+
+    def test_fetch_complex_ids_files(self):
+        dc = self.get_commit_editor(self.repos_url)
+        dir = dc.add_dir("dir")
+        dir.add_file("dir/adir").modify("contents")
+        dc.change_prop("bzr:revision-info", "")
+        dc.change_prop("bzr:file-ids", "dir\tbloe\ndir/adir\tbla\n")
+        dc.close()
+
+        dc = self.get_commit_editor(self.repos_url)
+        dc.add_file("bdir", "dir/adir")
+        dir = dc.open_dir("dir")
+        dir.delete("dir/adir")
+        dc.change_prop("bzr:revision-info", "properties: \n")
+        dc.change_prop("bzr:file-ids", "bdir\tbla\n")
+        dc.close()
+
+        oldrepos = Repository.open(self.repos_url)
+        dir = BzrDir.create("f", format.get_rich_root_format())
+        newrepos = dir.create_repository()
+        oldrepos.copy_content_into(newrepos)
+        mapping = oldrepos.get_mapping()
+        tree = newrepos.revision_tree(oldrepos.generate_revision_id(2, "", mapping))
+        self.assertEquals("bloe", tree.path2id("dir"))
+        self.assertIs(None, tree.path2id("dir/adir"))
+        mutter('entries: %r' % tree.inventory.entries())
+        self.assertEquals("bla", tree.path2id("bdir"))
 
 

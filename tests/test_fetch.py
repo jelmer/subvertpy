@@ -37,23 +37,6 @@ from bzrlib.plugins.svn.transport import SvnRaTransport
 import os, sys
 
 class TestFetchWorks(SubversionTestCase):
-    def test_fetch_fileid_renames(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_file("test").modify("data")
-        dc.change_prop("bzr:file-ids", "test\tbla\n")
-        dc.change_prop("bzr:revision-info", "")
-        dc.close()
-
-        oldrepos = Repository.open(repos_url)
-        dir = BzrDir.create("f", format.get_rich_root_format())
-        newrepos = dir.create_repository()
-        oldrepos.copy_content_into(newrepos)
-        mapping = oldrepos.get_mapping()
-        self.assertEqual("bla", newrepos.get_inventory(
-            oldrepos.generate_revision_id(1, "", mapping)).path2id("test"))
-
     def test_fetch_trunk1(self):
         repos_url = self.make_repository('d')
 
@@ -150,63 +133,6 @@ class TestFetchWorks(SubversionTestCase):
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos, NULL_REVISION)
-
-    def test_fetch_complex_ids_dirs(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
-        dir = dc.add_dir("dir")
-        dir.add_dir("dir/adir")
-        dc.change_prop("bzr:revision-info", "")
-        dc.change_prop("bzr:file-ids", "dir\tbloe\ndir/adir\tbla\n")
-        dc.close()
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_dir("bdir", "dir/adir")
-        dir = dc.open_dir("dir")
-        dir.delete("dir/adir")
-        dc.change_prop("bzr:revision-info", "properties: \n")
-        dc.change_prop("bzr:file-ids", "bdir\tbla\n")
-        dc.close()
-
-        oldrepos = Repository.open(repos_url)
-        dir = BzrDir.create("f", format.get_rich_root_format())
-        newrepos = dir.create_repository()
-        oldrepos.copy_content_into(newrepos)
-        mapping = oldrepos.get_mapping()
-        tree = newrepos.revision_tree(oldrepos.generate_revision_id(2, "", mapping))
-        self.assertEquals("bloe", tree.path2id("dir"))
-        self.assertIs(None, tree.path2id("dir/adir"))
-        self.assertEquals("bla", tree.path2id("bdir"))
-
-    def test_fetch_complex_ids_files(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
-        dir = dc.add_dir("dir")
-        dir.add_file("dir/adir").modify("contents")
-        dc.change_prop("bzr:revision-info", "")
-        dc.change_prop("bzr:file-ids", "dir\tbloe\ndir/adir\tbla\n")
-        dc.close()
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_file("bdir", "dir/adir")
-        dir = dc.open_dir("dir")
-        dir.delete("dir/adir")
-        dc.change_prop("bzr:revision-info", "properties: \n")
-        dc.change_prop("bzr:file-ids", "bdir\tbla\n")
-        dc.close()
-
-        oldrepos = Repository.open(repos_url)
-        dir = BzrDir.create("f", format.get_rich_root_format())
-        newrepos = dir.create_repository()
-        oldrepos.copy_content_into(newrepos)
-        mapping = oldrepos.get_mapping()
-        tree = newrepos.revision_tree(oldrepos.generate_revision_id(2, "", mapping))
-        self.assertEquals("bloe", tree.path2id("dir"))
-        self.assertIs(None, tree.path2id("dir/adir"))
-        mutter('entries: %r' % tree.inventory.entries())
-        self.assertEquals("bla", tree.path2id("bdir"))
 
     def test_fetch_copy_remove_old(self):
         repos_url = self.make_client('d', 'dc')
@@ -1735,23 +1661,6 @@ Node-copyfrom-path: x
         self.assertEqual(oldrepos.generate_revision_id(2, "", mapping), 
                          inv2[inv2.path2id("bla")].revision)
 
-    def test_fetch_ghosts(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_file("bla").modify("data")
-        dc.change_prop("bzr:ancestry:v3-none", "aghost\n")
-        dc.close()
-
-        oldrepos = Repository.open(repos_url)
-        dir = BzrDir.create("f", format.get_rich_root_format())
-        newrepos = dir.create_repository()
-        oldrepos.copy_content_into(newrepos)
-        mapping = oldrepos.get_mapping()
-
-        rev = newrepos.get_revision(oldrepos.generate_revision_id(1, "", mapping))
-        self.assertTrue("aghost" in rev.parent_ids)
-
     def test_fetch_svk_merge(self):
         repos_url = self.make_repository('d')
 
@@ -1782,24 +1691,6 @@ Node-copyfrom-path: x
         rev = newrepos.get_revision(oldrepos.generate_revision_id(3, "trunk", mapping))
         mutter('parent ids: %r' % rev.parent_ids)
         self.assertTrue(oldrepos.generate_revision_id(2, "branches/foo", mapping) in rev.parent_ids)
-
-    def test_fetch_invalid_ghosts(self):
-        repos_url = self.make_repository('d')
-        
-        dc = self.get_commit_editor(repos_url)
-        dc.add_file("bla").modify("data")
-        dc.change_prop("bzr:ancestry:v3-none", "a ghost\n")
-        dc.close()
-
-        oldrepos = Repository.open(repos_url)
-        dir = BzrDir.create("f", format.get_rich_root_format())
-        newrepos = dir.create_repository()
-        oldrepos.copy_content_into(newrepos)
-        
-        mapping = oldrepos.get_mapping()
-
-        rev = newrepos.get_revision(oldrepos.generate_revision_id(1, "", mapping))
-        self.assertEqual([oldrepos.generate_revision_id(0, "", mapping)], rev.parent_ids)
 
     def test_fetch_property_change_only(self):
         repos_url = self.make_repository('d')

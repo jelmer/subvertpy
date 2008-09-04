@@ -5,10 +5,12 @@ mappingv4:
   + remove Mapping.get_guessed_layout()
 
 - generate deltas rather than fulltexts when creating file id maps
+- fix working trees
 
 tests:
 - more blackbox tests
  - svn-import without scheme specified should guess
+- performance tests (count roundtrips?)
 
 .svn working trees:
 - implement apply_inventory_delta()
