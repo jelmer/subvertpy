@@ -35,7 +35,7 @@ from bzrlib.plugins.svn.svk import (
     generate_svk_feature, serialize_svk_features, 
     parse_svk_features, SVN_PROP_SVK_MERGE)
 from bzrlib.plugins.svn.logwalker import lazy_dict
-from bzrlib.plugins.svn.mapping import parse_revision_id
+from bzrlib.plugins.svn.mapping import mapping_registry
 from bzrlib.plugins.svn.repository import SvnRepositoryFormat, SvnRepository
 
 
@@ -46,7 +46,7 @@ def _revision_id_to_svk_feature(revid):
     :return: Matching SVK feature identifier.
     """
     assert isinstance(revid, str)
-    (uuid, branch, revnum, _) = parse_revision_id(revid)
+    (uuid, branch, revnum, _) = mapping_registry.parse_revision_id(revid)
     # TODO: What about renamed revisions? Should use 
     # repository.lookup_revision_id here.
     return generate_svk_feature(uuid, branch, revnum)

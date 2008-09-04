@@ -22,7 +22,7 @@ from bzrlib.trace import info
 
 import itertools
 from bzrlib.plugins.svn import changes, logwalker, mapping, properties
-from bzrlib.plugins.svn.mapping import parse_revision_id
+from bzrlib.plugins.svn.mapping import mapping_registry
 
 class UpgradeChangesContent(BzrError):
     """Inconsistency was found upgrading the mapping of a revision."""
@@ -118,7 +118,7 @@ def generate_upgrade_map(new_mapping, revs):
     for revid in revs:
         assert isinstance(revid, str)
         try:
-            (uuid, bp, rev, mapping) = parse_revision_id(revid)
+            (uuid, bp, rev, mapping) = mapping_registry.parse_revision_id(revid)
         except InvalidRevisionId:
             # Not a bzr-svn revision, nothing to do
             continue
@@ -217,7 +217,7 @@ def upgrade_repository(repository, svn_repository, new_mapping=None,
                 info("%s -> %s" % (revid, plan[revid][0]))
         def fix_revid(revid):
             try:
-                (uuid, bp, rev, mapping) = parse_revision_id(revid)
+                (uuid, bp, rev, mapping) = mapping_registry.parse_revision_id(revid)
             except InvalidRevisionId:
                 return revid
             return new_mapping.revision_id_foreign_to_bzr((uuid, rev, bp))

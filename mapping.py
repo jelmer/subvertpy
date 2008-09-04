@@ -649,7 +649,31 @@ class BzrSvnMappingRevProps(object):
         raise NotImplementedError(self.get_rhs_ancestors)
 
 
-mapping_registry = foreign.VcsMappingRegistry()
+class SubversionMappingRegistry(foreign.VcsMappingRegistry):
+
+    def parse_mapping_name(self, name):
+        assert isinstance(name, str)
+        if "-" in name:
+            name, rest = name.split("-", 1)
+            assert isinstance(rest, str)
+            return self.get(name)(rest)
+        return self.get(name)()
+
+
+    def parse_revision_id(self, revid):
+        """Try to parse a Subversion revision id.
+        
+        :param revid: Revision id to parse
+        :return: tuple with (uuid, branch_path, revno, mapping)
+        """
+        if not revid.startswith("svn-"):
+            raise InvalidRevisionId(revid, None)
+        mapping_version = revid[len("svn-"):len("svn-vx")]
+        mapping = self.get(mapping_version)
+        return mapping.revision_id_bzr_to_foreign(revid)
+
+
+mapping_registry = SubversionMappingRegistry()
 mapping_registry.register_lazy('v1', 'bzrlib.plugins.svn.mapping2', 
                                'BzrSvnMappingv1', 
                                'Original bzr-svn mapping format (bzr-svn 0.2.x)')
@@ -663,32 +687,6 @@ mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4',
                                'BzrSvnMappingv4',
                                'Fourth format (bzr-svn 0.5.x)')
 mapping_registry.set_default('v3')
-
-def parse_mapping_name(name):
-    assert isinstance(name, str)
-    if "-" in name:
-        name, rest = name.split("-", 1)
-        assert isinstance(rest, str)
-        return mapping_registry.get(name)(rest)
-    return mapping_registry.get(name)()
-
-
-def parse_revision_id(revid):
-    """Try to parse a Subversion revision id.
-    
-    :param revid: Revision id to parse
-    :return: tuple with (uuid, branch_path, revno, mapping)
-    """
-    if not revid.startswith("svn-"):
-        raise InvalidRevisionId(revid, None)
-    mapping_version = revid[len("svn-"):len("svn-vx")]
-    mapping = mapping_registry.get(mapping_version)
-    return mapping.revision_id_bzr_to_foreign(revid)
-
-
-def get_default_mapping():
-    return mapping_registry.get_default()
-
 
 def find_mapping(revprops, fileprops):
     if SVN_REVPROP_BZR_MAPPING_VERSION in revprops:
@@ -704,7 +702,7 @@ def find_mapping(revprops, fileprops):
                 return ret
     for k, v in fileprops.items():
         if k.startswith(SVN_PROP_BZR_REVISION_ID):
-            return parse_mapping_name(k[len(SVN_PROP_BZR_REVISION_ID):])
+            return mapping_registry.parse_mapping_name(k[len(SVN_PROP_BZR_REVISION_ID):])
     return None
 
 

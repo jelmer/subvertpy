@@ -43,7 +43,6 @@ from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
                      SVN_REVPROP_BZR_SKIP,
                      parse_tags_property,
                      BzrSvnMapping,
-                     get_default_mapping, 
                      mapping_registry,
                      is_bzr_revision_revprops, is_bzr_revision_fileprops,
                      parse_svn_dateprop)
@@ -256,7 +255,7 @@ class SvnRepository(Repository):
         config_mapping_name = self.get_config().get_default_mapping()
         if config_mapping_name is not None:
             return mapping_registry.get(config_mapping_name)
-        return get_default_mapping()
+        return mapping_registry.get_default()
 
     def get_mapping(self):
         if self._default_mapping is None:

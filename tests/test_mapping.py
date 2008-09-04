@@ -25,7 +25,7 @@ from bzrlib.plugins.svn.errors import InvalidPropertyValue
 from bzrlib.plugins.svn.mapping import (generate_revision_metadata, parse_revision_metadata, 
                      parse_revid_property, parse_merge_property, parse_text_parents_property,
                      generate_text_parents_property, 
-                     parse_revision_id, escape_svn_path, unescape_svn_path)
+                     escape_svn_path, unescape_svn_path)
 from bzrlib.plugins.svn.mapping2 import BzrSvnMappingv1, BzrSvnMappingv2
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.mapping4 import BzrSvnMappingv4
@@ -149,31 +149,31 @@ class ParseRevisionIdTests(object):
 
     def test_v4(self):
         self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv4()), 
-                parse_revision_id("svn-v3:uuid:trunk:1"))
+                mapping_registry.parse_revision_id("svn-v3:uuid:trunk:1"))
 
     def test_v3(self):
         self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv3FileProps(TrunkBranchingScheme())), 
-                parse_revision_id("svn-v3-trunk0:uuid:trunk:1"))
+                mapping_registry.parse_revision_id("svn-v3-trunk0:uuid:trunk:1"))
 
     def test_v3_undefined(self):
         self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv3FileProps(TrunkBranchingScheme())), 
-                parse_revision_id("svn-v3-undefined:uuid:trunk:1"))
+                mapping_registry.parse_revision_id("svn-v3-undefined:uuid:trunk:1"))
 
     def test_v2(self):
         self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv2()), 
-                         parse_revision_id("svn-v2:1@uuid-trunk"))
+                         mapping_registry.parse_revision_id("svn-v2:1@uuid-trunk"))
 
     def test_v1(self):
         self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv1()), 
-                         parse_revision_id("svn-v1:1@uuid-trunk"))
+                         mapping_registry.parse_revision_id("svn-v1:1@uuid-trunk"))
 
     def test_except(self):
         self.assertRaises(InvalidRevisionId, 
-                         parse_revision_id, "svn-v0:1@uuid-trunk")
+                         mapping_registry.parse_revision_id, "svn-v0:1@uuid-trunk")
 
     def test_except_nonsvn(self):
         self.assertRaises(InvalidRevisionId, 
-                         parse_revision_id, "blah")
+                         mapping_registry.parse_revision_id, "blah")
 
 
 class EscapeTest(TestCase):

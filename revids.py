@@ -22,9 +22,9 @@ from bzrlib.trace import mutter
 from bzrlib.plugins.svn.cache import CacheTable
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import InvalidPropertyValue, ERR_FS_NO_SUCH_REVISION, InvalidBzrSvnRevision
-from bzrlib.plugins.svn.mapping import (parse_revision_id, BzrSvnMapping, 
+from bzrlib.plugins.svn.mapping import (BzrSvnMapping, 
                      SVN_PROP_BZR_REVISION_ID, parse_revid_property,
-                     find_mapping, parse_mapping_name, is_bzr_revision_revprops)
+                     find_mapping, mapping_registry, is_bzr_revision_revprops)
 
 class RevidMap(object):
     def __init__(self, repos):
@@ -34,7 +34,7 @@ class RevidMap(object):
         """Find the (branch, revnum) tuple for a revision id."""
         # Try a simple parse
         try:
-            (uuid, branch_path, revnum, mapping) = parse_revision_id(revid)
+            (uuid, branch_path, revnum, mapping) = mapping_registry.parse_revision_id(revid)
             assert isinstance(branch_path, str)
             assert isinstance(mapping, BzrSvnMapping)
             if uuid == self.repos.uuid:
@@ -98,7 +98,7 @@ class RevidMap(object):
             # If there are any new entries that are not yet in the cache, 
             # add them
             for ((entry_revno, entry_revid), mapping_name) in revids:
-                yield (entry_revid, branch, revno, parse_mapping_name(mapping_name))
+                yield (entry_revid, branch, revno, mapping_registry.parse_mapping_name(mapping_name))
 
     def bisect_revid_revnum(self, revid, branch_path, min_revnum, max_revnum):
         """Find out what the actual revnum was that corresponds to a revid.
@@ -125,7 +125,7 @@ class RevidMap(object):
                     continue
                 if entry_revid == revid:
                     mapping_name = propname[len(SVN_PROP_BZR_REVISION_ID):]
-                    mapping = parse_mapping_name(mapping_name)
+                    mapping = mapping_registry.parse_mapping_name(mapping_name)
                     assert (mapping.is_tag(revmeta.branch_path) or 
                             mapping.is_branch(revmeta.branch_path))
                     return (revmeta.branch_path, revmeta.revnum, mapping)
@@ -142,7 +142,7 @@ class CachingRevidMap(object):
     def get_branch_revnum(self, revid, layout, project=None):
         # Try a simple parse
         try:
-            (uuid, branch_path, revnum, mapping) = parse_revision_id(revid)
+            (uuid, branch_path, revnum, mapping) = mapping_registry.parse_revision_id(revid)
             assert isinstance(branch_path, str)
             assert isinstance(mapping, BzrSvnMapping)
             if uuid == self.actual.repos.uuid:
@@ -162,7 +162,7 @@ class CachingRevidMap(object):
             # Entry already complete?
             assert min_revnum <= max_revnum
             if min_revnum == max_revnum:
-                return (branch_path, min_revnum, parse_mapping_name(mapping))
+                return (branch_path, min_revnum, mapping_registry.parse_mapping_name(mapping))
         except NoSuchRevision, e:
             last_revnum = self.actual.repos.get_latest_revnum()
             last_checked = self.cache.last_revnum_checked(repr((layout, project)))
