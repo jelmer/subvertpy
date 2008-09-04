@@ -21,6 +21,8 @@ from bzrlib.trace import mutter
 from bzrlib.plugins.svn import commit, core, mapping, properties
 
 class SubversionTags(BasicTags):
+    """Subversion tags object."""
+
     def __init__(self, branch):
         self.branch = branch
         self.repository = branch.repository

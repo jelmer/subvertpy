@@ -329,12 +329,16 @@ class RevisionMetadataBranch(object):
 
 class RevisionMetadataProvider(object):
 
-    def __init__(self, repository, check_revprops):
+    def __init__(self, repository, cache, check_revprops):
         self._revmeta_cache = {}
         self.repository = repository
         self._get_fileprops_fn = self.repository.branchprop_list.get_properties
         self._log = repository._log
         self.check_revprops = check_revprops
+        if cache:
+            self._revmeta_cls = CachingRevisionMetadata
+        else:
+            self._revmeta_cls = RevisionMetadata
 
     def get_revision(self, path, revnum, changes=None, revprops=None, changed_fileprops=None, 
                      metabranch=None):
@@ -346,7 +350,7 @@ class RevisionMetadataProvider(object):
                 cached._changed_fileprops = changed_fileprops
             return self._revmeta_cache[path,revnum]
 
-        ret = CachingRevisionMetadata(self.repository, self.check_revprops, self._get_fileprops_fn,
+        ret = self._revmeta_cls(self.repository, self.check_revprops, self._get_fileprops_fn,
                                self._log, self.repository.uuid, path, revnum, changes, revprops, 
                                changed_fileprops=changed_fileprops, 
                                metabranch=metabranch)
