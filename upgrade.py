@@ -263,7 +263,7 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
             if old_mapping == new_mapping:
                 # Already the latest mapping
                 continue
-            assert old_mapping.supports_custom_revprops() or bp is not None
+            assert old_mapping.can_use_revprops or bp is not None
             new_revprops = dict(revprops.items())
             revmeta = repository._revmeta(bp, changes, revnum, revprops, fileprops)
             rev = revmeta.get_revision(old_mapping)

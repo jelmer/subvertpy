@@ -520,7 +520,7 @@ class cmd_svn_set_revprops(Command):
         if mapping is None:
             mapping = mapping_registry.get_default()
         new_mapping = mapping.from_repository(repos)
-        if not new_mapping.supports_custom_revprops():
+        if not new_mapping.can_use_revprops:
             raise BzrCommandError("Please specify a different mapping, %s doesn't support revision properties." % new_mapping.name)
 
         set_revprops(repos, new_mapping)

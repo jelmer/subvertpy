@@ -283,6 +283,8 @@ class BzrSvnMapping(foreign.VcsMapping):
     experimental = False
     _warned_experimental = False
     roundtripping = False
+    can_use_revprops = False
+    can_use_fileprops = False
 
     def __init__(self):
         if (version_info[3] == 'exp' or self.experimental) and not BzrSvnMapping._warned_experimental:
@@ -297,16 +299,6 @@ class BzrSvnMapping(foreign.VcsMapping):
     @classmethod
     def from_revprops(cls, revprops):
         raise NotImplementedError
-
-    @classmethod
-    def supports_custom_revprops(cls):
-        """Whether this mapping will primarily use custom revision properties."""
-        return False
-
-    @classmethod
-    def supports_custom_fileprops(cls):
-        """Whether this mapping can be used with custom file properties."""
-        return False
 
     def get_mandated_layout(self, repository):
         """Return the repository layout if any is mandated by this mapping, 
@@ -475,11 +467,6 @@ class BzrSvnMappingFileProps(object):
     def __init__(self, name):
         self.name = name
 
-    @classmethod
-    def supports_custom_fileprops(cls):
-        """Whether this mapping can be used with custom file properties."""
-        return True
-
     def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
         parse_svn_revprops(svn_revprops, rev)
         if SVN_PROP_BZR_LOG in fileprops:
@@ -573,11 +560,6 @@ class BzrSvnMappingFileProps(object):
 
 
 class BzrSvnMappingRevProps(object):
-    @classmethod
-    def supports_custom_revprops(cls):
-        """Whether this mapping can be used with custom revision properties."""
-        return True
-
     def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
         parse_svn_revprops(svn_revprops, rev)
         parse_bzr_svn_revprops(svn_revprops, rev)

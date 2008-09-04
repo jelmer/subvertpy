@@ -31,6 +31,8 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     upgrade_suffix = "-svn4"
     experimental = True
     roundtripping = True
+    can_use_revprops = True
+    can_use_fileprops = True
 
     def __init__(self, layout=None):
         self.name = "v4"
@@ -48,10 +50,6 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     @classmethod
     def from_revprops(cls, revprops):
         return cls()
-
-    @staticmethod
-    def supports_custom_revprops():
-        return True
 
     @classmethod
     def revision_id_bzr_to_foreign(cls, revid):

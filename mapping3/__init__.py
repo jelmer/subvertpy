@@ -160,6 +160,7 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
     upgrade_suffix = "-svn3"
     revid_prefix = "svn-v3-"
     roundtripping = True
+    can_use_fileprops = True
 
     def __init__(self, scheme, guessed_scheme=None):
         mapping.BzrSvnMapping.__init__(self)
