@@ -600,6 +600,8 @@ class SvnRepository(Repository):
                             created.add(bp)
                         elif paths[p][0] == 'D' and rp == "":
                             deleted.add(bp)
+                except errors.NotBranchError:
+                    pass
                 except errors.InvalidSvnBranchPath:
                     pass
         return deleted, created
@@ -623,7 +625,7 @@ class SvnRepository(Repository):
         branches = []
         pb = ui.ui_factory.nested_progress_bar()
         try:
-            for project, bp, nick in layout.get_branches(revnum, pb=pb):
+            for project, bp, nick in layout.get_branches(self, revnum, pb=pb):
                 branches.append(SvnBranch(self, bp, _skip_check=True))
         finally:
             pb.finished()
@@ -799,9 +801,9 @@ class SvnRepository(Repository):
         if not check_removed and from_revnum == 0:
             it = iter([])
             if find_branches:
-                it = chain(it, layout.get_branches(to_revnum, project))
+                it = chain(it, layout.get_branches(self, to_revnum, project))
             if find_tags:
-                it = chain(it, layout.get_tags(to_revnum, project))
+                it = chain(it, layout.get_tags(self, to_revnum, project))
             for (project, branch, nick) in it:
                 yield (branch, to_revnum, True)
         else:

@@ -71,7 +71,7 @@ class SchemeDerivedLayout(RepositoryLayout):
     def push_merged_revisions(self, project=""):
         try:
             self.scheme.get_branch_path("somebranch")
-            return self.repository.get_config().get_push_merged_revisions()
+            return True
         except NotImplementedError:
             return False
 
@@ -176,7 +176,8 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
         return SchemeDerivedLayout(repository, self.guessed_scheme or self.scheme)
 
     def check_layout(self, repository, layout):
-        repository.get_mapping().scheme = scheme_from_layout(layout)
+        scheme = scheme_from_layout(layout)
+        repository.get_mapping().scheme = scheme
         config_set_scheme(repository, scheme, scheme)
 
     @classmethod

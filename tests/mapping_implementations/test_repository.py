@@ -112,7 +112,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         repos = Repository.open(repos_url)
         repos.set_layout(RootLayout())
         self.assertRaises(NoSuchRevision, list, 
-               repos._revmeta_provider.iter_reverse_branch_changes("/", 20, 0, repos.get_layout()))
+               repos._revmeta_provider.iter_reverse_branch_changes("/", 20, 0))
 
     def test_follow_branch_switched_parents(self):
         repos_url = self.make_client('a', 'dc')
@@ -216,7 +216,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         dc.close()
 
         repos = Repository.open(repos_url)
-        repos.set_layout(repos, TrunkLayout(0))
+        repos.set_layout(TrunkLayout(0))
         mapping = repos.get_mapping()
         self.assertEqual(set([
             repos.generate_revision_id(1, "trunk", mapping), 
@@ -735,6 +735,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.client_commit("dc", "Third Message") #3
         self.client_update("dc")
         repository = Repository.open(repos_url)
+        repository.set_layout(RootLayout())
         mapping = repository.get_mapping()
         inv = repository.get_inventory(
                 repository.generate_revision_id(1, "", mapping))

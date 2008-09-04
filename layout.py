@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from bzrlib import urlutils, ui
+from bzrlib import registry, urlutils, ui
 from bzrlib.errors import NotBranchError
 from bzrlib.trace import mutter
 from bzrlib.plugins.svn.core import SubversionException, NODE_DIR
@@ -23,8 +23,8 @@ from bzrlib.plugins.svn.ra import DIRENT_KIND
 class RepositoryLayout(object):
     """Describes a repository layout."""
 
-    def __init__(self, repository):
-        self._config = repository.get_config()
+    def __init__(self):
+        pass
 
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
@@ -120,6 +120,7 @@ class RepositoryLayout(object):
 class TrunkLayout(RepositoryLayout):
 
     def __init__(self, level=None):
+        assert level is None or isinstance(level, int)
         self.level = level
     
     def get_tag_path(self, name, project=""):
@@ -148,7 +149,7 @@ class TrunkLayout(RepositoryLayout):
         
         :param project: Name of the project.
         """
-        return self._config.get_push_merged_revisions()
+        return False
 
     def get_branch_path(self, name, project=""):
         """Return the path at which the branch with specified name should be found.
@@ -178,7 +179,8 @@ class TrunkLayout(RepositoryLayout):
                 else:
                     t = "branch"
                     j = i
-                return (t, 
+                if self.level in (j, None):
+                    return (t, 
                         "/".join(parts[:j]).strip("/"), 
                         "/".join(parts[:i+1]).strip("/"), 
                         "/".join(parts[i+1:]).strip("/"))
@@ -206,7 +208,10 @@ class TrunkLayout(RepositoryLayout):
         return get_root_paths(repository, [self._add_project("tags/*", project)], revnum, self.is_tag, project)
 
     def __repr__(self):
-        return "%s()" % self.__class__.__name__
+        if self.level is None:
+            return "%s()" % self.__class__.__name__
+        else:
+            return "%s(%d)" % (self.__class__.__name__, self.level)
 
 
 class RootLayout(RepositoryLayout):
@@ -257,14 +262,14 @@ class RootLayout(RepositoryLayout):
         """
         return ('branch', '', '', path)
 
-    def get_branches(self, revnum, project=None, pb=None):
+    def get_branches(self, repository, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to branches in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
         """
         raise NotImplementedError
 
-    def get_tags(self, revnum, project=None, pb=None):
+    def get_tags(self, repository, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to tags in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
@@ -356,5 +361,15 @@ def get_root_paths(repository, itemlist, revnum, verify_fn, project=None, pb=Non
                 yield "", bp, bp.split("/")[-1]
 
 
+def repository_guess_layout(repository, revnum):
+    return None # FIXME
+
+
 layout_registry = registry.Registry()
+layout_registry.register("root", RootLayout())
+layout_registry.register("none", RootLayout())
+layout_registry.register("trunk", TrunkLayout())
+layout_registry.register("trunk0", TrunkLayout(0))
+layout_registry.register("trunk1", TrunkLayout(1))
+layout_registry.register("trunk2", TrunkLayout(2))
 

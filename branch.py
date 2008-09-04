@@ -416,7 +416,8 @@ class SvnBranch(Branch):
         if todo is None:
             raise DivergedBranches(self, other)
         if _push_merged is None:
-            _push_merged = self.layout.push_merged_revisions(self.project)
+            _push_merged = (self.layout.push_merged_revisions(self.project) and 
+                            self.get_config().get_push_merged_revisions())
         self._push_missing_revisions(graph, other, other_graph, todo, 
                                      _push_merged)
 

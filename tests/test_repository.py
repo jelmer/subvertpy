@@ -39,68 +39,62 @@ from bzrlib.plugins.svn.repository import SvnRepositoryFormat
 class TestSubversionRepositoryWorks(SubversionTestCase):
     """Generic Subversion Repository tests."""
 
+    def setUp(self):
+        super(TestSubversionRepositoryWorks, self).setUp()
+        self.repos_path = 'a'
+        self.repos_url = self.make_repository(self.repos_path)
+
     def test_get_config_global_set(self):
-        repos_url = self.make_repository("a")
         cfg = GlobalConfig()
         cfg.set_user_option("foo", "Still Life")
 
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
         self.assertEquals("Still Life", 
                 repos.get_config().get_user_option("foo"))
 
     def test_get_config(self):
-        repos_url = self.make_repository("a")
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
         repos.get_config().set_user_option("foo", "Van Der Graaf Generator")
 
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
         self.assertEquals("Van Der Graaf Generator", 
                 repos.get_config().get_user_option("foo"))
 
     def test_repr(self):
-        repos_url = self.make_repository("a")
-
-        dc = self.get_commit_editor(repos_url)
+        dc = self.get_commit_editor(self.repos_url)
         dc.add_file("foo").modify("data")
         dc.close()
 
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
 
         self.assertEqual("SvnRepository('%s/')" % urlutils.local_path_to_url(urlutils.join(self.test_dir, "a")), repos.__repr__())
 
     def test_gather_stats(self):
-        repos_url = self.make_repository("a")
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
         stats = repos.gather_stats()
         self.assertEquals(1, stats['revisions'])
         self.assertTrue(stats.has_key("firstrev"))
         self.assertTrue(stats.has_key("latestrev"))
         self.assertFalse(stats.has_key('committers'))
 
-    def test_url(self):
-        """ Test repository URL is kept """
-        bzrdir = self.make_local_bzrdir('b', 'bc')
-        self.assertTrue(isinstance(bzrdir, BzrDir))
-
     def test_uuid(self):
         """ Test UUID is retrieved correctly """
-        bzrdir = self.make_local_bzrdir('c', 'cc')
-        self.assertTrue(isinstance(bzrdir, BzrDir))
-        repository = bzrdir._find_repository()
-        fs = self.open_fs('c')
+        fs = self.open_fs(self.repos_path)
+        repository = Repository.open(self.repos_url)
         self.assertEqual(fs.get_uuid(), repository.uuid)
 
     def test_is_shared(self):
-        repos_url = self.make_client('d', 'dc')
+        self.make_checkout(self.repos_url, 'dc')
         self.build_tree({'dc/foo/bla': "data"})
         self.client_add("dc/foo")
         self.client_commit("dc", "My Message")
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         self.assertTrue(repository.is_shared())
 
     def test_format(self):
         """ Test repository format is correct """
-        bzrdir = self.make_local_bzrdir('a', 'ac')
+        self.make_checkout(self.repos_url, 'ac')
+        bzrdir = BzrDir.open("ac")
         self.assertEqual(bzrdir._format.get_format_string(), \
                 "Subversion Local Checkout")
         
@@ -108,13 +102,11 @@ class TestSubversionRepositoryWorks(SubversionTestCase):
                 "Subversion Local Checkout")
 
     def test_make_working_trees(self):
-        repos_url = self.make_repository("a")
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
         self.assertFalse(repos.make_working_trees())
 
     def test_get_physical_lock_status(self):
-        repos_url = self.make_repository("a")
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
         self.assertFalse(repos.get_physical_lock_status())
 
 

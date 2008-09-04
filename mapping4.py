@@ -45,7 +45,7 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
         if _hinted_branch_path == "":
             return cls(layout.RootLayout())
         else:
-            return cls(layout.TrunkLayout(repository))
+            return cls(layout.TrunkLayout())
 
     @classmethod
     def from_revprops(cls, revprops):

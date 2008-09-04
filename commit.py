@@ -871,11 +871,13 @@ class InterToSvnRepository(InterRepository):
                 if target_branch.get_branch_path() != bp:
                     target_branch.set_branch_path(bp)
 
-                if layout.push_merged_revisions(target_branch.project) and len(rev.parent_ids) > 1:
+                target_config = target_branch.get_config()
+                if (layout.push_merged_revisions(target_branch.project) and 
+                    len(rev.parent_ids) > 1 and
+                    target_config.get_push_merged_revisions()):
                     push_ancestors(self.target, self.source, layout, "", rev.parent_ids, graph,
                                    create_prefix=True)
 
-                target_config = target_branch.get_config()
                 push_revision_tree(graph, target_branch, target_config, 
                                    self.source, parent_revid, revision_id, rev)
         finally:

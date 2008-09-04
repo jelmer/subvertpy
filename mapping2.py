@@ -30,7 +30,7 @@ class BzrSvnMappingv1(BzrSvnMapping):
     name = "v1"
     roundtripping = False
 
-    def __init__(self, layout=None):
+    def __init__(self, layout):
         super(BzrSvnMappingv1, self).__init__()
         self._layout = layout
 
@@ -45,9 +45,11 @@ class BzrSvnMappingv1(BzrSvnMapping):
         branch_path = unescape_svn_path(revid[fash+1:])
         revnum = int(revid[0:at])
         assert revnum >= 0
-        return (uuid, branch_path, revnum, cls())
+        return (uuid, branch_path, revnum, cls(LegacyLayout.from_branch_path(branch_path)))
 
-    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
+    @classmethod
+    def revision_id_foreign_to_bzr(cls, (uuid, revnum, path)):
+        assert isinstance(path, str)
         return "svn-v1:%d@%s-%s" % (revnum, uuid, escape_svn_path(path))
 
     def __eq__(self, other):
@@ -62,11 +64,10 @@ class BzrSvnMappingv1(BzrSvnMapping):
     def import_revision(self, svn_revprops, fileprops, uuid, branch, revnum, rev):
         parse_svn_revprops(svn_revprops, rev)
 
-    @staticmethod
-    def generate_file_id(uuid, revnum, branch, inv_path):
-        if inv_path == "":
+    def generate_file_id(self, uuid, revnum, branch, inv_path):
+        if inv_path == u"":
             return ROOT_ID
-        return "%s-%s" % (self.revision_id_foreign_to_bzr((uuid, revnum, branch)), escape_svn_path(inv_path))
+        return "%s-%s" % (self.revision_id_foreign_to_bzr((uuid, revnum, branch)), escape_svn_path(inv_path.encode("utf-8")))
 
     def import_fileid_map(self, revprops, fileprops):
         return {}
@@ -83,16 +84,9 @@ class BzrSvnMappingv1(BzrSvnMapping):
     @classmethod
     def from_repository(cls, repository, _hinted_branch_path=None):
         if _hinted_branch_path is None:
-            return cls(TrunkLegacyLayout(repository))
+            return cls(TrunkLegacyLayout())
     
-        parts = _hinted_branch_path.strip("/").split("/")
-        for i in range(0,len(parts)):
-            if parts[i] == "trunk" or \
-               parts[i] == "branches" or \
-               parts[i] == "tags":
-                return cls(TrunkLegacyLayout(repository, level=i))
-
-        return cls(RootLegacyLayout(repository))
+        return cls(LegacyLayout.from_branch_path(_hinted_branch_path))
 
     def get_guessed_layout(self, repository):
         return self._layout
@@ -118,7 +112,7 @@ class BzrSvnMappingv2(BzrSvnMappingv1):
         branch_path = unescape_svn_path(revid[fash+1:])
         revnum = int(revid[0:at])
         assert revnum >= 0
-        return (uuid, branch_path, revnum, cls())
+        return (uuid, branch_path, revnum, cls(LegacyLayout.from_branch_path(branch_path)))
 
     def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
         return "svn-v2:%d@%s-%s" % (revnum, uuid, escape_svn_path(path))
@@ -135,11 +129,22 @@ class LegacyLayout(RepositoryLayout):
     def get_branch_path(self, name, project=""):
         return None
 
+    @classmethod
+    def from_branch_path(cls, path):
+        parts = path.strip("/").split("/")
+        for i in range(0,len(parts)):
+            if parts[i] == "trunk" or \
+               parts[i] == "branches" or \
+               parts[i] == "tags":
+                return TrunkLegacyLayout(level=i)
+
+        return RootLegacyLayout()
+
 
 class TrunkLegacyLayout(LegacyLayout):
 
-    def __init__(self, repository, level=0):
-        super(TrunkLegacyLayout, self).__init__(repository)
+    def __init__(self, level=0):
+        super(TrunkLegacyLayout, self).__init__()
         self.level = level
     
     def parse(self, path):
@@ -169,12 +174,10 @@ class TrunkLegacyLayout(LegacyLayout):
         return False
 
 
-
-class RootLegacyLayout(RepositoryLayout):
+class RootLegacyLayout(LegacyLayout):
 
     def parse(self, path):
         return ("branch", "", "", path)
 
-    def is_branch(self, branch_path, project=None):
-        return branch_path == ""
-
+    def is_branch(self, path, project=None):
+        return path == ""

@@ -277,3 +277,7 @@ class BranchConfig(Config):
                     if mask_value is not None:
                         trace.warning('Value "%s" is masked by "%s" from'
                                       ' branch.conf', value, mask_value)
+
+    def get_push_merged_revisions(self):
+        """Check whether merged revisions should be pushed."""
+        return self._get_repository_config().get_push_merged_revisions()

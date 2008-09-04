@@ -60,17 +60,21 @@ def upgrade_workingtree(wt, svn_repository, new_mapping=None,
 
     :param svn_repository: Subversion repository object
     """
-    orig_basis_tree = wt.basis_tree()
-    renames = upgrade_branch(wt.branch, svn_repository, new_mapping=new_mapping,
-                             allow_changes=allow_changes, verbose=verbose)
-    last_revid = wt.branch.last_revision()
-    wt.set_last_revision(last_revid)
+    wt.lock_write()
+    try:
+        old_revid = wt.last_revision()
+        renames = upgrade_branch(wt.branch, svn_repository, new_mapping=new_mapping,
+                                 allow_changes=allow_changes, verbose=verbose)
+        last_revid = wt.branch.last_revision()
+        wt.set_last_revision(last_revid)
 
-    # Adjust file ids in working tree
-    for (old_fileid, new_fileid) in determine_fileid_renames(orig_basis_tree, wt.basis_tree()):
-        path = wt.id2path(old_fileid)
-        wt.remove(path)
-        wt.add([path], [new_fileid])
+        # Adjust file ids in working tree
+        for (old_fileid, new_fileid) in determine_fileid_renames(wt.branch.repository.revision_tree(old_revid), wt.basis_tree()):
+            path = wt.id2path(old_fileid)
+            wt.remove(path)
+            wt.add([path], [new_fileid])
+    finally:
+        wt.unlock()
 
     return renames
 
