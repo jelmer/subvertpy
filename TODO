@@ -5,7 +5,6 @@ mappingv4:
   + remove Mapping.get_guessed_layout()
 
 - generate deltas rather than fulltexts when creating file id maps
-- transform file ids in workingtree in svn-upgrade
 
 tests:
 - more blackbox tests
