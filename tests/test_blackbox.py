@@ -20,6 +20,7 @@ from bzrlib.repository import Repository
 from bzrlib.tests.blackbox import ExternalBase
 from bzrlib.tests import KnownFailure
 
+from bzrlib.plugins.svn.convert import load_dumpfile
 from bzrlib.plugins.svn.layout import RootLayout
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
@@ -293,6 +294,11 @@ Node-copyfrom-path: x
 
 """)
         self.check_output("", 'svn-import --layout=none %s dc' % filename)
+        load_dumpfile(filename, "realrepo")
+        svnrepo = Repository.open("realrepo")
+        self.assertEquals(uuid, svnrepo.uuid)
+        svnrepo.set_layout(RootLayout())
+        mapping = svnrepo.get_mapping()
         newrepos = Repository.open("dc")
         self.assertTrue(newrepos.has_revision(
             mapping.revision_id_foreign_to_bzr((uuid, 5, ""))))

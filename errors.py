@@ -208,3 +208,11 @@ repository layout. See 'bzr help svn-repository-layout' for details."""
         NotBranchError.__init__(self, urllib.quote(path))
         self.layout = layout
 
+
+class LayoutUnusable(BzrError):
+    _fmt = """Unable to use layout %(layout)r with mapping %(mapping)r."""
+
+    def __init__(self, layout, mapping):
+        BzrError.__init__(self)
+        self.layout = layout
+        self.mapping = mapping

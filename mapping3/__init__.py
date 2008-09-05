@@ -176,9 +176,8 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
         return SchemeDerivedLayout(repository, self.guessed_scheme or self.scheme)
 
     def check_layout(self, repository, layout):
-        scheme = scheme_from_layout(layout)
-        repository.get_mapping().scheme = scheme
-        config_set_scheme(repository, scheme, scheme)
+        self.scheme = scheme_from_layout(layout)
+        config_set_scheme(repository, self.scheme, self.scheme)
 
     @classmethod
     def from_repository(cls, repository, _hinted_branch_path=None):

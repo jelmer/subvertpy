@@ -14,9 +14,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from bzrlib.bzrdir import BzrDir
+from bzrlib.errors import NoSuchRevision
 from bzrlib.repository import Repository
 from bzrlib.tests import TestCase
 
+from bzrlib.plugins.svn import format
 from bzrlib.plugins.svn.layout import TrunkLayout
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID, mapping_registry
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps, SVN_PROP_BZR_BRANCHING_SCHEME, set_property_scheme
@@ -273,13 +275,13 @@ class RepositoryTests(SubversionTestCase):
 
     def test_set_property_scheme(self):
         self.make_checkout(self.repos_url, 'dc')
-        repos = Repository.open(repos_url)
+        repos = Repository.open(self.repos_url)
         set_property_scheme(repos, ListBranchingScheme(["bla/*"]))
         self.client_update("dc")
         self.assertEquals("bla/*\n", 
                    self.client_get_prop("dc", SVN_PROP_BZR_BRANCHING_SCHEME))
         self.assertEquals("Updating branching scheme for Bazaar.", 
-                self.client_log(repos_url, 1, 1)[1][3])
+                self.client_log(self.repos_url, 1, 1)[1][3])
 
     def test_fetch_fileid_renames(self):
         dc = self.get_commit_editor(self.repos_url)
@@ -381,10 +383,10 @@ class RepositoryTests(SubversionTestCase):
         self.assertEquals("bla", tree.path2id("bdir"))
 
     def test_store_branching_scheme(self):
-        repos_url = self.make_client('d', 'dc')
-        repository = Repository.open(repos_url)
+        self.make_checkout(self.repos_url, 'dc')
+        repository = Repository.open(self.repos_url)
         repository.set_layout(TrunkLayout(42))
-        repository = Repository.open(repos_url)
+        repository = Repository.open(self.repos_url)
         self.assertEquals("trunk42", str(repository.get_mapping().scheme))
 
 
