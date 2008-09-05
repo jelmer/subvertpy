@@ -24,7 +24,7 @@ from bzrlib.repository import Repository
 from bzrlib.revision import NULL_REVISION
 from bzrlib.tests import TestCase, TestSkipped, TestNotApplicable
 
-from bzrlib.plugins.svn import format, ra
+from bzrlib.plugins.svn import errors as svn_errors, format, ra
 from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout, CustomLayout
 from bzrlib.plugins.svn.mapping import mapping_registry
 from bzrlib.plugins.svn.tests import SubversionTestCase
@@ -49,6 +49,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         cb.close()
 
         repos = Repository.open(repos_url)
+        repos.set_layout(RootLayout())
 
         self.assertEqual([
             ('', {'foo': ('A', None, -1)}, 1), 
@@ -68,7 +69,10 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         dc.close()
 
         repos = Repository.open(repos_url)
-        repos.set_layout(CustomLayout(["bla/bar"]))
+        try:
+            repos.set_layout(CustomLayout(["bla/bar"]))
+        except svn_errors.LayoutUnusable:
+            raise TestNotApplicable
         ret = list(repos._revmeta_provider.iter_changes('bla/bar', 2, 0, repos.get_mapping()))
         self.assertEquals(1, len(ret))
         self.assertEquals("bla/bar", ret[0][0])
@@ -166,7 +170,10 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         dc.close()
 
         repos = Repository.open(repos_url)
-        repos.set_layout(CustomLayout(["pygments"]))
+        try:
+            repos.set_layout(CustomLayout(["pygments"]))
+        except svn_errors.LayoutUnusable:
+            raise TestNotApplicable
         changes = repos._revmeta_provider.iter_reverse_branch_changes("pygments", 2, 0)
         self.assertEquals([('pygments',
               {'pygments/bla': ('A', None, -1), 'pygments': ('A', None, -1)},
@@ -185,8 +192,8 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
 
         repos = Repository.open(repos_url)
 
-        self.assertEqual(2, 
-                   len(set(repos.all_revision_ids(repos.get_layout()))))
+        self.assertEqual(1, 
+                   len(set(repos.all_revision_ids(TrunkLayout()))))
 
     def test_all_revs_empty(self):
         repos_url = self.make_repository("a")
@@ -564,20 +571,6 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
             repository.get_parent_map([revid]))
         self.assertEqual({}, repository.get_parent_map(["notexisting"]))
 
-    def test_revision_fileidmap(self):
-        repos_url = self.make_repository('d')
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_file("foo").modify("data")
-        dc.change_prop("bzr:revision-info", "")
-        dc.change_prop("bzr:file-ids", "foo\tsomeid\n")
-        dc.close()
-
-        repository = Repository.open(repos_url)
-        tree = repository.revision_tree(Branch.open(repos_url).last_revision())
-        self.assertEqual("someid", tree.inventory.path2id("foo"))
-        self.assertFalse("1@%s::foo" % repository.uuid in tree.inventory)
-
     def test_get_revision_delta(self):
         repos_url = self.make_repository('d')
 
@@ -590,6 +583,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         dc.close()
 
         r = Repository.open(repos_url)
+        r.set_layout(RootLayout())
         d1 = r.get_revision_delta(r.get_revision(r.generate_revision_id(1, "", r.get_mapping())))
         self.assertEquals(None, d1.unchanged)
         self.assertEquals(1, len(d1.added))
@@ -813,6 +807,7 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
         self.client_add("dc/bar")
         self.client_commit("dc", "Second Message")
         repository = Repository.open(repos_url)
+        repository.set_layout(RootLayout())
         mapping = repository.get_mapping()
 
         to_bzrdir = BzrDir.create("e", format.get_rich_root_format())

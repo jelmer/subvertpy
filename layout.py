@@ -267,14 +267,14 @@ class RootLayout(RepositoryLayout):
 
         :result: Iterator over tuples with (project, branch path)
         """
-        raise [""]
+        return [("", "", "trunk")]
 
     def get_tags(self, repository, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to tags in a specific revision.
 
         :result: Iterator over tuples with (project, branch path)
         """
-        raise []
+        return []
 
     def __repr__(self):
         return "%s()" % self.__class__.__name__

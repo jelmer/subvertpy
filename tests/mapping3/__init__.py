@@ -13,13 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from bzrlib.branch import Branch
 from bzrlib.bzrdir import BzrDir
 from bzrlib.errors import NoSuchRevision
 from bzrlib.repository import Repository
 from bzrlib.tests import TestCase
 
 from bzrlib.plugins.svn import format
-from bzrlib.plugins.svn.layout import TrunkLayout
+from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID, mapping_registry
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps, SVN_PROP_BZR_BRANCHING_SCHEME, set_property_scheme
 from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme, ListBranchingScheme
@@ -388,5 +389,18 @@ class RepositoryTests(SubversionTestCase):
         repository.set_layout(TrunkLayout(42))
         repository = Repository.open(self.repos_url)
         self.assertEquals("trunk42", str(repository.get_mapping().scheme))
+
+    def test_revision_fileidmap(self):
+        dc = self.get_commit_editor(self.repos_url)
+        dc.add_file("foo").modify("data")
+        dc.change_prop("bzr:revision-info", "")
+        dc.change_prop("bzr:file-ids", "foo\tsomeid\n")
+        dc.close()
+
+        repository = Repository.open(self.repos_url)
+        repository.set_layout(RootLayout())
+        tree = repository.revision_tree(Branch.open(self.repos_url).last_revision())
+        self.assertEqual("someid", tree.inventory.path2id("foo"))
+        self.assertFalse("1@%s::foo" % repository.uuid in tree.inventory)
 
 

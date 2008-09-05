@@ -98,10 +98,11 @@ class BzrSvnMappingv1(BzrSvnMapping):
 
     def check_layout(self, repository, layout):
         if isinstance(layout, RootLayout):
-            return RootLegacyLayout()
+            self._layout = RootLegacyLayout()
         elif isinstance(layout, TrunkLayout):
-            return TrunkLegacyLayout(layout.level or 0)
-        raise LayoutUnusable(layout, self)
+            self._layout = TrunkLegacyLayout(layout.level or 0)
+        else:
+            raise LayoutUnusable(layout, self)
 
 
 class BzrSvnMappingv2(BzrSvnMappingv1):
@@ -203,7 +204,7 @@ class RootLegacyLayout(LegacyLayout):
         return path == ""
 
     def get_branches(self, repository, revnum, project="", pb=None):
-        return [""]
+        return [("", "", "trunk")]
 
     def get_tags(self, repository, revnum, project="", pb=None):
         return []

@@ -20,8 +20,8 @@ from bzrlib.errors import BzrError
 from bzrlib.trace import mutter
 
 from base64 import urlsafe_b64decode, urlsafe_b64encode
-from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout
-from bzrlib.plugins.svn.errors import InvalidSvnBranchPath
+from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout, CustomLayout
+from bzrlib.plugins.svn.errors import InvalidSvnBranchPath, LayoutUnusable
 from bzrlib.plugins.svn import properties
 import bz2
 
@@ -542,9 +542,9 @@ def scheme_from_layout(layout):
         return TrunkBranchingScheme(layout.level or 0)
     if isinstance(layout, RootLayout):
         return NoBranchingScheme()
-    # FIXME: Handle CustomLayout
-    # FIXME: What about WildcardLayout
-    return TrunkBranchingScheme()
+    if isinstance(layout, CustomLayout) and len(layout.branches) == 1:
+        return SingleBranchingScheme(layout.branches[0])
+    raise LayoutUnusable(layout, self)
 
 
 help_schemes = """Subversion Branching Schemes
