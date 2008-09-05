@@ -452,10 +452,8 @@ class SvnCommitBuilder(RootCommitBuilder):
                     ret += _dir_process_file_id(old_inv, new_inv, new_child_path, child_ie.file_id)
             return ret
 
-
         fileids = {}
         text_parents = {}
-
         changes = []
 
         if (self.old_inv.root is None or 
@@ -487,6 +485,8 @@ class SvnCommitBuilder(RootCommitBuilder):
         bp_parts = bp.split("/")
         repository_latest_revnum = self.repository.get_latest_revnum()
         lock = self.repository.transport.lock_write(".")
+
+        self._changed_fileprops = {}
 
         if self.push_metadata:
             (fileids, text_parents) = self._determine_texts_identity()
@@ -541,6 +541,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                     for prop, value in self._svnprops.items():
                         if value == self._base_branch_props.get(prop):
                             continue
+                        self._changed_fileprops[prop] = value
                         if not properties.is_valid_property_name(prop):
                             warning("Setting property %r with invalid characters in name", prop)
                         assert isinstance(value, str)
@@ -562,16 +563,15 @@ class SvnCommitBuilder(RootCommitBuilder):
         assert self.revision_metadata is not None
 
         (result_revision, result_date, result_author) = self.revision_metadata
+        
+        self._svn_revprops[properties.PROP_REVISION_AUTHOR] = result_author
+        self._svn_revprops[properties.PROP_REVISION_DATE] = result_date
 
         self.repository._clear_cached_state(result_revision)
 
-        revid = self.branch.generate_revision_id(result_revision)
-
-        assert not self.push_metadata or self._new_revision_id is None or self._new_revision_id == revid
-
-        self.mutter('commit %d finished. author: %r, date: %r, revid: %r',
+        self.mutter('commit %d finished. author: %r, date: %r',
                result_revision, result_author, 
-                   result_date, revid)
+                   result_date)
 
         override_svn_revprops = self._config.get_override_svn_revprops()
         if override_svn_revprops is not None:
@@ -581,7 +581,19 @@ class SvnCommitBuilder(RootCommitBuilder):
             if properties.PROP_REVISION_DATE in override_svn_revprops:
                 new_revprops[properties.PROP_REVISION_DATE] = properties.time_to_cstring(1000000*self._timestamp)
             set_svn_revprops(self.repository.transport, result_revision, new_revprops)
+            self._svn_revprops.update(new_revprops)
 
+        self.revmeta = self.repository._revmeta_provider.get_revision(self.branch.get_branch_path(), result_revision, 
+                None, # FIXME: Generate changes dictionary
+                revprops=self._svn_revprops,
+                changed_fileprops=self._changed_fileprops,
+                fileprops=self._svnprops,
+                metabranch=None # FIXME: Determine from base_revmeta ?
+                )
+
+        revid = self.revmeta.get_revision_id(self.base_mapping)
+
+        assert not self.push_metadata or self._new_revision_id is None or self._new_revision_id == revid
         return revid
 
     def record_entry_contents(self, ie, parent_invs, path, tree,
@@ -773,7 +785,6 @@ def push_revision_tree(graph, target, config, source_repo, base_revid,
         raise
     except ChangesRootLHSHistory:
         raise BzrError("Unable to push revision %r because it would change the ordering of existing revisions on the Subversion repository root. Use rebase and try again or push to a non-root path" % revision_id)
-    
 
     return revid
 

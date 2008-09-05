@@ -39,8 +39,10 @@ def full_paths(find_children, paths, bp, from_bp, from_rev):
 class RevisionMetadata(object):
     """Object describing a revision with bzr semantics in a Subversion repository."""
 
-    def __init__(self, repository, check_revprops, get_fileprops_fn, logwalker, uuid, 
-                 branch_path, revnum, paths, revprops, changed_fileprops=None, metabranch=None):
+    def __init__(self, repository, check_revprops, get_fileprops_fn, logwalker, 
+                 uuid, branch_path, revnum, paths, revprops, 
+                 changed_fileprops=None, fileprops=None, 
+                 metabranch=None):
         self.repository = repository
         self.check_revprops = check_revprops
         self._get_fileprops_fn = get_fileprops_fn
@@ -50,6 +52,7 @@ class RevisionMetadata(object):
         self.revnum = revnum
         self._revprops = revprops
         self._changed_fileprops = changed_fileprops
+        self._fileprops = fileprops
         self.metabranch = metabranch
         self.uuid = uuid
 
@@ -86,7 +89,9 @@ class RevisionMetadata(object):
         return revid
 
     def get_fileprops(self):
-        return self._get_fileprops_fn(self.branch_path, self.revnum)
+        if self._fileprops is None:
+            self._fileprops = self._get_fileprops_fn(self.branch_path, self.revnum)
+        return self._fileprops
 
     def get_revprops(self):
         if self._revprops is None:
@@ -352,18 +357,20 @@ class RevisionMetadataProvider(object):
             self._revmeta_cls = RevisionMetadata
 
     def get_revision(self, path, revnum, changes=None, revprops=None, changed_fileprops=None, 
-                     metabranch=None):
+                     fileprops=None, metabranch=None):
         if (path, revnum) in self._revmeta_cache:
             cached = self._revmeta_cache[path,revnum]
             if changes is not None:
                 cached.paths = changes
             if cached._changed_fileprops is None:
                 cached._changed_fileprops = changed_fileprops
+            if cached._fileprops is None:
+                cached._fileprops = fileprops
             return self._revmeta_cache[path,revnum]
 
         ret = self._revmeta_cls(self.repository, self.check_revprops, self._get_fileprops_fn,
                                self._log, self.repository.uuid, path, revnum, changes, revprops, 
-                               changed_fileprops=changed_fileprops, 
+                               changed_fileprops=changed_fileprops, fileprops=fileprops,
                                metabranch=metabranch)
         self._revmeta_cache[path,revnum] = ret
         return ret
