@@ -389,32 +389,21 @@ class RevisionBuildEditor(DeltaBuildEditor):
         assert prev_inventory.root is None or self.inventory.root.revision == prev_inventory.root.revision
         super(RevisionBuildEditor, self).__init__(revmeta, mapping)
 
-    def _get_revision(self, revid):
-        """Creates the revision object.
-
-        :param revid: Revision id of the revision to create.
-        """
-        rev = self.revmeta.get_revision(self.mapping)
-
-        # Only fetch if it's cheap
-        if self.source.transport.has_capability("log-revprops"):
-            signature = self.revmeta.get_signature()
-        else:
-            signature = None
-
-        return (rev, signature)
-
     def _finish_commit(self):
         assert len(self._premature_deletes) == 0
-        (rev, signature) = self._get_revision(self.revid)
+        rev = self.revmeta.get_revision(self.mapping)
         self.inventory.revision_id = self.revid
         # Escaping the commit message is really the task of the serialiser
         rev.message = _escape_commit_message(rev.message)
         rev.inventory_sha1 = None
         assert self.inventory.root.revision is not None
         self.target.add_revision(self.revid, rev, self.inventory)
-        if signature is not None:
-            self.target.add_signature_text(self.revid, signature)
+
+        # Only fetch signature if it's cheap
+        if self.source.transport.has_capability("log-revprops"):
+            signature = self.revmeta.get_signature()
+            if signature is not None:
+                self.target.add_signature_text(self.revid, signature)
 
     def _rename(self, file_id, parent_id, old_path, new_path, kind):
         assert isinstance(new_path, unicode)
@@ -603,7 +592,7 @@ class InterFromSvnRepository(InterRepository):
         meta_map = {}
         graph = self.source.get_graph()
         available_revs = set()
-        for revmeta in self.source._revmeta_provider.iter_all_changes(self.source.get_layout(), mapping=None, from_revnum=self.source.get_latest_revnum(), pb=pb):
+        for revmeta in self.source._revmeta_provider.iter_all_changes(self.source.get_layout(), mapping=mapping, from_revnum=self.source.get_latest_revnum(), pb=pb):
             revid = revmeta.get_revision_id(mapping)
             available_revs.add(revid)
             meta_map[revid] = revmeta

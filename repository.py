@@ -190,15 +190,6 @@ class SvnRepository(Repository):
         self._cached_revnum = self.transport.get_latest_revnum()
         return self._cached_revnum
 
-    def start_write_group(self):
-        pass
-
-    def abort_write_group(self):
-        pass
-
-    def commit_write_group(self):
-        pass
-
     def item_keys_introduced_by(self, revision_ids, _files_pb=None):
         fileids = {}
 
@@ -230,7 +221,6 @@ class SvnRepository(Repository):
             else:
                 revisions_with_signatures.add(rev_id)
         yield ("signatures", None, revisions_with_signatures)
-
         yield ("revisions", None, revision_ids)
 
     @needs_read_lock
@@ -271,8 +261,7 @@ class SvnRepository(Repository):
             yield self.get_revision_delta(revision)
 
     def get_revision_delta(self, revision):
-        parentrevmeta = self.branch_prev_location(revision.svn_meta.branch_path, revision.svn_meta.revnum, 
-                                                  revision.svn_mapping)
+        parentrevmeta = self._revmeta_provider.branch_prev_location(revision.svn_meta, revision.svn_mapping)
         from bzrlib.plugins.svn.fetch import TreeDeltaBuildEditor
         if parentrevmeta is None:
             parentfileidmap = {}
@@ -416,20 +405,6 @@ class SvnRepository(Repository):
             return RevisionTree(self, inventory, revision_id)
 
         return SvnRevisionTree(self, revision_id)
-
-    def branch_prev_location(self, path, revnum, mapping):
-        assert isinstance(path, str)
-        assert isinstance(revnum, int)
-
-        iterator = self._revmeta_provider.iter_reverse_branch_changes(path, revnum, to_revnum=0,
-                                                    mapping=mapping, limit=2)
-        revmeta = iterator.next()
-        assert revmeta.branch_path == path
-        assert revmeta.revnum == revnum
-        try:
-            return iterator.next()
-        except StopIteration:
-            return None
 
     def get_parent_map(self, revids):
         parent_map = {}

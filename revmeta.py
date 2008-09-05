@@ -32,8 +32,7 @@ def full_paths(find_children, paths, bp, from_bp, from_rev):
     :param from_rev: Revision to look up children in.
     """
     for c in find_children(from_bp, from_rev):
-        path = c.replace(from_bp, bp+"/", 1).replace("//", "/")
-        paths[path] = ('A', None, -1)
+        paths[changes.rebase_path(c, from_bp, bp)] = ('A', None, -1)
     return paths
 
 
@@ -53,6 +52,12 @@ class RevisionMetadata(object):
         self._changed_fileprops = changed_fileprops
         self.metabranch = metabranch
         self.uuid = uuid
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and 
+                self.branch_path == other.branch_path and
+                self.revnum == other.revnum and
+                self.uuid == other.uuid)
 
     def __repr__(self):
         return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, repr(self.uuid))
@@ -93,6 +98,10 @@ class RevisionMetadata(object):
         fileprops = self.get_fileprops()
         return isinstance(fileprops, dict) or fileprops.is_loaded
 
+    def knows_revprops(self):
+        revprops = self.get_revprops()
+        return isinstance(revprops, dict) or revprops.is_loaded
+
     def get_previous_fileprops(self):
         prev = changes.find_prev_location(self.get_paths(), self.branch_path, self.revnum)
         if prev is None:
@@ -109,6 +118,8 @@ class RevisionMetadata(object):
         return self._changed_fileprops
 
     def get_lhs_parent_revmeta(self, mapping):
+        assert (mapping.is_branch(self.branch_path) or 
+                mapping.is_tag(self.branch_path)), "%s not valid in %r" % (self.branch_path, mapping)
         if self.metabranch is not None and self.metabranch.mapping == mapping:
             # Perhaps the metabranch already has the parent?
             parentrevmeta = self.metabranch.get_lhs_parent(self)
@@ -116,7 +127,7 @@ class RevisionMetadata(object):
                 return parentrevmeta
         # FIXME: Don't use self.repository.branch_prev_location,
         #        since it browses history
-        return self.repository.branch_prev_location(self.branch_path, self.revnum, mapping)
+        return self.repository._revmeta_provider.branch_prev_location(self, mapping)
 
     def get_lhs_parent(self, mapping):
         # Sometimes we can retrieve the lhs parent from the revprop data
@@ -299,7 +310,7 @@ class RevisionMetadataBranch(object):
         this revmeta.
         """
         i = self._revs.index(revmeta)
-        for desc in self._revs[i+1:]:
+        for desc in self._revs[:i]:
             if desc.knows_fileprops():
                 return (desc.estimate_bzr_fileprop_ancestors() > 0)
         # assume the worst
@@ -406,6 +417,19 @@ class RevisionMetadataProvider(object):
     def get_mainline(self, branch_path, revnum, mapping, pb=None):
         return list(self.iter_reverse_branch_changes(branch_path, revnum, to_revnum=0, mapping=mapping, pb=pb))
 
+    def branch_prev_location(self, revmeta, mapping):
+        iterator = self.iter_reverse_branch_changes(revmeta.branch_path, revmeta.revnum, to_revnum=0, mapping=mapping, limit=2)
+        firstrevmeta = iterator.next()
+        assert revmeta == firstrevmeta
+        try:
+            parentrevmeta = iterator.next()
+            if (not mapping.is_branch(parentrevmeta.branch_path) and
+                not mapping.is_tag(parentrevmeta.branch_path)):
+                return None
+            return parentrevmeta
+        except StopIteration:
+            return None
+
     def iter_reverse_branch_changes(self, branch_path, from_revnum, to_revnum, 
                                     mapping=None, pb=None, limit=0):
         """Return all the changes that happened in a branch 
@@ -413,6 +437,7 @@ class RevisionMetadataProvider(object):
 
         :return: iterator that returns RevisionMetadata objects.
         """
+        assert mapping is None or mapping.is_branch(branch_path) or mapping.is_tag(branch_path)
         history_iter = self.iter_changes(branch_path, from_revnum, to_revnum, 
                                          mapping, pb=pb, limit=limit)
         metabranch = RevisionMetadataBranch(mapping)

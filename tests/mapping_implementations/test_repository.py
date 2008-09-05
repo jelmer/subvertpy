@@ -75,7 +75,10 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
             raise TestNotApplicable
         ret = list(repos._revmeta_provider.iter_changes('bla/bar', 2, 0, repos.get_mapping()))
         self.assertEquals(1, len(ret))
-        self.assertEquals("bla/bar", ret[0][0])
+        if repos.get_mapping().is_branch("foo/bar"):
+            self.assertEquals("foo/bar", ret[0][0])
+        else:
+            self.assertEquals("bla/bar", ret[0][0])
 
     def test_set_make_working_trees(self):
         repos_url = self.make_repository("a")
@@ -174,8 +177,15 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
             repos.set_layout(CustomLayout(["pygments"]))
         except svn_errors.LayoutUnusable:
             raise TestNotApplicable
-        changes = repos._revmeta_provider.iter_reverse_branch_changes("pygments", 2, 0)
-        self.assertEquals([('pygments',
+        changes = repos._revmeta_provider.iter_reverse_branch_changes("pygments", 2, 0, mapping=repos.get_mapping())
+        if repos.get_mapping().is_branch("pykleur"):
+            self.assertEquals([('pygments',
+                  {'pygments': ('A', 'pykleur', 1)},
+                    2),
+                    ('pykleur', {'pykleur': ('A', None, -1), 'pykleur/bla': ('A', None, -1)}, 1)],
+                    [(l.branch_path, l.get_paths(), l.revnum) for l in changes])
+        else:
+            self.assertEquals([('pygments',
               {'pygments/bla': ('A', None, -1), 'pygments': ('A', None, -1)},
                 2)],
                 [(l.branch_path, l.get_paths(), l.revnum) for l in changes])

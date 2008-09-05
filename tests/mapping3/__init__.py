@@ -18,6 +18,7 @@ from bzrlib.bzrdir import BzrDir
 from bzrlib.errors import NoSuchRevision
 from bzrlib.repository import Repository
 from bzrlib.tests import TestCase
+from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn import format
 from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout
@@ -127,8 +128,6 @@ class RepositoryTests(SubversionTestCase):
 
         repos = Repository.open(self.repos_url)
         mapping = repos.get_mapping()
-        if not mapping.roundtripping:
-            raise TestNotApplicable()
         revid = repos.generate_revision_id(1, "", mapping)
         self.assertEquals(
                 mapping.revision_id_foreign_to_bzr((repos.uuid, 1, "")),
@@ -306,6 +305,7 @@ class RepositoryTests(SubversionTestCase):
         dc.close()
 
         oldrepos = Repository.open(self.repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
