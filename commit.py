@@ -164,12 +164,16 @@ class SvnCommitBuilder(RootCommitBuilder):
             graph = self.repository.get_graph()
         self.base_revno = graph.find_distance_to_null(self.base_revid, [])
         if self.base_revid == NULL_REVISION:
+            self._base_revmeta = None
+            self._base_branch_props = {}
             self.base_revnum = -1
             self.base_path = None
             self.base_mapping = repository.get_mapping()
         else:
             (self.base_path, self.base_revnum, self.base_mapping) = \
                 repository.lookup_revision_id(self.base_revid)
+            self._base_revmeta = self.repository._revmeta_provider.get_revision(self.base_path, self.base_revnum)
+            self._base_branch_props = self._base_revmeta.get_fileprops()
 
         if old_inv is None:
             if self.base_revid == NULL_REVISION:
@@ -187,12 +191,6 @@ class SvnCommitBuilder(RootCommitBuilder):
 
         self.visit_dirs = set()
         self.modified_files = {}
-        if self.base_revid == NULL_REVISION:
-            self._base_revmeta = None
-            self._base_branch_props = {}
-        else:
-            self._base_revmeta = self.repository._revmeta_provider.get_revision(self.base_path, self.base_revnum)
-            self._base_branch_props = self._base_revmeta.get_fileprops()
         self.supports_custom_revprops = self.repository.transport.has_capability("commit-revprops")
         if (self.supports_custom_revprops is None and 
             self.base_mapping.can_use_revprops and 
