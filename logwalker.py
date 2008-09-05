@@ -227,8 +227,8 @@ class CachingLogWalker(CacheTable):
         self.quick_revprops = actual.quick_revprops
         self._transport = actual._transport
         self.find_children = actual.find_children
-
         self.saved_revnum = self.cache.last_revnum()
+        self._latest_revnum = None
 
     def find_latest_change(self, path, revnum):
         """Find latest revision that touched path.
@@ -348,9 +348,12 @@ class CachingLogWalker(CacheTable):
         assert isinstance(self.saved_revnum, int)
         if to_revnum <= self.saved_revnum:
             return
-        latest_revnum = self.actual._transport.get_latest_revnum()
-        assert isinstance(latest_revnum, int)
-        to_revnum = max(latest_revnum, to_revnum)
+
+        # Try to fetch log data in lumps, if possible.
+        if self._latest_revnum is None:
+            self._latest_revnum = self.actual._transport.get_latest_revnum()
+        assert isinstance(self._latest_revnum, int)
+        to_revnum = max(self._latest_revnum, to_revnum)
 
         # Subversion 1.4 clients and servers can only deliver a limited set of revprops
         if self._transport.has_capability("log-revprops"):
