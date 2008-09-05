@@ -1969,7 +1969,7 @@ PyTypeObject RemoteAccess_Type = {
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
 	
 	/* Flags to define presence of optional/expanded features */
-	0, /*	long tp_flags;	*/
+	Py_TPFLAGS_BASETYPE, /*	long tp_flags;	*/
 	
 	NULL, /*	const char *tp_doc;  Documentation string */
 	

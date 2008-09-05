@@ -111,6 +111,8 @@ def Connection(url):
         ret = ra.RemoteAccess(url.encode('utf8'), 
                 auth=create_auth_baton(url),
                 client_string_func=get_client_string)
+        if 'transport' in debug.debug_flags:
+            ret = MutteringRemoteAccess(ret)
     except SubversionException, (msg, num):
         if num in (ERR_RA_SVN_REPOS_NOT_FOUND,):
             raise NoSvnRepositoryPresent(url=url)
@@ -225,7 +227,6 @@ class SvnRaTransport(Transport):
     def get_uuid(self):
         if self._uuid is None:
             conn = self.get_connection()
-            self.mutter('svn get-uuid')
             try:
                 return conn.get_uuid()
             finally:
@@ -241,7 +242,6 @@ class SvnRaTransport(Transport):
 
     def get_svn_repos_root(self):
         if self._repos_root is None:
-            self.mutter('svn get-repos-root')
             conn = self.get_connection()
             try:
                 self._repos_root = conn.get_repos_root()
@@ -251,7 +251,6 @@ class SvnRaTransport(Transport):
 
     def get_latest_revnum(self):
         conn = self.get_connection()
-        self.mutter('svn get-latest-revnum')
         try:
             return conn.get_latest_revnum()
         finally:
@@ -263,8 +262,6 @@ class SvnRaTransport(Transport):
         assert isinstance(from_revnum, int) and isinstance(to_revnum, int)
         assert isinstance(limit, int)
         from threading import Thread, Semaphore
-
-        self.mutter('svn iter-log -r%d:%d %r ' % (from_revnum, to_revnum, paths))
 
         class logfetcher(Thread):
             def __init__(self, transport, *args, **kwargs):
@@ -323,8 +320,6 @@ class SvnRaTransport(Transport):
         
         assert paths is None or all_true
 
-        self.mutter('svn log -r%d:%d %r' % (from_revnum, to_revnum, paths))
-
         if paths is None:
             newpaths = None
         else:
@@ -342,7 +337,6 @@ class SvnRaTransport(Transport):
 
     def change_rev_prop(self, revnum, name, value):
         conn = self.get_connection()
-        self.mutter('svn change-revprop -r%d %s=%s' % (revnum, name, value))
         try:
             return conn.change_rev_prop(revnum, name, value)
         finally:
@@ -350,7 +344,6 @@ class SvnRaTransport(Transport):
 
     def get_dir(self, path, revnum, kind=False):
         conn = self.get_connection()
-        self.mutter('svn get-dir -r%d %s' % (revnum, path))
         try:
             return conn.get_dir(path, revnum, kind)
         finally:
@@ -358,15 +351,10 @@ class SvnRaTransport(Transport):
 
     def get_file(self, path, stream, revnum):
         conn = self.get_connection()
-        self.mutter('svn get-file -r%d %s' % (revnum, path))
         try:
             return conn.get_file(path, stream, revnum)
         finally:
             self.add_connection(conn)
-
-    def mutter(self, text, *args):
-        if 'transport' in debug.debug_flags:
-            mutter(text, *args)
 
     def list_dir(self, relpath):
         assert len(relpath) == 0 or relpath[0] != "/"
@@ -382,7 +370,6 @@ class SvnRaTransport(Transport):
 
     def check_path(self, path, revnum):
         conn = self.get_connection()
-        self.mutter('svn check-path -r%d %s' % (revnum, path))
         try:
             return conn.check_path(path, revnum)
         finally:
@@ -391,7 +378,6 @@ class SvnRaTransport(Transport):
     @convert_svn_error
     def mkdir(self, relpath, message="Creating directory"):
         conn = self.get_connection()
-        self.mutter('svn mkdir %s' % (relpath,))
         try:
             ce = conn.get_commit_editor({"svn:log": message})
             try:
@@ -419,7 +405,6 @@ class SvnRaTransport(Transport):
         if cap in self.capabilities:
             return self.capabilities[cap]
         conn = self.get_connection()
-        self.mutter('svn has-capability %s' % (cap,))
         try:
             try:
                 self.capabilities[cap] = conn.has_capability(cap)
@@ -431,7 +416,6 @@ class SvnRaTransport(Transport):
 
     def revprop_list(self, revnum):
         conn = self.get_connection()
-        self.mutter('svn revprop-list -r%d' % (revnum,))
         try:
             return conn.rev_proplist(revnum)
         finally:
@@ -439,7 +423,6 @@ class SvnRaTransport(Transport):
 
     def get_locations(self, path, peg_revnum, revnums):
         conn = self.get_connection()
-        self.mutter('svn get_locations -r%d %s (%r)' % (peg_revnum, path, revnums))
         try:
             return conn.get_locations(path, peg_revnum, revnums)
         finally:
@@ -496,3 +479,73 @@ class SvnRaTransport(Transport):
     def abspath(self, relpath):
         """See Transport.abspath()."""
         return urlutils.join(self.base, relpath)
+
+
+class MutteringRemoteAccess(object):
+
+    busy = property(lambda self: self.actual.busy)
+    url = property(lambda self: self.actual.url)
+
+    def __init__(self, actual):
+        self.actual = actual
+
+    def check_path(self, path, revnum):
+        mutter('svn check-path -r%d %s' % (revnum, path))
+        return self.actual.check_path(path, revnum)
+
+    def has_capability(self, cap):
+        mutter('svn has-capability %s' % (cap,))
+        return self.actual.has_capability(cap)
+
+    def get_uuid(self):
+        mutter('svn get-uuid')
+        return self.actual.get_uuid()
+
+    def get_repos_root(self):
+        mutter('svn get-repos-root')
+        return self.actual.get_repos_root()
+
+    def get_latest_revnum(self):
+        mutter('svn get-latest-revnum')
+        return self.actual.get_latest_revnum()
+
+    def get_log(self, callback, paths, from_revnum, to_revnum, *args, **kwargs):
+        mutter('svn log -r%d:%d %r' % (from_revnum, to_revnum, paths))
+        return self.actual.get_log(callback, paths, 
+                    from_revnum, to_revnum, *args, **kwargs)
+
+    def change_rev_prop(self, revnum, name, value):
+        mutter('svn change-revprop -r%d %s=%s' % (revnum, name, value))
+        return self.actual.change_rev_prop(revnum, name, value)
+
+    def get_dir(self, path, revnum=-1, fields=0):
+        mutter('svn get-dir -r%d %s' % (revnum, path))
+        return self.actual.get_dir(path, revnum, fields)
+
+    def get_file(self, path, revnum):
+        mutter('svn get-file -r%d %s' % (revnum, path))
+        return self.actual.get_file(path, revnum)
+
+    def revprop_list(self, revnum):
+        mutter('svn revprop-list -r%d' % (revnum,))
+        return self.actual.revprop_list(revnum)
+
+    def get_locations(self, path, peg_revnum, revnums):
+        mutter('svn get_locations -r%d %s (%r)' % (peg_revnum, path, revnums))
+        return self.actual.get_locations(path, peg_revnum, revnums)
+
+    def do_update(self, revnum, path, start_empty, editor):
+        mutter("svn update -r%d %s" % (revnum, path))
+        return self.actual.do_update(revnum, path, start_empty, editor)
+
+    def do_switch(self, revnum, path, start_empty, to_url, editor):
+        mutter("svn switch -r%d %s -> %s" % (revnum, path, to_url))
+        return self.actual.do_switch(revnum, path, start_empty, to_url, editor)
+
+    def reparent(self, url):
+        mutter("svn reparent %s" % url)
+        return self.actual.reparent(url)
+
+    def get_commit_editor(self, *args, **kwargs):
+        mutter("svn commit")
+        return self.actual.get_commit_editor(*args, **kwargs)
