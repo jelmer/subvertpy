@@ -65,6 +65,11 @@ class RevisionMetadata(object):
     def __repr__(self):
         return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, repr(self.uuid))
 
+    def changes_branch_root(self):
+        if self.knows_changed_fileprops():
+            return self.get_changed_fileprops() != {}
+        return self.branch_path in self.get_paths()
+
     def get_paths(self):
         if self._paths is None:
             self._paths = self._log.get_revision_paths(self.revnum)
@@ -99,6 +104,12 @@ class RevisionMetadata(object):
 
         return self._revprops
 
+    def knows_changed_fileprops(self):
+        if self._changed_fileprops is None:
+            return False
+        changed_fileprops = self.get_changed_fileprops()
+        return isinstance(changed_fileprops, dict) or changed_fileprops.is_loaded
+
     def knows_fileprops(self):
         fileprops = self.get_fileprops()
         return isinstance(fileprops, dict) or fileprops.is_loaded
@@ -116,7 +127,7 @@ class RevisionMetadata(object):
 
     def get_changed_fileprops(self):
         if self._changed_fileprops is None:
-            if self.branch_path in self.get_paths():
+            if self.changes_branch_root():
                 self._changed_fileprops = logwalker.lazy_dict({}, properties.diff, self.get_fileprops(), self.get_previous_fileprops())
             else:
                 self._changed_fileprops = {}
@@ -188,7 +199,7 @@ class RevisionMetadata(object):
         return mapping.get_rhs_parents(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
 
     def get_svk_merges(self, mapping):
-        if not self.branch_path in self.get_paths():
+        if not self.changes_branch_root():
             return ()
 
         current = self.get_fileprops().get(SVN_PROP_SVK_MERGE, "")
