@@ -139,7 +139,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         :param timestamp: Optional timestamp recorded for commit.
         :param timezone: Optional timezone for timestamp.
         :param committer: Optional committer to set for commit.
-        :param revprops: Revision properties to set.
+        :param revprops: Bazaar revision properties to set.
         :param revision_id: Revision id for the new revision.
         :param old_inv: Optional revision on top of which 
             the commit is happening
@@ -190,7 +190,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         if self.base_revid == NULL_REVISION:
             self._base_branch_props = {}
         else:
-            self._base_branch_props = lazy_dict({}, self.repository.branchprop_list.get_properties, self.base_path, self.base_revnum)
+            self._base_branch_props = self.repository._revmeta_provider.get_revision(self.base_path, self.base_revnum).get_fileprops()
         self.supports_custom_revprops = self.repository.transport.has_capability("commit-revprops")
         if (self.supports_custom_revprops is None and 
             self.base_mapping.can_use_revprops and 
