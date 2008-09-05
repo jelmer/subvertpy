@@ -188,9 +188,11 @@ class SvnCommitBuilder(RootCommitBuilder):
         self.visit_dirs = set()
         self.modified_files = {}
         if self.base_revid == NULL_REVISION:
+            self._base_revmeta = None
             self._base_branch_props = {}
         else:
-            self._base_branch_props = self.repository._revmeta_provider.get_revision(self.base_path, self.base_revnum).get_fileprops()
+            self._base_revmeta = self.repository._revmeta_provider.get_revision(self.base_path, self.base_revnum)
+            self._base_branch_props = self._base_revmeta.get_fileprops()
         self.supports_custom_revprops = self.repository.transport.has_capability("commit-revprops")
         if (self.supports_custom_revprops is None and 
             self.base_mapping.can_use_revprops and 
@@ -501,7 +503,14 @@ class SvnCommitBuilder(RootCommitBuilder):
         self._svn_revprops[properties.PROP_REVISION_LOG] = message.encode("utf-8")
 
         try:
-            existing_bp_parts = _check_dirs_exist(self.repository.transport, 
+            # Shortcut - no need to see if dir exists if our base 
+            # was the last revision in the repo. This situation 
+            # happens a lot when pushing multiple subsequent revisions.
+            if (self.base_revnum == self.repository.get_latest_revnum() and 
+                self.base_path == self.branch.get_branch_path()):
+                existing_bp_parts = bp_parts
+            else:
+                existing_bp_parts = _check_dirs_exist(self.repository.transport, 
                                               bp_parts, -1)
             self.revision_metadata = None
             for prop in self._svn_revprops:
@@ -559,8 +568,6 @@ class SvnCommitBuilder(RootCommitBuilder):
             self.repository.transport.add_connection(conn)
         finally:
             lock.unlock()
-
-        assert self.revision_metadata is not None
 
         (result_revision, result_date, result_author) = self.revision_metadata
         
