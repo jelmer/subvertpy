@@ -127,13 +127,14 @@ def set_svn_revprops(transport, revnum, revprops):
 class SvnCommitBuilder(RootCommitBuilder):
     """Commit Builder implementation wrapped around svn_delta_editor. """
 
-    def __init__(self, repository, branch, parents, config, timestamp, 
+    def __init__(self, repository, branch_path, parents, config, timestamp, 
                  timezone, committer, revprops, revision_id, old_inv=None,
-                 push_metadata=True, graph=None, opt_signature=None):
+                 push_metadata=True, graph=None, opt_signature=None,
+                 append_revisions_only=True):
         """Instantiate a new SvnCommitBuilder.
 
         :param repository: SvnRepository to commit to.
-        :param branch: SvnBranch to commit to.
+        :param branch: branch path to commit to.
         :param parents: List of parent revision ids.
         :param config: Branch configuration to use.
         :param timestamp: Optional timestamp recorded for commit.
@@ -150,8 +151,9 @@ class SvnCommitBuilder(RootCommitBuilder):
         """
         super(SvnCommitBuilder, self).__init__(repository, parents, 
             config, timestamp, timezone, committer, revprops, revision_id)
-        self.branch = branch
+        self.branch_path = branch_path
         self.push_metadata = push_metadata
+        self._append_revisions_only = append_revisions_only
 
         # Gather information about revision on top of which the commit is 
         # happening
@@ -206,7 +208,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             self._svn_revprops = None
         self._svnprops = lazy_dict({}, lambda: dict(self._base_branch_props.items()))
         self.base_mapping.export_revision(
-            self.branch.get_branch_path(), timestamp, timezone, committer, revprops, 
+            self.branch_path, timestamp, timezone, committer, revprops, 
             revision_id, self.base_revno+1, parents, self._svn_revprops, self._svnprops)
 
         if len(merges) > 0:
@@ -267,7 +269,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                     self.new_inventory[child_ie.file_id].name != child_name):
                     self.mutter('removing %r(%r)', (child_name, child_ie.file_id))
                     dir_editor.delete_entry(
-                        urlutils.join(self.branch.get_branch_path(), path, child_name), 
+                        urlutils.join(self.branch_path, path, child_name), 
                         self.base_revnum)
 
         # Loop over file children of file_id in self.new_inventory
@@ -279,7 +281,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                 continue
 
             new_child_path = self.new_inventory.id2path(child_ie.file_id).encode("utf-8")
-            full_new_child_path = urlutils.join(self.branch.get_branch_path(), 
+            full_new_child_path = urlutils.join(self.branch_path, 
                                   new_child_path)
             # add them if they didn't exist in old_inv 
             if not child_ie.file_id in self.old_inv:
@@ -352,7 +354,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             if not child_ie.file_id in self.old_inv:
                 self.mutter('adding dir %r', child_ie.name)
                 child_editor = dir_editor.add_directory(
-                    urlutils.join(self.branch.get_branch_path(), 
+                    urlutils.join(self.branch_path, 
                                   new_child_path))
 
             # copy if they existed at different location
@@ -360,7 +362,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                 old_child_path = self.old_inv.id2path(child_ie.file_id)
                 self.mutter('copy dir %r -> %r', old_child_path, new_child_path)
                 child_editor = dir_editor.add_directory(
-                    urlutils.join(self.branch.get_branch_path(), new_child_path),
+                    urlutils.join(self.branch_path, new_child_path),
                     urlutils.join(self.repository.transport.svn_url, self.base_path, old_child_path), self.base_revnum)
 
             # open if they existed at the same location and 
@@ -369,7 +371,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                 self.mutter('open dir %r', new_child_path)
 
                 child_editor = dir_editor.open_directory(
-                        urlutils.join(self.branch.get_branch_path(), new_child_path), 
+                        urlutils.join(self.branch_path, new_child_path), 
                         self.base_revnum)
             else:
                 continue
@@ -480,9 +482,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             """
             self.revision_metadata = args
         
-        bp = self.branch.get_branch_path()
-        assert isinstance(bp, str), "%r" % bp
-        bp_parts = bp.split("/")
+        bp_parts = self.branch_path.split("/")
         repository_latest_revnum = self.repository.get_latest_revnum()
         lock = self.repository.transport.lock_write(".")
 
@@ -505,7 +505,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             # was the last revision in the repo. This situation 
             # happens a lot when pushing multiple subsequent revisions.
             if (self.base_revnum == self.repository.get_latest_revnum() and 
-                self.base_path == self.branch.get_branch_path()):
+                self.base_path == self.branch_path):
                 existing_bp_parts = bp_parts
             else:
                 existing_bp_parts = _check_dirs_exist(self.repository.transport, 
@@ -529,11 +529,11 @@ class SvnCommitBuilder(RootCommitBuilder):
                 if len(bp_parts) == len(existing_bp_parts):
                     if self.base_path is None or self.base_path.strip("/") != "/".join(bp_parts).strip("/"):
                         replace_existing = True
-                    elif self.base_revnum < self.repository._log.find_latest_change(self.branch.get_branch_path(), repository_latest_revnum):
+                    elif self.base_revnum < self.repository._log.find_latest_change(self.branch_path, repository_latest_revnum):
                         replace_existing = True
 
-                if replace_existing and self.branch._get_append_revisions_only():
-                    raise AppendRevisionsOnlyViolation(self.branch.base)
+                if replace_existing and self._append_revisions_only:
+                    raise AppendRevisionsOnlyViolation(urlutils.join(self.repository.base, self.branch_path))
 
                 # TODO: Accept create_prefix argument
                 branch_editors = self.open_branch_editors(root, bp_parts,
@@ -588,7 +588,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             set_svn_revprops(self.repository.transport, result_revision, new_revprops)
             self._svn_revprops.update(new_revprops)
 
-        self.revmeta = self.repository._revmeta_provider.get_revision(self.branch.get_branch_path(), result_revision, 
+        self.revmeta = self.repository._revmeta_provider.get_revision(self.branch_path, result_revision, 
                 None, # FIXME: Generate changes dictionary
                 revprops=self._svn_revprops,
                 changed_fileprops=self._changed_fileprops,
@@ -759,7 +759,8 @@ def dpush(target, source, stop_revision=None):
 
 
 def push_revision_tree(graph, target, config, source_repo, base_revid, 
-                       revision_id, rev, push_metadata=True):
+                       revision_id, rev, push_metadata=True,
+                       append_revisions_only=True):
     old_tree = source_repo.revision_tree(revision_id)
     base_tree = source_repo.revision_tree(base_revid)
 
@@ -772,14 +773,15 @@ def push_revision_tree(graph, target, config, source_repo, base_revid,
         opt_signature = source_repo.get_signature_text(rev.revision_id)
     except NoSuchRevision:
         opt_signature = None
-    builder = SvnCommitBuilder(target.repository, target, 
+    builder = SvnCommitBuilder(target.repository, target.get_branch_path(), 
                                base_revids,
                                config, rev.timestamp,
                                rev.timezone, rev.committer, rev.properties, 
                                revision_id, base_tree.inventory, 
                                push_metadata=push_metadata,
                                graph=graph,
-                               opt_signature=opt_signature)
+                               opt_signature=opt_signature,
+                               append_revisions_only=append_revisions_only)
                          
     replay_delta(builder, base_tree, old_tree)
     try:
@@ -821,7 +823,8 @@ def push(graph, target, source_repo, revision_id, push_metadata=True):
     try:
         revid = push_revision_tree(graph, target, target.get_config(), 
                                    source_repo, base_revid, revision_id, 
-                                   rev, push_metadata=push_metadata)
+                                   rev, push_metadata=push_metadata,
+                                   append_revisions_only=target._get_append_revisions_only())
     finally:
         source_repo.unlock()
 
@@ -895,7 +898,8 @@ class InterToSvnRepository(InterRepository):
                                    create_prefix=True)
 
                 push_revision_tree(graph, target_branch, target_config, 
-                                   self.source, parent_revid, revision_id, rev)
+                                   self.source, parent_revid, revision_id, rev,
+                                   append_revisions_only=target_branch._get_append_revisions_only())
         finally:
             self.source.unlock()
  

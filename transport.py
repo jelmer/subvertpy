@@ -290,7 +290,7 @@ class SvnRaTransport(Transport):
                     self.semaphore.release()
                 try:
                     try:
-                        self.conn.get_log(callback=rcvr, *self.args, **self.kwargs)
+                        self.conn.get_log(rcvr, *self.args, **self.kwargs)
                         self.pending.append(None)
                     except Exception, e:
                         self.pending.append(e)
@@ -304,7 +304,7 @@ class SvnRaTransport(Transport):
         else:
             newpaths = [p.rstrip("/") for p in paths]
 
-        fetcher = logfetcher(self, paths=newpaths, start=from_revnum, end=to_revnum, limit=limit, discover_changed_paths=discover_changed_paths, strict_node_history=strict_node_history, include_merged_revisions=include_merged_revisions, revprops=revprops)
+        fetcher = logfetcher(self, newpaths, from_revnum, to_revnum, limit, discover_changed_paths=discover_changed_paths, strict_node_history=strict_node_history, include_merged_revisions=include_merged_revisions, revprops=revprops)
         fetcher.start()
         return iter(fetcher.next, None)
 
@@ -549,3 +549,7 @@ class MutteringRemoteAccess(object):
     def get_commit_editor(self, *args, **kwargs):
         mutter("svn commit")
         return self.actual.get_commit_editor(*args, **kwargs)
+
+    def rev_proplist(self, revnum):
+        mutter("svn rev-proplist -r%d" % revnum)
+        return self.actual.rev_proplist(revnum)

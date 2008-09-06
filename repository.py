@@ -767,8 +767,9 @@ class SvnRepository(Repository):
                            timezone=None, committer=None, revprops=None, 
                            revision_id=None):
         from bzrlib.plugins.svn.commit import SvnCommitBuilder
-        return SvnCommitBuilder(self, branch, parents, config, timestamp, 
-                timezone, committer, revprops, revision_id)
+        return SvnCommitBuilder(self, branch.get_branch_path(), parents, config, timestamp, 
+                timezone, committer, revprops, revision_id, 
+                append_revisions_only=True)
 
     def find_fileprop_paths(self, layout, from_revnum, to_revnum, 
                                project=None, check_removed=False, 
