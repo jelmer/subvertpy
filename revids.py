@@ -83,17 +83,10 @@ class RevidMap(object):
             revids = set()
             try:
                 revmeta = self.repos._revmeta_provider.get_revision(branch, revno)
-                for propname, propvalue in revmeta.get_fileprops().items():
-                    if not propname.startswith(SVN_PROP_BZR_REVISION_ID):
-                        continue
-                    mapping_name = propname[len(SVN_PROP_BZR_REVISION_ID):]
-                    for line in propvalue.splitlines():
-                        try:
-                            revids.add((parse_revid_property(line), mapping_name))
-                        except InvalidPropertyValue, ie:
-                            mutter(str(ie))
+                for revid, revno, mapping_name in revmeta.get_roundtrip_ancestor_revids():
+                    revids.add(((revno, revid), mapping_name))
             except SubversionException, (_, ERR_FS_NOT_DIRECTORY):
-                    continue
+                continue
 
             # If there are any new entries that are not yet in the cache, 
             # add them

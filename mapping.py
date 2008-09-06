@@ -718,3 +718,17 @@ def estimate_bzr_ancestors(fileprops):
         if k.startswith(SVN_PROP_BZR_PREFIX):
             return 1
     return 0
+
+
+def get_roundtrip_ancestor_revids(fileprops):
+    for propname, propvalue in fileprops.items():
+        if not propname.startswith(SVN_PROP_BZR_REVISION_ID):
+            continue
+        mapping_name = propname[len(SVN_PROP_BZR_REVISION_ID):]
+        for line in propvalue.splitlines():
+            try:
+                (revno, revid) = parse_revid_property(line)
+            except svn_errors.InvalidPropertyValue, ie:
+                mutter(str(ie))
+            yield (revid, revno, mapping_name)
+

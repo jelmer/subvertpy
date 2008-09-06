@@ -17,7 +17,7 @@ from bzrlib import errors, ui
 from bzrlib.revision import NULL_REVISION, Revision
 
 from bzrlib.plugins.svn import changes, core, errors as svn_errors, logwalker, properties
-from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors, SVN_REVPROP_BZR_SIGNATURE
+from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors, SVN_REVPROP_BZR_SIGNATURE, get_roundtrip_ancestor_revids
 from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
                  parse_svk_feature, estimate_svk_ancestors)
 
@@ -264,6 +264,12 @@ class RevisionMetadata(object):
 
     def get_fileid_map(self, mapping):
         return mapping.import_fileid_map(self.get_revprops(), self.get_changed_fileprops())
+
+    def get_roundtrip_ancestor_revids(self):
+        if self.metabranch is not None and not self.metabranch.consider_bzr_fileprops(self):
+            # This revisions descendant doesn't have bzr fileprops set, so this one can't have them either.
+            return 0
+        return iter(get_roundtrip_ancestor_revids(self.get_fileprops()))
 
     def __hash__(self):
         return hash((self.__class__, self.uuid, self.branch_path, self.revnum))

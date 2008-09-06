@@ -28,7 +28,7 @@ from bzrlib.plugins.svn import ra
 from bzrlib.plugins.svn.auth import create_auth_baton
 from bzrlib.plugins.svn.client import get_config
 from bzrlib.plugins.svn.core import SubversionException
-from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_DIRECTORY, ERR_RA_DAV_RELOCATED, ERR_RA_DAV_PATH_NOT_FOUND
+from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_DIRECTORY, ERR_RA_DAV_RELOCATED, ERR_RA_DAV_PATH_NOT_FOUND, ERR_UNKNOWN_CAPABILITY
 import urlparse
 import urllib
 
@@ -408,6 +408,10 @@ class SvnRaTransport(Transport):
         try:
             try:
                 self.capabilities[cap] = conn.has_capability(cap)
+            except SubversionException, (msg, num):
+                if num != ERR_UNKNOWN_CAPABILITY:
+                    raise
+                self.capabilities[cap] = None
             except NotImplementedError:
                 self.capabilities[cap] = None # None for unknown
             return self.capabilities[cap]
