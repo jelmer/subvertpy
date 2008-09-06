@@ -47,36 +47,36 @@ class RevidMap(object):
 
         last_revnum = self.repos.get_latest_revnum()
         fileprops_to_revnum = last_revnum
-        for entry_revid, branch, revno, mapping in self.discover_revprop_revids(0, last_revnum):
+        for entry_revid, branch, min_revno, max_revno, mapping in self.discover_revprop_revids(lyout, last_revnum, 0):
             if revid == entry_revid:
-                return (branch, revno, mapping.name)
-            fileprops_to_revnum = min(fileprops_to_revnum, revno)
+                return (branch, min_revno, max_revno, mapping.name)
+            fileprops_to_revnum = min(fileprops_to_revnum, min_revno)
 
-        for entry_revid, branch, revno, mapping in self.discover_fileprop_revids(layout, 0, fileprops_to_revnum, project):
+        for entry_revid, branch, min_revno, max_revno, mapping in self.discover_fileprop_revids(layout, 0, fileprops_to_revnum, project):
             if revid == entry_revid:
-                (bp, revnum, mapping_name) = self.bisect_revid_revnum(revid, branch, 0, revno)
+                (bp, revnum, mapping_name) = self.bisect_revid_revnum(revid, branch, min_revno, max_revno)
                 return (bp, revnum, mapping_name)
         raise NoSuchRevision(self, revid)
 
-    def discover_revprop_revids(self, from_revnum, to_revnum):
+    def discover_revprop_revids(self, layout, from_revnum, to_revnum):
         """Discover bzr-svn revision properties between from_revnum and to_revnum.
 
         :return: First revision number on which a revision property was found, or None
         """
         if self.repos.transport.has_capability("log-revprops") != True:
             return
-        for (_, revno, revprops) in self.repos._log.iter_changes(None, from_revnum, to_revnum):
-            if is_bzr_revision_revprops(revprops):
-                mapping = find_mapping(revprops, {})
-                (_, revid) = mapping.get_revision_id(None, revprops, {})
+        for revmeta in self.repos._revmeta_provider.iter_all_changes(layout, None, from_revnum, to_revnum):
+            if is_bzr_revision_revprops(revmeta.get_revprops()):
+                mapping = find_mapping(revmeta.get_revprops(), {})
+                (_, revid) = revmeta.get_revision_id(mapping)
                 if revid is not None:
-                    yield (revid, mapping.get_branch_root(revprops).strip("/"), revno, mapping)
+                    yield (revid, mapping.get_branch_root(revmeta.get_revprops()).strip("/"), revmeta.revnum, revmeta.revnum, mapping)
 
     def discover_fileprop_revids(self, layout, from_revnum, to_revnum, project=None):
         reuse_policy = self.repos.get_config().get_reuse_revisions()
         assert reuse_policy in ("other-branches", "removed-branches", "none") 
         check_removed = (reuse_policy == "removed-branches")
-        for (branch, revno, exists) in self.repos.find_fileprop_paths(layout, from_revnum, to_revnum, project, check_removed=check_removed, find_branches=True, find_tags=True):
+        for (branch, revno, exists) in self.repos.find_fileprop_paths(layout, from_revnum, to_revnum, project, check_removed=check_removed):
             assert isinstance(branch, str)
             assert isinstance(revno, int)
             # Look at their bzr:revision-id-vX
@@ -91,7 +91,7 @@ class RevidMap(object):
             # If there are any new entries that are not yet in the cache, 
             # add them
             for ((entry_revno, entry_revid), mapping_name) in revids:
-                yield (entry_revid, branch, revno, mapping_registry.parse_mapping_name(mapping_name))
+                yield (entry_revid, branch, 0, revno, mapping_registry.parse_mapping_name(mapping_name))
 
     def bisect_revid_revnum(self, revid, branch_path, min_revnum, max_revnum):
         """Find out what the actual revnum was that corresponds to a revid.
@@ -166,18 +166,19 @@ class CachingRevidMap(object):
                 raise e
             found = None
             fileprops_to_revnum = last_revnum
-            for entry_revid, branch, revno, mapping in self.actual.discover_revprop_revids(last_checked, last_revnum):
-                fileprops_to_revnum = min(fileprops_to_revnum, revno)
+            for entry_revid, branch, min_revno, max_revno, mapping in self.actual.discover_revprop_revids(layout, last_revnum, last_checked):
+                fileprops_to_revnum = min(fileprops_to_revnum, min_revno)
                 if entry_revid == revid:
-                    found = (branch, revno, revno, mapping)
+                    found = (branch, min_revno, max_revno, mapping)
                 if entry_revid not in self.revid_seen:
-                    self.cache.insert_revid(entry_revid, branch, revno, revno, mapping.name)
+                    self.cache.insert_revid(entry_revid, branch, min_revno, max_revno, mapping.name)
                     self.revid_seen.add(entry_revid)
-            for entry_revid, branch, revno, mapping in self.actual.discover_fileprop_revids(layout, last_checked, fileprops_to_revnum, project):
+            for entry_revid, branch, min_revno, max_revno, mapping in self.actual.discover_fileprop_revids(layout, last_checked, fileprops_to_revnum, project):
+                min_revno = max(last_checked, min_revno)
                 if entry_revid == revid:
-                    found = (branch, last_checked, revno, mapping)
+                    found = (branch, min_revno, max_revno, mapping)
                 if entry_revid not in self.revid_seen:
-                    self.cache.insert_revid(entry_revid, branch, last_checked, revno, mapping.name)
+                    self.cache.insert_revid(entry_revid, branch, min_revno, max_revno, mapping.name)
                     self.revid_seen.add(entry_revid)
                 
             # We've added all the revision ids for this layout in the
