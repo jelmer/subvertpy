@@ -632,9 +632,7 @@ class InterFromSvnRepository(InterRepository):
             return []
         extra = list()
         def check_revid(revision_id):
-            revs = []
-            meta_map = {}
-            needed = []
+            revmetas = []
             try:
                 (branch_path, revnum, mapping) = \
                     self.source.lookup_revision_id(revision_id)
@@ -647,17 +645,16 @@ class InterFromSvnRepository(InterRepository):
                               revnum-revmeta.revnum, revnum)
                 revid = revmeta.get_revision_id(mapping)
                 parent_ids = revmeta.get_parent_ids(mapping)
-                meta_map[revid] = revmeta
                 if revid in checked:
                     # This revision (and its ancestry) has already been checked
                     break
                 extra.extend(parent_ids[1:])
                 if not self.target.has_revision(revid):
-                    revs.append(revid)
+                    revmetas.append(revmeta)
                 elif not find_ghosts:
                     break
                 checked.add(revid)
-            return [(meta_map[revid], mapping) for revid in reversed(revs)]
+            return [(revmeta, mapping) for revmeta in reversed(revmetas)]
 
         needed = check_revid(revision_id)
 
@@ -732,7 +729,7 @@ class InterFromSvnRepository(InterRepository):
             if not conn.busy:
                 self.source.transport.add_connection(conn)
 
-    def _fetch_revisions(self, revs, pb=None):
+    def _fetch_revisions(self, revs, pb=None, use_replay=False):
         """Copy a set of related revisions using svn.ra.switch.
 
         :param revids: List of revision ids of revisions to copy, 
@@ -754,8 +751,10 @@ class InterFromSvnRepository(InterRepository):
             try:
                 editor = self._get_editor(revmeta, mapping)
                 try:
-                    #self._fetch_revision_replay(editor, revmeta, parent_revmeta)
-                    self._fetch_revision_switch(editor, revmeta, parent_revmeta)
+                    if use_replay:
+                        self._fetch_revision_replay(editor, revmeta, parent_revmeta)
+                    else:
+                        self._fetch_revision_switch(editor, revmeta, parent_revmeta)
                 except:
                     editor.abort()
                     raise
@@ -780,6 +779,9 @@ class InterFromSvnRepository(InterRepository):
 
         if pb:
             pb.update("determining revisions to fetch", 0, 2)
+
+        use_replay_range = self.source.transport.has_capability("partial-replay") and False
+        use_replay = self.source.transport.has_capability("partial-replay") and False
 
         # Loop over all the revnums until revision_id
         # (or youngest_revnum) and call self.target.add_revision() 
@@ -808,10 +810,10 @@ class InterFromSvnRepository(InterRepository):
             else:
                 nested_pb = None
             try:
-                #if self.source.transport.has_capability("partial-replay"):
-                #    self._fetch_revision_chunks(needed, pb)
-                #else:
-                    self._fetch_revisions(needed, pb)
+                if use_replay_range:
+                    self._fetch_revision_chunks(needed, pb)
+                else:
+                    self._fetch_revisions(needed, pb, use_replay=use_replay)
             finally:
                 if nested_pb is not None:
                     nested_pb.finished()
