@@ -33,6 +33,8 @@ bzr-svn-0.5			UNRELEASED
 
    * Provide SvnWorkingTree._transport. (#264548)
 
+   * Don't rely on cache when checking revision id during commit. (#230863)
+
   INTERNALS
 
    * Remove custom commit code for working tree. 
