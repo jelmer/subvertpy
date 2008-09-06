@@ -672,14 +672,6 @@ class InterFromSvnRepository(InterRepository):
         """See InterRepository.copy_content."""
         self.fetch(revision_id, pb, find_ghosts=False)
 
-    def _fetch_replay(self, revids, pb=None):
-        """Copy a set of related revisions using svn.ra.replay.
-
-        :param revids: Revision ids to copy.
-        :param pb: Optional progress bar
-        """
-        raise NotImplementedError(self._fetch_replay)
-
     def _get_inventory(self, revid):
         """Retrieve an inventory, optionally using a inventory previously 
         cached.
@@ -694,7 +686,34 @@ class InterFromSvnRepository(InterRepository):
             assert self.target.has_revision(revid)
         return self.target.get_inventory(revid)
 
-    def _fetch_switch(self, repos_root, revids, pb=None):
+    def _get_editor(self, revmeta, mapping):
+        return RevisionBuildEditor(self.source, self.target, 
+            revmeta.get_revision_id(mapping), 
+            self._get_inventory(revmeta.get_lhs_parent(mapping)), 
+            revmeta)
+
+    def _fetch_revision_switch(self, editor, parent_branch, parent_revnum,
+                               current_branch, current_revnum, start_empty):
+        conn = None
+        try:
+            conn = self.source.transport.get_connection(parent_branch)
+
+            assert current_revnum > parent_revnum or start_empty
+
+            if parent_branch != current_branch:
+                reporter = conn.do_switch(current_revnum, "", True, 
+                    _url_escape_uri(urlutils.join(conn.get_repos_root()), current_branch)), 
+                    editor)
+            else:
+                reporter = conn.do_update(current_revnum, "", True, editor)
+
+            report_inventory_contents(reporter, parent_revnum, start_empty)
+        finally:
+            if conn is not None:
+                if not conn.busy:
+                    self.source.transport.add_connection(conn)
+
+    def _fetch_revisions(self, revs, pb=None):
         """Copy a set of related revisions using svn.ra.switch.
 
         :param revids: List of revision ids of revisions to copy, 
@@ -703,20 +722,14 @@ class InterFromSvnRepository(InterRepository):
         """
         self._prev_inv = None
 
-        for num, (revmeta, mapping) in enumerate(revids):
+        for num, (revmeta, mapping) in enumerate(revs):
             revid = revmeta.get_revision_id(mapping)
             assert revid != NULL_REVISION
-            pb.update('copying revision', num, len(revids))
+            pb.update('copying revision', num, len(revs))
 
             parent_revmeta = revmeta.get_lhs_parent_revmeta(mapping)
+
             if parent_revmeta is None:
-                parent_revid = NULL_REVISION
-            else:
-                parent_revid = parent_revmeta.get_revision_id(mapping)
-
-            assert parent_revid is not None and parent_revid != revid
-
-            if parent_revid == NULL_REVISION:
                 parent_branch = revmeta.branch_path
                 parent_revnum = revmeta.revnum
                 start_empty = True
@@ -728,26 +741,11 @@ class InterFromSvnRepository(InterRepository):
             if not self.target.is_in_write_group():
                 self.target.start_write_group()
             try:
-                editor = RevisionBuildEditor(self.source, self.target, revid, self._get_inventory(parent_revid), revmeta)
+                editor = self._get_editor(revmeta, mapping)
                 try:
-                    conn = None
-                    try:
-                        conn = self.source.transport.get_connection(parent_branch)
-
-                        assert revmeta.revnum > parent_revnum or start_empty
-
-                        if parent_branch != revmeta.branch_path:
-                            reporter = conn.do_switch(revmeta.revnum, "", True, 
-                                _url_escape_uri(urlutils.join(repos_root, revmeta.branch_path)), 
-                                editor)
-                        else:
-                            reporter = conn.do_update(revmeta.revnum, "", True, editor)
-
-                        report_inventory_contents(reporter, parent_revnum, start_empty)
-                    finally:
-                        if conn is not None:
-                            if not conn.busy:
-                                self.source.transport.add_connection(conn)
+                    self._fetch_revision_switch(editor, parent_branch, parent_revnum, 
+                                                revmeta.branch_path, revmeta.revnum,
+                                                start_empty)
                 except:
                     editor.abort()
                     raise
@@ -762,6 +760,16 @@ class InterFromSvnRepository(InterRepository):
             assert self._prev_inv.revision_id == revid
         if self.target.is_in_write_group():
             self.target.commit_write_group()
+
+    def _fetch_revisions_range(self, revids, pb=None):
+        """Copy a set of related revisions using svn.ra.replay.
+
+        :param revids: Revision ids to copy.
+        :param pb: Optional progress bar
+        """
+        # FIXME: First, determine ranges to fetch
+        # FIXME: Fetch ranges
+        raise NotImplementedError(self._fetch_replay_range)
 
     def fetch(self, revision_id=None, pb=None, find_ghosts=False, 
               branches=None):
@@ -800,7 +808,10 @@ class InterFromSvnRepository(InterRepository):
             else:
                 nested_pb = None
             try:
-                self._fetch_switch(self.source.transport.get_svn_repos_root(), needed, pb)
+                #FIXME: if self.source.transport.has_capability("partial-replay"):
+                #    self._fetch_revisions_range(needed, pb)
+                #else:
+                self._fetch_revisions(needed, pb)
             finally:
                 if nested_pb is not None:
                     nested_pb.finished()
