@@ -771,16 +771,6 @@ class InterFromSvnRepository(InterRepository):
         if self.target.is_in_write_group():
             self.target.commit_write_group()
 
-    def _fetch_revisions_range(self, revids, pb=None):
-        """Copy a set of related revisions using svn.ra.replay.
-
-        :param revids: Revision ids to copy.
-        :param pb: Optional progress bar
-        """
-        # FIXME: First, determine ranges to fetch
-        # FIXME: Fetch ranges
-        raise NotImplementedError(self._fetch_replay_range)
-
     def fetch(self, revision_id=None, pb=None, find_ghosts=False, 
               branches=None):
         """Fetch revisions. """
@@ -818,15 +808,78 @@ class InterFromSvnRepository(InterRepository):
             else:
                 nested_pb = None
             try:
-                #FIXME: if self.source.transport.has_capability("partial-replay"):
-                #    self._fetch_revisions_range(needed, pb)
+                #if self.source.transport.has_capability("partial-replay"):
+                #    self._fetch_revision_chunks(needed, pb)
                 #else:
-                self._fetch_revisions(needed, pb)
+                    self._fetch_revisions(needed, pb)
             finally:
                 if nested_pb is not None:
                     nested_pb.finished()
         finally:
             self.target.unlock()
+
+    def _fetch_revision_chunks(self, revs, pb=None):
+        """Copy a set of related revisions using svn.ra.replay.
+
+        :param revids: Revision ids to copy.
+        :param pb: Optional progress bar
+        """
+        self._prev_inv = None
+        ranges = []
+        curmetabranch = None
+        currange = None
+        revmetas = {}
+        pb = ui.ui_factory.nested_progress_bar()
+        try:
+            for i, (revmeta, mapping) in enumerate(revs):
+                pb.update("determining revision ranges", i, len(revs))
+                if revmeta.metabranch is not None and curmetabranch == revmeta.metabranch:
+                    (branch_path, low_water_mark, from_revnum, to_revum, revmetas) = currange
+                    revmetas[revmeta.revnum] = (revmeta, mapping)
+                    currange = (revmeta.branch_path, low_water_mark, from_revnum, revmeta.revnum, revmetas)
+                else:
+                    if currange is not None:
+                        ranges.append(currange)
+                    parentrevmeta = revmeta.get_lhs_parent_revmeta(mapping)
+                    if parentrevmeta is None:
+                        low_water_mark = 0
+                    else:
+                        low_water_mark = parentrevmeta.revnum
+                    currange = (revmeta.branch_path, low_water_mark, revmeta.revnum, revmeta.revnum,
+                                {revmeta.revnum: (revmeta, mapping)})
+        finally:
+            pb.finished()
+        if currange is not None:
+            ranges.append(currange)
+
+        mutter("fetching ranges: %r" % ranges)
+        if not self.target.is_in_write_group():
+            self.target.start_write_group()
+
+        try:
+            for (branch_path, low_water_mark, start_revision, end_revision, revmetas) in ranges:
+                def revstart(revnum, revprops):
+                    if pb is not None:
+                        pb.update("fetching revisions", revnum, len(revs))
+                    revmeta, mapping = revmetas[revnum]
+                    revmeta._revprops = revprops
+                    return self._get_editor(revmeta, mapping)
+
+                def revfinish(revision, revprops, editor):
+                    self._prev_inv = editor.inventory
+
+                conn = self.source.transport.get_connection(revmeta.branch_path)
+                try:
+                    conn.replay_range(start_revision, end_revision, low_water_mark, (revstart, revfinish), True)
+                finally:
+                    if not conn.busy:
+                        self.source.transport.add_connection(conn)
+
+                if i % FETCH_COMMIT_WRITE_SIZE == 0:
+                    self.target.commit_write_group()
+        finally:
+            if self.target.is_in_write_group():
+                self.target.commit_write_group()
 
     @staticmethod
     def is_compatible(source, target):
