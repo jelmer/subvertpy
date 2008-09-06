@@ -657,8 +657,7 @@ class InterFromSvnRepository(InterRepository):
                 elif not find_ghosts:
                     break
                 checked.add(revid)
-            return [(meta_map[revid], mapping) 
-                      for revid in reversed(revs)]
+            return [(meta_map[revid], mapping) for revid in reversed(revs)]
 
         needed = check_revid(revision_id)
 

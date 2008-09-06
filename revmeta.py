@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from bzrlib import errors
+from bzrlib import errors, ui
 from bzrlib.revision import NULL_REVISION, Revision
 
 from bzrlib.plugins.svn import changes, core, errors as svn_errors, logwalker, properties
@@ -31,8 +31,12 @@ def full_paths(find_children, paths, bp, from_bp, from_rev):
     :param from_bp: Path to look up children in
     :param from_rev: Revision to look up children in.
     """
-    for c in find_children(from_bp, from_rev):
-        paths[changes.rebase_path(c, from_bp, bp)] = ('A', None, -1)
+    pb = ui.ui_factory.nested_progress_bar()
+    try:
+        for c in find_children(from_bp, from_rev, pb):
+            paths[changes.rebase_path(c, from_bp, bp)] = ('A', None, -1)
+    finally:
+        pb.finished()
     return paths
 
 
@@ -418,6 +422,7 @@ class RevisionMetadataProvider(object):
                 not (mapping is None or mapping.is_branch(next[0]) or mapping.is_tag(next[0]))):
                 # Make it look like the branch started here if the mapping 
                 # doesn't support weird paths as branches
+                # TODO: Make this quicker - it can be very slow for large repos.
                 lazypaths = logwalker.lazy_dict(paths, full_paths, self._log.find_children, paths, bp, next[0], next[1])
                 paths[bp] = ('A', None, -1)
 

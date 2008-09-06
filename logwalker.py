@@ -507,7 +507,7 @@ class LogWalker(object):
                     revision="Revision number %d" % revnum)
             raise
 
-    def find_children(self, path, revnum):
+    def find_children(self, path, revnum, pb=None):
         """Find all children of path in revnum.
 
         :param path:  Path to check
@@ -518,9 +518,13 @@ class LogWalker(object):
         conn = self._transport.connections.get(self._transport.get_svn_repos_root())
         results = []
         unchecked_dirs = set([path])
+        num_checked = 0
         try:
             while len(unchecked_dirs) > 0:
+                if pb is not None:
+                    pb.update("listing branch contents", num_checked, num_checked+len(unchecked_dirs))
                 nextp = unchecked_dirs.pop()
+                num_checked += 1
                 try:
                     dirents = conn.get_dir(nextp, revnum, DIRENT_KIND)[0]
                 except SubversionException, (_, num):
