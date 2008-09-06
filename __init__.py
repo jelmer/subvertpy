@@ -272,16 +272,16 @@ class cmd_svn_import(Command):
 
         from_repos.lock_read()
         try:
-            (guessed_layout, layout) = repository_guess_layout(from_repos, 
+            (guessed_overall_layout, guessed_layout) = repository_guess_layout(from_repos, 
                 from_repos.get_latest_revnum())
 
             if prefix is not None:
                 prefix = prefix.strip("/") + "/"
-                if guessed_layout.is_branch(prefix):
+                if guessed_overall__layout.is_branch(prefix):
                     raise BzrCommandError("%s appears to contain a branch. " 
                             "For individual branches, use 'bzr branch'." % 
                             from_location)
-                elif guessed_layout.is_branch_parent(prefix):
+                elif guessed_overall_layout.is_branch_parent(prefix):
                     self.outf.write("Importing branches with prefix /%s\n" % 
                         urlutils.unescape_for_display(prefix, self.outf.encoding))
                 else:
@@ -297,6 +297,9 @@ class cmd_svn_import(Command):
                     not branch.get_branch_path().startswith(prefix)):
                     return False
                 return True
+
+            if layout is None:
+                layout = guessed_layout
 
             convert_repository(from_repos, to_location, layout, 
                                not standalone, trees, all, 
