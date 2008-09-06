@@ -238,7 +238,7 @@ class SvnBranch(Branch):
     def set_revision_history(self, rev_history):
         """See Branch.set_revision_history()."""
         if (rev_history == [] or 
-            not self.repository.has_revision(rev_history[-1])):
+            not self.repository.has_revision(rev_history[-1], project=self.project)):
             raise NotImplementedError("set_revision_history can't add ghosts")
         push(self.repository.get_graph(), 
              self, self.repository, rev_history[-1])
@@ -271,7 +271,7 @@ class SvnBranch(Branch):
         """
         missing = []
         for revid in other.repository.iter_reverse_revision_history(stop_revision):
-            if self.repository.has_revision(revid):
+            if self.repository.has_revision(revid, project=self.project):
                 missing.reverse()
                 return missing
             missing.append(revid)

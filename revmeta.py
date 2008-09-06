@@ -485,7 +485,7 @@ class RevisionMetadataProvider(object):
         if prev is not None:
             yield prev
 
-    def iter_all_changes(self, layout, mapping, from_revnum, to_revnum=0, pb=None):
+    def iter_all_changes(self, layout, mapping, from_revnum, to_revnum=0, project=None, pb=None):
         assert from_revnum >= to_revnum
         metabranches = {}
         if mapping is None:
@@ -498,8 +498,13 @@ class RevisionMetadataProvider(object):
             if not bp in metabranches:
                 metabranches[bp] = RevisionMetadataBranch(mapping)
             return metabranches[bp]
+
+        if project is not None:
+            prefixes = layout.get_project_prefixes(project)
+        else:
+            prefixes = [""]
         unusual = set()
-        for (paths, revnum, revprops) in self._log.iter_changes(None, from_revnum, to_revnum, pb=pb):
+        for (paths, revnum, revprops) in self._log.iter_changes(prefixes, from_revnum, to_revnum, pb=pb):
             bps = {}
             if pb:
                 pb.update("discovering revisions", revnum, from_revnum-revnum)
@@ -508,7 +513,7 @@ class RevisionMetadataProvider(object):
                 action = paths[p][0]
 
                 try:
-                    (_, _, bp, ip) = layout.parse(p)
+                    (_, bp, ip) = layout.split_project_path(p, project)
                 except errors.NotBranchError:
                     pass
                     for u in unusual:
@@ -530,7 +535,7 @@ class RevisionMetadataProvider(object):
                     del metabranches[new_name]
                     if mapping_check_path(old_name):
                         metabranches[old_name] = data
-                        if not layout.is_branch_or_tag(old_name):
+                        if not layout.is_branch_or_tag(old_name, project):
                             unusual.add(old_name)
 
             for bp in bps:
@@ -539,6 +544,6 @@ class RevisionMetadataProvider(object):
                 yield revmeta
     
         # Make sure commit 0 is processed
-        if to_revnum == 0 and layout.is_branch_or_tag(""):
+        if to_revnum == 0 and layout.is_branch_or_tag("", project):
             bps[""] = get_metabranch("")
             yield self.get_revision("", 0, {"": ('A', None, -1)}, {}, metabranch=bps[""])

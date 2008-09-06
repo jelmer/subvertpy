@@ -546,7 +546,7 @@ class SvnRepository(Repository):
             raise errors.RevpropChangeFailed(SVN_REVPROP_BZR_SIGNATURE)
 
     @needs_read_lock
-    def find_branches_between(self, layout, from_revnum, to_revnum):
+    def find_branches_between(self, layout, from_revnum, to_revnum, project=None):
         deleted = set()
         created = set()
         for (paths, revnum, revprops) in self._log.iter_changes(None, from_revnum, to_revnum):
@@ -568,7 +568,7 @@ class SvnRepository(Repository):
                             except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
                                 pass
                 try:
-                    (pt, project, bp, rp) = layout.parse(p)
+                    (pt, bp, rp) = layout.split_project_path(p, project)
                     if pt == "branch":
                         if paths[p][0] != 'D' or rp != "":
                             created.add(bp)
@@ -639,12 +639,12 @@ class SvnRepository(Repository):
                                 pass
                     else:
                         try:
-                            (pt, proj, bp, rp) = layout.parse(p)
+                            (pt, bp, rp) = layout.split_project_path(p, project)
                         except errors.InvalidSvnBranchPath:
                             continue
                         except NotBranchError:
                             continue
-                        if pt != "tag" or (project is not None and proj != project):
+                        if pt != "tag":
                             continue
                         if action == "D" and rp == "":
                             tag_changes[p] = None
@@ -698,7 +698,7 @@ class SvnRepository(Repository):
                     layout=layout, mapping=mapping, from_revnum=0, to_revnum=revnum)
         return self._cached_tags[layout,mapping]
 
-    def find_branchpaths(self, check_path, check_parent_path, 
+    def find_branchpaths(self, layout,
                          from_revnum=0, to_revnum=None, 
                          project=None):
         """Find all branch paths that were changed in the specified revision 
@@ -716,21 +716,26 @@ class SvnRepository(Repository):
 
         ret = []
 
+        if project is not None:
+            prefixes = layout.get_project_prefixes(project)
+        else:
+            prefixes = [""]
+
         pb = ui.ui_factory.nested_progress_bar()
         try:
-            for (paths, i, revprops) in self._log.iter_changes([""], from_revnum, to_revnum):
+            for (paths, i, revprops) in self._log.iter_changes(prefixes, from_revnum, to_revnum):
                 pb.update("finding branches", i, to_revnum)
                 if self.transport.has_capability("log-revprops") and is_bzr_revision_revprops(revprops) is not None:
                     continue
                 for p in sorted(paths.keys()):
-                    if check_path(p, project):
+                    if layout.is_branch_or_tag(p, project):
                         if paths[p][0] in ('R', 'D') and p in created_branches:
                             ret.append((p, created_branches[p], False))
                             del created_branches[p]
 
                         if paths[p][0] in ('A', 'R', 'M'): 
                             created_branches[p] = i
-                    elif check_parent_path(p, project):
+                    elif layout.is_branch_or_tag_parent(p, project):
                         if paths[p][0] in ('R', 'D'):
                             k = created_branches.keys()
                             for c in k:
@@ -744,9 +749,9 @@ class SvnRepository(Repository):
                                 try:
                                     for c in self.transport.get_dir(p, i)[0].keys():
                                         n = p+"/"+c
-                                        if check_path(n, project):
+                                        if layout.is_branch_or_tag(n, project):
                                             created_branches[n] = i
-                                        elif check_parent_path(n, project):
+                                        elif layout.is_branch_or_tag_parent(n, project):
                                             parents.append(n)
                                 except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
                                     pass
@@ -782,11 +787,8 @@ class SvnRepository(Repository):
             for (project, branch, nick) in it:
                 yield (branch, to_revnum, True)
         else:
-            check_path_fn = layout.is_branch_or_tag
-            check_parent_path_fn = layout.is_branch_or_tag_parent
             for (branch, revno, exists) in self.find_branchpaths(
-                check_path_fn, check_parent_path_fn,
-                from_revnum, to_revnum, project):
+                    layout, from_revnum, to_revnum, project):
                 yield (branch, revno, exists)
 
     def abort_write_group(self):

@@ -176,7 +176,7 @@ def convert_repository(source_repos, output_url, layout=None,
         # have to remove existing branches.
         if from_revnum == 0 or (not keep and len(to_transport.list_dir(".")) > 1):
             removed_branches, changed_branches = source_repos.find_branches_between(layout=layout, 
-                from_revnum=from_revnum, to_revnum=to_revnum)
+                from_revnum=from_revnum, to_revnum=to_revnum, project=None)
             existing_branches = []
             for bp in changed_branches:
                 try:

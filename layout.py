@@ -17,7 +17,7 @@ from bzrlib import registry, urlutils, ui
 from bzrlib.errors import NotBranchError
 from bzrlib.trace import mutter
 from bzrlib.plugins.svn.core import SubversionException, NODE_DIR
-from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND
+from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND, InvalidSvnBranchPath
 from bzrlib.plugins.svn.ra import DIRENT_KIND
 
 class RepositoryLayout(object):
@@ -25,6 +25,9 @@ class RepositoryLayout(object):
 
     def __init__(self):
         pass
+
+    def get_project_prefixes(self, project):
+        return [project]
 
     def supports_tags(self):
         return True
@@ -70,6 +73,15 @@ class RepositoryLayout(object):
             inside the branch
         """
         raise NotImplementedError
+
+    def split_project_path(self, path, project):
+        """Parse a project inside a particular project.
+
+        """
+        (pt, parsed_project, bp, ip) = self.parse(path)
+        if project is not None and parsed_project != project:
+            raise InvalidSvnBranchPath(path, self)
+        return (pt, bp, ip)
 
     def is_branch(self, path, project=None):
         """Check whether a specified path points at a branch."""

@@ -13,6 +13,9 @@ bzr-svn-0.5			UNRELEASED
 	   replaced by "repository layouts", which are 
 	   much more flexible. (#130372)
 
+   * Will avoid browsing the full repository for bzr-revisions, 
+     only closely related paths.
+
   FEATURES
 
    * Add bzr:skip revision property to allow skipping 
