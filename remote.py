@@ -137,12 +137,11 @@ class SvnRemoteAccess(BzrDir):
             repos = self.find_repository()
             repos.lock_write()
             try:
-                full_branch_url = urlutils.join(repos.transport.base, 
-                                                target_branch_path)
                 if repos.transport.check_path(target_branch_path,
                     repos.get_latest_revnum()) != core.NODE_NONE:
-                    raise AlreadyBranchError(full_branch_url)
-                push_new(repos, target_branch_path, source.repository, stop_revision)
+                    raise AlreadyBranchError(target_branch_path)
+                push_new(source.repository.get_graph(), repos, target_branch_path, source.repository, stop_revision, 
+                         append_revisions_only=True)
             finally:
                 repos.unlock()
             branch = self.open_branch()
@@ -158,7 +157,7 @@ class SvnRemoteAccess(BzrDir):
 
     def create_branch(self):
         """See BzrDir.create_branch()."""
-        from branch import SvnBranch
+        from bzrlib.plugins.svn.branch import SvnBranch
         repos = self.find_repository()
 
         if self.branch_path != "":

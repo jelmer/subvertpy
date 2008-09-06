@@ -186,7 +186,8 @@ class SvnCommitBuilder(RootCommitBuilder):
             self.old_inv = old_inv
             # Not all repositories appear to set Inventory.revision_id, 
             # so allow None as well.
-            assert self.old_inv.revision_id in (None, self.base_revid)
+            assert self.old_inv.revision_id in (None, self.base_revid), \
+                    "%s != %s" % (self.old_inv.revision_id, self.base_revid)
 
         # Determine revisions merged in this one
         merges = filter(lambda x: x != self.base_revid, parents)
@@ -652,70 +653,34 @@ def replay_delta(builder, old_tree, new_tree):
     builder.finish_inventory()
 
 
-def push_new(target_repository, target_branch_path, source, stop_revision,
-             push_metadata=True):
+def push_new(graph, target_repository, target_branch_path, source, stop_revision,
+             push_metadata=True, append_revisions_only=False):
     """Push a revision into Subversion, creating a new branch.
 
     This will do a new commit in the target branch.
 
+    :param graph: Repository graph.
     :param target_repository: Repository to push to
     :param target_branch_path: Path to create new branch at
     :param source: Source repository
     """
     assert isinstance(source, Repository)
-    revhistory = list(source.iter_reverse_revision_history(stop_revision))
-    history = list(revhistory)
-    history.reverse()
-    start_revid_parent = NULL_REVISION
     start_revid = stop_revision
-    for revid in revhistory:
-        # We've found the revision to push if there is a revision 
-        # which LHS parent is present or if this is the first revision.
+    for revid in source.iter_reverse_revision_history(stop_revision):
         if target_repository.has_revision(revid):
-            start_revid_parent = revid
             break
         start_revid = revid
-    assert start_revid is not None
-    # Get commit builder but specify that target_branch_path should
-    # be created and copied from (copy_path, copy_revnum)
-    class ImaginaryBranch(object):
-        """Simple branch that pretends to be empty but already exist."""
-        def __init__(self, repository):
-            self.repository = repository
-            self._revision_history = None
+    rev = source.get_revision(start_revid)
+    if rev.parent_ids == []:
+        start_revid_parent = NULL_REVISION
+    else:
+        start_revid_parent = rev.parent_ids[0]
+    return push_revision_tree(graph, target_repository, target_branch_path, 
+                              target_repository.get_config(), 
+                              source, start_revid_parent, start_revid, 
+                              rev, push_metadata=push_metadata,
+                              append_revisions_only=append_revisions_only)
 
-        def _get_append_revisions_only(self):
-            return False
-
-        def get_config(self):
-            """See Branch.get_config()."""
-            return self.repository.get_config()
-
-        def revision_id_to_revno(self, revid):
-            if revid is NULL_REVISION:
-                return 0
-            return history.index(revid)
-
-        def last_revision_info(self):
-            """See Branch.last_revision_info()."""
-            last_revid = self.last_revision()
-            return (self.revision_id_to_revno(last_revid), last_revid)
-
-        def last_revision(self):
-            """See Branch.last_revision()."""
-            return start_revid_parent
-
-        def get_branch_path(self, revnum=None):
-            """See SvnBranch.get_branch_path()."""
-            return target_branch_path
-
-        def generate_revision_id(self, revnum):
-            """See SvnBranch.generate_revision_id()."""
-            return self.repository.generate_revision_id(
-                revnum, self.get_branch_path(revnum), 
-                self.repository.get_mapping())
-
-    push(target_repository.get_graph(), ImaginaryBranch(target_repository), source, start_revid, push_metadata=push_metadata)
 
 
 def dpush(target, source, stop_revision=None):
@@ -758,9 +723,24 @@ def dpush(target, source, stop_revision=None):
         source.unlock()
 
 
-def push_revision_tree(graph, target, config, source_repo, base_revid, 
+def push_revision_tree(graph, target_repo, branch_path, config, source_repo, base_revid, 
                        revision_id, rev, push_metadata=True,
                        append_revisions_only=True):
+    """Push a revision tree into a target repository.
+
+    :param graph: Repository graph.
+    :param target_repo: Target repository.
+    :param branch_path: Branch path.
+    :param config: Branch configuration.
+    :param source_repo: Source repository.
+    :param base_revid: Base revision id.
+    :param revision_id: Revision id to push.
+    :param rev: Revision object of revision to push.
+    :param push_metadata: Whether to push metadata.
+    :param append_revisions_only: Append revisions only.
+    :return: Revision id of newly created revision.
+    """
+    assert rev.revision_id in (None, revision_id)
     old_tree = source_repo.revision_tree(revision_id)
     base_tree = source_repo.revision_tree(base_revid)
 
@@ -773,14 +753,13 @@ def push_revision_tree(graph, target, config, source_repo, base_revid,
         opt_signature = source_repo.get_signature_text(rev.revision_id)
     except NoSuchRevision:
         opt_signature = None
-    builder = SvnCommitBuilder(target.repository, target.get_branch_path(), 
-                               base_revids,
+
+    builder = SvnCommitBuilder(target_repo, branch_path, base_revids,
                                config, rev.timestamp,
                                rev.timezone, rev.committer, rev.properties, 
                                revision_id, base_tree.inventory, 
                                push_metadata=push_metadata,
-                               graph=graph,
-                               opt_signature=opt_signature,
+                               graph=graph, opt_signature=opt_signature,
                                append_revisions_only=append_revisions_only)
                          
     replay_delta(builder, base_tree, old_tree)
@@ -788,7 +767,7 @@ def push_revision_tree(graph, target, config, source_repo, base_revid,
         revid = builder.commit(rev.message)
     except SubversionException, (_, num):
         if num == ERR_FS_TXN_OUT_OF_DATE:
-            raise DivergedBranches(source, target)
+            raise DivergedBranches(source, target_repo)
         raise
     except ChangesRootLHSHistory:
         raise BzrError("Unable to push revision %r because it would change the ordering of existing revisions on the Subversion repository root. Use rebase and try again or push to a non-root path" % revision_id)
@@ -821,7 +800,7 @@ def push(graph, target, source_repo, revision_id, push_metadata=True):
 
     source_repo.lock_read()
     try:
-        revid = push_revision_tree(graph, target, target.get_config(), 
+        revid = push_revision_tree(graph, target.repository, target.get_branch_path(), target.get_config(), 
                                    source_repo, base_revid, revision_id, 
                                    rev, push_metadata=push_metadata,
                                    append_revisions_only=target._get_append_revisions_only())
@@ -897,8 +876,8 @@ class InterToSvnRepository(InterRepository):
                     push_ancestors(self.target, self.source, layout, "", rev.parent_ids, graph,
                                    create_prefix=True)
 
-                push_revision_tree(graph, target_branch, target_config, 
-                                   self.source, parent_revid, revision_id, rev,
+                push_revision_tree(graph, target_branch.repository, target_branch.get_branch_path(), 
+                                   target_config, self.source, parent_revid, revision_id, rev,
                                    append_revisions_only=target_branch._get_append_revisions_only())
         finally:
             self.source.unlock()
@@ -927,7 +906,7 @@ def push_ancestors(target_repo, source_repo, layout, project, parent_revids, gra
             nick = (rev.properties.get('branch-nick') or "merged").encode("utf-8").replace("/","_")
             rhs_branch_path = layout.get_branch_path(nick, project)
             try:
-                push_new(target_repo, rhs_branch_path, source_repo, x)
+                push_new(graph, target_repo, rhs_branch_path, source_repo, x, append_revisions_only=False)
             except MissingPrefix, e:
                 if not create_prefix:
                     raise
@@ -935,7 +914,7 @@ def push_ancestors(target_repo, source_repo, layout, project, parent_revids, gra
                 if target_repo.transport.has_capability("commit-revprops"):
                     revprops[mapping.SVN_REVPROP_BZR_SKIP] = ""
                 create_branch_prefix(target_repo, revprops, e.path.split("/")[:-1], filter(lambda x: x != "", e.existing_path.split("/")))
-                push_new(target_repo, rhs_branch_path, source_repo, x)
+                push_new(graph, target_repo, rhs_branch_path, source_repo, x, append_revisions_only=False)
 
 
 def create_branch_prefix(repository, revprops, bp_parts, existing_bp_parts):
