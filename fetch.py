@@ -564,7 +564,7 @@ class TreeDeltaBuildEditor(DeltaBuildEditor):
         return self._idmap[path][0]
 
 
-def report_inventory_contents(reporter, inv, revnum, start_empty):
+def report_inventory_contents(reporter, revnum, start_empty):
     try:
         reporter.set_path("", revnum, start_empty)
     except:
@@ -680,6 +680,20 @@ class InterFromSvnRepository(InterRepository):
         """
         raise NotImplementedError(self._fetch_replay)
 
+    def _get_inventory(self, revid):
+        """Retrieve an inventory, optionally using a inventory previously 
+        cached.
+
+        :param revid: Revision id to use.
+        """
+        if revid == NULL_REVISION:
+            return Inventory(root_id=None)
+        if self._prev_inv is not None and self._prev_inv.revision_id == revid:
+            return self._prev_inv
+        if "validate" in debug.debug_flags:
+            assert self.target.has_revision(revid)
+        return self.target.get_inventory(revid)
+
     def _fetch_switch(self, repos_root, revids, pb=None):
         """Copy a set of related revisions using svn.ra.switch.
 
@@ -687,84 +701,67 @@ class InterFromSvnRepository(InterRepository):
                        newest first.
         :param pb: Optional progress bar.
         """
-        prev_revid = None
-        if pb is None:
-            pb = ui.ui_factory.nested_progress_bar()
-            nested_pb = pb
-        else:
-            nested_pb = None
-        prev_inv = None
+        self._prev_inv = None
 
-        try:
-            for num, (revmeta, mapping) in enumerate(revids):
-                revid = revmeta.get_revision_id(mapping)
-                assert revid != NULL_REVISION
-                pb.update('copying revision', num, len(revids))
+        for num, (revmeta, mapping) in enumerate(revids):
+            revid = revmeta.get_revision_id(mapping)
+            assert revid != NULL_REVISION
+            pb.update('copying revision', num, len(revids))
 
-                parent_revmeta = revmeta.get_lhs_parent_revmeta(mapping)
-                if parent_revmeta is None:
-                    parent_revid = NULL_REVISION
-                    parent_inv = Inventory(root_id=None)
-                else:
-                    parent_revid = parent_revmeta.get_revision_id(mapping)
-                    if prev_revid != parent_revid:
-                        if "validate" in debug.debug_flags:
-                            assert self.target.has_revision(parent_revid)
-                        parent_inv = self.target.get_inventory(parent_revid)
-                    else:
-                        parent_inv = prev_inv
+            parent_revmeta = revmeta.get_lhs_parent_revmeta(mapping)
+            if parent_revmeta is None:
+                parent_revid = NULL_REVISION
+            else:
+                parent_revid = parent_revmeta.get_revision_id(mapping)
 
-                assert parent_revid is not None and parent_revid != revid
+            assert parent_revid is not None and parent_revid != revid
 
-                if parent_revid == NULL_REVISION:
-                    parent_branch = revmeta.branch_path
-                    parent_revnum = revmeta.revnum
-                    start_empty = True
-                else:
-                    parent_branch = parent_revmeta.branch_path
-                    parent_revnum = parent_revmeta.revnum
-                    start_empty = False
+            if parent_revid == NULL_REVISION:
+                parent_branch = revmeta.branch_path
+                parent_revnum = revmeta.revnum
+                start_empty = True
+            else:
+                parent_branch = parent_revmeta.branch_path
+                parent_revnum = parent_revmeta.revnum
+                start_empty = False
 
-                if not self.target.is_in_write_group():
-                    self.target.start_write_group()
+            if not self.target.is_in_write_group():
+                self.target.start_write_group()
+            try:
+                editor = RevisionBuildEditor(self.source, self.target, revid, self._get_inventory(parent_revid), revmeta)
                 try:
-                    editor = RevisionBuildEditor(self.source, self.target, revid, parent_inv, revmeta)
+                    conn = None
                     try:
-                        conn = None
-                        try:
-                            conn = self.source.transport.get_connection(parent_branch)
+                        conn = self.source.transport.get_connection(parent_branch)
 
-                            assert revmeta.revnum > parent_revnum or start_empty
+                        assert revmeta.revnum > parent_revnum or start_empty
 
-                            if parent_branch != revmeta.branch_path:
-                                reporter = conn.do_switch(revmeta.revnum, "", True, 
-                                    _url_escape_uri(urlutils.join(repos_root, revmeta.branch_path)), 
-                                    editor)
-                            else:
-                                reporter = conn.do_update(revmeta.revnum, "", True, editor)
+                        if parent_branch != revmeta.branch_path:
+                            reporter = conn.do_switch(revmeta.revnum, "", True, 
+                                _url_escape_uri(urlutils.join(repos_root, revmeta.branch_path)), 
+                                editor)
+                        else:
+                            reporter = conn.do_update(revmeta.revnum, "", True, editor)
 
-                            report_inventory_contents(reporter, parent_inv, parent_revnum, start_empty)
-                        finally:
-                            if conn is not None:
-                                if not conn.busy:
-                                    self.source.transport.add_connection(conn)
-                    except:
-                        editor.abort()
-                        raise
+                        report_inventory_contents(reporter, parent_revnum, start_empty)
+                    finally:
+                        if conn is not None:
+                            if not conn.busy:
+                                self.source.transport.add_connection(conn)
                 except:
-                    if self.target.is_in_write_group():
-                        self.target.abort_write_group()
+                    editor.abort()
                     raise
-                if num % FETCH_COMMIT_WRITE_SIZE == 0:
-                    self.target.commit_write_group()
-
-                prev_inv = editor.inventory
-                prev_revid = revid
-            if self.target.is_in_write_group():
+            except:
+                if self.target.is_in_write_group():
+                    self.target.abort_write_group()
+                raise
+            if num % FETCH_COMMIT_WRITE_SIZE == 0:
                 self.target.commit_write_group()
-        finally:
-            if nested_pb is not None:
-                nested_pb.finished()
+
+            self._prev_inv = editor.inventory
+            assert self._prev_inv.revision_id == revid
+        if self.target.is_in_write_group():
+            self.target.commit_write_group()
 
     def fetch(self, revision_id=None, pb=None, find_ghosts=False, 
               branches=None):
@@ -797,7 +794,16 @@ class InterFromSvnRepository(InterRepository):
                 # Nothing to fetch
                 return
 
-            self._fetch_switch(self.source.transport.get_svn_repos_root(), needed, pb)
+            if pb is None:
+                pb = ui.ui_factory.nested_progress_bar()
+                nested_pb = pb
+            else:
+                nested_pb = None
+            try:
+                self._fetch_switch(self.source.transport.get_svn_repos_root(), needed, pb)
+            finally:
+                if nested_pb is not None:
+                    nested_pb.finished()
         finally:
             self.target.unlock()
 
