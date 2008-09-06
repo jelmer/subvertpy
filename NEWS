@@ -14,7 +14,7 @@ bzr-svn-0.5			UNRELEASED
 	   much more flexible. (#130372)
 
    * Will avoid browsing the full repository for bzr-revisions, 
-     only closely related paths.
+     only closely related paths. (#158657)
 
   FEATURES
 

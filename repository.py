@@ -613,6 +613,8 @@ class SvnRepository(Repository):
         pb = ui.ui_factory.nested_progress_bar()
         try:
             for (paths, revnum, revprops) in self._log.iter_changes(None, from_revnum, to_revnum, pb=pb):
+                if revprops is None:
+                    continue
                 if (self.transport.has_capability("log-revprops") and 
                     SVN_REVPROP_BZR_TAGS in revprops):
                     for name, revid in parse_tags_property(revprops[SVN_REVPROP_BZR_TAGS]):
