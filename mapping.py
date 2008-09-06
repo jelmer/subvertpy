@@ -728,7 +728,7 @@ def get_roundtrip_ancestor_revids(fileprops):
         for line in propvalue.splitlines():
             try:
                 (revno, revid) = parse_revid_property(line)
-            except svn_errors.InvalidPropertyValue, ie:
+                yield (revid, revno, mapping_name)
+            except errors.InvalidPropertyValue, ie:
                 mutter(str(ie))
-            yield (revid, revno, mapping_name)
 
