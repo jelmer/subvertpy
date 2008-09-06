@@ -38,6 +38,12 @@ def get_local_changes(paths, branch, mapping, layout, generate_revid,
     :param generate_revid: Function for generating revision id from svn revnum
     :param get_children: Function for obtaining the children of a path
     """
+    if (branch in paths and 
+        paths[branch][0] == 'A' and 
+        paths[branch][1] is None and get_children is None):
+        # Avoid finding all file ids if we're returning unusual 
+        # file ids only (get_children is None)
+        return {}
     new_paths = {}
     for p in sorted(paths.keys(), reverse=False):
         if not changes.path_is_child(branch, p):
