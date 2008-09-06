@@ -588,7 +588,6 @@ class InterFromSvnRepository(InterRepository):
         """Find all revisions from the source repository that are not 
         yet in the target repository.
         """
-        parents = {}
         meta_map = {}
         graph = self.source.get_graph()
         available_revs = set()
@@ -598,8 +597,7 @@ class InterFromSvnRepository(InterRepository):
             meta_map[revid] = revmeta
         missing = available_revs.difference(self.target.has_revisions(available_revs))
         needed = list(graph.iter_topo_order(missing))
-        parents = graph.get_parent_map(needed)
-        return [(revid, parents[revid][0], meta_map[revid]) for revid in needed]
+        return [(meta_map[revid], mapping) for revid in needed]
 
     def _find_branches(self, branches, find_ghosts=False, pb=None):
         set_needed = set()
@@ -637,7 +635,6 @@ class InterFromSvnRepository(InterRepository):
             revs = []
             meta_map = {}
             needed = []
-            lhs_parent = {}
             try:
                 (branch_path, revnum, mapping) = \
                     self.source.lookup_revision_id(revision_id)
@@ -650,7 +647,6 @@ class InterFromSvnRepository(InterRepository):
                               revnum-revmeta.revnum, revnum)
                 revid = revmeta.get_revision_id(mapping)
                 parent_ids = revmeta.get_parent_ids(mapping)
-                lhs_parent[revid] = parent_ids[0]
                 meta_map[revid] = revmeta
                 if revid in checked:
                     # This revision (and its ancestry) has already been checked
@@ -661,7 +657,7 @@ class InterFromSvnRepository(InterRepository):
                 elif not find_ghosts:
                     break
                 checked.add(revid)
-            return [(revid, lhs_parent[revid], meta_map[revid]) 
+            return [(meta_map[revid], mapping) 
                       for revid in reversed(revs)]
 
         needed = check_revid(revision_id)
@@ -698,32 +694,36 @@ class InterFromSvnRepository(InterRepository):
             nested_pb = pb
         else:
             nested_pb = None
-        num = 0
         prev_inv = None
 
         try:
-            for (revid, parent_revid, revmeta) in revids:
+            for num, (revmeta, mapping) in enumerate(revids):
+                revid = revmeta.get_revision_id(mapping)
                 assert revid != NULL_REVISION
                 pb.update('copying revision', num, len(revids))
 
-                assert parent_revid is not None and parent_revid != revid
-
-                if parent_revid == NULL_REVISION:
+                parent_revmeta = revmeta.get_lhs_parent_revmeta(mapping)
+                if parent_revmeta is None:
+                    parent_revid = NULL_REVISION
                     parent_inv = Inventory(root_id=None)
-                elif prev_revid != parent_revid:
-                    if "validate" in debug.debug_flags:
-                        assert self.target.has_revision(parent_revid)
-                    parent_inv = self.target.get_inventory(parent_revid)
                 else:
-                    parent_inv = prev_inv
+                    parent_revid = parent_revmeta.get_revision_id(mapping)
+                    if prev_revid != parent_revid:
+                        if "validate" in debug.debug_flags:
+                            assert self.target.has_revision(parent_revid)
+                        parent_inv = self.target.get_inventory(parent_revid)
+                    else:
+                        parent_inv = prev_inv
+
+                assert parent_revid is not None and parent_revid != revid
 
                 if parent_revid == NULL_REVISION:
                     parent_branch = revmeta.branch_path
                     parent_revnum = revmeta.revnum
                     start_empty = True
                 else:
-                    (parent_branch, parent_revnum, mapping) = \
-                            self.source.lookup_revision_id(parent_revid)
+                    parent_branch = parent_revmeta.branch_path
+                    parent_revnum = parent_revmeta.revnum
                     start_empty = False
 
                 if not self.target.is_in_write_group():
@@ -761,7 +761,6 @@ class InterFromSvnRepository(InterRepository):
 
                 prev_inv = editor.inventory
                 prev_revid = revid
-                num += 1
             if self.target.is_in_write_group():
                 self.target.commit_write_group()
         finally:
