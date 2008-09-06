@@ -692,26 +692,45 @@ class InterFromSvnRepository(InterRepository):
             self._get_inventory(revmeta.get_lhs_parent(mapping)), 
             revmeta)
 
-    def _fetch_revision_switch(self, editor, parent_branch, parent_revnum,
-                               current_branch, current_revnum, start_empty):
-        conn = None
+    def _fetch_revision_switch(self, editor, revmeta, parent_revmeta):
+        if parent_revmeta is None:
+            parent_branch = revmeta.branch_path
+            parent_revnum = revmeta.revnum
+            start_empty = True
+        else:
+            parent_branch = parent_revmeta.branch_path
+            parent_revnum = parent_revmeta.revnum
+            start_empty = False
+
+        conn = self.source.transport.get_connection(parent_branch)
         try:
-            conn = self.source.transport.get_connection(parent_branch)
+            assert revmeta.revnum > parent_revnum or start_empty
 
-            assert current_revnum > parent_revnum or start_empty
-
-            if parent_branch != current_branch:
-                reporter = conn.do_switch(current_revnum, "", True, 
-                    _url_escape_uri(urlutils.join(conn.get_repos_root()), current_branch)), 
+            if parent_branch != revmeta.branch_path:
+                reporter = conn.do_switch(revmeta.revnum, "", True, 
+                    _url_escape_uri(urlutils.join(conn.get_repos_root(), revmeta.branch_path)), 
                     editor)
             else:
-                reporter = conn.do_update(current_revnum, "", True, editor)
+                reporter = conn.do_update(revmeta.revnum, "", True, editor)
 
             report_inventory_contents(reporter, parent_revnum, start_empty)
         finally:
-            if conn is not None:
-                if not conn.busy:
-                    self.source.transport.add_connection(conn)
+            if not conn.busy:
+                self.source.transport.add_connection(conn)
+
+    def _fetch_revision_replay(self, editor, revmeta, parent_revmeta):
+        if parent_revmeta is None:
+            low_water_mark = 0
+        else:
+            low_water_mark = parent_revmeta.revnum
+        assert revmeta.revnum >= 0
+        assert low_water_mark >= 0
+        conn = self.source.transport.get_connection(revmeta.branch_path)
+        try:
+            conn.replay(revmeta.revnum, low_water_mark, editor, True)
+        finally:
+            if not conn.busy:
+                self.source.transport.add_connection(conn)
 
     def _fetch_revisions(self, revs, pb=None):
         """Copy a set of related revisions using svn.ra.switch.
@@ -725,27 +744,18 @@ class InterFromSvnRepository(InterRepository):
         for num, (revmeta, mapping) in enumerate(revs):
             revid = revmeta.get_revision_id(mapping)
             assert revid != NULL_REVISION
-            pb.update('copying revision', num, len(revs))
+            if pb is not None:
+                pb.update('copying revision', num, len(revs))
 
             parent_revmeta = revmeta.get_lhs_parent_revmeta(mapping)
-
-            if parent_revmeta is None:
-                parent_branch = revmeta.branch_path
-                parent_revnum = revmeta.revnum
-                start_empty = True
-            else:
-                parent_branch = parent_revmeta.branch_path
-                parent_revnum = parent_revmeta.revnum
-                start_empty = False
 
             if not self.target.is_in_write_group():
                 self.target.start_write_group()
             try:
                 editor = self._get_editor(revmeta, mapping)
                 try:
-                    self._fetch_revision_switch(editor, parent_branch, parent_revnum, 
-                                                revmeta.branch_path, revmeta.revnum,
-                                                start_empty)
+                    #self._fetch_revision_replay(editor, revmeta, parent_revmeta)
+                    self._fetch_revision_switch(editor, revmeta, parent_revmeta)
                 except:
                     editor.abort()
                     raise
