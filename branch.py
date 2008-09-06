@@ -164,7 +164,8 @@ class SvnBranch(Branch):
         :raises NoSuchRevision: If the revision id was not found.
         """
         (bp, revnum, mapping) = self.repository.lookup_revision_id(revid, 
-            ancestry=(self.get_branch_path(), self.get_revnum()))
+            ancestry=(self.get_branch_path(), self.get_revnum()), 
+            project=self.project)
         assert bp.strip("/") == self.get_branch_path(revnum).strip("/"), \
                 "Got %r, expected %r" % (bp, self.get_branch_path(revnum))
         return revnum

@@ -26,6 +26,9 @@ class RepositoryLayout(object):
     def __init__(self):
         pass
 
+    def supports_tags(self):
+        return True
+
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
 
@@ -220,6 +223,9 @@ class RootLayout(RepositoryLayout):
     def __init__(self):
         pass
 
+    def supports_tags(self):
+        return False
+
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
 
@@ -285,6 +291,9 @@ class CustomLayout(RepositoryLayout):
     def __init__(self, branches=[], tags=[]):
         self.branches = branches
         self.tags = tags
+
+    def supports_tags(self):
+        return (self.tags != [])
     
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.
@@ -359,6 +368,9 @@ class WildcardLayout(RepositoryLayout):
     def __init__(self, branches=[], tags=[]):
         self.branches = branches
         self.tags = tags
+
+    def supports_tags(self):
+        return (self.tags != [])
     
     def get_tag_path(self, name, project=""):
         """Return the path at which the tag with specified name should be found.

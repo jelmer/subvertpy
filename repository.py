@@ -374,13 +374,13 @@ class SvnRepository(Repository):
         ancestry.reverse()
         return ancestry
 
-    def has_revision(self, revision_id):
+    def has_revision(self, revision_id, project=None):
         """See Repository.has_revision()."""
         if revision_id is None:
             return True
 
         try:
-            (path, revnum, _) = self.lookup_revision_id(revision_id)
+            (path, revnum, _) = self.lookup_revision_id(revision_id, project=project)
         except NoSuchRevision:
             return False
 
@@ -419,7 +419,6 @@ class SvnRepository(Repository):
                 continue
 
             revmeta = self._revmeta_provider.get_revision(branch, revnum)
-
             parent_map[revision_id] = revmeta.get_parent_ids(mapping)
         return parent_map
 
@@ -690,6 +689,9 @@ class SvnRepository(Repository):
 
         if mapping is None:
             mapping = self.get_mapping()
+
+        if not layout.supports_tags():
+            return {}
 
         if not (layout, mapping) in self._cached_tags:
             self._cached_tags[layout,mapping] = self.find_tags_between(project=project,

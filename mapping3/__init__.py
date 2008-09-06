@@ -48,6 +48,9 @@ class SchemeDerivedLayout(RepositoryLayout):
     def get_tag_name(self, path, project=None):
         return path.split("/")[-1]
 
+    def supports_tags(self):
+        return (self.scheme.tag_list != [])
+
     def get_branches(self, repository, revnum, project=None, pb=None):
         return get_root_paths(repository, self.scheme.branch_list, revnum, self.scheme.is_branch, project, pb)
 

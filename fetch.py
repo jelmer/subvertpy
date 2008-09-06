@@ -376,14 +376,13 @@ class RevisionBuildEditor(DeltaBuildEditor):
     """Implementation of the Subversion commit editor interface that builds a 
     Bazaar revision.
     """
-    def __init__(self, source, target, revid, prev_inventory, revmeta):
+    def __init__(self, source, target, revid, prev_inventory, revmeta, mapping):
         self.target = target
         self.source = source
         self.texts = target.texts
         self.revid = revid
         self._text_revids = None
         self._premature_deletes = set()
-        mapping = self.source.lookup_revision_id(revid)[2]
         self.old_inventory = prev_inventory
         self.inventory = prev_inventory.copy()
         assert prev_inventory.root is None or self.inventory.root.revision == prev_inventory.root.revision
@@ -609,7 +608,7 @@ class InterFromSvnRepository(InterRepository):
             try:
                 nestedpb = ui.ui_factory.nested_progress_bar()
                 for rev in self._find_until(branch.last_revision(), find_ghosts=find_ghosts, 
-                                            pb=nestedpb, checked=checked):
+                                            pb=nestedpb, checked=checked, project=branch.project):
                     if rev[0] not in set_needed:
                         ret_needed.append(rev)
                         set_needed.add(rev[0])
@@ -618,7 +617,7 @@ class InterFromSvnRepository(InterRepository):
         return ret_needed
 
     def _find_until(self, revision_id, find_ghosts=False, pb=None,
-                    checked=None):
+                    checked=None, project=None):
         """Find all missing revisions until revision_id
 
         :param revision_id: Stop revision
@@ -631,11 +630,11 @@ class InterFromSvnRepository(InterRepository):
         if revision_id in checked:
             return []
         extra = list()
-        def check_revid(revision_id):
+        def check_revid(revision_id, project=None):
             revmetas = []
             try:
                 (branch_path, revnum, mapping) = \
-                    self.source.lookup_revision_id(revision_id)
+                    self.source.lookup_revision_id(revision_id, project=project)
             except NoSuchRevision:
                 return [] # Ghost
             for revmeta in self.source._revmeta_provider.iter_reverse_branch_changes(
@@ -648,7 +647,7 @@ class InterFromSvnRepository(InterRepository):
                 if revid in checked:
                     # This revision (and its ancestry) has already been checked
                     break
-                extra.extend(parent_ids[1:])
+                extra.extend([(p, project) for p in parent_ids[1:]])
                 if not self.target.has_revision(revid):
                     revmetas.append(revmeta)
                 elif not find_ghosts:
@@ -656,12 +655,12 @@ class InterFromSvnRepository(InterRepository):
                 checked.add(revid)
             return [(revmeta, mapping) for revmeta in reversed(revmetas)]
 
-        needed = check_revid(revision_id)
+        needed = check_revid(revision_id, project)
 
         while len(extra) > 0:
-            revid = extra.pop()
+            revid, project = extra.pop()
             if revid not in checked:
-                needed += check_revid(revid)
+                needed += check_revid(revid, project)
 
         return needed
 
@@ -687,7 +686,7 @@ class InterFromSvnRepository(InterRepository):
         return RevisionBuildEditor(self.source, self.target, 
             revmeta.get_revision_id(mapping), 
             self._get_inventory(revmeta.get_lhs_parent(mapping)), 
-            revmeta)
+            revmeta, mapping)
 
     def _fetch_revision_switch(self, editor, revmeta, parent_revmeta):
         if parent_revmeta is None:
