@@ -390,55 +390,33 @@ class SvnWorkingTree(WorkingTree):
         self.base_revid = revid
         self.base_tree = None
 
-        # TODO: Implement more efficient version
-        newrev = self.branch.repository.get_revision(revid)
-        newrevtree = self.branch.repository.revision_tree(revid)
-        svn_revprops = self.branch.repository._log.revprop_list(rev)
-
-        def update_settings(wc, path):
-            id = newrevtree.inventory.path2id(path)
-            mutter("Updating settings for %r", id)
-            revnum = self.branch.lookup_revision_id(
-                    newrevtree.inventory[id].revision)
-
-            if newrevtree.inventory[id].kind != 'directory':
-                return
-
-            entries = wc.entries_read(True)
-            for name, entry in entries.items():
-                if name == "":
-                    continue
-
-                wc.process_committed(self.abspath(path).rstrip("/"), 
-                              False, self.branch.lookup_revision_id(newrevtree.inventory[id].revision),
-                              svn_revprops[properties.PROP_REVISION_DATE], 
-                              svn_revprops.get(properties.PROP_REVISION_AUTHOR, ""))
-
-                child_path = os.path.join(path, name.decode("utf-8"))
-
-                fileid = newrevtree.inventory.path2id(child_path)
-
-                if newrevtree.inventory[fileid].kind == 'directory':
-                    subwc = WorkingCopy(wc, self.abspath(child_path).rstrip("/"), write_lock=True)
-                    try:
-                        update_settings(subwc, child_path)
-                    finally:
-                        subwc.close()
-
-        # Set proper version for all files in the wc
-        wc = self._get_wc(write_lock=True)
-        try:
-            wc.process_committed(self.basedir,
-                          False, self.branch.lookup_revision_id(newrevtree.inventory.root.revision),
-                          svn_revprops[properties.PROP_REVISION_DATE], 
-                          svn_revprops.get(properties.PROP_REVISION_AUTHOR, ""))
-            update_settings(wc, "")
-        finally:
-            wc.close()
+        self.client_ctx.update([self.basedir.encode("utf-8")], self.base_revnum, True)
 
     def set_parent_trees(self, parents_list, allow_leftmost_as_ghost=False):
         """See MutableTree.set_parent_trees."""
         self.set_parent_ids([rev for (rev, tree) in parents_list])
+
+    def set_parent_ids(self, parent_ids):
+        super(SvnWorkingTree, self).set_parent_ids(parent_ids)
+        if parent_ids == [] or parent_ids[0] == NULL_REVISION:
+            merges = []
+        else:
+            merges = parent_ids[1:]
+        adm = self._get_wc(write_lock=True)
+        try:
+            svk_merges = parse_svk_features(self._get_svk_merges(self._get_base_branch_props()))
+
+            # Set svk:merge
+            for merge in merges:
+                try:
+                    svk_merges.add(_revision_id_to_svk_feature(merge))
+                except InvalidRevisionId:
+                    pass
+
+            adm.prop_set(SVN_PROP_SVK_MERGE, 
+                         serialize_svk_features(svk_merges), self.basedir)
+        finally:
+            adm.close()
 
     def smart_add(self, file_list, recurse=True, action=None, save=True):
         assert isinstance(recurse, bool)

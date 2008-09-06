@@ -548,7 +548,7 @@ class TestWorkingTree(SubversionTestCase):
         self.assertEqual(
                 tree.branch.generate_revision_id(1),
                 tree.basis_tree().get_revision_id())
-        delta = tree.basis_tree().changes_from(tree.branch.repository.revision_tree(tree.branch.generate_revision_id(1)))
+        delta = tree.basis_tree().changes_from(tree.branch.repository.revision_tree(tree.branch.generate_revision_id(0)))
         self.assertTrue(delta.has_changed())
         tree = WorkingTree.open("dc")
         delta = tree.basis_tree().changes_from(tree)
