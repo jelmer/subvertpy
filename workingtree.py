@@ -33,7 +33,6 @@ from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 from bzrlib.plugins.svn import core, properties
 from bzrlib.plugins.svn.auth import create_auth_baton
 from bzrlib.plugins.svn.branch import SvnBranch
-from bzrlib.plugins.svn.client import Client
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import ERR_FS_TXN_OUT_OF_DATE, ERR_ENTRY_EXISTS, ERR_WC_PATH_NOT_FOUND, ERR_WC_NOT_DIRECTORY, NotSvnBranchPath
@@ -89,7 +88,6 @@ class SvnWorkingTree(WorkingTree):
         self.bzrdir = bzrdir
         self._branch = branch
         self.base_revnum = 0
-        self.client_ctx = Client(auth=create_auth_baton(bzrdir.svn_url))
 
         self._get_wc()
         max_rev = revision_status(self.basedir, None, True)[1]
@@ -390,8 +388,6 @@ class SvnWorkingTree(WorkingTree):
         self.base_revid = revid
         self.base_tree = None
 
-        self.client_ctx.update([self.basedir.encode("utf-8")], self.base_revnum, True)
-
     def set_parent_trees(self, parents_list, allow_leftmost_as_ghost=False):
         """See MutableTree.set_parent_trees."""
         self.set_parent_ids([rev for (rev, tree) in parents_list])
@@ -613,6 +609,78 @@ class SvnWorkingTree(WorkingTree):
                 return inv[file_id].executable
             # Default to not executable
             return False
+
+    def update_basis_by_delta(self, new_revid, delta):
+        """Update the parents of this tree after a commit.
+
+        This gives the tree one parent, with revision id new_revid. The
+        inventory delta is applied to the current basis tree to generate the
+        inventory for the parent new_revid, and all other parent trees are
+        discarded.
+
+        All the changes in the delta should be changes synchronising the basis
+        tree with some or all of the working tree, with a change to a directory
+        requiring that its contents have been recursively included. That is,
+        this is not a general purpose tree modification routine, but a helper
+        for commit which is not required to handle situations that do not arise
+        outside of commit.
+
+        :param new_revid: The new revision id for the trees parent.
+        :param delta: An inventory delta (see apply_inventory_delta) describing
+            the changes from the current left most parent revision to new_revid.
+        """
+        rev = self.branch.lookup_revision_id(new_revid)
+        self.base_revnum = rev
+        self.base_revid = new_revid
+        self.base_tree = None
+
+        # TODO: Implement more efficient version
+        newrev = self.branch.repository.get_revision(new_revid)
+        newrevtree = self.branch.repository.revision_tree(new_revid)
+        svn_revprops = self.branch.repository._log.revprop_list(rev)
+
+        def update_settings(wc, path):
+            id = newrevtree.inventory.path2id(path)
+            mutter("Updating settings for %r", id)
+            revnum = self.branch.lookup_revision_id(
+                    newrevtree.inventory[id].revision)
+
+            if newrevtree.inventory[id].kind != 'directory':
+                return
+
+            entries = wc.entries_read(True)
+            for name, entry in entries.items():
+                if name == "":
+                    continue
+
+                wc.process_committed(self.abspath(path).rstrip("/"), 
+                              False, self.branch.lookup_revision_id(newrevtree.inventory[id].revision),
+                              svn_revprops[properties.PROP_REVISION_DATE], 
+                              svn_revprops.get(properties.PROP_REVISION_AUTHOR, ""))
+
+                child_path = os.path.join(path, name.decode("utf-8"))
+
+                fileid = newrevtree.inventory.path2id(child_path)
+
+                if newrevtree.inventory[fileid].kind == 'directory':
+                    subwc = WorkingCopy(wc, self.abspath(child_path).rstrip("/"), write_lock=True)
+                    try:
+                        update_settings(subwc, child_path)
+                    finally:
+                        subwc.close()
+
+        # Set proper version for all files in the wc
+        wc = self._get_wc(write_lock=True)
+        try:
+            wc.process_committed(self.basedir,
+                          False, self.branch.lookup_revision_id(newrevtree.inventory.root.revision),
+                          svn_revprops[properties.PROP_REVISION_DATE], 
+                          svn_revprops.get(properties.PROP_REVISION_AUTHOR, ""))
+            update_settings(wc, "")
+        finally:
+            wc.close()
+
+        self.set_parent_ids([new_revid])
 
 
 class SvnWorkingTreeFormat(WorkingTreeFormat):
