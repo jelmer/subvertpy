@@ -70,19 +70,25 @@ class RevisionMetadata(object):
         return "<RevisionMetadata for revision %d in repository %s>" % (self.revnum, repr(self.uuid))
 
     def changes_branch_root(self):
+        """Check whether the branch root was modified in this revision.
+        """
         if self.knows_changed_fileprops():
             return self.get_changed_fileprops() != {}
         return self.branch_path in self.get_paths()
 
     def get_paths(self):
+        """Fetch the changed paths dictionary for this revision.
+        """
         if self._paths is None:
             self._paths = self._log.get_revision_paths(self.revnum)
         return self._paths
 
     def get_revision_id(self, mapping):
+        """Determine the revision id for this revision.
+        """
         if mapping.roundtripping:
             # See if there is a bzr:revision-id revprop set
-            (bzr_revno, revid) = mapping.get_revision_id(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
+            (_, revid) = mapping.get_revision_id(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
         else:
             revid = None
 
@@ -93,31 +99,38 @@ class RevisionMetadata(object):
         return revid
 
     def get_fileprops(self):
+        """Get the file properties set on the branch root.
+        """
         if self._fileprops is None:
             self._fileprops = self._get_fileprops_fn(self.branch_path, self.revnum)
         return self._fileprops
 
     def get_revprops(self):
+        """Get the revision properties set on the revision."""
         if self._revprops is None:
             self._revprops = self._log.revprop_list(self.revnum)
 
         return self._revprops
 
     def knows_changed_fileprops(self):
+        """Check whether the changed file properties can be cheaply retrieved."""
         if self._changed_fileprops is None:
             return False
         changed_fileprops = self.get_changed_fileprops()
         return isinstance(changed_fileprops, dict) or changed_fileprops.is_loaded
 
     def knows_fileprops(self):
+        """Check whether the file properties can be cheaply retrieved."""
         fileprops = self.get_fileprops()
         return isinstance(fileprops, dict) or fileprops.is_loaded
 
     def knows_revprops(self):
+        """Check whether all revision properties can be cheaply retrieved."""
         revprops = self.get_revprops()
         return isinstance(revprops, dict) or revprops.is_loaded
 
     def get_previous_fileprops(self):
+        """Return the file properties set on the branch root before this revision."""
         prev = changes.find_prev_location(self.get_paths(), self.branch_path, self.revnum)
         if prev is None:
             return {}
@@ -125,6 +138,7 @@ class RevisionMetadata(object):
         return self._get_fileprops_fn(prev_path, prev_revnum)
 
     def get_changed_fileprops(self):
+        """Determine the file properties changed in this revision."""
         if self._changed_fileprops is None:
             if self.changes_branch_root():
                 self._changed_fileprops = logwalker.lazy_dict({}, properties.diff, self.get_fileprops(), self.get_previous_fileprops())
@@ -150,6 +164,7 @@ class RevisionMetadata(object):
         return nm
 
     def get_lhs_parent(self, mapping):
+        """Find the revid of the left hand side parent of this revision."""
         # Sometimes we can retrieve the lhs parent from the revprop data
         lhs_parent = mapping.get_lhs_parent(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
         if lhs_parent is not None:
@@ -169,6 +184,7 @@ class RevisionMetadata(object):
         return estimate_bzr_ancestors(self.get_fileprops())
 
     def estimate_svk_fileprop_ancestors(self):
+        """Estimate how many svk ancestors this revision has."""
         if self.metabranch is not None and not self.metabranch.consider_svk_fileprops(self):
             # This revisions descendant doesn't have svk fileprops set, so this one can't have them either.
             return 0
@@ -181,6 +197,8 @@ class RevisionMetadata(object):
         return is_bzr_revision_fileprops(self.get_changed_fileprops())
 
     def is_hidden(self, mapping):
+        if not mapping.supports_hidden:
+            return False
         if self.is_bzr_revision():
             return mapping.is_bzr_revision_hidden(self.get_revprops(), self.get_changed_fileprops())
         return False
