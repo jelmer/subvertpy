@@ -82,12 +82,7 @@ class RevisionMetadata(object):
     def get_revision_id(self, mapping):
         if mapping.roundtripping:
             # See if there is a bzr:revision-id revprop set
-            try:
-                (bzr_revno, revid) = mapping.get_revision_id(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
-            except core.SubversionException, (_, num):
-                if num == svn_errors.ERR_FS_NO_SUCH_REVISION:
-                    raise errors.NoSuchRevision(path, revnum)
-                raise
+            (bzr_revno, revid) = mapping.get_revision_id(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
         else:
             revid = None
 
@@ -186,7 +181,9 @@ class RevisionMetadata(object):
         return is_bzr_revision_fileprops(self.get_changed_fileprops())
 
     def is_hidden(self, mapping):
-        return mapping.is_bzr_revision_hidden(self.get_revprops(), self.get_changed_fileprops())
+        if self.is_bzr_revision():
+            return mapping.is_bzr_revision_hidden(self.get_revprops(), self.get_changed_fileprops())
+        return False
 
     def is_bzr_revision(self):
         """Determine (with as few network requests as possible) if this is a bzr revision.
@@ -232,6 +229,19 @@ class RevisionMetadata(object):
                 ret.append(revid)
 
         return tuple(ret)
+
+    def get_distance_to_null(self, mapping):
+        if mapping.roundtripping:
+            (bzr_revno, _) = mapping.get_revision_id(self.branch_path, self.get_revprops(), 
+                                                             self.get_changed_fileprops())
+            if bzr_revno is not None:
+                return bzr_revno
+        revno = 0
+        revmeta = self
+        while revmeta is not None:
+            revno+=1
+            revmeta = revmeta.get_lhs_parent_revmeta(mapping)
+        return revno
 
     def get_rhs_parents(self, mapping):
         """Determine the right hand side parents for this revision.

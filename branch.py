@@ -35,6 +35,7 @@ from bzrlib.plugins.svn.repository import SvnRepository
 from bzrlib.plugins.svn.tags import SubversionTags
 from bzrlib.plugins.svn.transport import bzr_to_svn_url
 
+import itertools
 import os
 
 class SvnBranch(Branch):
@@ -125,7 +126,7 @@ class SvnBranch(Branch):
         return self.last_revmeta().revnum
 
     def last_revmeta(self):
-        return self._revision_meta_history()[0]
+        return self._revision_meta_history().next()
 
     def check(self):
         """See Branch.Check.
@@ -279,8 +280,12 @@ class SvnBranch(Branch):
  
     def last_revision_info(self):
         """See Branch.last_revision_info()."""
-        last_revid = self.last_revision()
-        return self.revision_id_to_revno(last_revid), last_revid
+        last_revmeta = self.last_revmeta()
+        last_revid = last_revmeta.get_revision_id(self.mapping)
+        last_revno = last_revmeta.get_distance_to_null(self.mapping)
+        if last_revno is None:
+            last_revno = self.revision_id_to_revno(last_revid)
+        return last_revno, last_revid
 
     def revision_id_to_revno(self, revision_id):
         """Given a revision id, return its revno"""
@@ -289,7 +294,7 @@ class SvnBranch(Branch):
         revmeta_history = self._revision_meta_history()
         for revmeta in revmeta_history:
             if revmeta.get_revision_id(self.mapping) == revision_id:
-                return len(revmeta_history) - revmeta_history.index(revmeta)
+                return revmeta.get_distance_to_null(self.mapping)
         raise NoSuchRevision(self, revision_id)
 
     def get_root_id(self, revnum=None):
@@ -312,10 +317,10 @@ class SvnBranch(Branch):
         if self._revmeta_cache is None:
             pb = ui.ui_factory.nested_progress_bar()
             try:
-                self._revmeta_cache = [revmeta for revmeta in self.repository._revmeta_provider.get_mainline(self.get_branch_path(), self.repository.get_latest_revnum(), self.mapping, pb=pb) if not revmeta.is_hidden(self.mapping)]
+                self._revmeta_cache = self.repository._revmeta_provider.get_mainline(self.get_branch_path(), self.repository.get_latest_revnum(), self.mapping, pb=pb)
             finally:
                 pb.finished()
-        return self._revmeta_cache
+        return itertools.ifilter(lambda revmeta: not revmeta.is_hidden(self.mapping), self._revmeta_cache)
 
     def _gen_revision_history(self):
         """Generate the revision history from last revision
