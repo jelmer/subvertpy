@@ -64,7 +64,7 @@ class SvnBranch(Branch):
         assert isinstance(self._branch_path, str)
         if not _skip_check:
             try:
-                revnum = self.get_revnum()
+                revnum = self.repository.get_latest_revnum()
                 if self.repository.transport.check_path(self._branch_path, 
                     revnum) != core.NODE_DIR:
                     raise NotBranchError(self.base)
@@ -107,12 +107,13 @@ class SvnBranch(Branch):
         if revnum is None:
             return self._branch_path
 
-        if revnum == self.get_revnum():
-            return self._branch_path
+        last_revmeta = self.last_revmeta()
+        if revnum == last_revmeta.revnum:
+            return last_revmeta.branch_path
 
         # Use revnum - this branch may have been moved in the past 
         return self.repository.transport.get_locations(
-                    self._branch_path, self.get_revnum(), 
+                    last_revmeta.branch_path, last_revmeta.revnum,
                     [revnum])[revnum].strip("/")
 
     def get_revnum(self):
@@ -121,14 +122,10 @@ class SvnBranch(Branch):
 
         :return: Revision number
         """
-        if self._lock_mode == 'r' and self._cached_revnum:
-            return self._cached_revnum
-        latest_revnum = self.repository.get_latest_revnum()
-        self._cached_revnum = self.repository._log.find_latest_change(
-            self.get_branch_path(), latest_revnum)
-        if self._cached_revnum is None:
-            raise NotBranchError(self.base)
-        return self._cached_revnum
+        return self.last_revmeta().revnum
+
+    def last_revmeta(self):
+        return self._revision_meta_history()[0]
 
     def check(self):
         """See Branch.Check.
@@ -315,7 +312,7 @@ class SvnBranch(Branch):
         if self._revmeta_cache is None:
             pb = ui.ui_factory.nested_progress_bar()
             try:
-                self._revmeta_cache = [revmeta for revmeta in self.repository._revmeta_provider.get_mainline(self.get_branch_path(), self.get_revnum(), self.mapping, pb=pb) if not revmeta.is_hidden(self.mapping)]
+                self._revmeta_cache = [revmeta for revmeta in self.repository._revmeta_provider.get_mainline(self.get_branch_path(), self.repository.get_latest_revnum(), self.mapping, pb=pb) if not revmeta.is_hidden(self.mapping)]
             finally:
                 pb.finished()
         return self._revmeta_cache
@@ -323,13 +320,7 @@ class SvnBranch(Branch):
     def _gen_revision_history(self):
         """Generate the revision history from last revision
         """
-        pb = ui.ui_factory.nested_progress_bar()
-        try:
-            history = []
-            for revmeta in self._revision_meta_history():
-                history.append(revmeta.get_revision_id(self.mapping))
-        finally:
-            pb.finished()
+        history = [revmeta.get_revision_id(self.mapping) for revmeta in self._revision_meta_history()]
         history.reverse()
         return history
 
@@ -337,7 +328,7 @@ class SvnBranch(Branch):
         """See Branch.last_revision()."""
         # Shortcut for finding the tip. This avoids expensive generation time
         # on large branches.
-        return self.generate_revision_id(self.get_revnum())
+        return self.last_revmeta().get_revision_id(self.mapping)
 
     @needs_write_lock
     def dpull(self, source, stop_revision=None):
