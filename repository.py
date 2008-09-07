@@ -593,11 +593,11 @@ class SvnRepository(Repository):
             tags = {}
         assert from_revnum <= to_revnum
         pb = ui.ui_factory.nested_progress_bar()
-        if project is None:
+        # FIXME: Use something compatible with CachingLogWalker
+        if project is None or getattr(self._log, "cache", None) is not None:
             prefixes = [""]
         else:
-            # FIXME: Use prefixes = layout.get_project_prefixes(project)
-            prefixes = [""]
+            prefixes = layout.get_project_prefixes(project)
         try:
             for (paths, revnum, revprops) in self._log.iter_changes(prefixes, from_revnum, to_revnum, pb=pb):
                 if revprops is None:
