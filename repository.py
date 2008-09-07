@@ -611,8 +611,12 @@ class SvnRepository(Repository):
             tags = {}
         assert from_revnum <= to_revnum
         pb = ui.ui_factory.nested_progress_bar()
+        if project is None:
+            prefixes = [""]
+        else:
+            prefixes = layout.get_project_prefixes(project)
         try:
-            for (paths, revnum, revprops) in self._log.iter_changes(None, from_revnum, to_revnum, pb=pb):
+            for (paths, revnum, revprops) in self._log.iter_changes(prefixes, from_revnum, to_revnum, pb=pb):
                 if revprops is None:
                     continue
                 if (self.transport.has_capability("log-revprops") and 
