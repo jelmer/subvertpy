@@ -3,20 +3,19 @@ mappingv4:
  - allow skipping a revision completely - to allow creating branches using "svn cp"
  - create schemes from layouts rather than the other way around
   + remove Mapping.get_guessed_layout()
+- fix update_after_commit test
+- fix text parents
 
-- generate deltas rather than fulltexts when creating file id maps
-- fix working trees
-
-tests:
-- more blackbox tests
- - svn-import without scheme specified should guess
+more tests:
+- Run all tests against repository with revprop changing allowed and without
 - performance tests (count roundtrips?)
+- bzr:hidden
+- bzr svn-set-revprops
 
-.svn working trees:
-- implement apply_inventory_delta()
-
-- Needs more tests
- - Run all tests against repository with revprop changing allowed and without
+performance:
+- generate deltas rather than fulltexts when creating file id maps
+- use replay and replay range to fetch revisions
+- implement SvnWorkingTree.apply_inventory_delta()
 
 for other things to do, see:
 

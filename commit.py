@@ -653,6 +653,32 @@ def replay_delta(builder, old_tree, new_tree):
     builder.finish_inventory()
 
 
+def create_branch_with_hidden_commit(repository, branch_path, revid, deletefirst=False):
+    revprops = {properties.PROP_REVISION_LOG: "Create new branch."}
+    revmeta, mapping = repository._get_revmeta(revid)
+    fileprops = dict(revmeta.get_fileprops().items())
+    mapping.export_hidden(revprops, fileprops)
+    parent = urlutils.dirname(branch_path)
+    conn = repository.transport.get_connection(parent)
+    try:
+        ci = conn.get_commit_editor(revprops)
+        try:
+            root = ci.open_root()
+            if deletefirst:
+                root.delete_entry(urlutils.basename(branch_path))
+            branch_dir = root.add_directory(urlutils.basename(branch_path), urlutils.join(repository.base, revmeta.branch_path), revmeta.revnum)
+            for k, v in properties.diff(fileprops, revmeta.get_fileprops()).items():
+                branch_dir.change_prop(k, v)
+            branch_dir.close()
+            root.close()
+        except:
+            ci.abort()
+            raise
+        ci.close()
+    finally:
+        repository.transport.add_connection(conn)
+
+
 def push_new(graph, target_repository, target_branch_path, source, stop_revision,
              push_metadata=True, append_revisions_only=False):
     """Push a revision into Subversion, creating a new branch.
@@ -675,7 +701,12 @@ def push_new(graph, target_repository, target_branch_path, source, stop_revision
         start_revid_parent = NULL_REVISION
     else:
         start_revid_parent = rev.parent_ids[0]
-    return push_revision_tree(graph, target_repository, target_branch_path, 
+    # If this is just intended to create a new branch
+    mapping = target_repository.get_mapping()
+    if (stop_revision != NULL_REVISION and stop_revision == start_revid and mapping.supports_hidden):
+        create_branch_with_hidden_commit(target_repository, target_branch_path, start_revid, mapping)
+    else:
+        return push_revision_tree(graph, target_repository, target_branch_path, 
                               target_repository.get_config(), 
                               source, start_revid_parent, start_revid, 
                               rev, push_metadata=push_metadata,

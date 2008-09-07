@@ -261,7 +261,7 @@ class SvnRepository(Repository):
             yield self.get_revision_delta(revision)
 
     def get_revision_delta(self, revision):
-        parentrevmeta = self._revmeta_provider.branch_prev_location(revision.svn_meta, revision.svn_mapping)
+        parentrevmeta = revision.svn_meta.get_lhs_parent_revmeta(revision.svn_mapping)
         from bzrlib.plugins.svn.fetch import TreeDeltaBuildEditor
         if parentrevmeta is None:
             parentfileidmap = {}
@@ -334,6 +334,8 @@ class SvnRepository(Repository):
         if layout is None:
             layout = self.get_layout()
         for revmeta in self._revmeta_provider.iter_all_changes(layout, mapping, self.get_latest_revnum()):
+            if revmeta.is_hidden(mapping):
+                continue
             yield revmeta.get_revision_id(mapping)
 
     def set_make_working_trees(self, new_value):
@@ -360,6 +362,8 @@ class SvnRepository(Repository):
         for revmeta in self._revmeta_provider.iter_reverse_branch_changes(branch_path, revnum, to_revnum=0, 
                                                         mapping=mapping, pb=pb, 
                                                         limit=limit):
+            if revmeta.is_hidden(mapping):
+                continue
             yield revmeta.get_revision_id(mapping)
 
     def get_ancestry(self, revision_id, topo_sorted=True):
@@ -414,22 +418,27 @@ class SvnRepository(Repository):
                 continue
 
             try:
-                (branch, revnum, mapping) = self.lookup_revision_id(ensure_null(revision_id))
+                revmeta, mapping = self._get_revmeta(ensure_null(revision_id))
             except NoSuchRevision:
                 continue
+            else:
+                parent_map[revision_id] = revmeta.get_parent_ids(mapping)
 
-            revmeta = self._revmeta_provider.get_revision(branch, revnum)
-            parent_map[revision_id] = revmeta.get_parent_ids(mapping)
         return parent_map
+
+    def _get_revmeta(self, revision_id):
+        (branch, revnum, mapping) = self.lookup_revision_id(revision_id)
+        revmeta = self._revmeta_provider.get_revision(branch, revnum)
+        return revmeta, mapping
 
     def get_revision(self, revision_id):
         """See Repository.get_revision."""
         if not revision_id or not isinstance(revision_id, str):
             raise InvalidRevisionId(revision_id=revision_id, branch=self)
 
-        (path, revnum, mapping) = self.lookup_revision_id(revision_id)
+        revmeta, mapping = self._get_revmeta(revision_id)
         
-        return self._revmeta_provider.get_revision(path, revnum).get_revision(mapping)
+        return revmeta.get_revision(mapping)
 
     def get_revisions(self, revision_ids):
         """See Repository.get_revisions()."""

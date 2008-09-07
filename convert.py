@@ -190,6 +190,8 @@ def convert_repository(source_repos, output_url, layout=None,
                                                                        to_revnum, from_revnum,
                                                                        project=project):
                     pb.update("determining revisions to fetch", to_revnum-revmeta.revnum, to_revnum)
+                    if revmeta.is_hidden(mapping):
+                        continue
                     if target_repos is not None and not target_repos.has_revision(revmeta.get_revision_id(mapping)):
                         revmetas.append(revmeta)
                     if not revmeta.branch_path in existing_branches:

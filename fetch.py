@@ -591,6 +591,8 @@ class InterFromSvnRepository(InterRepository):
         graph = self.source.get_graph()
         available_revs = set()
         for revmeta in self.source._revmeta_provider.iter_all_changes(self.source.get_layout(), mapping=mapping, from_revnum=self.source.get_latest_revnum(), pb=pb):
+            if revmeta.is_hidden(mapping):
+                continue
             revid = revmeta.get_revision_id(mapping)
             available_revs.add(revid)
             meta_map[revid] = revmeta
@@ -642,6 +644,8 @@ class InterFromSvnRepository(InterRepository):
                 if pb:
                     pb.update("determining revisions to fetch", 
                               revnum-revmeta.revnum, revnum)
+                if revmeta.is_hidden(mapping):
+                    continue
                 revid = revmeta.get_revision_id(mapping)
                 parent_ids = revmeta.get_parent_ids(mapping)
                 if revid in checked:

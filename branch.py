@@ -315,7 +315,7 @@ class SvnBranch(Branch):
         if self._revmeta_cache is None:
             pb = ui.ui_factory.nested_progress_bar()
             try:
-                self._revmeta_cache = self.repository._revmeta_provider.get_mainline(self.get_branch_path(), self.get_revnum(), self.mapping, pb=pb)
+                self._revmeta_cache = [revmeta for revmeta in self.repository._revmeta_provider.get_mainline(self.get_branch_path(), self.get_revnum(), self.mapping, pb=pb) if not revmeta.is_hidden(self.mapping)]
             finally:
                 pb.finished()
         return self._revmeta_cache

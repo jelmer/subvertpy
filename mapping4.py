@@ -33,6 +33,7 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     roundtripping = True
     can_use_revprops = True
     can_use_fileprops = True
+    supports_hidden = True
 
     def __init__(self, layout=None):
         self.name = "v4"
@@ -149,3 +150,18 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
 
     def get_mandated_layout(self, repository):
         return self.layout
+
+    def is_bzr_revision_hidden(self, revprops, changed_fileprops):
+        if revprops.has_key(mapping.SVN_REVPROP_BZR_HIDDEN):
+            return True
+        if (changed_fileprops.has_key(mapping.SVN_PROP_BZR_HIDDEN) and 
+            changed_fileprops.get(mapping.SVN_PROP_BZR_HIDDEN) is not None):
+            return True
+        return False
+
+    def export_hidden(self, revprops, fileprops):
+        if revprops is not None:
+            revprops[mapping.SVN_REVPROP_BZR_HIDDEN] = ""
+            return
+        old_value = fileprops.get(mapping.SVN_PROP_BZR_HIDDEN, "0")
+        fileprops[mapping.SVN_PROP_BZR_HIDDEN] = str(int(old_value)+1)

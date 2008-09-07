@@ -33,6 +33,7 @@ SVN_PROP_BZR_REVISION_ID = 'bzr:revision-id:'
 SVN_PROP_BZR_TEXT_PARENTS = 'bzr:text-parents'
 SVN_PROP_BZR_LOG = 'bzr:log'
 SVN_PROP_BZR_REQUIRED_FEATURES = 'bzr:required-features'
+SVN_PROP_BZR_HIDDEN = 'bzr:hidden'
 
 SVN_REVPROP_BZR_COMMITTER = 'bzr:committer'
 SVN_REVPROP_BZR_FILEIDS = 'bzr:file-ids'
@@ -49,6 +50,7 @@ SVN_REVPROP_BZR_TEXT_PARENTS = 'bzr:text-parents'
 SVN_REVPROP_BZR_REQUIRED_FEATURES = 'bzr:required-features'
 SVN_REVPROP_BZR_BASE_REVISION = 'bzr:base-revision'
 SVN_REVPROP_BZR_SKIP = 'bzr:skip'
+SVN_REVPROP_BZR_HIDDEN = 'bzr:hidden'
 SVN_REVPROP_BZR_TAGS = 'bzr:tags'
 
 
@@ -285,6 +287,7 @@ class BzrSvnMapping(foreign.VcsMapping):
     roundtripping = False
     can_use_revprops = False
     can_use_fileprops = False
+    supports_hidden = False
 
     def __init__(self):
         if (version_info[3] == 'exp' or self.experimental) and not BzrSvnMapping._warned_experimental:
@@ -431,6 +434,12 @@ class BzrSvnMapping(foreign.VcsMapping):
     @classmethod
     def get_test_instance(cls):
         return cls()
+
+    def is_bzr_revision_hidden(self, revprops, changed_fileprops):
+        return False
+
+    def export_hidden(self, revprops, fileprops):
+        raise NotImplementedError(self.export_hidden)
 
 
 def parse_fileid_property(text):
@@ -672,7 +681,7 @@ mapping_registry.register_lazy('v3', 'bzrlib.plugins.svn.mapping3',
 mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4', 
                                'BzrSvnMappingv4',
                                'Fourth format (bzr-svn 0.5.x)')
-mapping_registry.set_default('v3')
+mapping_registry.set_default('v4')
 
 def find_mapping(revprops, fileprops):
     if SVN_REVPROP_BZR_MAPPING_VERSION in revprops:

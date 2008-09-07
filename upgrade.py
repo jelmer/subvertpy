@@ -269,7 +269,7 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
                 continue
             assert old_mapping.can_use_revprops or bp is not None
             new_revprops = dict(revprops.items())
-            revmeta = repository._revmeta(bp, changes, revnum, revprops, fileprops)
+            revmeta = repository._revmeta_provider.get_revision(bp, revnum, changes, revprops, fileprops)
             rev = revmeta.get_revision(old_mapping)
             revno = graph.find_distance_to_null(rev.revision_id, [])
             assert bp is not None

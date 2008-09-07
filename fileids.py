@@ -168,6 +168,8 @@ class FileIdMap(object):
         try:
             for i, revmeta in enumerate(reversed(todo)):
                 pb.update('generating file id map', i, len(todo))
+                if revmeta.is_hidden(mapping):
+                    continue
                 revid = revmeta.get_revision_id(mapping)
                 (idmap, changes) = self.apply_changes(revmeta, 
                         mapping, self.repos._log.find_children)
@@ -261,6 +263,8 @@ class CachingFileIdMap(object):
             pb = ui.ui_factory.nested_progress_bar()
             for revmeta in self.repos._revmeta_provider.iter_reverse_branch_changes(branch, revnum, to_revnum=0, mapping=mapping):
                 pb.update("fetching changes for file ids", revnum-revmeta.revnum, revnum)
+                if revmeta.is_hidden(mapping):
+                    continue
                 revid = revmeta.get_revision_id(mapping)
                 try:
                     map = self.cache.load(revid)
