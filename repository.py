@@ -596,7 +596,8 @@ class SvnRepository(Repository):
         if project is None:
             prefixes = [""]
         else:
-            prefixes = layout.get_project_prefixes(project)
+            # FIXME: Use prefixes = layout.get_project_prefixes(project)
+            prefixes = [""]
         try:
             for (paths, revnum, revprops) in self._log.iter_changes(prefixes, from_revnum, to_revnum, pb=pb):
                 if revprops is None:

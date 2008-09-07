@@ -175,7 +175,7 @@ def convert_repository(source_repos, output_url, layout=None,
         # just listing the branches in HEAD, so avoid it if possible.
         # If there's more than one subdirectory (we always have .bzr), we may 
         # have to remove existing branches.
-        if (not keep and len(to_transport.list_dir(".")) > 1):
+        if (not keep and to_transport.has(".") and len(to_transport.list_dir(".")) > 1):
             removed_branches = source_repos.find_deleted_branches_between(layout=layout, 
                 from_revnum=from_revnum, to_revnum=to_revnum, project=project)
         else:
