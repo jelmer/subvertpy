@@ -238,7 +238,7 @@ class CachingLogWalker(CacheTable):
         """
         assert isinstance(path, str)
         assert isinstance(revnum, int) and revnum >= 0
-        self.fetch_revisions(revnum)
+        self._fetch_revisions(revnum)
 
         self.mutter("latest change: %r:%r", path, revnum)
         revnum = self.cache.find_latest_change(path.strip("/"), revnum)
@@ -273,7 +273,7 @@ class CachingLogWalker(CacheTable):
 
         assert from_revnum >= to_revnum or path == ""
 
-        self.fetch_revisions(max(from_revnum, to_revnum), pb=pb)
+        self._fetch_revisions(max(from_revnum, to_revnum), pb=pb)
         i = 0
 
         while ((not ascending and revnum >= to_revnum) or
@@ -312,13 +312,13 @@ class CachingLogWalker(CacheTable):
     def get_revision_paths(self, revnum):
         if revnum == 0:
             return {'': ('A', None, -1)}
-        self.fetch_revisions(revnum)
+        self._fetch_revisions(revnum)
 
         return self.cache.get_revision_paths(revnum)
 
     def revprop_list(self, revnum):
         self.mutter('revprop list: %d' % revnum)
-        self.fetch_revisions(revnum)
+        self._fetch_revisions(revnum)
 
         if revnum > 0:
             has_all_revprops = self.cache.has_all_revprops(revnum)
@@ -339,7 +339,7 @@ class CachingLogWalker(CacheTable):
         self.cache.commit()
         return revprops
 
-    def fetch_revisions(self, to_revnum=None, pb=None):
+    def _fetch_revisions(self, to_revnum=None, pb=None):
         """Fetch information about all revisions in the remote repository
         until to_revnum.
 
