@@ -178,6 +178,8 @@ def convert_repository(source_repos, output_url, layout=None,
         if (not keep and len(to_transport.list_dir(".")) > 1):
             removed_branches = source_repos.find_deleted_branches_between(layout=layout, 
                 from_revnum=from_revnum, to_revnum=to_revnum, project=project)
+        else:
+            removed_branches = []
         mapping = source_repos.get_mapping()
         if from_revnum > 0:
             revmetas = []
