@@ -663,7 +663,7 @@ class SvnRepository(Repository):
                             del newpaths[p]
                             if not changes.changes_path(newpaths, p, False) and layout.is_branch(cf):
                                 tp = cf
-                                tr = int(self.transport.get_dir(cf, cr)[2][properties.PROP_ENTRY_COMMITTED_REV])
+                                tr = self._log.find_latest_change(cf, cr)
                             tag_changes[p] = self.generate_revision_id(tr, tp, mapping)
                         else:
                             tag_changes[bp] = self._revmeta_provider.get_revision(bp, revnum, revprops=revprops).get_revision_id(mapping)
