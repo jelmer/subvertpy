@@ -770,7 +770,7 @@ class InterFromSvnRepository(InterRepository):
             self.target.commit_write_group()
 
     def fetch(self, revision_id=None, pb=None, find_ghosts=False, 
-              branches=None):
+              branches=None, revmetas=None, mapping=None):
         """Fetch revisions. """
         if revision_id == NULL_REVISION:
             return
@@ -789,7 +789,9 @@ class InterFromSvnRepository(InterRepository):
         try:
             nested_pb = ui.ui_factory.nested_progress_bar()
             try:
-                if branches is not None:
+                if revmetas is not None:
+                    needed = [(revmeta, mapping) for revmeta in revmetas]
+                elif branches is not None:
                     needed = self._find_branches(branches, find_ghosts, 
                                 pb=nested_pb)
                 elif revision_id is None:

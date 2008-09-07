@@ -546,9 +546,8 @@ class SvnRepository(Repository):
             raise errors.RevpropChangeFailed(SVN_REVPROP_BZR_SIGNATURE)
 
     @needs_read_lock
-    def find_branches_between(self, layout, from_revnum, to_revnum, project=None):
+    def find_deleted_branches_between(self, layout, from_revnum, to_revnum, project=None):
         deleted = set()
-        created = set()
         if project is not None:
             prefixes = layout.get_project_prefixes(project)
         else:
@@ -558,44 +557,18 @@ class SvnRepository(Repository):
             for (paths, revnum, revprops) in self._log.iter_changes(prefixes, from_revnum, to_revnum):
                 pb.update("finding branches", revnum, to_revnum)
                 for p in paths:
-                    if layout.is_branch_parent(p, project):
-                        if paths[p][0] in ('R', 'D'):
-                            deleted.add(p)
-                        elif paths[p][1] is not None:
-                            parents = [p]
-                            while parents:
-                                p = parents.pop()
-                                try:
-                                    for c in self.transport.get_dir(p, revnum)[0].keys():
-                                        n = p+"/"+c
-                                        if layout.is_branch(n, project):
-                                            created.add(n)
-                                        elif layout.is_branch_parent(n, project):
-                                            parents.append(n)
-                                except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
-                                    pass
-                    try:
-                        (pt, bp, rp) = layout.split_project_path(p, project)
-                        if pt == "branch":
-                            if paths[p][0] != 'D' or rp != "":
-                                created.add(bp)
-                            elif paths[p][0] == 'D' and rp == "":
-                                deleted.add(bp)
-                    except errors.NotBranchError:
-                        pass
-                    except errors.InvalidSvnBranchPath:
-                        pass
+                    if ((layout.is_branch_parent(p, project) or layout.is_branch(p, project)) and 
+                            paths[p][0] in ('R', 'D')):
+                        deleted.add(p)
         finally:
             pb.finished()
-        return deleted, created
+        return deleted
 
     @needs_read_lock
-    def find_branches(self, using=False, layout=None, revnum=None):
+    def find_branches(self, layout=None, revnum=None):
         """Find branches underneath this repository.
 
         This will include branches inside other branches.
-
-        :param using: If True, list only branches using this repository.
         """
         from bzrlib.plugins.svn.branch import SvnBranch # avoid circular imports
         # All branches use this repository, so the using argument can be 
