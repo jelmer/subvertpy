@@ -272,7 +272,7 @@ class cmd_svn_import(Command):
 
         from_repos.lock_read()
         try:
-            (guessed_overall_layout, guessed_layout) = repository_guess_layout(from_repos, 
+            (guessed_overall_layout, _) = repository_guess_layout(from_repos, 
                 from_repos.get_latest_revnum())
 
             if prefix is not None:
@@ -297,9 +297,6 @@ class cmd_svn_import(Command):
                     not branch.get_branch_path().startswith(prefix)):
                     return False
                 return True
-
-            if layout is None:
-                layout = guessed_layout
 
             convert_repository(from_repos, to_location, layout, 
                                not standalone, trees, all, 

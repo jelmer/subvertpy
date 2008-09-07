@@ -549,35 +549,44 @@ class SvnRepository(Repository):
     def find_branches_between(self, layout, from_revnum, to_revnum, project=None):
         deleted = set()
         created = set()
-        for (paths, revnum, revprops) in self._log.iter_changes(None, from_revnum, to_revnum):
-            for p in paths:
-                if layout.is_branch_parent(p):
-                    if paths[p][0] in ('R', 'D'):
-                        deleted.add(p)
-                    elif paths[p][1] is not None:
-                        parents = [p]
-                        while parents:
-                            p = parents.pop()
-                            try:
-                                for c in self.transport.get_dir(p, revnum)[0].keys():
-                                    n = p+"/"+c
-                                    if layout.is_branch(n):
-                                        created.add(n)
-                                    elif layout.is_branch_parent(n):
-                                        parents.append(n)
-                            except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
-                                pass
-                try:
-                    (pt, bp, rp) = layout.split_project_path(p, project)
-                    if pt == "branch":
-                        if paths[p][0] != 'D' or rp != "":
-                            created.add(bp)
-                        elif paths[p][0] == 'D' and rp == "":
-                            deleted.add(bp)
-                except errors.NotBranchError:
-                    pass
-                except errors.InvalidSvnBranchPath:
-                    pass
+        if project is not None:
+            prefixes = layout.get_project_prefixes(project)
+        else:
+            prefixes = None
+        pb = ui.ui_factory.nested_progress_bar()
+        try:
+            for (paths, revnum, revprops) in self._log.iter_changes(prefixes, from_revnum, to_revnum):
+                pb.update("finding branches", revnum, to_revnum)
+                for p in paths:
+                    if layout.is_branch_parent(p, project):
+                        if paths[p][0] in ('R', 'D'):
+                            deleted.add(p)
+                        elif paths[p][1] is not None:
+                            parents = [p]
+                            while parents:
+                                p = parents.pop()
+                                try:
+                                    for c in self.transport.get_dir(p, revnum)[0].keys():
+                                        n = p+"/"+c
+                                        if layout.is_branch(n, project):
+                                            created.add(n)
+                                        elif layout.is_branch_parent(n, project):
+                                            parents.append(n)
+                                except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
+                                    pass
+                    try:
+                        (pt, bp, rp) = layout.split_project_path(p, project)
+                        if pt == "branch":
+                            if paths[p][0] != 'D' or rp != "":
+                                created.add(bp)
+                            elif paths[p][0] == 'D' and rp == "":
+                                deleted.add(bp)
+                    except errors.NotBranchError:
+                        pass
+                    except errors.InvalidSvnBranchPath:
+                        pass
+        finally:
+            pb.finished()
         return deleted, created
 
     @needs_read_lock

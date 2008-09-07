@@ -178,11 +178,16 @@ def convert_repository(source_repos, output_url, layout=None,
             removed_branches, changed_branches = source_repos.find_branches_between(layout=layout, 
                 from_revnum=from_revnum, to_revnum=to_revnum, project=None)
             existing_branches = []
-            for bp in changed_branches:
-                try:
-                    existing_branches.append(SvnBranch(source_repos, bp))
-                except NotBranchError: # Skip non-directories
-                    pass
+            pb = ui.ui_factory.nested_progress_bar()
+            try:
+                for i, bp in enumerate(changed_branches):
+                    pb.update("opening changed branches", i, len(changed_branches))
+                    try:
+                        existing_branches.append(SvnBranch(source_repos, bp))
+                    except NotBranchError: # Skip non-directories
+                        pass
+            finally:
+                pb.finished()
         else:
             existing_branches = source_repos.find_branches(layout=layout, revnum=to_revnum)
 
