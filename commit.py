@@ -154,6 +154,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         self.branch_path = branch_path
         self.push_metadata = push_metadata
         self._append_revisions_only = append_revisions_only
+        self._text_parents = {}
 
         # Gather information about revision on top of which the commit is 
         # happening
@@ -448,7 +449,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                     old_inv.id2path(child_ie.file_id) != new_child_path or
                     old_inv[child_ie.file_id].revision != child_ie.revision or
                     old_inv[child_ie.file_id].parent_id != child_ie.parent_id):
-                    ret.append((child_ie.file_id, new_child_path, child_ie.revision))
+                    ret.append((child_ie.file_id, new_child_path, child_ie.revision, self._text_parents[child_ie.file_id]))
 
                 if (child_ie.kind == 'directory' and 
                     child_ie.file_id in self.visit_dirs):
@@ -457,19 +458,23 @@ class SvnCommitBuilder(RootCommitBuilder):
 
         fileids = {}
         text_parents = {}
+        text_revisions = {}
         changes = []
 
         if (self.old_inv.root is None or 
             self.new_inventory.root.file_id != self.old_inv.root.file_id):
-            changes.append((self.new_inventory.root.file_id, "", self.new_inventory.root.revision))
+            changes.append((self.new_inventory.root.file_id, "", self.new_inventory.root.revision, self._text_parents[self.new_inventory.root.file_id]))
 
         changes += _dir_process_file_id(self.old_inv, self.new_inventory, "", self.new_inventory.root.file_id)
 
-        for id, path, revid in changes:
+        for id, path, revid, parents in changes:
             fileids[path] = id
             if revid is not None and revid != self.base_revid and revid != self._new_revision_id:
-                text_parents[path] = revid
-        return (fileids, text_parents)
+                text_revisions[path] = revid
+            if ((id not in self.old_inv and parents != []) or 
+                (id in self.old_inv and parents != [self.base_revid])):
+                text_parents[path] = parents
+        return (fileids, text_revisions, text_parents)
 
     def commit(self, message):
         """Finish the commit.
@@ -490,8 +495,9 @@ class SvnCommitBuilder(RootCommitBuilder):
         self._changed_fileprops = {}
 
         if self.push_metadata:
-            (fileids, text_parents) = self._determine_texts_identity()
+            (fileids, text_revisions, text_parents) = self._determine_texts_identity()
 
+            self.base_mapping.export_text_revisions(text_revisions, self._svn_revprops, self._svnprops)
             self.base_mapping.export_text_parents(text_parents, self._svn_revprops, self._svnprops)
             self.base_mapping.export_fileid_map(fileids, self._svn_revprops, self._svnprops)
             if self._config.get_log_strip_trailing_newline():
@@ -619,6 +625,10 @@ class SvnCommitBuilder(RootCommitBuilder):
                 accessed when the entry has a revision of None - that is when 
                 it is a candidate to commit.
         """
+        self._text_parents[ie.file_id] = []
+        for parent_inv in parent_invs:
+            if ie.file_id in parent_inv:
+                self._text_parents[ie.file_id].append(parent_inv[ie.file_id].revision)
         self.new_inventory.add(ie)
         assert (ie.file_id not in self.old_inv or 
                 self.old_inv[ie.file_id].revision is not None)

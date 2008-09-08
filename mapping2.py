@@ -76,6 +76,9 @@ class BzrSvnMappingv1(BzrSvnMapping):
     def import_text_parents(self, revprops, fileprops):
         return {}
 
+    def import_text_revisions(self, svn_revprops, fileprops):
+        return {}
+
     def get_rhs_parents(self, branch_path, revprops, fileprops):
         value = fileprops.get(SVN_PROP_BZR_MERGE, "")
         if value == "":

@@ -227,9 +227,11 @@ class DirectoryRevisionBuildEditor(DirectoryBuildEditor):
             assert self.editor.revid is not None
             ie.revision = self.editor.revid
 
+            text_revision = self.editor._get_text_revid(self.path) or ie.revision
+            text_parents = self.editor._get_text_parents(self.path) or self.parent_revids
             self.editor.texts.add_lines(
-                (self.new_id, self.editor._get_text_revid(self.path) or ie.revision),
-                [(self.new_id, revid) for revid in self.parent_revids], [])
+                (self.new_id, text_revision),
+                [(self.new_id, revid) for revid in text_parents], [])
 
         if self.new_id == self.editor.inventory.root.file_id:
             assert self.editor.inventory.root.revision is not None
@@ -340,8 +342,10 @@ class FileRevisionBuildEditor(FileBuildEditor):
         actual_checksum = md5_strings(lines)
         assert checksum is None or checksum == actual_checksum
 
-        self.editor.texts.add_lines((self.file_id, self.editor._get_text_revid(self.path) or self.editor.revid), 
-                [(self.file_id, revid) for revid in self.file_parents], lines)
+        text_revision = self.editor._get_text_revid(self.path) or self.editor.revid
+        text_parents = self.editor._get_text_parents(self.path) or self.file_parents
+        self.editor.texts.add_lines((self.file_id, text_revision), 
+            [(self.file_id, revid) for revid in text_parents], lines)
 
         if self.is_special is not None:
             self.is_symlink = (self.is_special and len(lines) > 0 and lines[0].startswith("link "))
@@ -382,6 +386,7 @@ class RevisionBuildEditor(DeltaBuildEditor):
         self.texts = target.texts
         self.revid = revid
         self._text_revids = None
+        self._text_parents = None
         self._premature_deletes = set()
         self.old_inventory = prev_inventory
         self.inventory = prev_inventory.copy()
@@ -470,10 +475,13 @@ class RevisionBuildEditor(DeltaBuildEditor):
 
     def _get_text_revid(self, path):
         if self._text_revids is None:
-            self._text_revids = self.mapping.import_text_parents(self.revmeta.get_revprops(), 
-                                                                 self.revmeta.get_changed_fileprops())
+            self._text_revids = self.mapping.import_text_revisions(self.revmeta.get_revprops(), self.revmeta.get_changed_fileprops())
         return self._text_revids.get(path)
 
+    def _get_text_parents(self, path):
+        if self._text_parents is None:
+            self._text_parents = self.mapping.import_text_parents(self.revmeta.get_revprops(), self.revmeta.get_changed_fileprops())
+        return self._text_parents.get(path)
 
 
 class FileTreeDeltaBuildEditor(FileBuildEditor):

@@ -30,6 +30,7 @@ SVN_PROP_BZR_ANCESTRY = 'bzr:ancestry:'
 SVN_PROP_BZR_FILEIDS = 'bzr:file-ids'
 SVN_PROP_BZR_REVISION_INFO = 'bzr:revision-info'
 SVN_PROP_BZR_REVISION_ID = 'bzr:revision-id:'
+SVN_PROP_BZR_TEXT_REVISIONS = 'bzr:text-revisions'
 SVN_PROP_BZR_TEXT_PARENTS = 'bzr:text-parents'
 SVN_PROP_BZR_LOG = 'bzr:log'
 SVN_PROP_BZR_REQUIRED_FEATURES = 'bzr:required-features'
@@ -47,6 +48,7 @@ SVN_REVPROP_BZR_SIGNATURE = 'bzr:gpg-signature'
 SVN_REVPROP_BZR_TIMESTAMP = 'bzr:timestamp'
 SVN_REVPROP_BZR_LOG = 'bzr:log'
 SVN_REVPROP_BZR_TEXT_PARENTS = 'bzr:text-parents'
+SVN_REVPROP_BZR_TEXT_REVISIONS = 'bzr:text-revisions'
 SVN_REVPROP_BZR_REQUIRED_FEATURES = 'bzr:required-features'
 SVN_REVPROP_BZR_BASE_REVISION = 'bzr:base-revision'
 SVN_REVPROP_BZR_SKIP = 'bzr:skip'
@@ -419,6 +421,12 @@ class BzrSvnMapping(foreign.VcsMapping):
         """
         raise NotImplementedError(self.export_text_parents)
 
+    def export_text_revisions(self, text_revisions, revprops, fileprops):
+        raise NotImplementedError(self.export_text_revisions)
+
+    def import_text_revisions(self, revprops, fileprops):
+        raise NotImplementedError(self.import_text_revisions)
+
     def export_revision(self, branch_root, timestamp, timezone, committer, revprops, revision_id, revno, parent_ids, svn_revprops, svn_fileprops):
         """Determines the revision properties and branch root file 
         properties.
@@ -467,13 +475,26 @@ def generate_fileid_property(fileids):
 def parse_text_parents_property(text):
     ret = {}
     for line in text.splitlines():
-        (entry, parent_revid) = line.split("\t", 1)
-        ret[urllib.unquote(entry)] = osutils.safe_revision_id(parent_revid)
+        parts = line.split("\t")
+        entry = parts[0]
+        ret[urllib.unquote(entry)] = filter(lambda x: x != "", [osutils.safe_revision_id(parent_revid) for parent_revid in parts[1:]])
+    return ret
+
+
+def parse_text_revisions_property(text):
+    ret = {}
+    for line in text.splitlines():
+        (entry, revid) = line.split("\t", 1)
+        ret[urllib.unquote(entry)] = osutils.safe_revision_id(revid)
     return ret
 
 
 def generate_text_parents_property(text_parents):
-    return "".join(["%s\t%s\n" % (urllib.quote(path.encode("utf-8")), text_parents[path]) for path in sorted(text_parents.keys())])
+    return "".join(["%s\t%s\n" % (urllib.quote(path.encode("utf-8")), "\t".join(text_parents[path])) for path in sorted(text_parents.keys())])
+
+
+def generate_text_revisions_property(text_revisions):
+    return "".join(["%s\t%s\n" % (urllib.quote(path.encode("utf-8")), text_revisions[path]) for path in sorted(text_revisions.keys())])
 
 
 class BzrSvnMappingFileProps(object):
@@ -488,6 +509,12 @@ class BzrSvnMappingFileProps(object):
         if metadata is not None:
             parse_revision_metadata(metadata, rev)
 
+    def import_text_revisions(self, svn_revprops, fileprops):
+        metadata = fileprops.get(SVN_PROP_BZR_TEXT_REVISIONS)
+        if metadata is None:
+            return {}
+        return parse_text_revisions_property(metadata)
+
     def import_text_parents(self, svn_revprops, fileprops):
         metadata = fileprops.get(SVN_PROP_BZR_TEXT_PARENTS)
         if metadata is None:
@@ -499,6 +526,12 @@ class BzrSvnMappingFileProps(object):
             fileprops[SVN_PROP_BZR_TEXT_PARENTS] = generate_text_parents_property(text_parents)
         elif SVN_PROP_BZR_TEXT_PARENTS in fileprops:
             fileprops[SVN_PROP_BZR_TEXT_PARENTS] = ""
+
+    def export_text_revisions(self, text_revisions, svn_revprops, fileprops):
+        if text_revisions != {}:
+            fileprops[SVN_PROP_BZR_TEXT_REVISIONS] = generate_text_revisions_property(text_revisions)
+        elif SVN_PROP_BZR_TEXT_REVISIONS in fileprops:
+            fileprops[SVN_PROP_BZR_TEXT_REVISIONS] = ""
 
     def get_rhs_parents(self, branch_path, revprops, fileprops):
         bzr_merges = fileprops.get(SVN_PROP_BZR_ANCESTRY+self.name, None)
@@ -590,6 +623,15 @@ class BzrSvnMappingRevProps(object):
     def export_text_parents(self, text_parents, svn_revprops, fileprops):
         if text_parents != {}:
             svn_revprops[SVN_REVPROP_BZR_TEXT_PARENTS] = generate_text_parents_property(text_parents)
+
+    def import_text_revisions(self, svn_revprops, fileprops):
+        if not svn_revprops.has_key(SVN_REVPROP_BZR_TEXT_REVISIONS):
+            return {}
+        return parse_text_revisions_property(svn_revprops[SVN_REVPROP_BZR_TEXT_REVISIONS])
+
+    def export_text_revisions(self, text_revisions, svn_revprops, fileprops):
+        if text_revisions != {}:
+            svn_revprops[SVN_REVPROP_BZR_TEXT_REVISIONS] = generate_text_revisions_property(text_revisions)
 
     def get_lhs_parent(self, branch_parent, svn_revprops, fileprops):
         return svn_revprops.get(SVN_REVPROP_BZR_BASE_REVISION)

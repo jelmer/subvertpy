@@ -115,7 +115,7 @@ class MetadataMarshallerTests(TestCase):
 
 class ParseTextParentsTestCase(TestCase):
     def test_text_parents(self):
-        self.assertEquals({"bla": "bloe"}, parse_text_parents_property("bla\tbloe\n"))
+        self.assertEquals({"bla": ["bloe"]}, parse_text_parents_property("bla\tbloe\n"))
 
     def test_text_parents_empty(self):
         self.assertEquals({}, parse_text_parents_property(""))
@@ -126,7 +126,7 @@ class GenerateTextParentsTestCase(TestCase):
         self.assertEquals("", generate_text_parents_property({}))
 
     def test_generate_simple(self):
-        self.assertEquals("bla\tbloe\n", generate_text_parents_property({"bla": "bloe"}))
+        self.assertEquals("bla\tbloe\n", generate_text_parents_property({"bla": ["bloe"]}))
 
 
 class ParseMergePropertyTestCase(TestCase):

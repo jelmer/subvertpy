@@ -276,8 +276,8 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
             new_mapping.export_revision(bp, rev.timestamp, rev.timezone, rev.committer, rev.properties, rev.revision_id, revno, rev.parent_ids, new_revprops, None)
             new_mapping.export_fileid_map(old_mapping.import_fileid_map(revprops, fileprops), 
                 new_revprops, None)
-            new_mapping.export_text_parents(old_mapping.import_text_parents(revprops, fileprops),
-                new_revprops, None)
+            new_mapping.export_text_parents(old_mapping.import_text_parents(revprops, fileprops), new_revprops, None)
+            new_mapping.export_text_revisions(old_mapping.import_text_revisions(revprops, fileprops), new_revprops, None)
             if rev.message != mapping.parse_svn_log(revprops.get(properties.PROP_REVISION_LOG)):
                 new_mapping.export_message(rev.message, new_revprops, None)
             changed_revprops = dict(filter(lambda (k,v): k not in revprops or revprops[k] != v, new_revprops.items()))
