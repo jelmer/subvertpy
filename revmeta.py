@@ -131,7 +131,14 @@ class RevisionMetadata(object):
 
     def get_previous_fileprops(self):
         """Return the file properties set on the branch root before this revision."""
-        prev = changes.find_prev_location(self.get_paths(), self.branch_path, self.revnum)
+        # Perhaps the metabranch already has the parent?
+        prev = None
+        if self.metabranch is not None:
+            parentrevmeta = self.metabranch.get_lhs_parent(self)
+            if parentrevmeta is not None:
+                prev = (parentrevmeta.branch_path, parentrevmeta.revnum)
+        if prev is None:
+            prev = changes.find_prev_location(self.get_paths(), self.branch_path, self.revnum)
         if prev is None:
             return {}
         (prev_path, prev_revnum) = prev
@@ -178,14 +185,14 @@ class RevisionMetadata(object):
         """Estimate how many ancestors with bzr file properties this revision has.
 
         """
-        if self.metabranch is not None and not self.metabranch.consider_bzr_fileprops(self):
+        if not self.consider_bzr_fileprops():
             # This revisions descendant doesn't have bzr fileprops set, so this one can't have them either.
             return 0
         return estimate_bzr_ancestors(self.get_fileprops())
 
     def estimate_svk_fileprop_ancestors(self):
         """Estimate how many svk ancestors this revision has."""
-        if self.metabranch is not None and not self.metabranch.consider_svk_fileprops(self):
+        if not self.consider_svk_fileprops():
             # This revisions descendant doesn't have svk fileprops set, so this one can't have them either.
             return 0
         return estimate_svk_ancestors(self.get_fileprops())
@@ -199,7 +206,7 @@ class RevisionMetadata(object):
     def is_hidden(self, mapping):
         if not mapping.supports_hidden:
             return False
-        if self.is_bzr_revision():
+        if self.consider_bzr_fileprops() or self.consider_bzr_revprops():
             return mapping.is_bzr_revision_hidden(self.get_revprops(), self.get_changed_fileprops())
         return False
 
@@ -211,10 +218,10 @@ class RevisionMetadata(object):
         # If the server already sent us all revprops, look at those first
         if self._log.quick_revprops:
             order.append(self.is_bzr_revision_revprops)
-        if self.metabranch is None or self.metabranch.consider_bzr_fileprops(self) == True:
+        if self.consider_bzr_fileprops():
             order.append(self.is_bzr_revision_fileprops)
         # Only look for revprops if they could've been committed
-        if (not self._log.quick_revprops and self.check_revprops):
+        if (not self._log.quick_revprops and self.consider_bzr_revprops()):
             order.append(self.is_bzr_revision_revprops)
         for fn in order:
             ret = fn()
@@ -226,6 +233,9 @@ class RevisionMetadata(object):
         return mapping.get_rhs_parents(self.branch_path, self.get_revprops(), self.get_changed_fileprops())
 
     def get_svk_merges(self, mapping):
+        if not self.consider_svk_fileprops():
+            return ()
+
         if not self.changes_branch_root():
             return ()
 
@@ -254,12 +264,16 @@ class RevisionMetadata(object):
                                                              self.get_changed_fileprops())
             if bzr_revno is not None:
                 return bzr_revno
-        revno = 0
-        revmeta = self
-        while revmeta is not None:
-            revno+=1
-            revmeta = revmeta.get_lhs_parent_revmeta(mapping)
-        return revno
+        return None
+
+    def get_hidden_lhs_ancestors_count(self, mapping):
+        if not mapping.supports_hidden:
+            return 0
+        count = self.mapping.get_hidden_lhs_ancestors_count(self.get_fileprops())
+        if count is not None:
+            return count
+        # FIXME: Count number of lhs ancestor revisions with bzr:hidden set
+        return 0
 
     def get_rhs_parents(self, mapping):
         """Determine the right hand side parents for this revision.
@@ -301,10 +315,19 @@ class RevisionMetadata(object):
     def get_fileid_map(self, mapping):
         return mapping.import_fileid_map(self.get_revprops(), self.get_changed_fileprops())
 
+    def consider_bzr_fileprops(self):
+        return self.metabranch is None or self.metabranch.consider_bzr_fileprops(self)
+
+    def consider_bzr_revprops(self):
+        return self.check_revprops
+
+    def consider_svk_fileprops(self):
+        return self.metabranch is None or self.metabranch.consider_svk_fileprops(self)
+
     def get_roundtrip_ancestor_revids(self):
-        if self.metabranch is not None and not self.metabranch.consider_bzr_fileprops(self):
+        if not self.consider_bzr_fileprops():
             # This revisions descendant doesn't have bzr fileprops set, so this one can't have them either.
-            return 0
+            return iter([])
         return iter(get_roundtrip_ancestor_revids(self.get_fileprops()))
 
     def __hash__(self):
@@ -375,7 +398,7 @@ class RevisionMetadataBranch(object):
         this revmeta.
         """
         i = self._revs.index(revmeta)
-        for desc in self._revs[:i]:
+        for desc in reversed(self._revs[:i]):
             if desc.knows_fileprops():
                 return (desc.estimate_bzr_fileprop_ancestors() > 0)
         # assume the worst
@@ -386,7 +409,7 @@ class RevisionMetadataBranch(object):
         this revmeta.
         """
         i = self._revs.index(revmeta)
-        for desc in self._revs[i+1:]:
+        for desc in reversed(self._revs[:i]):
             if desc.knows_fileprops():
                 return (desc.estimate_svk_fileprop_ancestors() > 0)
         # assume the worst
@@ -400,6 +423,7 @@ class RevisionMetadataBranch(object):
             return None
 
     def append(self, revmeta):
+        assert len(self._revs) == 0 or self._revs[-1].revnum > revmeta.revnum
         self._revs.append(revmeta)
 
 
