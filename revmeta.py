@@ -269,7 +269,7 @@ class RevisionMetadata(object):
     def get_hidden_lhs_ancestors_count(self, mapping):
         if not mapping.supports_hidden:
             return 0
-        count = self.mapping.get_hidden_lhs_ancestors_count(self.get_fileprops())
+        count = mapping.get_hidden_lhs_ancestors_count(self.get_fileprops())
         if count is not None:
             return count
         # FIXME: Count number of lhs ancestor revisions with bzr:hidden set
