@@ -38,7 +38,6 @@ from bzrlib.plugins.svn.logwalker import lazy_dict
 from bzrlib.plugins.svn.mapping import mapping_registry
 from bzrlib.plugins.svn.repository import SvnRepositoryFormat, SvnRepository
 
-
 def _revision_id_to_svk_feature(revid):
     """Create a SVK feature identifier from a revision id.
 
@@ -650,7 +649,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         return self._get_delta(ie, self.old_inv, self.new_inventory.id2path(ie.file_id)), version_recorded
 
 
-def replay_delta(builder, old_tree, new_tree):
+def replay_delta(builder, old_trees, new_tree):
     """Replays a delta to a commit builder.
 
     :param builder: The commit builder.
@@ -658,8 +657,9 @@ def replay_delta(builder, old_tree, new_tree):
     :param new_tree: New tree that should be committed
     """
     for path, ie in new_tree.inventory.iter_entries():
-        builder.record_entry_contents(ie.copy(), [old_tree.inventory], 
-                                      path, new_tree, None)
+        builder.record_entry_contents(ie.copy(), 
+            [old_tree.inventory for old_tree in old_trees], 
+            path, new_tree, None)
     builder.finish_inventory()
 
 
@@ -803,7 +803,7 @@ def push_revision_tree(graph, target_repo, branch_path, config, source_repo, bas
                                graph=graph, opt_signature=opt_signature,
                                append_revisions_only=append_revisions_only)
                          
-    replay_delta(builder, base_tree, old_tree)
+    replay_delta(builder, source_repo.revision_trees(rev.parent_ids), old_tree)
     try:
         revid = builder.commit(rev.message)
     except SubversionException, (_, num):

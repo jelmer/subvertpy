@@ -228,7 +228,9 @@ class DirectoryRevisionBuildEditor(DirectoryBuildEditor):
             ie.revision = self.editor.revid
 
             text_revision = self.editor._get_text_revid(self.path) or ie.revision
-            text_parents = self.editor._get_text_parents(self.path) or self.parent_revids
+            text_parents = self.editor._get_text_parents(self.path)
+            if text_parents is None:
+                text_parents = self.parent_revids
             self.editor.texts.add_lines(
                 (self.new_id, text_revision),
                 [(self.new_id, revid) for revid in text_parents], [])
@@ -343,7 +345,9 @@ class FileRevisionBuildEditor(FileBuildEditor):
         assert checksum is None or checksum == actual_checksum
 
         text_revision = self.editor._get_text_revid(self.path) or self.editor.revid
-        text_parents = self.editor._get_text_parents(self.path) or self.file_parents
+        text_parents = self.editor._get_text_parents(self.path)
+        if text_parents is None:
+            text_parents = self.file_parents
         self.editor.texts.add_lines((self.file_id, text_revision), 
             [(self.file_id, revid) for revid in text_parents], lines)
 
