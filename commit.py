@@ -178,7 +178,7 @@ class SvnCommitBuilder(RootCommitBuilder):
             self._base_branch_props = self._base_revmeta.get_fileprops()
 
         if parent_invs is None:
-            self.parent_invs = self.repository.get_inventories(parents)
+            self.parent_invs = [self.repository.get_inventory(parent) for parent in parents]
         else:
             self.parent_invs = parent_invs
 
