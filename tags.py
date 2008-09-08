@@ -18,7 +18,7 @@ from bzrlib.errors import NoSuchRevision, NoSuchTag
 from bzrlib.tag import BasicTags
 from bzrlib.trace import mutter
 
-from bzrlib.plugins.svn import commit, core, mapping, properties
+from bzrlib.plugins.svn import commit, core, errors as svn_errors, mapping, properties
 
 class SubversionTags(BasicTags):
     """Subversion tags object."""
@@ -58,7 +58,7 @@ class SubversionTags(BasicTags):
         conn = self.repository.transport.get_connection(parent)
         deletefirst = (conn.check_path(urlutils.basename(path), self.repository.get_latest_revnum()) != core.NODE_NONE)
         try:
-            ci = conn.get_commit_editor(self._revprops("Add tag %s" % tag_name.encode("utf-8"),
+            ci = svn_errors.convert_svn_error(conn.get_commit_editor)(self._revprops("Add tag %s" % tag_name.encode("utf-8"),
                                         {tag_name.encode("utf-8"): tag_target}))
             try:
                 root = ci.open_root()
@@ -116,7 +116,7 @@ class SubversionTags(BasicTags):
         try:
             if conn.check_path(urlutils.basename(path), self.repository.get_latest_revnum()) != core.NODE_DIR:
                 raise NoSuchTag(tag_name)
-            ci = conn.get_commit_editor(self._revprops("Remove tag %s" % tag_name.encode("utf-8"),
+            ci = svn_errors.convert_svn_error(conn.get_commit_editor)(self._revprops("Remove tag %s" % tag_name.encode("utf-8"),
                                         {tag_name: ""}))
             try:
                 root = ci.open_root()
