@@ -64,7 +64,8 @@ class SubversionTags(BasicTags):
                 root = ci.open_root()
                 if deletefirst:
                     root.delete_entry(urlutils.basename(path))
-                root.add_directory(urlutils.basename(path), urlutils.join(self.repository.base, from_bp), from_revnum)
+                tag_dir = root.add_directory(urlutils.basename(path), urlutils.join(self.repository.base, from_bp), from_revnum)
+                tag_dir.close()
                 root.close()
             except:
                 ci.abort()
