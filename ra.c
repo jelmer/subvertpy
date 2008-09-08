@@ -716,9 +716,9 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	svn_auth_baton_t *auth_baton;
 	svn_error_t *err;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOOOO", kwnames, &url, &progress_cb, 
-									 (PyObject **)&auth, &config, &client_string_func,
-									 &open_tmp_file_func))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOOOO", kwnames, &url, 
+									 &progress_cb, (PyObject **)&auth, &config, 
+									 &client_string_func, &open_tmp_file_func))
 		return NULL;
 
 	ret = PyObject_New(RemoteAccessObject, &RemoteAccess_Type);
@@ -765,7 +765,6 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	callbacks2->get_client_string = py_get_client_string;
 #endif
-	Py_INCREF(config);
 	config_hash = config_hash_from_object(config, ret->pool);
 	if (config_hash == NULL) {
 		apr_pool_destroy(ret->pool);
