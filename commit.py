@@ -672,6 +672,12 @@ def create_branch_with_hidden_commit(repository, branch_path, revid, deletefirst
     fileprops = dict(revmeta.get_fileprops().items())
     mapping.export_hidden(revprops, fileprops)
     parent = urlutils.dirname(branch_path)
+
+    bp_parts = branch_path.split("/")
+    existing_bp_parts =_check_dirs_exist(repository.transport, bp_parts, -1)
+    if (len(bp_parts) not in (len(existing_bp_parts), len(existing_bp_parts)+1)):
+        raise MissingPrefix("/".join(bp_parts), "/".join(existing_bp_parts))
+
     conn = repository.transport.get_connection(parent)
     try:
         ci = conn.get_commit_editor(revprops)
@@ -716,8 +722,12 @@ def push_new(graph, target_repository, target_branch_path, source, stop_revision
         start_revid_parent = rev.parent_ids[0]
     # If this is just intended to create a new branch
     mapping = target_repository.get_mapping()
-    if (stop_revision != NULL_REVISION and stop_revision == start_revid and mapping.supports_hidden):
-        create_branch_with_hidden_commit(target_repository, target_branch_path, start_revid, mapping)
+    if (start_revid != NULL_REVISION and start_revid_parent != NULL_REVISION and stop_revision == start_revid and mapping.supports_hidden):
+        if target_repository.has_revision(start_revid) or start_revid == NULL_REVISION:
+            revid = start_revid
+        else:
+            revid = start_revid_parent
+        create_branch_with_hidden_commit(target_repository, target_branch_path, revid, mapping)
     else:
         return push_revision_tree(graph, target_repository, target_branch_path, 
                               target_repository.get_config(), 
