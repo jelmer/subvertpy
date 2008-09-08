@@ -157,17 +157,17 @@ class RevisionMetadata(object):
         assert (mapping.is_branch(self.branch_path) or 
                 mapping.is_tag(self.branch_path)), "%s not valid in %r" % (self.branch_path, mapping)
         def get_next_parent(rm):
-            if self.metabranch is not None and self.metabranch.mapping == mapping:
+            if rm.metabranch is not None and rm.metabranch.mapping == mapping:
                 # Perhaps the metabranch already has the parent?
-                parentrevmeta = self.metabranch.get_lhs_parent(rm)
+                parentrevmeta = rm.metabranch.get_lhs_parent(rm)
                 if parentrevmeta is not None:
                     return parentrevmeta
             # FIXME: Don't use self.repository.branch_prev_location,
             #        since it browses history
-            return self.repository._revmeta_provider.branch_prev_location(rm, mapping)
+            return rm.repository._revmeta_provider.branch_prev_location(rm, mapping)
         nm = get_next_parent(self)
         while nm is not None and nm.is_hidden(mapping):
-            nm = get_next_parent(self)
+            nm = get_next_parent(nm)
         return nm
 
     def get_lhs_parent(self, mapping):
