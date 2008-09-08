@@ -737,10 +737,17 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 	ret->root = NULL;
 	ret->pool = Pool(NULL);
-	if (ret->pool == NULL)
+	if (ret->pool == NULL) {
+        PyObject_Del(ret);
 		return NULL;
+    }
 
 	ret->url = svn_path_canonicalize(url, ret->pool);
+    if (ret->url == NULL) {
+		apr_pool_destroy(ret->pool);
+        PyObject_Del(ret->pool);
+        return NULL;
+    }
 	if (!check_error(svn_ra_create_callbacks(&callbacks2, ret->pool))) {
 		apr_pool_destroy(ret->pool);
 		PyObject_Del(ret);
@@ -766,7 +773,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_ra_open2(&ret->ra, svn_path_canonicalize(url, ret->pool),
+	err = svn_ra_open2(&ret->ra, ret->url,
 			   callbacks2, ret, config_hash, ret->pool);
 	Py_END_ALLOW_THREADS
 	if (!check_error(err)) {
