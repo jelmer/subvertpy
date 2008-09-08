@@ -78,6 +78,8 @@ class SvnTexts(VersionedFiles):
         ret = {}
         for (fileid, revid) in keys:
             # FIXME: Evil hack
+            # TODO: find revision revid, call import_text_revisions
+            # and retrieve parents for fileid
             ret[(fileid, revid)] = None
         return ret
 

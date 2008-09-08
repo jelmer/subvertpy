@@ -127,7 +127,7 @@ class SvnCommitBuilder(RootCommitBuilder):
     """Commit Builder implementation wrapped around svn_delta_editor. """
 
     def __init__(self, repository, branch_path, parents, config, timestamp, 
-                 timezone, committer, revprops, revision_id, parent_invs=None,
+                 timezone, committer, revprops, revision_id, old_inv=None,
                  push_metadata=True, graph=None, opt_signature=None,
                  texts=None, append_revisions_only=True):
         """Instantiate a new SvnCommitBuilder.
@@ -177,15 +177,12 @@ class SvnCommitBuilder(RootCommitBuilder):
             self._base_revmeta = self.repository._revmeta_provider.get_revision(self.base_path, self.base_revnum)
             self._base_branch_props = self._base_revmeta.get_fileprops()
 
-        if parent_invs is None:
-            self.parent_invs = [self.repository.get_inventory(parent) for parent in parents]
-        else:
-            self.parent_invs = parent_invs
-
         if self.base_revid == NULL_REVISION:
             self.old_inv = Inventory(root_id=None)
+        elif old_inv is None:
+            self.old_inv = self.repository.get_inventory(self.base_revid)
         else:
-            self.old_inv = self.parent_invs[0]
+            self.old_inv = old_inv
 
         # Not all repositories appear to set Inventory.revision_id, 
         # so allow None as well.
@@ -808,13 +805,16 @@ def push_revision_tree(graph, target_repo, branch_path, config, source_repo, bas
     except NoSuchRevision:
         opt_signature = None
 
-    parent_trees = source_repo.revision_trees(rev.parent_ids)
+    if base_revids == rev.parent_ids:
+        parent_trees = [base_tree]
+    else:
+        parent_trees = source_repo.revision_trees(rev.parent_ids)
 
     builder = SvnCommitBuilder(target_repo, branch_path, base_revids,
                                config, rev.timestamp,
                                rev.timezone, rev.committer, rev.properties, 
                                revision_id, 
-                               [t.inventory for t in parent_trees], 
+                               base_tree.inventory,
                                push_metadata=push_metadata,
                                graph=graph, opt_signature=opt_signature,
                                texts=source_repo.texts,
