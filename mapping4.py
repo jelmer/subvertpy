@@ -171,6 +171,9 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
             return True
         return False
 
+    def get_hidden_lhs_ancestors_count(self, fileprops):
+        return int(fileprops.get(mapping.SVN_PROP_BZR_HIDDEN, "0"))
+
     def export_hidden(self, revprops, fileprops):
         if revprops is not None:
             revprops[mapping.SVN_REVPROP_BZR_HIDDEN] = ""
