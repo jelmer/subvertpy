@@ -442,6 +442,8 @@ class RevisionMetadataProvider(object):
 
     def get_revision(self, path, revnum, changes=None, revprops=None, changed_fileprops=None, 
                      fileprops=None, metabranch=None):
+        assert isinstance(path, str)
+        assert isinstance(revnum, int)
         if (path, revnum) in self._revmeta_cache:
             cached = self._revmeta_cache[path,revnum]
             if changes is not None:

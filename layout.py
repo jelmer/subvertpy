@@ -182,7 +182,8 @@ class TrunkLayout(RepositoryLayout):
             inside the branch
         """
         assert isinstance(path, str)
-        parts = path.strip("/").split("/")
+        path = path.strip("/")
+        parts = path.split("/")
         for i, p in enumerate(parts):
             if (i > 0 and parts[i-1] in ("branches", "tags")) or p == "trunk":
                 if parts[i-1] == "tags":

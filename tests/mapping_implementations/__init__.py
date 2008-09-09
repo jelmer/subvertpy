@@ -19,7 +19,7 @@ from bzrlib.plugins.svn.mapping import mapping_registry
 def load_tests(basic_tests, module, loader):
     result = loader.suiteClass()
     prefix = "bzrlib.plugins.svn.tests.mapping_implementations"
-    modules = ['test_base', 'test_repository']
+    modules = ['test_base', 'test_branch', 'test_repository']
     module_name_list = ["%s.%s" % (prefix, m) for m in modules]
     format_scenarios = []
     for name in mapping_registry.keys():

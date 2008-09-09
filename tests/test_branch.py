@@ -352,37 +352,6 @@ class WorkingSubversionBranch(SubversionTestCase):
         branch = Branch.open(repos_url)
         self.assertRaises(NoSuchRevision, branch.revision_id_to_revno, "bla")
     
-    def test_revision_id_to_revno_simple(self):
-        repos_url = self.make_repository('a')
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_file("foo").modify()
-        dc.change_prop("bzr:revision-id:v3-none", 
-                            "2 myrevid\n")
-        dc.close()
-
-        branch = Branch.open(repos_url)
-        self.assertEquals(2, branch.revision_id_to_revno("myrevid"))
-
-    def test_revision_id_to_revno_older(self):
-        repos_url = self.make_repository('a')
-
-        dc = self.get_commit_editor(repos_url)
-        dc.add_file("foo").modify()
-        dc.change_prop("bzr:revision-id:v3-none", 
-                            "2 myrevid\n")
-        dc.close()
-
-        dc = self.get_commit_editor(repos_url)
-        dc.open_file("foo").modify()
-        dc.change_prop("bzr:revision-id:v3-none", 
-                            "2 myrevid\n3 mysecondrevid\n")
-        dc.close()
-
-        branch = Branch.open(repos_url)
-        self.assertEquals(3, branch.revision_id_to_revno("mysecondrevid"))
-        self.assertEquals(2, branch.revision_id_to_revno("myrevid"))
-
     def test_get_nick_none(self):
         repos_url = self.make_repository('a')
 

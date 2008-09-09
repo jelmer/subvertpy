@@ -403,4 +403,66 @@ class RepositoryTests(SubversionTestCase):
         self.assertEqual("someid", tree.inventory.path2id("foo"))
         self.assertFalse("1@%s::foo" % repository.uuid in tree.inventory)
 
+    def test_commit_revision_id(self):
+        self.make_checkout(self.repos_url, "dc")
+        wt = WorkingTree.open("dc")
+        self.build_tree({'dc/foo/bla': "data", 'dc/bla': "otherdata"})
+        wt.add('bla')
+        wt.commit(message="data")
 
+        branch = Branch.open(self.repos_url)
+        builder = branch.get_commit_builder([branch.last_revision()], 
+                revision_id="my-revision-id")
+        tree = branch.repository.revision_tree(branch.last_revision())
+        new_tree = copy(tree)
+        ie = new_tree.inventory.root
+        ie.revision = None
+        builder.record_entry_contents(ie, [tree.inventory], '', new_tree, 
+                                      None)
+        builder.finish_inventory()
+        builder.commit("foo")
+
+        self.assertEqual("3 my-revision-id\n", 
+            self.client_get_prop("dc", 
+                "bzr:revision-id:v3-none", 2))
+
+    def test_commit_metadata(self):
+        self.make_checkout(self.repos_url, "dc")
+
+        wt = WorkingTree.open("dc")
+        self.build_tree({'dc/foo/bla': "data", 'dc/bla': "otherdata"})
+        wt.add('bla')
+        wt.commit(message="data")
+
+        branch = Branch.open(self.repos_url)
+        builder = branch.get_commit_builder([branch.last_revision()], 
+                timestamp=4534.0, timezone=2, committer="fry",
+                revision_id="my-revision-id")
+        tree = branch.repository.revision_tree(branch.last_revision())
+        new_tree = copy(tree)
+        ie = new_tree.inventory.root
+        ie.revision = None
+        builder.record_entry_contents(ie, [tree.inventory], '', new_tree, None)
+        builder.finish_inventory()
+        builder.commit("foo")
+
+        self.assertEqual("3 my-revision-id\n", 
+                self.client_get_prop("dc", "bzr:revision-id:v3-none", 2))
+
+        self.assertEqual(
+                "timestamp: 1970-01-01 01:15:36.000000000 +0000\ncommitter: fry\n",
+                self.client_get_prop("dc", "bzr:revision-info", 2))
+
+    def test_commit_parents(self):
+        self.make_checkout(self.repos_url, "dc")
+        self.build_tree({'dc/foo/bla': "data"})
+        self.client_add("dc/foo")
+        wt = WorkingTree.open("dc")
+        wt.set_pending_merges(["some-ghost-revision"])
+        self.assertEqual(["some-ghost-revision"], wt.get_parent_ids()[1:])
+        wt.commit(message="data")
+        self.assertEqual("some-ghost-revision\n", 
+                self.client_get_prop(self.repos_url, "bzr:ancestry:v3-none", 1))
+        self.assertEqual((wt.branch.generate_revision_id(0), "some-ghost-revision"),
+                         wt.branch.repository.get_revision(
+                             wt.branch.last_revision()).parent_ids)

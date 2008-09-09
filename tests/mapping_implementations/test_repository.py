@@ -1006,4 +1006,33 @@ class TestSubversionMappingRepositoryWorks(SubversionTestCase):
             ('signatures', None, set([])),
             ('revisions', None, [revid])], ch)
 
+    def test_fetch_file_from_non_branch(self):
+        repos_url = self.make_repository('d')
 
+        dc = self.get_commit_editor(repos_url)
+        old_trunk = dc.add_dir("old-trunk")
+        lib = old_trunk.add_dir("old-trunk/lib")
+        lib.add_file("old-trunk/lib/file").modify("data")
+        dc.close()
+
+        dc = self.get_commit_editor(repos_url)
+        trunk = dc.add_dir("trunk")
+        lib = trunk.add_dir("trunk/lib")
+        lib.add_file("trunk/lib/file", "old-trunk/lib/file")
+        dc.close()
+
+        oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(TrunkLayout(0))
+        dir = BzrDir.create("f", format.get_rich_root_format())
+        newrepos = dir.create_repository()
+        oldrepos.copy_content_into(newrepos)
+
+        mapping = oldrepos.get_mapping()
+        branch = Branch.open("%s/trunk" % repos_url)
+        if mapping.is_branch("old-trunk"):
+            self.assertEqual([oldrepos.generate_revision_id(1, "old-trunk", mapping), 
+                              oldrepos.generate_revision_id(2, "trunk", mapping)], 
+                              branch.revision_history())
+        else:
+            self.assertEqual([oldrepos.generate_revision_id(2, "trunk", mapping)], 
+                         branch.revision_history())
