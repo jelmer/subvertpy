@@ -1878,9 +1878,10 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 static void ra_dealloc(PyObject *self)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+	Py_XDECREF(ra->client_string_func);
 	Py_XDECREF(ra->progress_func);
-	apr_pool_destroy(ra->pool);
 	Py_XDECREF(ra->auth);
+	apr_pool_destroy(ra->pool);
 	PyObject_Del(self);
 }
 
