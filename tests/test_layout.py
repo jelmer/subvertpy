@@ -15,7 +15,7 @@
 
 from bzrlib.errors import NotBranchError
 from bzrlib.tests import TestCase
-from bzrlib.plugins.svn import layout
+from bzrlib.plugins.svn.layout.standard import RootLayout, TrunkLayout
 
 
 class LayoutTests:
@@ -36,13 +36,13 @@ class LayoutTests:
 class RootLayoutTests(TestCase,LayoutTests):
 
     def setUp(self):
-        self.layout = layout.RootLayout()
+        self.layout = RootLayout()
 
 
 class TrunkLayoutTests(TestCase,LayoutTests):
 
     def setUp(self):
-        self.layout = layout.TrunkLayout()
+        self.layout = TrunkLayout()
 
     def test_parse_trunk(self):
         self.assertEquals(("branch", "", "trunk", ""), 

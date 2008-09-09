@@ -439,8 +439,9 @@ class TestPush(SubversionTestCase):
         push(b.repository.get_graph(), b, wt.branch.repository, 
              wt.branch.revision_history()[-2])
         mutter('log %r' % self.client_log("%s/trunk" % self.repos_url, 0, 4)[4][0])
-        self.assertEquals('M',
-            self.client_log("%s/trunk" % self.repos_url, 0, 4)[4][0]['/trunk'][0])
+        if not b.mapping.can_use_revprops and b.mapping.can_use_fileprops:
+            self.assertEquals('M',
+                self.client_log("%s/trunk" % self.repos_url, 0, 4)[4][0]['/trunk'][0])
         b = Branch.open("%s/trunk" % self.repos_url)
         push(b.repository.get_graph(), b, wt.branch.repository, wt.branch.last_revision())
         mutter('log %r' % self.client_log("%s/trunk" % self.repos_url, 0, 5)[5][0])

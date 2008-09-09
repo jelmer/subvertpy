@@ -221,7 +221,7 @@ class UpgradeTests(SubversionTestCase):
         renames = upgrade_repository(newrepos, oldrepos, new_mapping=mapping, mapping_registry=mapping_registry, 
                                      allow_changes=True)
         self.assertEqual({
-            'svn-v1:1@%s-' % oldrepos.uuid: 'svn-v3-none:%s::1' % oldrepos.uuid,
+            'svn-v1:1@%s-' % oldrepos.uuid: mapping.revision_id_foreign_to_bzr((oldrepos.uuid, "", 1)),
             "customrev": "customrev%s-upgrade" % mapping.upgrade_suffix,
             "anotherrev": "anotherrev%s-upgrade" % mapping.upgrade_suffix},
             renames)

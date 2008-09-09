@@ -182,7 +182,7 @@ def get_layout(layoutname):
     from bzrlib.errors import BzrCommandError
     
     try:
-        ret = layout_registry.get(layoutname)
+        ret = layout_registry.get(layoutname)()
     except KeyError:
         raise BzrCommandError('No such repository layout %r' % layoutname)
     return ret
