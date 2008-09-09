@@ -507,9 +507,9 @@ class SvnRepository(Repository):
         repository.
 
         """
-        if self.check_revprops == False:
+        if self.transport.has_capability("commit-revprops") == False:
             return False
-        for revmeta in self._revmeta_provider.iter_all_changes(self.get_layout(), self.get_latest_revnum()):
+        for revmeta in self._revmeta_provider.iter_all_changes(self.get_layout(), None, self.get_latest_revnum()):
             if revmeta.is_bzr_revision_revprops():
                 return True
         return False

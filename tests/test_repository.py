@@ -84,10 +84,11 @@ class TestSubversionRepositoryWorks(SubversionTestCase):
         self.assertEqual(fs.get_uuid(), repository.uuid)
 
     def test_is_shared(self):
-        self.make_checkout(self.repos_url, 'dc')
-        self.build_tree({'dc/foo/bla': "data"})
-        self.client_add("dc/foo")
-        self.client_commit("dc", "My Message")
+        dc = self.get_commit_editor(self.repos_url)
+        foo = dc.add_dir("foo")
+        bla = foo.add_file("foo/bla").modify("data")
+        dc.close()
+
         repository = Repository.open(self.repos_url)
         self.assertTrue(repository.is_shared())
 
@@ -108,6 +109,14 @@ class TestSubversionRepositoryWorks(SubversionTestCase):
     def test_get_physical_lock_status(self):
         repos = Repository.open(self.repos_url)
         self.assertFalse(repos.get_physical_lock_status())
+
+    def test_seen_bzr_revprops(self):
+        repos = Repository.open(self.repos_url)
+        dc = self.get_commit_editor(self.repos_url)
+        dc.add_dir("foo")
+        dc.close()
+
+        self.assertFalse(repos.seen_bzr_revprops())
 
 
 class SvnRepositoryFormatTests(TestCase):

@@ -221,7 +221,7 @@ class RevisionMetadata(object):
         if self.consider_bzr_fileprops():
             order.append(self.is_bzr_revision_fileprops)
         # Only look for revprops if they could've been committed
-        if (not self._log.quick_revprops and self.consider_bzr_revprops()):
+        if ((not self._log.quick_revprops) and self.consider_bzr_revprops()):
             order.append(self.is_bzr_revision_revprops)
         for fn in order:
             ret = fn()
