@@ -311,7 +311,8 @@ PROPS-END
         repos = self.load_dumpfile(dumpfile, 'g')
         convert_repository(repos, branch_path, RootLayout())
         branch = Repository.open(branch_path)
-        self.assertEqual(['svn-v3-none:6987ef2d-cd6b-461f-9991-6f1abef3bd59::0'], branch.all_revision_ids())
+        mapping = branch.repository.get_mapping()
+        self.assertEqual([mapping.revision_id_foreign_to_bzr(("6987ef2d-cd6b-461f-9991-6f1abef3bd59", 0, ""))], branch.all_revision_ids())
         Branch.open(branch_path)
 
     def load_dumpfile(self, dumpfile, target_path):

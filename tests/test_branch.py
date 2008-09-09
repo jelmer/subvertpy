@@ -711,7 +711,8 @@ foohosts""")
         dc.close()
 
         branch = Branch.open('d')
-        self.assertEqual("svn-v3-none:%s::1" % (branch.repository.uuid),  branch.generate_revision_id(1))
+        mapping = branch.repository.get_mapping()
+        self.assertEqual(mapping.revision_id_foreign_to_bzr((branch.repository.uuid, 1, "")), branch.generate_revision_id(1))
 
     def test_create_checkout(self):
         repos_url = self.make_repository('d')

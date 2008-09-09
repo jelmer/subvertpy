@@ -20,13 +20,13 @@ from bzrlib.bzrdir import BzrDir
 from bzrlib.repository import Repository
 from bzrlib.tests import TestCase, TestSkipped
 
-from bzrlib.plugins.svn.errors import RebaseNotPresent
 from bzrlib.plugins.svn.format import get_rich_root_format
+from bzrlib.plugins.svn.mapping import mapping_registry
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.mapping3.scheme import TrunkBranchingScheme
 from bzrlib.plugins.svn.tests import SubversionTestCase
-from bzrlib.plugins.foreign.upgrade import (upgrade_repository, upgrade_branch,
-                     upgrade_workingtree, UpgradeChangesContent, 
+from bzrlib.plugins.svn.foreign.upgrade import (upgrade_repository, upgrade_branch,
+                     upgrade_workingtree, UpgradeChangesContent, RebaseNotPresent,
                      create_upgraded_revid, generate_upgrade_map)
 
 class TestUpgradeChangesContent(TestCase):
@@ -77,9 +77,9 @@ class UpgradeTests(SubversionTestCase):
 
         self.assertTrue(newrepos.has_revision("svn-v1:1@%s-" % oldrepos.uuid))
 
-        upgrade_repository(newrepos, oldrepos, mapping_registry=mapping_registry, allow_changes=True)
-
         mapping = oldrepos.get_mapping()
+        upgrade_repository(newrepos, oldrepos, new_mapping=mapping, mapping_registry=mapping_registry, allow_changes=True)
+
         self.assertTrue(newrepos.has_revision(oldrepos.generate_revision_id(1, "", mapping)))
 
     @skip_no_rebase
@@ -102,9 +102,9 @@ class UpgradeTests(SubversionTestCase):
         file("f/a", 'w').write("moredata")
         wt.commit(message='fix moredata', rev_id="customrev")
 
-        upgrade_repository(newrepos, oldrepos, mapping_registry=mapping_registry, allow_changes=True)
-
         mapping = oldrepos.get_mapping()
+        upgrade_repository(newrepos, oldrepos, new_mapping=mapping, mapping_registry=mapping_registry, allow_changes=True)
+
         self.assertTrue(newrepos.has_revision(oldrepos.generate_revision_id(1, "", mapping)))
         self.assertTrue(newrepos.has_revision("customrev%s-upgrade" % mapping.upgrade_suffix))
         newrepos.lock_read()
@@ -134,8 +134,8 @@ class UpgradeTests(SubversionTestCase):
         wt.add(["a"], ["specificid"])
         wt.commit(message='fix moredata', rev_id="customrev")
 
-        upgrade_repository(newrepos, oldrepos, mapping_registry=mapping_registry, allow_changes=True)
         mapping = oldrepos.get_mapping()
+        upgrade_repository(newrepos, oldrepos, new_mapping=mapping, mapping_registry=mapping_registry, allow_changes=True)
         tree = newrepos.revision_tree("customrev%s-upgrade" % mapping.upgrade_suffix)
         self.assertEqual("specificid", tree.inventory.path2id("a"))
         self.assertEqual(mapping.generate_file_id(oldrepos.uuid, 1, "", u"a"), 
@@ -180,7 +180,7 @@ class UpgradeTests(SubversionTestCase):
         newrepos.commit_write_group()
         newrepos.unlock()
 
-        upgrade_repository(newrepos, oldrepos, mapping_registry=mapping_registry, 
+        upgrade_repository(newrepos, oldrepos, new_mapping=mapping, mapping_registry=mapping_registry, 
                            allow_changes=True)
 
         self.assertTrue(newrepos.has_revision(oldrepos.generate_revision_id(1, "", mapping)))
@@ -212,7 +212,7 @@ class UpgradeTests(SubversionTestCase):
         wt.commit(message='fix it again', rev_id="anotherrev")
 
         mapping = oldrepos.get_mapping()
-        renames = upgrade_repository(newrepos, oldrepos, mapping_registry=mapping_registry, 
+        renames = upgrade_repository(newrepos, oldrepos, new_mapping=mapping, mapping_registry=mapping_registry, 
                                      allow_changes=True)
         self.assertEqual({
             'svn-v1:1@%s-' % oldrepos.uuid: 'svn-v3-none:%s::1' % oldrepos.uuid,
@@ -251,7 +251,7 @@ class UpgradeTests(SubversionTestCase):
         file("f/a", 'w').write("blackfield")
         wt.commit(message='fix it again', rev_id="anotherrev")
 
-        upgrade_branch(b, oldrepos, mapping_registry=mapping_registry, allow_changes=True)
+        upgrade_branch(b, oldrepos, new_mapping=oldrepos.get_mapping(), mapping_registry=mapping_registry, allow_changes=True)
         mapping = oldrepos.get_mapping()
         self.assertEqual([oldrepos.generate_revision_id(0, "", mapping),
                           oldrepos.generate_revision_id(1, "", mapping),
@@ -281,7 +281,8 @@ class UpgradeTests(SubversionTestCase):
         wt.commit(message='fix it again', rev_id="anotherrev")
 
         mapping = oldrepos.get_mapping()
-        upgrade_workingtree(wt, oldrepos, mapping_registry, allow_changes=True)
+        upgrade_workingtree(wt, oldrepos, new_mapping=mapping, 
+                mapping_registry=mapping_registry, allow_changes=True)
         self.assertEquals(wt.last_revision(), b.last_revision())
         self.assertEqual([oldrepos.generate_revision_id(0, "", mapping),
                           oldrepos.generate_revision_id(1, "", mapping),
@@ -310,7 +311,7 @@ class UpgradeTests(SubversionTestCase):
         file("f/a", 'w').write("blackfield")
         wt.commit(message='fix it again', rev_id="anotherrev")
 
-        upgrade_branch(b, oldrepos, mapping_registry=mapping_registry)
+        upgrade_branch(b, oldrepos, new_mapping=oldrepos.get_mapping(), mapping_registry=mapping_registry)
         self.assertEqual(["blarev", "customrev", "anotherrev"],
                 b.revision_history())
 
@@ -331,7 +332,7 @@ class UpgradeTests(SubversionTestCase):
         wt.add("a")
         wt.commit(message="data", rev_id="svn-v1:1@%s-" % oldrepos.uuid)
 
-        self.assertRaises(UpgradeChangesContent, lambda: upgrade_branch(b, oldrepos, mapping_registry=mapping_registry))
+        self.assertRaises(UpgradeChangesContent, lambda: upgrade_branch(b, oldrepos, new_mapping=oldrepos.get_mapping(), mapping_registry=mapping_registry))
 
 
 class TestGenerateUpdateMapTests(TestCase):

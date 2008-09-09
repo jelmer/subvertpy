@@ -943,51 +943,6 @@ class PushNewBranchTests(SubversionTestCase):
         os.mkdir("n")
         BzrDir.open(repos_url+"/trunk").sprout("n")
 
-    def test_push_unnecessary_merge(self):        
-        from bzrlib.debug import debug_flags
-        debug_flags.add("commit")
-        debug_flags.add("fetch")
-        repos_url = self.make_repository("a")
-        bzrwt = BzrDir.create_standalone_workingtree("c", 
-            format=format.get_rich_root_format())
-        self.build_tree({'c/registry/generic.c': "Tour"})
-        bzrwt.add("registry")
-        bzrwt.add("registry/generic.c")
-        revid1 = bzrwt.commit("Add initial directory + file", 
-                              rev_id="initialrevid")
-
-        # Push first branch into Subversion
-        newdir = BzrDir.open(repos_url+"/trunk")
-        newbranch = newdir.import_branch(bzrwt.branch)
-
-        c = ra.RemoteAccess(repos_url)
-        self.assertTrue(c.check_path("trunk/registry/generic.c", c.get_latest_revnum()) == core.NODE_FILE)
-
-        dc = self.get_commit_editor(repos_url)
-        trunk = dc.open_dir("trunk")
-        registry = trunk.open_dir("trunk/registry")
-        registry.open_file("trunk/registry/generic.c").modify("BLA")
-        dc.close()
-        mapping = newdir.find_repository().get_mapping()
-        merge_revid = newdir.find_repository().generate_revision_id(2, "trunk", mapping)
-
-        # Merge 
-        self.build_tree({'c/registry/generic.c': "DE"})
-        bzrwt.add_pending_merge(merge_revid)
-        self.assertEquals(bzrwt.get_parent_ids()[1], merge_revid)
-        revid2 = bzrwt.commit("Merge something", rev_id="mergerevid")
-        bzr_parents = bzrwt.branch.repository.get_revision(revid2).parent_ids
-        trunk = Branch.open(repos_url + "/trunk")
-        trunk.pull(bzrwt.branch)
-
-        self.assertEquals(tuple(bzr_parents), 
-                trunk.repository.get_revision(revid2).parent_ids)
-
-        self.assertEquals([revid1, revid2], trunk.revision_history())
-        self.assertEquals(
-                '1 initialrevid\n2 mergerevid\n',
-                self.client_get_prop(repos_url+"/trunk", SVN_PROP_BZR_REVISION_ID+"v3-trunk0",
-                                     c.get_latest_revnum()))
 
 
 class TestPushTwice(SubversionTestCase):
