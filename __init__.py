@@ -108,24 +108,6 @@ def check_subversion_version():
     mutter("bzr-svn: using Subversion %d.%d.%d (%s)" % ra_version)
 
 
-def check_rebase_version(min_version):
-    """Check what version of bzr-rebase is installed.
-
-    Raises an exception when the version installed is older than 
-    min_version.
-
-    :raises RebaseNotPresent: Raised if bzr-rebase is not installed or too old.
-    """
-    from bzrlib.plugins.svn.errors import RebaseNotPresent
-    try:
-        from bzrlib.plugins.rebase import version_info as rebase_version_info
-        if rebase_version_info[:2] < min_version:
-            raise RebaseNotPresent("Version %r present, at least %r required" 
-                                   % (rebase_version_info, min_version))
-    except ImportError, e:
-        raise RebaseNotPresent(e)
-
-
 check_subversion_version()
 
 from bzrlib.plugins.svn import format, revspec
@@ -327,7 +309,8 @@ class cmd_svn_upgrade(Command):
 
     @display_command
     def run(self, from_repository=None, verbose=False, mapping=None):
-        from bzrlib.plugins.svn.upgrade import (upgrade_branch, 
+        from bzrlib.plugins.svn.mapping import mapping_registry
+        from bzrlib.plugins.svn.foreign.upgrade import (upgrade_branch, 
                                                 upgrade_workingtree)
         from bzrlib.branch import Branch
         from bzrlib.errors import NoWorkingTree, BzrCommandError
@@ -363,10 +346,12 @@ class cmd_svn_upgrade(Command):
         if wt_to is not None:
             renames = upgrade_workingtree(wt_to, from_repository, 
                                           new_mapping=new_mapping,
+                                          mapping_registry=mapping_registry,
                                           allow_changes=True, verbose=verbose)
         else:
             renames = upgrade_branch(branch_to, from_repository, 
                                      new_mapping=new_mapping,
+                                     mapping_registry=mapping_registry,
                                      allow_changes=True, verbose=verbose)
 
         if renames == {}:

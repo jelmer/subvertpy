@@ -172,13 +172,6 @@ class InvalidPropertyValue(BzrError):
         self.property = property
         self.msg = msg
 
-class RebaseNotPresent(DependencyNotPresent):
-    _fmt = "Unable to import bzr-rebase (required for svn-upgrade support): %(error)s"
-
-    def __init__(self, error):
-        DependencyNotPresent.__init__(self, 'bzr-rebase', error)
-
-
 class InvalidFileName(BzrError):
     _fmt = "Unable to convert Subversion path %(path)s because it contains characters invalid in Bazaar."
 

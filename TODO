@@ -5,6 +5,8 @@ mappingv4:
 - fix update_after_commit test
 - fix text parents
 
+move upgrade to bzr-foreign
+
 more tests:
 - Run all tests against repository with revprop changing allowed and without
 - performance tests (count roundtrips?)
