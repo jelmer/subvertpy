@@ -182,7 +182,7 @@ class TrunkLayout(RepositoryLayout):
             inside the branch
         """
         assert isinstance(path, str)
-        parts = path.split("/")
+        parts = path.strip("/").split("/")
         for i, p in enumerate(parts):
             if (i > 0 and parts[i-1] in ("branches", "tags")) or p == "trunk":
                 if parts[i-1] == "tags":
@@ -438,7 +438,7 @@ class WildcardLayout(RepositoryLayout):
         :return: Tuple with type ('tag', 'branch'), project name, branch path and path 
             inside the branch
         """
-        parts = path.split("/")
+        parts = path.strip("/").split("/")
         for i in range(len(parts)+1):
             bp = "/".join(parts[:i])
             if self.is_branch(bp):
@@ -562,7 +562,7 @@ def get_root_paths(repository, itemlist, revnum, verify_fn, project=None, pb=Non
     for idx, pattern in enumerate(itemlist):
         if pb is not None:
             pb.update("finding branches", idx, len(itemlist))
-        for bp in expand_branch_pattern([], pattern.split("/"), check_path,
+        for bp in expand_branch_pattern([], pattern.strip("/").split("/"), check_path,
                 find_children, project):
             if verify_fn(bp, project):
                 yield "", bp, bp.split("/")[-1]
