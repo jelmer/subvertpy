@@ -42,6 +42,9 @@ bzr-svn-0.5			UNRELEASED
 
    * Store text parents properly. (#260416)
 
+   * Avoid leaking memory when attempting to open an invalid Subversion 
+     repository. (#262513)
+
   INTERNALS
 
    * Remove custom commit code for working tree. 
