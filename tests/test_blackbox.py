@@ -301,13 +301,13 @@ Node-copyfrom-path: x
         mapping = svnrepo.get_mapping()
         newrepos = Repository.open("dc")
         self.assertTrue(newrepos.has_revision(
-            mapping.revision_id_foreign_to_bzr((uuid, 5, ""))))
+            mapping.revision_id_foreign_to_bzr((uuid, "", 5))))
         self.assertTrue(newrepos.has_revision(
-            mapping.revision_id_foreign_to_bzr((uuid, 1, ""))))
+            mapping.revision_id_foreign_to_bzr((uuid, "", 1))))
         inv1 = newrepos.get_inventory(
-                mapping.revision_id_foreign_to_bzr((uuid, 1, "")))
+                mapping.revision_id_foreign_to_bzr((uuid, "", 1)))
         inv2 = newrepos.get_inventory(
-                mapping.revision_id_foreign_to_bzr((uuid, 5, "")))
+                mapping.revision_id_foreign_to_bzr((uuid, "", 5)))
         self.assertNotEqual(inv1.path2id("y"), inv2.path2id("y"))
 
 

@@ -561,7 +561,7 @@ class HeavyWeightCheckoutTests(SubversionTestCase):
         mapping = master_branch.repository.get_mapping()
         self.assertEquals({"dir": dirid, 
                           "dir/file": fileid},
-                          rm_provider.get_revision(1, "").get_fileid_map(mapping))
+                          rm_provider.get_revision("", 1).get_fileid_map(mapping))
 
 
 class RevpropTests(SubversionTestCase):

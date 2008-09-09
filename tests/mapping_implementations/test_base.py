@@ -26,7 +26,7 @@ class RoundtripMappingTests(TestCase):
         self.mapping = mapping_registry.get(self.mapping_name).get_test_instance()
 
     def test_roundtrip_revision(self):
-        revid = self.mapping.revision_id_foreign_to_bzr(("myuuid", 42, "path"))
+        revid = self.mapping.revision_id_foreign_to_bzr(("myuuid", "path", 42))
         (uuid, path, revnum), mapping = self.mapping.revision_id_bzr_to_foreign(revid)
         self.assertEquals(uuid, "myuuid")
         self.assertEquals(revnum, 42)
@@ -116,7 +116,7 @@ class RoundtripMappingTests(TestCase):
     def test_parse_revision_id(self):
         self.assertEquals((("myuuid", "bla", 5), self.mapping), 
             self.mapping.revision_id_bzr_to_foreign(
-                self.mapping.revision_id_foreign_to_bzr(("myuuid", 5, "bla"))))
+                self.mapping.revision_id_foreign_to_bzr(("myuuid", "bla", 5))))
 
 
     def test_import_revision_svnprops(self):
