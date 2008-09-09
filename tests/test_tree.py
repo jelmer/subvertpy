@@ -230,6 +230,7 @@ class TestSvnRevisionTree(SubversionTestCase):
         self.client_add("dc/foo")
         self.client_commit("dc", "My Message")
         self.repos = Repository.open(repos_url)
+        self.repos.set_layout(RootLayout())
         mapping = self.repos.get_mapping()
         self.inventory = self.repos.get_inventory(
                 self.repos.generate_revision_id(1, "", mapping))

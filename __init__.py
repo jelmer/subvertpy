@@ -221,7 +221,7 @@ class cmd_svn_import(Command):
         from bzrlib.errors import BzrCommandError, NoRepositoryPresent
         from bzrlib import osutils, urlutils
         from bzrlib.plugins.svn.convert import convert_repository
-        from bzrlib.plugins.svn.layout import repository_guess_layout
+        from bzrlib.plugins.svn.layout.guess import repository_guess_layout
         from bzrlib.plugins.svn.repository import SvnRepository
 
         if to_location is None:

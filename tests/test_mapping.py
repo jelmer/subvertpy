@@ -27,7 +27,7 @@ from bzrlib.plugins.svn.mapping import (generate_revision_metadata, parse_revisi
                      parse_revid_property, parse_merge_property, parse_text_parents_property,
                      generate_text_parents_property, estimate_bzr_ancestors,
                      escape_svn_path, unescape_svn_path, is_bzr_revision_fileprops,
-                     get_roundtrip_ancestor_revids)
+                     get_roundtrip_ancestor_revids, is_bzr_revision_revprops)
 from bzrlib.plugins.svn.mapping2 import BzrSvnMappingv1, BzrSvnMappingv2
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.mapping4 import BzrSvnMappingv4

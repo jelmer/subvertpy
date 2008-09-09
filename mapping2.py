@@ -16,7 +16,8 @@
 from bzrlib.errors import InvalidRevisionId, NotBranchError
 from bzrlib.inventory import ROOT_ID
 from bzrlib.plugins.svn.errors import LayoutUnusable
-from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths, RootLayout, TrunkLayout
+from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
+from bzrlib.plugins.svn.layout.standard import RootLayout, TrunkLayout
 from bzrlib.plugins.svn.mapping import BzrSvnMapping, escape_svn_path, unescape_svn_path, parse_svn_revprops
 
 SVN_PROP_BZR_MERGE = 'bzr:merge'

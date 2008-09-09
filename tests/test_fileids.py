@@ -22,7 +22,7 @@ from bzrlib.trace import mutter
 from bzrlib.tests import TestCase
 
 from bzrlib.plugins.svn.fileids import simple_apply_changes
-from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout
+from bzrlib.plugins.svn.layout.standard import TrunkLayout, RootLayout
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class MockRepo(object):
@@ -61,7 +61,7 @@ class TestComplexFileids(SubversionTestCase):
         dc.close()
 
         repository = Repository.open(repos_url)
-        oldrepos.set_layout(RootLayout())
+        repository.set_layout(RootLayout())
         mapping = repository.get_mapping()
 
         inv1 = repository.get_inventory(

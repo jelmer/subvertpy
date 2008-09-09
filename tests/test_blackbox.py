@@ -21,7 +21,7 @@ from bzrlib.tests.blackbox import ExternalBase
 from bzrlib.tests import KnownFailure
 
 from bzrlib.plugins.svn.convert import load_dumpfile
-from bzrlib.plugins.svn.layout import RootLayout
+from bzrlib.plugins.svn.layout.standard import RootLayout
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 import os, sys

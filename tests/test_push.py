@@ -30,6 +30,7 @@ import os
 from bzrlib.plugins.svn import core, format, ra
 from bzrlib.plugins.svn.errors import MissingPrefix
 from bzrlib.plugins.svn.commit import push, dpush
+from bzrlib.plugins.svn.layout.standard import RootLayout, CustomLayout
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
@@ -516,6 +517,7 @@ class PushNewBranchTests(SubversionTestCase):
         wt.commit("add still more files", rev_id="mydiver")
 
         repos = Repository.open(repos_url)
+        repos.set_layout(RootLayout())
         wt.branch.repository.fetch(repos)
         mapping = repos.get_mapping()
         other_rev = repos.generate_revision_id(3, "", mapping)

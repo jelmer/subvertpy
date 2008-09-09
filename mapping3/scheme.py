@@ -20,7 +20,7 @@ from bzrlib.errors import BzrError
 from bzrlib.trace import mutter
 
 from base64 import urlsafe_b64decode, urlsafe_b64encode
-from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout, CustomLayout
+from bzrlib.plugins.svn.layout.standard import TrunkLayout, RootLayout, CustomLayout
 from bzrlib.plugins.svn.errors import InvalidSvnBranchPath, LayoutUnusable
 from bzrlib.plugins.svn import properties
 import bz2

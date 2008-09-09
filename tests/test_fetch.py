@@ -29,7 +29,7 @@ from bzrlib.trace import mutter
 from bzrlib.plugins.svn import format, remote
 from bzrlib.plugins.svn.convert import load_dumpfile
 from bzrlib.plugins.svn.errors import InvalidFileName
-from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout
+from bzrlib.plugins.svn.layout.standard import TrunkLayout, RootLayout
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.transport import SvnRaTransport
 
@@ -1313,7 +1313,12 @@ Node-copyfrom-path: x
         oldrepos.copy_content_into(newrepos)
 
         branch = Branch.open("%s/trunk" % repos_url)
-        self.assertEqual([oldrepos.generate_revision_id(2, "trunk", oldrepos.get_mapping())],
+        if oldrepos.get_mapping().is_branch("old-trunk"):
+            self.assertEqual([oldrepos.generate_revision_id(1, "old-trunk", oldrepos.get_mapping()), 
+                              oldrepos.generate_revision_id(2, "trunk", oldrepos.get_mapping())],
+                         branch.revision_history())
+        else:
+            self.assertEqual([oldrepos.generate_revision_id(2, "trunk", oldrepos.get_mapping())],
                          branch.revision_history())
 
 
@@ -1460,6 +1465,7 @@ Node-copyfrom-path: x
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir1 = BzrDir.create("f", format.get_rich_root_format())
         dir2 = BzrDir.create("g", format.get_rich_root_format())
         newrepos1 = dir1.create_repository()

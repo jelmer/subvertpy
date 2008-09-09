@@ -21,13 +21,15 @@ from bzrlib.tests import TestCase
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn import format, ra
-from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout
+from bzrlib.plugins.svn import core, format, ra
+from bzrlib.plugins.svn.layout.standard import TrunkLayout, RootLayout
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID, mapping_registry
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps, SVN_PROP_BZR_BRANCHING_SCHEME, set_property_scheme
 from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme, ListBranchingScheme
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.tests.test_mapping import sha1
+
+from copy import copy
 
 class Mappingv3FilePropTests(TestCase):
     def setUp(self):

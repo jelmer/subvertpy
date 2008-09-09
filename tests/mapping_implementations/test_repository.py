@@ -25,7 +25,7 @@ from bzrlib.revision import NULL_REVISION
 from bzrlib.tests import TestCase, TestSkipped, TestNotApplicable
 
 from bzrlib.plugins.svn import errors as svn_errors, format, ra
-from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout, CustomLayout
+from bzrlib.plugins.svn.layout.standard import TrunkLayout, RootLayout, CustomLayout
 from bzrlib.plugins.svn.mapping import mapping_registry
 from bzrlib.plugins.svn.tests import SubversionTestCase
 

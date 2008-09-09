@@ -26,7 +26,7 @@ from bzrlib.tests import TestCaseInTempDir
 import os, sys
 
 from bzrlib.plugins.svn import repos
-from bzrlib.plugins.svn.layout import RootLayout, TrunkLayout
+from bzrlib.plugins.svn.layout.standard import RootLayout, TrunkLayout
 from bzrlib.plugins.svn.convert import convert_repository, NotDumpFile, load_dumpfile
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.tests import SubversionTestCase

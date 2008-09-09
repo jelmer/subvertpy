@@ -15,7 +15,8 @@
 
 from bzrlib import errors
 
-from bzrlib.plugins.svn import layout, mapping
+from bzrlib.plugins.svn import mapping
+from bzrlib.plugins.svn.layout.standard import RootLayout, TrunkLayout
 
 supported_features = set()
 
@@ -44,9 +45,9 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
     @classmethod
     def from_repository(cls, repository, _hinted_branch_path=None):
         if _hinted_branch_path == "":
-            return cls(layout.RootLayout())
+            return cls(RootLayout())
         else:
-            return cls(layout.TrunkLayout())
+            return cls(TrunkLayout())
 
     @classmethod
     def from_revprops(cls, revprops):
