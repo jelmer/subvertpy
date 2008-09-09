@@ -21,11 +21,13 @@ from bzrlib.errors import InvalidRevisionId, NotBranchError
 from bzrlib.tests import TestCase, TestNotApplicable
 from bzrlib.revision import Revision
 
+from bzrlib.plugins.svn import mapping
 from bzrlib.plugins.svn.errors import InvalidPropertyValue
 from bzrlib.plugins.svn.mapping import (generate_revision_metadata, parse_revision_metadata, 
                      parse_revid_property, parse_merge_property, parse_text_parents_property,
-                     generate_text_parents_property, 
-                     escape_svn_path, unescape_svn_path)
+                     generate_text_parents_property, estimate_bzr_ancestors,
+                     escape_svn_path, unescape_svn_path, is_bzr_revision_fileprops,
+                     get_roundtrip_ancestor_revids)
 from bzrlib.plugins.svn.mapping2 import BzrSvnMappingv1, BzrSvnMappingv2
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps
 from bzrlib.plugins.svn.mapping4 import BzrSvnMappingv4
@@ -206,3 +208,52 @@ class EscapeTest(TestCase):
 
     def test_escape_svn_path_nordic(self):
         self.assertEqual("foobar%C3%A6", escape_svn_path(u"foobar\xe6".encode("utf-8")))
+
+
+class EstimateBzrAncestorsTests(TestCase):
+
+    def test_no_fileprops(self):
+        self.assertEquals(0, estimate_bzr_ancestors({}))
+
+    def test_one(self):
+        self.assertEquals(2, estimate_bzr_ancestors({"bzr:revision-id:v42": "bla\nblie\n"}))
+
+    def test_multiple(self):
+        self.assertEquals(2, estimate_bzr_ancestors({"bzr:revision-id:v42": "bla\n", 
+            "bzr:revision-id:v50": "blie\nblie\n"}))
+
+
+class IsBzrRevisionTests(TestCase):
+
+    def test_no_fileprops(self):
+        self.assertEquals(None, is_bzr_revision_fileprops({}))
+
+    def test_fileprops(self):
+        self.assertEquals(True, is_bzr_revision_fileprops({"bzr:bla": "bloe"}))
+
+    def test_revprops(self):
+        self.assertEquals(True, is_bzr_revision_revprops({mapping.SVN_REVPROP_BZR_MAPPING_VERSION: "42"}))
+
+    def test_revprops_no(self):
+        self.assertEquals(False, is_bzr_revision_revprops({mapping.SVN_REVPROP_BZR_SKIP: ""}))
+
+    def test_revprops_unknown(self):
+        self.assertEquals(None, is_bzr_revision_revprops({}))
+
+
+class RoundTripAncestorRevids(TestCase):
+    
+    def test_none(self):
+        self.assertEquals([], list(get_roundtrip_ancestor_revids({})))
+
+    def test_simple(self):
+        self.assertEquals([("arevid", 42, "v42-scheme")], 
+                list(get_roundtrip_ancestor_revids({mapping.SVN_PROP_BZR_REVISION_ID+"v42-scheme": "42 arevid\n"})))
+
+    def test_multiple(self):
+        self.assertEquals(set([("arevid", 42, "v42-scheme"), ("brevid", 50, "v90-ll")]), 
+                set(get_roundtrip_ancestor_revids({
+                    mapping.SVN_PROP_BZR_REVISION_ID+"v42-scheme": "42 arevid\n",
+                    mapping.SVN_PROP_BZR_REVISION_ID+"v90-ll": "50 brevid\n",
+                    "otherrevprop": "fsldds",
+                    })))

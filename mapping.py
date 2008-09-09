@@ -725,7 +725,14 @@ mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4',
                                'Fourth format (bzr-svn 0.5.x)')
 mapping_registry.set_default('v3')
 
+
 def find_mapping(revprops, fileprops):
+    """Find a mapping instance based on the revprops and fileprops set on a revision.
+
+    :param revprops: Revision properties.
+    :param fileprops: File properties set on branch root.
+    :return: BzrSvnMapping instance or None if no mapping found.
+    """
     if SVN_REVPROP_BZR_MAPPING_VERSION in revprops:
         try:
             cls = mapping_registry.get(revprops[SVN_REVPROP_BZR_MAPPING_VERSION])
@@ -759,6 +766,9 @@ def is_bzr_revision_fileprops(fileprops):
 
 
 def estimate_bzr_ancestors(fileprops):
+    """Estimate the number of bzr ancestors that a revision has based on file properties.
+
+    """
     found = []
     for k, v in fileprops.items():
         if k.startswith(SVN_PROP_BZR_REVISION_ID):
