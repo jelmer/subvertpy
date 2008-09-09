@@ -16,12 +16,18 @@
 """Utility functions for dealing with changes dictionaries as return by Subversions' log functions."""
 
 def path_is_child(branch_path, path):
+    """Check whether path is or is under branch_path."""
     return (branch_path == "" or 
             branch_path == path or 
             path.startswith(branch_path+"/"))
 
 
 def find_prev_location(paths, branch_path, revnum):
+    """Find the previous location at which branch_path can be found.
+    
+    :note: If branch_path wasn't copied, this will return revnum-1 as the 
+        previous revision.
+    """
     assert isinstance(branch_path, str)
     assert isinstance(revnum, int)
     if revnum == 0:
@@ -121,5 +127,6 @@ def apply_reverse_changes(branches, changes):
 
 
 def rebase_path(path, orig_parent, new_parent):
+    """Rebase a path on a different parent."""
     return (new_parent+"/"+path[len(orig_parent):].strip("/")).strip("/")
 

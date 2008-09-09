@@ -125,6 +125,8 @@ class SvnBranch(Branch):
         return self.last_revmeta().revnum
 
     def last_revmeta(self):
+        """Return the revmeta element for the last revision in this branch.
+        """
         for revmeta in self._revision_meta_history():
             if not revmeta.is_hidden(self.mapping):
                 return revmeta

@@ -71,6 +71,7 @@ def _check_dirs_exist(transport, bp_parts, base_rev):
 
 
 def update_svk_features(oldvalue, merges):
+    """Update a set of SVK features to include the specified set of merges."""
     old_svk_features = parse_svk_features(oldvalue)
     svk_features = set(old_svk_features)
 
@@ -87,6 +88,7 @@ def update_svk_features(oldvalue, merges):
 
 
 def update_mergeinfo(repository, graph, oldvalue, baserevid, merges):
+    """Update a svn:mergeinfo property to include a specified list of merges."""
     pb = ui.ui_factory.nested_progress_bar()
     try:
         mergeinfo = properties.parse_mergeinfo_property(oldvalue)
@@ -627,7 +629,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                 it is a candidate to commit.
         """
         if self._texts is None:
-            self._text_parents[ie.file_id] = [parent_inv[ie.file_id].revision for parent_inv in parent_invs if ie.file_id in parent_inv]
+            self._text_parents[ie.file_id] = [parent_inv[ie.file_id].revision for parent_inv in self.parent_invs if ie.file_id in parent_inv]
         elif isinstance(self._texts, SvnTexts):
             overridden_parents = self._texts._get_parent(ie.file_id, ie.revision)
             if overridden_parents is None:
@@ -682,6 +684,13 @@ def replay_delta(builder, old_trees, new_tree):
 
 
 def create_branch_with_hidden_commit(repository, branch_path, revid, deletefirst=False):
+    """Create a new branch using a simple "svn cp" operation.
+
+    :param repository: Repository in which to create the branch.
+    :param branch_path: Branch path
+    :param revid: Revision id to keep as tip.
+    :param deletefirst: Whether to delete an existing branch at this location first.
+    """
     revprops = {properties.PROP_REVISION_LOG: "Create new branch."}
     revmeta, mapping = repository._get_revmeta(revid)
     fileprops = dict(revmeta.get_fileprops().items())
@@ -970,6 +979,16 @@ class InterToSvnRepository(InterRepository):
 
 
 def push_ancestors(target_repo, source_repo, layout, project, parent_revids, graph, create_prefix=False):
+    """Push the ancestors of a revision.
+
+    :param target_repo: Target repository.
+    :param source_repo: Source repository
+    :param layout: Subversion layout
+    :param project: Project name
+    :param parent_revids: The revision ids of the basic ancestors to push
+    :param graph: Graph object for source_repo
+    :param create_prefix: Whether to optionally create the prefix of the branches.
+    """
     for parent_revid in parent_revids[1:]:
         if target_repo.has_revision(parent_revid):
             continue
@@ -994,6 +1013,14 @@ def push_ancestors(target_repo, source_repo, layout, project, parent_revids, gra
 
 
 def create_branch_prefix(repository, revprops, bp_parts, existing_bp_parts):
+    """Create a branch prefixes (e.g. "branches")
+
+    :param repository: Subversion repository
+    :param revprops: Revision properties to set
+    :param bp_parts: Branch path elements that should be created (list of names, 
+        ["branches", "foo"] for "branches/foo")
+    :param existing_bp_parts: Branch path elements that already exist.
+    """
     conn = repository.transport.get_connection()
     try:
         ci = convert_svn_error(conn.get_commit_editor)(revprops)

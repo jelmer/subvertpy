@@ -98,6 +98,7 @@ class CacheTable(object):
         self._commit_countdown = self._commit_interval
 
     def commit(self):
+        """Commit the changes to the database."""
         self.cachedb.commit()
         self._commit_countdown = self._commit_interval
 
