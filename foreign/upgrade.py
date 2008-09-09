@@ -103,8 +103,8 @@ def upgrade_workingtree(wt, foreign_repository, new_mapping, mapping_registry,
     return renames
 
 
-def upgrade_branch(branch, foreign_repository, new_mapping=None, 
-                   allow_changes=False, verbose=False):
+def upgrade_branch(branch, foreign_repository, new_mapping, 
+                   mapping_registry, allow_changes=False, verbose=False):
     """Upgrade a branch to the current mapping version.
     
     :param branch: Branch to upgrade.
@@ -115,6 +115,7 @@ def upgrade_branch(branch, foreign_repository, new_mapping=None,
     revid = branch.last_revision()
     renames = upgrade_repository(branch.repository, foreign_repository, 
               revision_id=revid, new_mapping=new_mapping,
+              mapping_registry=mapping_registry,
               allow_changes=allow_changes, verbose=verbose)
     if len(renames) > 0:
         branch.generate_revision_history(renames[revid])
@@ -146,7 +147,7 @@ def generate_upgrade_map(new_mapping, revs, mapping_registry):
     for revid in revs:
         assert isinstance(revid, str)
         try:
-            (foreign_revid, mapping) = mapping_registry.parse_revision_id(revid)
+            (foreign_revid, _) = mapping_registry.parse_revision_id(revid)
         except InvalidRevisionId:
             # Not a foreign revision, nothing to do
             continue

@@ -29,18 +29,18 @@ from unittest import TestCase
 from bzrlib.plugins.svn import core
 from bzrlib.plugins.svn.branch import FakeControlFiles, SvnBranchFormat
 from bzrlib.plugins.svn.convert import load_dumpfile
-from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID
+from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID, mapping_registry
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class WorkingSubversionBranch(SubversionTestCase):
 
     def setUp(self):
-        super(TestSubversionMappingRepositoryWorks, self).setUp()
+        super(WorkingSubversionBranch, self).setUp()
         self._old_mapping = mapping_registry._get_default_key()
         mapping_registry.set_default(self.mapping_name)
 
     def tearDown(self):
-        super(TestSubversionMappingRepositoryWorks, self).tearDown()
+        super(WorkingSubversionBranch, self).tearDown()
         mapping_registry.set_default(self._old_mapping)
 
     def test_revision_id_to_revno_simple(self):

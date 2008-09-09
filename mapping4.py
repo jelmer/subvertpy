@@ -66,9 +66,9 @@ class BzrSvnMappingv4(mapping.BzrSvnMapping):
 
         branch_path = mapping.unescape_svn_path(branch_path)
 
-        return (uuid, branch_path, int(srevnum), cls())
+        return (uuid, branch_path, int(srevnum)), cls()
 
-    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
+    def revision_id_foreign_to_bzr(self, (uuid, path, revnum)):
         return "svn-v4:%s:%s:%d" % (uuid, path, revnum)
 
     def generate_file_id(self, uuid, revnum, branch, inv_path):

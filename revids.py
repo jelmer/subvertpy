@@ -34,7 +34,7 @@ class RevidMap(object):
         """Find the (branch, revnum) tuple for a revision id."""
         # Try a simple parse
         try:
-            (uuid, branch_path, revnum, mapping) = mapping_registry.parse_revision_id(revid)
+            (uuid, branch_path, revnum), mapping = mapping_registry.parse_revision_id(revid)
             assert isinstance(branch_path, str)
             assert isinstance(mapping, BzrSvnMapping)
             if uuid == self.repos.uuid:
@@ -135,7 +135,7 @@ class CachingRevidMap(object):
     def get_branch_revnum(self, revid, layout, project=None):
         # Try a simple parse
         try:
-            (uuid, branch_path, revnum, mapping) = mapping_registry.parse_revision_id(revid)
+            (uuid, branch_path, revnum), mapping = mapping_registry.parse_revision_id(revid)
             assert isinstance(branch_path, str)
             assert isinstance(mapping, BzrSvnMapping)
             if uuid == self.actual.repos.uuid:

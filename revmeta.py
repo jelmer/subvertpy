@@ -94,7 +94,7 @@ class RevisionMetadata(object):
 
         # Or generate it
         if revid is None:
-            return mapping.revision_id_foreign_to_bzr((self.uuid, self.revnum, self.branch_path))
+            return mapping.revision_id_foreign_to_bzr((self.uuid, self.branch_path, self.revnum))
 
         return revid
 
@@ -315,6 +315,9 @@ class RevisionMetadata(object):
     def get_fileid_map(self, mapping):
         return mapping.import_fileid_map(self.get_revprops(), self.get_changed_fileprops())
 
+    def get_text_revisions(self, mapping):
+        return mapping.import_text_revisions(self.get_revprops(), self.get_changed_fileprops())
+
     def consider_bzr_fileprops(self):
         return self.metabranch is None or self.metabranch.consider_bzr_fileprops(self)
 
@@ -383,7 +386,7 @@ def svk_feature_to_revision_id(feature, mapping):
         return None
     if not mapping.is_branch(bp) and not mapping.is_tag(bp):
         return None
-    return mapping.revision_id_foreign_to_bzr((uuid, revnum, bp))
+    return mapping.revision_id_foreign_to_bzr((uuid, bp, revnum))
 
 
 class RevisionMetadataBranch(object):

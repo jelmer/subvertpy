@@ -246,7 +246,7 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
         else:
             scheme = BranchingScheme.find_scheme(scheme)
 
-        return (uuid, branch_path, srevnum, cls(scheme))
+        return (uuid, branch_path, srevnum), cls(scheme)
 
     def is_branch(self, branch_path):
         return self.scheme.is_branch(branch_path)
@@ -264,7 +264,7 @@ class BzrSvnMappingv3(mapping.BzrSvnMapping):
         return "%s%s:%s:%s:%d" % (cls.revid_prefix, scheme, uuid, \
                        mapping.escape_svn_path(path.strip("/")), revnum)
 
-    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
+    def revision_id_foreign_to_bzr(self, (uuid, path, revnum)):
         return self._generate_revision_id(uuid, revnum, path, self.scheme)
 
     def __eq__(self, other):

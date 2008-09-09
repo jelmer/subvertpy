@@ -686,9 +686,9 @@ foohosts""")
         host_fileid = tree.inventory.path2id("hosts")
         mapping = oldbranch.repository.get_mapping()
         self.assertVersionsPresentEquals(texts, host_fileid, [
-            mapping.revision_id_foreign_to_bzr((uuid, 1, "trunk")),
-            mapping.revision_id_foreign_to_bzr((uuid, 2, "trunk")),
-            mapping.revision_id_foreign_to_bzr((uuid, 3, "trunk")),
+            mapping.revision_id_foreign_to_bzr((uuid, "trunk", 1)),
+            mapping.revision_id_foreign_to_bzr((uuid, "trunk", 2)),
+            mapping.revision_id_foreign_to_bzr((uuid, "trunk", 3)),
             oldbranch.generate_revision_id(6)])
         newbranch.repository.unlock()
 
@@ -712,7 +712,7 @@ foohosts""")
 
         branch = Branch.open('d')
         mapping = branch.repository.get_mapping()
-        self.assertEqual(mapping.revision_id_foreign_to_bzr((branch.repository.uuid, 1, "")), branch.generate_revision_id(1))
+        self.assertEqual(mapping.revision_id_foreign_to_bzr((branch.repository.uuid, "", 1)), branch.generate_revision_id(1))
 
     def test_create_checkout(self):
         repos_url = self.make_repository('d')

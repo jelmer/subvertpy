@@ -337,7 +337,7 @@ class UpgradeTests(SubversionTestCase):
 
 class TestGenerateUpdateMapTests(TestCase):
     def test_nothing(self):
-        self.assertEquals({}, generate_upgrade_map(BzrSvnMappingv3FileProps(TrunkBranchingScheme()), ["bla", "bloe"]))
+        self.assertEquals({}, generate_upgrade_map(BzrSvnMappingv3FileProps(TrunkBranchingScheme()), ["bla", "bloe"], mapping_registry))
 
     def test_v2_to_v3(self):
-        self.assertEquals({"svn-v2:12@65390229-12b7-0310-b90b-f21a5aa7ec8e-trunk": "svn-v3-trunk0:65390229-12b7-0310-b90b-f21a5aa7ec8e:trunk:12"}, generate_upgrade_map(BzrSvnMappingv3FileProps(TrunkBranchingScheme()), ["svn-v2:12@65390229-12b7-0310-b90b-f21a5aa7ec8e-trunk", "bloe", "blaaa"]))
+        self.assertEquals({"svn-v2:12@65390229-12b7-0310-b90b-f21a5aa7ec8e-trunk": "svn-v3-trunk0:65390229-12b7-0310-b90b-f21a5aa7ec8e:trunk:12"}, generate_upgrade_map(BzrSvnMappingv3FileProps(TrunkBranchingScheme()), ["svn-v2:12@65390229-12b7-0310-b90b-f21a5aa7ec8e-trunk", "bloe", "blaaa"], mapping_registry))

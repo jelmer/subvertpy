@@ -130,7 +130,7 @@ class RepositoryTests(SubversionTestCase):
         mapping = repos.get_mapping()
         revid = repos.generate_revision_id(1, "", mapping)
         self.assertEquals(
-                mapping.revision_id_foreign_to_bzr((repos.uuid, 1, "")),
+                mapping.revision_id_foreign_to_bzr((repos.uuid, "", 1)),
                 revid)
 
     def test_revision_ghost_parents(self):
@@ -172,7 +172,7 @@ class RepositoryTests(SubversionTestCase):
         mapping = repository.get_mapping()
         if not mapping.roundtripping:
             raise TestNotApplicable
-        revid = mapping.revision_id_foreign_to_bzr((repository.uuid, 2, ""))
+        revid = mapping.revision_id_foreign_to_bzr((repository.uuid, "", 2))
         rev = repository.get_revision("myrevid")
         self.assertEqual((repository.generate_revision_id(1, "", mapping),),
                 rev.parent_ids)
@@ -214,7 +214,7 @@ class RepositoryTests(SubversionTestCase):
         repository = Repository.open(self.repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(("", 1), repository.lookup_revision_id( 
-            mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
+            mapping.revision_id_foreign_to_bzr((repository.uuid, "", 1)))[:2])
         self.assertEqual(("", 1), 
                 repository.lookup_revision_id("myid")[:2])
 
@@ -227,7 +227,7 @@ class RepositoryTests(SubversionTestCase):
         repository = Repository.open(self.repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(("", 1), repository.lookup_revision_id( 
-            mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
+            mapping.revision_id_foreign_to_bzr((repository.uuid, "", 1)))[:2])
         self.assertRaises(NoSuchRevision, repository.lookup_revision_id, 
             "corrupt-entry")
 
@@ -246,9 +246,9 @@ class RepositoryTests(SubversionTestCase):
         repository = Repository.open(self.repos_url)
         mapping = repository.get_mapping()
         self.assertEqual(("", 2), repository.lookup_revision_id( 
-            mapping.revision_id_foreign_to_bzr((repository.uuid, 2, "")))[:2])
+            mapping.revision_id_foreign_to_bzr((repository.uuid, "", 2)))[:2])
         self.assertEqual(("", 1), repository.lookup_revision_id( 
-            mapping.revision_id_foreign_to_bzr((repository.uuid, 1, "")))[:2])
+            mapping.revision_id_foreign_to_bzr((repository.uuid, "", 1)))[:2])
         self.assertEqual(("", 2), repository.lookup_revision_id( 
             "corrupt-entry")[:2])
 

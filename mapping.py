@@ -324,16 +324,16 @@ class BzrSvnMapping(foreign.VcsMapping):
 
         :param revid: The revision id.
         :raises: InvalidRevisionId
-        :return: Tuple with uuid, branch path, revision number and mapping.
+        :return: Tuple with (uuid, branch path, revision number) and mapping.
         """
         raise NotImplementedError(self.revision_id_bzr_to_foreign)
 
-    def revision_id_foreign_to_bzr(self, (uuid, revnum, path)):
+    def revision_id_foreign_to_bzr(self, (uuid, path, revnum)):
         """Generate a unambiguous revision id. 
         
         :param uuid: UUID of the repository.
-        :param revnum: Subversion revision number.
         :param path: Branch path.
+        :param revnum: Subversion revision number.
 
         :return: New revision id.
         """
@@ -701,7 +701,7 @@ class SubversionMappingRegistry(foreign.VcsMappingRegistry):
         """Try to parse a Subversion revision id.
         
         :param revid: Revision id to parse
-        :return: tuple with (uuid, branch_path, revno, mapping)
+        :return: tuple with (uuid, branch_path, revno), mapping
         """
         if not revid.startswith("svn-"):
             raise InvalidRevisionId(revid, None)
@@ -723,7 +723,7 @@ mapping_registry.register_lazy('v3', 'bzrlib.plugins.svn.mapping3',
 mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4', 
                                'BzrSvnMappingv4',
                                'Fourth format (bzr-svn 0.5.x)')
-mapping_registry.set_default('v4')
+mapping_registry.set_default('v3')
 
 def find_mapping(revprops, fileprops):
     if SVN_REVPROP_BZR_MAPPING_VERSION in revprops:

@@ -311,8 +311,7 @@ PROPS-END
         repos = self.load_dumpfile(dumpfile, 'g')
         convert_repository(repos, branch_path, RootLayout())
         branch = Repository.open(branch_path)
-        mapping = branch.repository.get_mapping()
-        self.assertEqual([mapping.revision_id_foreign_to_bzr(("6987ef2d-cd6b-461f-9991-6f1abef3bd59", 0, ""))], branch.all_revision_ids())
+        self.assertEqual(len(branch.all_revision_ids()), 1)
         Branch.open(branch_path)
 
     def load_dumpfile(self, dumpfile, target_path):
@@ -409,5 +408,5 @@ data
             abspath = '/' + abspath
         branch = Branch.open(os.path.join(self.test_dir, "e", "trunk"))
         self.assertEqual(local_path_to_url(os.path.join(self.test_dir, "e", "trunk")), branch.base.rstrip("/"))
-        self.assertEqual(mapping.revision_id_foreign_to_bzr(("6987ef2d-cd6b-461f-9991-6f1abef3bd59", 1, 'trunk')), branch.last_revision())
+        self.assertEqual(mapping.revision_id_foreign_to_bzr(("6987ef2d-cd6b-461f-9991-6f1abef3bd59", 'trunk', 1)), branch.last_revision())
 

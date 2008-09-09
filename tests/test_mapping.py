@@ -148,23 +148,23 @@ def sha1(text):
 class ParseRevisionIdTests(object):
 
     def test_v4(self):
-        self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv4()), 
+        self.assertEqual((("uuid", "trunk", 1), BzrSvnMappingv4()), 
                 mapping_registry.parse_revision_id("svn-v3:uuid:trunk:1"))
 
     def test_v3(self):
-        self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv3FileProps(TrunkBranchingScheme())), 
+        self.assertEqual((("uuid", "trunk", 1), BzrSvnMappingv3FileProps(TrunkBranchingScheme())), 
                 mapping_registry.parse_revision_id("svn-v3-trunk0:uuid:trunk:1"))
 
     def test_v3_undefined(self):
-        self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv3FileProps(TrunkBranchingScheme())), 
+        self.assertEqual((("uuid", "trunk", 1), BzrSvnMappingv3FileProps(TrunkBranchingScheme())), 
                 mapping_registry.parse_revision_id("svn-v3-undefined:uuid:trunk:1"))
 
     def test_v2(self):
-        self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv2()), 
+        self.assertEqual((("uuid", "trunk", 1), BzrSvnMappingv2()), 
                          mapping_registry.parse_revision_id("svn-v2:1@uuid-trunk"))
 
     def test_v1(self):
-        self.assertEqual(("uuid", "trunk", 1, BzrSvnMappingv1()), 
+        self.assertEqual((("uuid", "trunk", 1), BzrSvnMappingv1()), 
                          mapping_registry.parse_revision_id("svn-v1:1@uuid-trunk"))
 
     def test_except(self):
