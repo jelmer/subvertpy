@@ -29,7 +29,7 @@ from bzrlib.trace import mutter
 from bzrlib.plugins.svn import format, remote
 from bzrlib.plugins.svn.convert import load_dumpfile
 from bzrlib.plugins.svn.errors import InvalidFileName
-from bzrlib.plugins.svn.layout import TrunkLayout
+from bzrlib.plugins.svn.layout import TrunkLayout, RootLayout
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.transport import SvnRaTransport
 
@@ -272,6 +272,7 @@ class TestFetchWorks(SubversionTestCase):
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -298,6 +299,7 @@ class TestFetchWorks(SubversionTestCase):
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -329,6 +331,7 @@ class TestFetchWorks(SubversionTestCase):
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -450,6 +453,7 @@ Node-action: delete
 
         load_dumpfile("dumpfile", "old")
         oldrepos = Repository.open("old")
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -591,6 +595,7 @@ Node-copyfrom-path: u
 
         load_dumpfile("dumpfile", "old")
         oldrepos = Repository.open("old")
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -737,6 +742,7 @@ Node-copyfrom-path: bla
 
         load_dumpfile("dumpfile", "old")
         oldrepos = Repository.open("old")
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -917,6 +923,7 @@ Node-copyfrom-path: bla
 
         load_dumpfile("dumpfile", "old")
         oldrepos = Repository.open("old")
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1058,6 +1065,7 @@ Node-copyfrom-path: x
 
         load_dumpfile("dumpfile", "old")
         oldrepos = Repository.open("old")
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1221,6 +1229,7 @@ Node-copyfrom-path: x
 
         load_dumpfile("dumpfile", "old")
         oldrepos = Repository.open("old")
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1477,6 +1486,7 @@ Node-copyfrom-path: x
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1502,6 +1512,7 @@ Node-copyfrom-path: x
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1526,6 +1537,7 @@ Node-copyfrom-path: x
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1572,6 +1584,7 @@ Node-copyfrom-path: x
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1596,6 +1609,7 @@ Node-copyfrom-path: x
         oldrepos = Repository.open(repos_url)
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
+        oldrepos.set_layout(RootLayout())
         oldrepos.copy_content_into(newrepos)
         mapping = oldrepos.get_mapping()
         self.assertTrue(newrepos.has_revision(
@@ -1620,6 +1634,7 @@ Node-copyfrom-path: x
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)
@@ -1686,6 +1701,7 @@ Node-copyfrom-path: x
         dc.close()
 
         oldrepos = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         dir = BzrDir.create("f", format.get_rich_root_format())
         newrepos = dir.create_repository()
         oldrepos.copy_content_into(newrepos)

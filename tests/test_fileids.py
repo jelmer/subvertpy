@@ -61,6 +61,7 @@ class TestComplexFileids(SubversionTestCase):
         dc.close()
 
         repository = Repository.open(repos_url)
+        oldrepos.set_layout(RootLayout())
         mapping = repository.get_mapping()
 
         inv1 = repository.get_inventory(
