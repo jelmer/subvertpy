@@ -138,9 +138,9 @@ class TestNativeCommit(SubversionTestCase):
         wt = WorkingTree.open("dc")
         wt.set_pending_merges(["some-ghost-revision"])
         oldid = wt.path2id("foo")
-        wt.commit(message="data")
+        wt.commit(message="data") # 1
         wt.rename_one("foo", "bar")
-        wt.commit(message="doe")
+        wt.commit(message="doe") # 2
         paths = self.client_log(repos_url, 2, 0)[2][0]
         self.assertEquals('D', paths["/foo"][0])
         self.assertEquals('A', paths["/bar"][0])

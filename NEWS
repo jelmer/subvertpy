@@ -48,6 +48,8 @@ bzr-svn-0.5			UNRELEASED
    * Fix corner case corruption pulling from a svn repository that contains bzr-roundtripped 
      revisions. (#260416)
 
+   * Upgrade tags as well during svn-upgrade.
+
   INTERNALS
 
    * Remove custom commit code for working tree. 
