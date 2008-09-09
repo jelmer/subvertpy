@@ -451,7 +451,7 @@ class cmd_svn_branching_scheme(Command):
         from bzrlib.trace import info
         from bzrlib.plugins.svn.repository import SvnRepository
         from bzrlib.plugins.svn.mapping3.scheme import scheme_from_branch_list
-        from bzrlib.plugins.svn.mapping3 import (config_set_scheme, 
+        from bzrlib.plugins.svn.mapping3 import (BzrSvnMappingv3FileProps, config_set_scheme, 
             get_property_scheme, set_property_scheme)
         def scheme_str(scheme):
             if scheme is None:
@@ -464,7 +464,7 @@ class cmd_svn_branching_scheme(Command):
         if repository_wide:
             scheme = get_property_scheme(repos)
         else:
-            scheme = repos.get_mapping().scheme
+            scheme = BzrSvnMappingv3FileProps.from_repository(repos).scheme
         if set:
             schemestr = edit_commit_message("", 
                                             start_message=scheme_str(scheme))
