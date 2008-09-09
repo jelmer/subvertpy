@@ -629,7 +629,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                 it is a candidate to commit.
         """
         if self._texts is None:
-            self._text_parents[ie.file_id] = [parent_inv[ie.file_id].revision for parent_inv in self.parent_invs if ie.file_id in parent_inv]
+            self._text_parents[ie.file_id] = [parent_inv[ie.file_id].revision for parent_inv in parent_invs if ie.file_id in parent_inv]
         elif isinstance(self._texts, SvnTexts):
             overridden_parents = self._texts._get_parent(ie.file_id, ie.revision)
             if overridden_parents is None:
