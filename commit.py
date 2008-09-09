@@ -37,6 +37,7 @@ from bzrlib.plugins.svn.svk import (
 from bzrlib.plugins.svn.logwalker import lazy_dict
 from bzrlib.plugins.svn.mapping import mapping_registry
 from bzrlib.plugins.svn.repository import SvnRepositoryFormat, SvnRepository
+from bzrlib.plugins.svn.versionedfiles import SvnTexts
 
 def _revision_id_to_svk_feature(revid):
     """Create a SVK feature identifier from a revision id.
@@ -625,11 +626,17 @@ class SvnCommitBuilder(RootCommitBuilder):
                 accessed when the entry has a revision of None - that is when 
                 it is a candidate to commit.
         """
-        if self._texts is None or ie.revision is None:
-            self._text_parents[ie.file_id] = []
-            for parent_inv in parent_invs:
-                if ie.file_id in parent_inv:
-                    self._text_parents[ie.file_id].append(parent_inv[ie.file_id].revision)
+        if self._texts is None:
+            self._text_parents[ie.file_id] = [parent_inv[ie.file_id].revision for parent_inv in parent_invs if ie.file_id in parent_inv]
+        elif isinstance(self._texts, SvnTexts):
+            overridden_parents = self._texts._get_parent(ie.file_id, ie.revision)
+            if overridden_parents is None:
+                if ie.file_id in self.old_inv:
+                    self._text_parents[ie.file_id] = [self.old_inv[ie.file_id].revision]
+                else:
+                    self._text_parents[ie.file_id] = []
+            else:
+                self._text_parents[ie.file_id] = overridden_parents
         else:
             key = (ie.file_id, ie.revision)
             parent_map = self._texts.get_parent_map([key])
@@ -637,6 +644,7 @@ class SvnCommitBuilder(RootCommitBuilder):
                 # non-rich-root repositories don't have a text for the root
                 self._text_parents[ie.file_id] = self.parents
             else:
+                assert parent_map[key] is not None, "No parents found for %r" % (key,)
                 self._text_parents[ie.file_id] = [r[1] for r in parent_map[key]]
         self.new_inventory.add(ie)
         assert (ie.file_id not in self.old_inv or 

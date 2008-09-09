@@ -71,16 +71,32 @@ class SvnTexts(VersionedFiles):
                         sha1=osutils.sha_strings(lines),
                         text=''.join(lines))
 
+    def _get_parent(self, fileid, revid):
+        revmeta, mapping = self.repository._get_revmeta(revid)
+        fileidmap = self.repository.get_fileid_map(revmeta.revnum, revmeta.branch_path, mapping)
+        path = None
+        for k, (v_fileid, v_revid) in fileidmap.items():
+            if v_fileid == fileid:
+                path = k
+        if path is None:
+            return
+
+        text_parents = mapping.import_text_parents(revmeta.get_revprops(), revmeta.get_changed_fileprops())
+        if path in text_parents:
+            return text_parents[path]
+
+        # Not explicitly record - so find the last place where this file was modified
+        # and report that.
+
+        return 
+
     def get_parent_map(self, keys):
         invs = {}
 
         # First, figure out the revision number/path
         ret = {}
         for (fileid, revid) in keys:
-            # FIXME: Evil hack
-            # TODO: find revision revid, call import_text_revisions
-            # and retrieve parents for fileid
-            ret[(fileid, revid)] = None
+            ret[(fileid, revid)] = self._get_parent(fileid, revid)
         return ret
 
     # TODO: annotate, get_sha1s, iter_lines_added_or_present_in_keys, keys
