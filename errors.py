@@ -145,8 +145,6 @@ def convert_error(err):
         return ConnectionError(msg=msg)
     elif num == ERR_RA_DAV_REQUEST_FAILED:
         return DavRequestFailed(msg)
-    elif num > 0 and num < 1000:
-        return OSError(num, msg)
     else:
         return err
 

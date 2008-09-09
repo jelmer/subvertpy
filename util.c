@@ -64,6 +64,11 @@ void PyErr_SetSubversionException(svn_error_t *error)
 	PyObject *coremod;
 	PyObject *excval, *excobj;
 
+	if (error->apr_err < 1000) {
+		PyErr_SetObject(PyExc_OSError, Py_BuildValue("(iz)", error->apr_err, error->message));
+		return;
+	}
+
 	coremod = PyImport_ImportModule("bzrlib.plugins.svn.core");
 
 	if (coremod == NULL) {
