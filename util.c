@@ -401,6 +401,22 @@ svn_error_t *py_cancel_func(void *cancel_baton)
 	return NULL;
 }
 
+static apr_hash_t *get_default_config(void)
+{
+	static bool initialised = false;
+	static apr_pool_t *pool = NULL;
+	static apr_hash_t *default_config = NULL;
+
+	if (!initialised) {
+		pool = Pool(NULL);
+		RUN_SVN_WITH_POOL(pool, 
+					  svn_config_get_config(&default_config, NULL, pool));
+		initialised = true;
+	}
+
+	return default_config;
+}
+
 apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool)
 {
 	Py_ssize_t idx = 0;
@@ -409,9 +425,7 @@ apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool)
 	PyObject *dict;
 
 	if (config == Py_None) {
-		RUN_SVN_WITH_POOL(pool, 
-					  svn_config_get_config(&config_hash, NULL, pool));
-		return config_hash;
+		return get_default_config();
 	}
 
 	config_hash = apr_hash_make(pool);
