@@ -74,12 +74,14 @@ static void repos_dealloc(PyObject *self)
 	RepositoryObject *repos = (RepositoryObject *)self;
 
 	apr_pool_destroy(repos->pool);
+	PyObject_Del(repos);
 }
 
 static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	char *path;
 	char *kwnames[] = { "path", NULL };
+	svn_error_t *err;
 	RepositoryObject *ret;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwnames, &path))
@@ -93,13 +95,12 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	if (ret->pool == NULL)
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
-    if (!check_error(svn_repos_open(&ret->repos, path, ret->pool))) {
-		apr_pool_destroy(ret->pool);
-		PyEval_RestoreThread(_save);
-		PyObject_Del(ret);
+	err = svn_repos_open(&ret->repos, path, ret->pool);
+	Py_END_ALLOW_THREADS
+    if (!check_error(err)) {
+		Py_DECREF(ret);
 		return NULL;
 	}
-	Py_END_ALLOW_THREADS
 
 	return (PyObject *)ret;
 }

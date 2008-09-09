@@ -725,6 +725,19 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (ret == NULL)
 		return NULL;
 
+	ret->root = NULL;
+	ret->pool = Pool(NULL);
+	if (ret->pool == NULL) {
+        Py_DECREF(ret);
+		return NULL;
+    }
+
+	ret->url = svn_path_canonicalize(url, ret->pool);
+    if (ret->url == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
+
 	if ((PyObject *)auth == Py_None) {
 		auth_baton = NULL;
 		ret->auth = NULL;
@@ -735,22 +748,8 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		auth_baton = ret->auth->auth_baton;
 	}
 
-	ret->root = NULL;
-	ret->pool = Pool(NULL);
-	if (ret->pool == NULL) {
-        PyObject_Del(ret);
-		return NULL;
-    }
-
-	ret->url = svn_path_canonicalize(url, ret->pool);
-    if (ret->url == NULL) {
-		apr_pool_destroy(ret->pool);
-        PyObject_Del(ret->pool);
-        return NULL;
-    }
 	if (!check_error(svn_ra_create_callbacks(&callbacks2, ret->pool))) {
-		apr_pool_destroy(ret->pool);
-		PyObject_Del(ret);
+		Py_DECREF(ret);
 		return NULL;
 	}
 
@@ -767,8 +766,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 #endif
 	config_hash = config_hash_from_object(config, ret->pool);
 	if (config_hash == NULL) {
-		apr_pool_destroy(ret->pool);
-		PyObject_Del(ret);
+		Py_DECREF(ret);
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
@@ -776,8 +774,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			   callbacks2, ret, config_hash, ret->pool);
 	Py_END_ALLOW_THREADS
 	if (!check_error(err)) {
-		apr_pool_destroy(ret->pool);
-		PyObject_Del(ret);
+		Py_DECREF(ret);
 		return NULL;
 	}
 	ret->busy = false;
@@ -2056,12 +2053,15 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 	if (!PyList_Check(providers)) {
 		PyErr_SetString(PyExc_TypeError, "Auth providers should be list");
+		Py_DECREF(ret);
 		return NULL;
 	}
 
 	ret->pool = Pool(NULL);
-	if (ret->pool == NULL)
+	if (ret->pool == NULL) {
+		Py_DECREF(ret);
 		return NULL;
+	}
 
 	ret->providers = providers;
 	Py_INCREF(providers);
@@ -2069,6 +2069,7 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	c_providers = apr_array_make(ret->pool, PyList_Size(providers), sizeof(svn_auth_provider_object_t *));
 	if (c_providers == NULL) {
 		PyErr_NoMemory();
+		Py_DECREF(ret);
 		return NULL;
 	}
 	for (i = 0; i < PyList_Size(providers); i++) {
@@ -2280,7 +2281,7 @@ static void auth_dealloc(PyObject *self)
 {
 	AuthObject *auth = (AuthObject *)self;
 	apr_pool_destroy(auth->pool);
-	Py_DECREF(auth->providers);	
+	Py_XDECREF(auth->providers);	
 }
 
 PyTypeObject Auth_Type = {

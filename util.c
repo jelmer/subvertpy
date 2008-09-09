@@ -407,6 +407,7 @@ apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool)
 	PyObject *key, *value;
 	apr_hash_t *config_hash;
 	PyObject *dict;
+
 	if (config == Py_None) {
 		RUN_SVN_WITH_POOL(pool, 
 					  svn_config_get_config(&config_hash, NULL, pool));

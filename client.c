@@ -93,7 +93,7 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
 			copyfrom = Py_BuildValue("(si)", commit_item->copyfrom_url, 
 									 commit_item->copyfrom_rev);
 			if (copyfrom == NULL) {
-				PyObject_Del(ret);
+				Py_DECREF(ret);
 				return NULL;
 			}
 		} else {
@@ -106,7 +106,7 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
 							 copyfrom,
 							 commit_item->state_flags);
 		if (item == NULL) {
-			PyObject_Del(ret);
+			Py_DECREF(ret);
 			return NULL;
 		}
 
@@ -182,13 +182,12 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 
 	ret->pool = Pool(NULL);
 	if (ret->pool == NULL) {
-		PyObject_Del(ret);
+		Py_DECREF(ret);
 		return NULL;
 	}
 
 	if (!check_error(svn_client_create_context(&ret->client, ret->pool))) {
-		apr_pool_destroy(ret->pool);
-		PyObject_Del(ret);
+		Py_DECREF(ret);
 		return NULL;
 	}
 
@@ -208,7 +207,8 @@ static void client_dealloc(PyObject *self)
 	Py_XDECREF((PyObject *)client->client->log_msg_baton2);
 	Py_XDECREF(client->py_auth);
 	Py_XDECREF(client->py_config);
-	apr_pool_destroy(client->pool);
+	if (client->pool != NULL)
+		apr_pool_destroy(client->pool);
 	PyObject_Del(self);
 }
 
@@ -614,7 +614,9 @@ static PyMethodDef config_methods[] = {
 
 static void config_dealloc(PyObject *obj)
 {
-	apr_pool_destroy(((ConfigObject *)obj)->pool);
+	apr_pool_t *pool = ((ConfigObject *)obj)->pool;
+	if (pool != NULL)
+		apr_pool_destroy(pool);
 	PyObject_Del(obj);
 }
 
