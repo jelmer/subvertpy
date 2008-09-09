@@ -154,6 +154,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         self.push_metadata = push_metadata
         self._append_revisions_only = append_revisions_only
         self._text_parents = {}
+        self._texts = texts
 
         # Gather information about revision on top of which the commit is 
         # happening
@@ -624,10 +625,19 @@ class SvnCommitBuilder(RootCommitBuilder):
                 accessed when the entry has a revision of None - that is when 
                 it is a candidate to commit.
         """
-        self._text_parents[ie.file_id] = []
-        for parent_inv in parent_invs:
-            if ie.file_id in parent_inv:
-                self._text_parents[ie.file_id].append(parent_inv[ie.file_id].revision)
+        if self._texts is None or ie.revision is None:
+            self._text_parents[ie.file_id] = []
+            for parent_inv in parent_invs:
+                if ie.file_id in parent_inv:
+                    self._text_parents[ie.file_id].append(parent_inv[ie.file_id].revision)
+        else:
+            key = (ie.file_id, ie.revision)
+            parent_map = self._texts.get_parent_map([key])
+            if ie.parent_id is None and (not key in parent_map or parent_map[key] is None):
+                # non-rich-root repositories don't have a text for the root
+                self._text_parents[ie.file_id] = self.parents
+            else:
+                self._text_parents[ie.file_id] = [r[1] for r in parent_map[key]]
         self.new_inventory.add(ie)
         assert (ie.file_id not in self.old_inv or 
                 self.old_inv[ie.file_id].revision is not None)

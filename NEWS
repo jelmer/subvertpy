@@ -45,6 +45,9 @@ bzr-svn-0.5			UNRELEASED
    * Avoid leaking memory when attempting to open an invalid Subversion 
      repository. (#262513)
 
+   * Fix corner case corruption pulling from a svn repository that contains bzr-roundtripped 
+     revisions. (#260416)
+
   INTERNALS
 
    * Remove custom commit code for working tree. 
