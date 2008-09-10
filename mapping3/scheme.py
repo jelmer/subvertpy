@@ -20,6 +20,7 @@ from bzrlib.errors import BzrError
 from bzrlib.trace import mutter
 
 from base64 import urlsafe_b64decode, urlsafe_b64encode
+from bzrlib.plugins.svn.layout.guess import find_commit_paths
 from bzrlib.plugins.svn.layout.standard import TrunkLayout, RootLayout, CustomLayout
 from bzrlib.plugins.svn.errors import InvalidSvnBranchPath, LayoutUnusable
 from bzrlib.plugins.svn import properties
@@ -412,28 +413,6 @@ class SingleBranchingSchemev0(SingleBranchingScheme):
         return "single-%s" % self.path
 
 
-def _find_common_prefix(paths):
-    prefix = ""
-    # Find a common prefix
-    parts = paths[0].split("/")
-    for i in range(len(parts)+1):
-        for j in paths:
-            if j.split("/")[:i] != parts[:i]:
-                return prefix
-        prefix = "/".join(parts[:i])
-    return prefix
-
-
-def find_commit_paths(changed_paths):
-    """Find the commit-paths used in a bunch of revisions.
-
-    :param changed_paths: List of changed_paths (dictionary with path -> action)
-    :return: List of potential commit paths.
-    """
-    for changes in changed_paths:
-        yield _find_common_prefix(changes.keys())
-
-
 def guess_scheme_from_branch_path(relpath):
     """Try to guess the branching scheme from a branch path.
 
@@ -572,4 +551,6 @@ This scheme is called "none" by Bazaar.
 
 The branching scheme bzr-svn should use for a repository can be set in the 
 configuration file ~/.bazaar/subversion.conf.
+
+Branching schemes are only used for version 3 of the Bzr<->Svn mappings.
 """
