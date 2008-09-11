@@ -296,8 +296,6 @@ class SvnRepository(Repository):
             except KeyError:
                 pass
         if self._layout is None:
-            self._layout = self.get_guessed_layout()
-        if self._layout is None:
             (self._guessed_layout, self._layout) = repository_guess_layout(self, 
                     self.get_latest_revnum(), self._hinted_branch_path)
         return self._layout
