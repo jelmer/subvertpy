@@ -32,7 +32,7 @@ from copy import copy
 from itertools import chain
 import os
 
-from bzrlib.plugins.svn import cache, changes, core, errors, logwalker, properties, revmeta
+from bzrlib.plugins.svn import cache, changes, core, errors, layout, logwalker, properties, revmeta
 from bzrlib.plugins.svn.branchprops import PathPropertyProvider
 from bzrlib.plugins.svn.config import SvnRepositoryConfig
 from bzrlib.plugins.svn.core import SubversionException
@@ -290,6 +290,11 @@ class SvnRepository(Repository):
     def get_layout(self):
         if self._layout is None:
             self._layout = self.get_mapping().get_mandated_layout(self)
+        if self._layout is None:
+            try:
+                self._layout = layout.repository_registry.get(self.uuid)()
+            except KeyError:
+                pass
         if self._layout is None:
             self._layout = self.get_guessed_layout()
         if self._layout is None:

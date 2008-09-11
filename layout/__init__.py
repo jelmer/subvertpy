@@ -225,3 +225,5 @@ layout_registry.register_lazy("trunk", "bzrlib.plugins.svn.layout.standard", "Tr
 layout_registry.register_lazy("trunk0", "bzrlib.plugins.svn.layout.standard", "TrunkLayout0")
 layout_registry.register_lazy("trunk1", "bzrlib.plugins.svn.layout.standard", "TrunkLayout1")
 layout_registry.register_lazy("trunk2", "bzrlib.plugins.svn.layout.standard", "TrunkLayout2")
+
+repository_registry = registry.Registry()
