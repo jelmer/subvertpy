@@ -373,3 +373,102 @@ class ConfigBasedLayout(WildcardLayout):
         super(ConfigBasedLayout, self).__init__(self._get_list("branches"),
                                                 self._get_list("tags"))
 
+
+class InverseTrunkLayout(RepositoryLayout):
+
+    def __init__(self, level):
+        assert isinstance(level, int)
+        assert level > 0
+        self.level = level
+    
+    def get_tag_path(self, name, project=""):
+        """Return the path at which the tag with specified name should be found.
+
+        :param name: Name of the tag. 
+        :param project: Optional name of the project the tag is for. Can include slashes.
+        :return: Path of the tag."
+        """
+        return urlutils.join("tags", project, name.encode("utf-8")).strip("/")
+
+    def get_tag_name(self, path, project=""):
+        """Determine the tag name from a tag path.
+
+        :param path: Path inside the repository.
+        """
+        return urlutils.basename(path).strip("/")
+
+    def push_merged_revisions(self, project=""):
+        """Determine whether or not right hand side (merged) revisions should be pushed.
+
+        Defaults to False.
+        
+        :param project: Name of the project.
+        """
+        return False
+
+    def get_branch_path(self, name, project=""):
+        """Return the path at which the branch with specified name should be found.
+
+        :param name: Name of the branch. 
+        :param project: Optional name of the project the branch is for. Can include slashes.
+        :return: Path of the branch.
+        """
+        return urlutils.join("branches", project, name).strip("/")
+
+    def parse(self, path):
+        """Parse a path.
+
+        :return: Tuple with type ('tag', 'branch'), project name, branch path and path 
+            inside the branch
+        """
+        assert isinstance(path, str)
+        path = path.strip("/")
+        parts = path.split("/")
+        if len(parts) == 0:
+            raise bzr_errors.NotBranchError(path)
+        if parts[0] == "trunk":
+            if len(parts) < (self.level + 1):
+                raise bzr_errors.NotBranchError(path)
+            return ("branch", "/".join(parts[1:self.level+2]), "/".join(parts[:self.level+1]), "/".join(parts[self.level+1:]))
+        elif parts[0] in ("branches", "tags"):
+            if len(parts) < (self.level + 2):
+                raise bzr_errors.NotBranchError(path)
+            if parts[0] == "branches":
+                t = "branch"
+            else:
+                t = "tag"
+            return (t, "/".join(parts[1:self.level+1]), "/".join(parts[:self.level+2]), "/".join(parts[self.level+2:]))
+        raise bzr_errors.NotBranchError(path)
+
+    def _add_project(self, path, project=None):
+        if project is None:
+            project = "*/" * self.level
+        if path == "trunk":
+            return urlutils.join(path, project)
+        else:
+            return urlutils.join(urlutils.join(path, project), "*")
+
+    def get_branches(self, repository, revnum, project=None, pb=None):
+        """Retrieve a list of paths that refer to branches in a specific revision.
+
+        :result: Iterator over tuples with (project, branch path)
+        """
+        return get_root_paths(repository, 
+             [self._add_project(x, project) for x in "branches", "trunk"], 
+             revnum, self.is_branch, project)
+
+    def get_tags(self, repository, revnum, project=None, pb=None):
+        """Retrieve a list of paths that refer to tags in a specific revision.
+
+        :result: Iterator over tuples with (project, branch path)
+        """
+        return get_root_paths(repository, [self._add_project("tags", project)], revnum, self.is_tag, project)
+
+    def __repr__(self):
+        return "%s(%d)" % (self.__class__.__name__, self.level)
+
+InverseTrunkLayout1 = partial(InverseTrunkLayout, 1)
+InverseTrunkLayout2 = partial(InverseTrunkLayout, 2)
+InverseTrunkLayout3 = partial(InverseTrunkLayout, 3)
+InverseTrunkLayout4 = partial(InverseTrunkLayout, 4)
+

@@ -215,7 +215,7 @@ def get_root_paths(repository, itemlist, revnum, verify_fn, project=None, pb=Non
         for bp in expand_branch_pattern([], pattern.strip("/").split("/"), check_path,
                 find_children, project):
             if verify_fn(bp, project):
-                yield "", bp, bp.split("/")[-1]
+                yield project, bp, bp.split("/")[-1]
 
 
 layout_registry = registry.Registry()
@@ -226,4 +226,14 @@ layout_registry.register_lazy("trunk0", "bzrlib.plugins.svn.layout.standard", "T
 layout_registry.register_lazy("trunk1", "bzrlib.plugins.svn.layout.standard", "TrunkLayout1")
 layout_registry.register_lazy("trunk2", "bzrlib.plugins.svn.layout.standard", "TrunkLayout2")
 
+layout_registry.register_lazy("itrunk1", "bzrlib.plugins.svn.layout.standard", 
+    "InverseTrunkLayout1")
+layout_registry.register_lazy("itrunk2", "bzrlib.plugins.svn.layout.standard", 
+    "InverseTrunkLayout2")
+layout_registry.register_lazy("itrunk3", "bzrlib.plugins.svn.layout.standard", 
+    "InverseTrunkLayout3")
+
 repository_registry = registry.Registry()
+# KDE:
+repository_registry.register_lazy("283d02a7-25f6-0310-bc7c-ecb5cbfe19da", 
+        "bzrlib.plugins.svn.layout.standard", "InverseTrunkLayout1")
