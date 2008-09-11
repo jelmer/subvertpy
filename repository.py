@@ -267,14 +267,13 @@ class SvnRepository(Repository):
             parentrevnum = revision.svn_meta.revnum
             start_empty = True
         else:
-            parentfileidmap = self.get_fileid_map(parentrevmeta.revnum, parentrevmeta.branch_path, revision.svn_mapping)
+            parentfileidmap = self.get_fileid_map(parentrevmeta, revision.svn_mapping)
             parent_branch_path = parentrevmeta.branch_path
             parentrevnum = parentrevmeta.revnum
             start_empty = False
         editor = TreeDeltaBuildEditor(revision.svn_meta, revision.svn_mapping, 
-                                      self.get_fileid_map(revision.svn_meta.revnum, 
-                                                          revision.svn_meta.branch_path,
-                                                          revision.svn_mapping), parentfileidmap)
+                                      self.get_fileid_map(revision.svn_meta, revision.svn_mapping), 
+                                      parentfileidmap)
         conn = self.transport.get_connection(parent_branch_path)
         try:
             reporter = conn.do_diff(revision.svn_meta.revnum, "", urlutils.join(self.transport.get_svn_repos_root(), revision.svn_meta.branch_path), editor, True, True, False)
@@ -328,8 +327,8 @@ class SvnRepository(Repository):
         assert revision_id != None
         return self.revision_tree(revision_id).inventory
 
-    def get_fileid_map(self, revnum, path, mapping):
-        return self.fileid_map.get_map(self.uuid, revnum, path, mapping)
+    def get_fileid_map(self, revmeta, mapping):
+        return self.fileid_map.get_map(revmeta.uuid, revmeta.revnum, revmeta.branch_path, mapping)
 
     def transform_fileid_map(self, revmeta, mapping):
         return self.fileid_map.apply_changes(revmeta, mapping)[0]

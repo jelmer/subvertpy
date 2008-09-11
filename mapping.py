@@ -147,6 +147,7 @@ def parse_merge_property(line):
 
 
 def parse_svn_dateprop(date):
+    """Parse a Subversion date property and return a unix timestamp."""
     return (properties.time_from_cstring(date) / 1000000.0, 0)
 
 
@@ -723,7 +724,7 @@ mapping_registry.register_lazy('v3', 'bzrlib.plugins.svn.mapping3',
 mapping_registry.register_lazy('v4', 'bzrlib.plugins.svn.mapping4', 
                                'BzrSvnMappingv4',
                                'Fourth format (bzr-svn 0.5.x)')
-mapping_registry.set_default('v3')
+mapping_registry.set_default('v4')
 
 
 def find_mapping(revprops, fileprops):
