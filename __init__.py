@@ -252,10 +252,12 @@ class cmd_svn_import(Command):
             prefix = urlutils.relative_url(from_repos.base, from_location)
             prefix = prefix.encode("utf-8")
 
+        to_revnum = from_repos.get_latest_revnum()
+
         from_repos.lock_read()
         try:
             (guessed_overall_layout, _) = repository_guess_layout(from_repos, 
-                from_repos.get_latest_revnum())
+                to_revnum)
 
             if prefix is not None:
                 prefix = prefix.strip("/") + "/"
@@ -283,7 +285,8 @@ class cmd_svn_import(Command):
             convert_repository(from_repos, to_location, layout, 
                                not standalone, trees, all, 
                                filter_branch=filter_branch,
-                               keep=keep, incremental=incremental)
+                               keep=keep, incremental=incremental,
+                               to_revnum=to_revnum)
 
             if tmp_repos is not None:
                 osutils.rmtree(tmp_repos)

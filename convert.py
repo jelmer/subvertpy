@@ -118,7 +118,7 @@ def load_dumpfile(dumpfile, outputdir):
 def convert_repository(source_repos, output_url, layout=None,
                        create_shared_repo=True, working_trees=False, all=False,
                        format=None, filter_branch=None, keep=False, 
-                       incremental=False):
+                       incremental=False, to_revnum=None):
     """Convert a Subversion repository and its' branches to a 
     Bazaar repository.
 
@@ -170,7 +170,8 @@ def convert_repository(source_repos, output_url, layout=None,
         else:
             from_revnum = 0
         project = None
-        to_revnum = source_repos.get_latest_revnum()
+        if to_revnum is None:
+            to_revnum = source_repos.get_latest_revnum()
         # Searching history for touched and removed branches is more expensive than 
         # just listing the branches in HEAD, so avoid it if possible.
         # If there's more than one subdirectory (we always have .bzr), we may 
