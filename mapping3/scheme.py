@@ -517,6 +517,8 @@ def scheme_from_branch_list(branch_list):
 
 
 def scheme_from_layout(layout):
+    if getattr(layout, "scheme", None) is not None:
+        return layout.scheme
     if isinstance(layout, TrunkLayout):
         return TrunkBranchingScheme(layout.level or 0)
     if isinstance(layout, RootLayout):

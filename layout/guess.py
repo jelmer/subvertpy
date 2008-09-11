@@ -16,7 +16,7 @@
 from bzrlib import ui
 from bzrlib.trace import mutter
 
-from bzrlib.plugins.svn.layout.standard import TrunkLayout
+from bzrlib.plugins.svn.layout.standard import RootLayout, CustomLayout, TrunkLayout
 
 # Number of revisions to evaluate when guessing the repository layout
 GUESS_SAMPLE_SIZE = 2000

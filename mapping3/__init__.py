@@ -18,6 +18,7 @@ from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn import mapping, properties
+from bzrlib.plugins.svn.layout.guess import GUESS_SAMPLE_SIZE
 from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
 from bzrlib.plugins.svn.mapping3.scheme import (BranchingScheme, guess_scheme_from_branch_path, 
                              guess_scheme_from_history, ListBranchingScheme, 
@@ -28,9 +29,6 @@ from bzrlib.plugins.svn.ra import DIRENT_KIND
 import sha
 
 SVN_PROP_BZR_BRANCHING_SCHEME = 'bzr:branching-scheme'
-
-# Number of revisions to evaluate when guessing the branching scheme
-SCHEME_GUESS_SAMPLE_SIZE = 2000
 
 class SchemeDerivedLayout(RepositoryLayout):
     def __init__(self, repository, scheme):
@@ -129,7 +127,7 @@ def repository_guess_scheme(repository, last_revnum, branch_path=None):
     pb = ui.ui_factory.nested_progress_bar()
     try:
         (guessed_scheme, scheme) = guess_scheme_from_history(
-            repository._log.iter_changes(None, last_revnum, max(0, last_revnum-SCHEME_GUESS_SAMPLE_SIZE), pb=pb), last_revnum, branch_path)
+            repository._log.iter_changes(None, last_revnum, max(0, last_revnum-GUESS_SAMPLE_SIZE), pb=pb), last_revnum, branch_path)
     finally:
         pb.finished()
     mutter("Guessed branching scheme: %r, guess scheme to use: %r" % 
