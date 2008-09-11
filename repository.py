@@ -34,12 +34,11 @@ import os
 
 from bzrlib.plugins.svn import cache, changes, core, errors, logwalker, properties, revmeta
 from bzrlib.plugins.svn.branchprops import PathPropertyProvider
-from bzrlib.plugins.svn.changes import changes_path, find_prev_location
 from bzrlib.plugins.svn.config import SvnRepositoryConfig
 from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.layout.guess import repository_guess_layout
 from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
                      SVN_REVPROP_BZR_TAGS,
-                     SVN_REVPROP_BZR_SKIP,
                      parse_tags_property,
                      BzrSvnMapping,
                      mapping_registry,
@@ -47,8 +46,6 @@ from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
                      parse_svn_dateprop)
 from bzrlib.plugins.svn.parents import DiskCachingParentsProvider
 from bzrlib.plugins.svn.revids import CachingRevidMap, RevidMap
-from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
-                 parse_svk_feature)
 from bzrlib.plugins.svn.tree import SvnRevisionTree
 from bzrlib.plugins.svn.versionedfiles import (SvnTexts, VirtualRevisionTexts, 
                                                VirtualInventoryTexts, VirtualSignatureTexts)
@@ -103,6 +100,7 @@ class SvnRepository(Repository):
         self._lock_mode = None
         self._lock_count = 0
         self._layout = None
+        self._guessed_layout = None
         self.transport = transport
         self.uuid = transport.get_uuid()
         assert self.uuid is not None
@@ -293,12 +291,20 @@ class SvnRepository(Repository):
     def get_layout(self):
         if self._layout is None:
             self._layout = self.get_mapping().get_mandated_layout(self)
-            if self._layout is None:
-                self._layout = self.get_guessed_layout()
+        if self._layout is None:
+            self._layout = self.get_guessed_layout()
+        if self._layout is None:
+            (self._guessed_layout, self._layout) = repository_guess_layout(self, 
+                    self.get_latest_revnum(), self._hinted_branch_path)
         return self._layout
 
     def get_guessed_layout(self):
-        return self.get_mapping().get_guessed_layout(self)
+        if self._guessed_layout is None:
+            self._guessed_layout = self.get_mapping().get_guessed_layout(self)
+        if self._guessed_layout is None:
+            (self._guessed_layout, self._layout) = repository_guess_layout(self, 
+                    self.get_latest_revnum(), self._hinted_branch_path)
+        return self._guessed_layout
 
     def _warn_if_deprecated(self):
         # This class isn't deprecated
