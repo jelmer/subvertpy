@@ -185,14 +185,14 @@ class RevisionMetadata(object):
         """Estimate how many ancestors with bzr file properties this revision has.
 
         """
-        if not self.consider_bzr_fileprops():
+        if not self.knows_fileprops() and not self.consider_bzr_fileprops():
             # This revisions descendant doesn't have bzr fileprops set, so this one can't have them either.
             return 0
         return estimate_bzr_ancestors(self.get_fileprops())
 
     def estimate_svk_fileprop_ancestors(self):
         """Estimate how many svk ancestors this revision has."""
-        if not self.consider_svk_fileprops():
+        if not self.knows_fileprops() and not self.consider_svk_fileprops():
             # This revisions descendant doesn't have svk fileprops set, so this one can't have them either.
             return 0
         return estimate_svk_ancestors(self.get_fileprops())
