@@ -507,8 +507,7 @@ class SvnRepository(Repository):
         :param revision_id: Revision for which to return the XML.
         :return: XML string
         """
-        return self._serializer.write_revision_to_string(
-            self.get_revision(revision_id))
+        return self._serializer.write_revision_to_string(self.get_revision(revision_id))
 
     def seen_bzr_revprops(self):
         """Check whether bzr-specific custom revision properties are present on this 
@@ -535,11 +534,10 @@ class SvnRepository(Repository):
             at the moment.
         """
         try:
-            (path, revnum, mapping) = self.lookup_revision_id(revision_id)
+            revmeta = self._get_revmeta(revision_id)
         except NoSuchRevision:
             return False
-        revprops = self.transport.revprop_list(revnum)
-        return revprops.has_key(SVN_REVPROP_BZR_SIGNATURE)
+        return revmeta.get_signature() is not None
 
     def get_signature_text(self, revision_id):
         """Return the signature text for a particular revision.
@@ -548,12 +546,11 @@ class SvnRepository(Repository):
                             signature.
         :raises NoSuchRevision: Always
         """
-        (path, revnum, mapping) = self.lookup_revision_id(revision_id)
-        revprops = self.transport.revprop_list(revnum)
-        try:
-            return revprops[SVN_REVPROP_BZR_SIGNATURE]
-        except KeyError:
+        revmeta = self._get_revmeta(revision_id)
+        signature = revmeta.get_signature()
+        if signature is None:
             raise NoSuchRevision(self, revision_id)
+        return signature
 
     def add_signature_text(self, revision_id, signature):
         (path, revnum, mapping) = self.lookup_revision_id(revision_id)
