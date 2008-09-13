@@ -199,7 +199,7 @@ def convert_repository(source_repos, output_url, layout=None,
                         existing_branches[revmeta.branch_path] = SvnBranch(source_repos, revmeta.branch_path, _skip_check=True)
             finally:
                 pb.finished()
-            existing_branches = existing_branches.keys()
+            existing_branches = existing_branches.values()
         else:
             existing_branches = source_repos.find_branches(layout, to_revnum)
             revmetas = None
