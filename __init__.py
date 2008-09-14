@@ -221,7 +221,6 @@ class cmd_svn_import(Command):
         from bzrlib.errors import BzrCommandError, NoRepositoryPresent
         from bzrlib import osutils, urlutils
         from bzrlib.plugins.svn.convert import convert_repository
-        from bzrlib.plugins.svn.layout.guess import repository_guess_layout
         from bzrlib.plugins.svn.repository import SvnRepository
 
         if to_location is None:
@@ -256,12 +255,11 @@ class cmd_svn_import(Command):
 
         from_repos.lock_read()
         try:
-            (guessed_overall_layout, _) = repository_guess_layout(from_repos, 
-                to_revnum)
+            guessed_overall_layout = from_repos.get_guessed_layout()
 
             if prefix is not None:
                 prefix = prefix.strip("/") + "/"
-                if guessed_overall__layout.is_branch(prefix):
+                if guessed_overall_layout.is_branch(prefix):
                     raise BzrCommandError("%s appears to contain a branch. " 
                             "For individual branches, use 'bzr branch'." % 
                             from_location)

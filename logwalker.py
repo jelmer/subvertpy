@@ -187,7 +187,8 @@ class LogCache(CacheTable):
         :param name: Name of the revision property.
         :param value: Contents of the revision property.
         """
-        self.cachedb.execute("replace into revprop (rev, name, value) values (?, ?, ?)", (rev, name.decode("utf-8"), value.decode("utf-8")))
+        assert isinstance(name, str) and isinstance(value, str)
+        self.cachedb.execute("replace into revprop (rev, name, value) values (?, ?, ?)", (rev, name.decode("utf-8", "replace"), value.decode("utf-8", "replace")))
     
     def insert_revprops(self, revision, revprops):
         if revprops is None:

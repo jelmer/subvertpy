@@ -233,7 +233,15 @@ layout_registry.register_lazy("itrunk2", "bzrlib.plugins.svn.layout.standard",
 layout_registry.register_lazy("itrunk3", "bzrlib.plugins.svn.layout.standard", 
     "InverseTrunkLayout3")
 
-repository_registry = registry.Registry()
+class RepositoryRegistry(registry.Registry):
+
+    def get(self, name):
+        try:
+            return super(RepositoryRegistry, self).get(name)()
+        except KeyError:
+            return None
+
+repository_registry = RepositoryRegistry()
 # KDE:
 repository_registry.register_lazy("283d02a7-25f6-0310-bc7c-ecb5cbfe19da", 
         "bzrlib.plugins.svn.layout.standard", "InverseTrunkLayout1")
