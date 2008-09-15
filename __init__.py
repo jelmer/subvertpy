@@ -526,6 +526,19 @@ class cmd_svn_set_revprops(Command):
 register_command(cmd_svn_set_revprops)
 
 
+class cmd_svn_layout(Command):
+
+    takes_args = ["repos_url"]
+
+    def run(self, repos_url):
+        from bzrlib.repository import Repository
+
+        repos = Repository.open(repos_url)
+        layout = repos.get_layout()
+        self.outf.write("Layout: %s\n" % str(layout))
+
+register_command(cmd_svn_layout)
+
 def test_suite():
     """Returns the testsuite for bzr-svn."""
     from unittest import TestSuite
