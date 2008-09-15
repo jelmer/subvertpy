@@ -210,13 +210,15 @@ class cmd_svn_import(Command):
                          help="Import revisions incrementally."),
                      Option('prefix', type=str, 
                          help='Only consider branches of which path starts '
-                              'with prefix.')
+                              'with prefix.'),
+                     Option('until', type=int,
+                         help="Only import revisions up to specified Subversion revnum"),
                     ]
 
     @display_command
     def run(self, from_location, to_location=None, trees=False, 
             standalone=False, layout=None, all=False, prefix=None, keep=False,
-            incremental=False):
+            incremental=False, until=None):
         from bzrlib.bzrdir import BzrDir
         from bzrlib.errors import BzrCommandError, NoRepositoryPresent
         from bzrlib import osutils, urlutils
@@ -251,7 +253,10 @@ class cmd_svn_import(Command):
             prefix = urlutils.relative_url(from_repos.base, from_location)
             prefix = prefix.encode("utf-8")
 
-        to_revnum = from_repos.get_latest_revnum()
+        if until is None:
+            to_revnum = from_repos.get_latest_revnum()
+        else:
+            to_revnum = min(until, from_repos.get_latest_revnum())
 
         from_repos.lock_read()
         try:

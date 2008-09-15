@@ -612,24 +612,6 @@ class InterFromSvnRepository(InterRepository):
         needed = list(graph.iter_topo_order(missing))
         return [(meta_map[revid], mapping) for revid in needed]
 
-    def _find_branches(self, branches, find_ghosts=False, pb=None):
-        set_needed = set()
-        ret_needed = list()
-        checked = set()
-        for branch in branches:
-            if pb:
-                pb.update("determining revisions to fetch", branches.index(branch), len(branches))
-            try:
-                nestedpb = ui.ui_factory.nested_progress_bar()
-                for rev in self._find_until(branch.last_revision(), find_ghosts=find_ghosts, 
-                                            pb=nestedpb, checked=checked, project=branch.project):
-                    if rev[0] not in set_needed:
-                        ret_needed.append(rev)
-                        set_needed.add(rev[0])
-            finally:
-                nestedpb.finished()
-        return ret_needed
-
     def _find_until(self, revision_id, find_ghosts=False, pb=None,
                     checked=None, project=None):
         """Find all missing revisions until revision_id
@@ -786,7 +768,7 @@ class InterFromSvnRepository(InterRepository):
             self.target.commit_write_group()
 
     def fetch(self, revision_id=None, pb=None, find_ghosts=False, 
-              branches=None, revmetas=None, mapping=None):
+              revmetas=None, mapping=None):
         """Fetch revisions. """
         if revision_id == NULL_REVISION:
             return
@@ -807,9 +789,6 @@ class InterFromSvnRepository(InterRepository):
             try:
                 if revmetas is not None:
                     needed = [(revmeta, mapping) for revmeta in revmetas]
-                elif branches is not None:
-                    needed = self._find_branches(branches, find_ghosts, 
-                                pb=nested_pb)
                 elif revision_id is None:
                     needed = self._find_all(self.source.get_mapping(), pb=nested_pb)
                 else:
