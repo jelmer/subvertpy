@@ -210,18 +210,19 @@ class cmd_svn_import(Command):
                          help="Import revisions incrementally."),
                      Option('prefix', type=str, 
                          help='Only consider branches of which path starts '
-                              'with prefix.')
+                              'with prefix.'),
+                     Option('until', type=int,
+                         help="Only import revisions up to specified Subversion revnum"),
                     ]
 
     @display_command
     def run(self, from_location, to_location=None, trees=False, 
             standalone=False, layout=None, all=False, prefix=None, keep=False,
-            incremental=False):
+            incremental=False, until=None):
         from bzrlib.bzrdir import BzrDir
         from bzrlib.errors import BzrCommandError, NoRepositoryPresent
         from bzrlib import osutils, urlutils
         from bzrlib.plugins.svn.convert import convert_repository
-        from bzrlib.plugins.svn.layout.guess import repository_guess_layout
         from bzrlib.plugins.svn.repository import SvnRepository
         from bzrlib.trace import info
 
@@ -253,16 +254,18 @@ class cmd_svn_import(Command):
             prefix = urlutils.relative_url(from_repos.base, from_location)
             prefix = prefix.encode("utf-8")
 
-        to_revnum = from_repos.get_latest_revnum()
+        if until is None:
+            to_revnum = from_repos.get_latest_revnum()
+        else:
+            to_revnum = min(until, from_repos.get_latest_revnum())
 
         from_repos.lock_read()
         try:
-            (guessed_overall_layout, _) = repository_guess_layout(from_repos, 
-                to_revnum)
+            guessed_overall_layout = from_repos.get_guessed_layout()
 
             if prefix is not None:
                 prefix = prefix.strip("/") + "/"
-                if guessed_overall__layout.is_branch(prefix):
+                if guessed_overall_layout.is_branch(prefix):
                     raise BzrCommandError("%s appears to contain a branch. " 
                             "For individual branches, use 'bzr branch'." % 
                             from_location)
@@ -524,6 +527,19 @@ class cmd_svn_set_revprops(Command):
 
 register_command(cmd_svn_set_revprops)
 
+
+class cmd_svn_layout(Command):
+
+    takes_args = ["repos_url"]
+
+    def run(self, repos_url):
+        from bzrlib.repository import Repository
+
+        repos = Repository.open(repos_url)
+        layout = repos.get_layout()
+        self.outf.write("Layout: %s\n" % str(layout))
+
+register_command(cmd_svn_layout)
 
 def test_suite():
     """Returns the testsuite for bzr-svn."""

@@ -359,21 +359,6 @@ class WildcardLayout(RepositoryLayout):
         return "%s(%r,%r)" % (self.__class__.__name__, self.branches, self.tags)
 
 
-class ConfigBasedLayout(WildcardLayout):
-
-    def _get_list(self, name):
-        try:
-            return self._config.get_user_option(name).split(";")
-        except TypeError:
-            return []
-
-    def __init__(self, repository):
-        self.repository = repository
-        self._config = repository.get_config()
-        super(ConfigBasedLayout, self).__init__(self._get_list("branches"),
-                                                self._get_list("tags"))
-
-
 class InverseTrunkLayout(RepositoryLayout):
 
     def __init__(self, level):

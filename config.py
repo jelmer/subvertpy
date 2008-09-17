@@ -57,6 +57,15 @@ class SvnRepositoryConfig(IniBasedConfig):
             self.get_user_option('branching-scheme-mandatory') is not None):
             self.set_user_option('branching-scheme-mandatory', str(mandatory))
 
+    def get_layout(self):
+        return self._get_user_option("layout", use_global=False)
+
+    def get_branches(self):
+        return self._get_user_option("branches", use_global=False)
+
+    def get_tags(self):
+        return self._get_user_option("tags", use_global=False)
+
     def _get_user_option(self, name, use_global=True):
         try:
             return self._get_parser()[self.uuid][name]

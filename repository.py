@@ -36,6 +36,7 @@ from bzrlib.plugins.svn import cache, changes, core, errors, layout, logwalker, 
 from bzrlib.plugins.svn.branchprops import PathPropertyProvider
 from bzrlib.plugins.svn.config import SvnRepositoryConfig
 from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.layout.standard import WildcardLayout
 from bzrlib.plugins.svn.layout.guess import repository_guess_layout
 from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
                      SVN_REVPROP_BZR_TAGS,
@@ -291,10 +292,16 @@ class SvnRepository(Repository):
         if self._layout is None:
             self._layout = self.get_mapping().get_mandated_layout(self)
         if self._layout is None:
-            try:
-                self._layout = layout.repository_registry.get(self.uuid)()
-            except KeyError:
-                pass
+            layoutname = self.get_config().get_layout()
+            if layoutname is not None:
+                self._layout = mapping_registry.get(layoutname)()
+        if self._layout is None:
+            branches = self.get_config().get_branches()
+            tags = self.get_config().get_tags()
+            if branches is not None:
+                self._layout = WildcardLayout(branches, tags)
+        if self._layout is None:
+            self._layout = layout.repository_registry.get(self.uuid)
         if self._layout is None:
             (self._guessed_layout, self._layout) = repository_guess_layout(self, 
                     self.get_latest_revnum(), self._hinted_branch_path)
@@ -534,7 +541,7 @@ class SvnRepository(Repository):
             at the moment.
         """
         try:
-            revmeta = self._get_revmeta(revision_id)
+            revmeta, mapping = self._get_revmeta(revision_id)
         except NoSuchRevision:
             return False
         return revmeta.get_signature() is not None
@@ -546,7 +553,7 @@ class SvnRepository(Repository):
                             signature.
         :raises NoSuchRevision: Always
         """
-        revmeta = self._get_revmeta(revision_id)
+        revmeta, mapping = self._get_revmeta(revision_id)
         signature = revmeta.get_signature()
         if signature is None:
             raise NoSuchRevision(self, revision_id)

@@ -182,30 +182,24 @@ def convert_repository(source_repos, output_url, layout=None,
         else:
             removed_branches = []
         mapping = source_repos.get_mapping()
-        if from_revnum > 0:
-            revmetas = []
-            existing_branches = {}
-            pb = ui.ui_factory.nested_progress_bar()
-            try:
-                for revmeta in source_repos._revmeta_provider.iter_all_changes(layout, mapping,
-                                                                       to_revnum, from_revnum,
-                                                                       project=project):
-                    pb.update("determining revisions to fetch", to_revnum-revmeta.revnum, to_revnum)
-                    if revmeta.is_hidden(mapping):
-                        continue
-                    if target_repos is not None and not target_repos.has_revision(revmeta.get_revision_id(mapping)):
-                        revmetas.append(revmeta)
-                    if not revmeta.branch_path in existing_branches:
-                        existing_branches[revmeta.branch_path] = SvnBranch(source_repos, revmeta.branch_path, _skip_check=True)
-            finally:
-                pb.finished()
-            existing_branches = existing_branches.keys()
-        else:
-            existing_branches = source_repos.find_branches(layout, to_revnum)
-            revmetas = None
-
-        if filter_branch is not None:
-            existing_branches = filter(filter_branch, existing_branches)
+        revmetas = []
+        existing_branches = {}
+        pb = ui.ui_factory.nested_progress_bar()
+        # FIXME: Use filter_branch
+        try:
+            for revmeta in source_repos._revmeta_provider.iter_all_changes(layout, mapping,
+                                                                   to_revnum, from_revnum,
+                                                                   project=project):
+                pb.update("determining revisions to fetch", to_revnum-revmeta.revnum, to_revnum)
+                if revmeta.is_hidden(mapping):
+                    continue
+                if target_repos is not None and not target_repos.has_revision(revmeta.get_revision_id(mapping)):
+                    revmetas.append(revmeta)
+                if not revmeta.branch_path in existing_branches:
+                    existing_branches[revmeta.branch_path] = SvnBranch(source_repos, revmeta.branch_path, revnum=revmeta.revnum, _skip_check=True)
+        finally:
+            pb.finished()
+        existing_branches = existing_branches.values()
 
         if create_shared_repo:
             inter = InterRepository.get(source_repos, target_repos)
@@ -215,7 +209,8 @@ def convert_repository(source_repos, output_url, layout=None,
             elif (target_repos.is_shared() and 
                   getattr(inter, '_supports_branches', None) and 
                   inter._supports_branches):
-                inter.fetch(branches=existing_branches, revmetas=revmetas, mapping=source_repos.get_mapping())
+                revmetas.reverse()
+                inter.fetch(revmetas=revmetas, mapping=source_repos.get_mapping())
 
         if not keep:
             # Remove removed branches

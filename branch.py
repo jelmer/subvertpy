@@ -39,7 +39,7 @@ import os
 
 class SvnBranch(Branch):
     """Maps to a Branch in a Subversion repository """
-    def __init__(self, repository, branch_path, _skip_check=False):
+    def __init__(self, repository, branch_path, revnum=None, _skip_check=False):
         """Instantiate a new SvnBranch.
 
         :param repos: SvnRepository this branch is part of.
@@ -61,10 +61,11 @@ class SvnBranch(Branch):
         self.base = urlutils.join(self.repository.base, 
                         self._branch_path).rstrip("/")
         self._revmeta_cache = None
+        self._revnum = revnum
         assert isinstance(self._branch_path, str)
         if not _skip_check:
             try:
-                revnum = self.repository.get_latest_revnum()
+                revnum = self._revnum or self.repository.get_latest_revnum()
                 if self.repository.transport.check_path(self._branch_path, 
                     revnum) != core.NODE_DIR:
                     raise NotBranchError(self.base)
@@ -317,7 +318,7 @@ class SvnBranch(Branch):
         if self._revmeta_cache is None:
             pb = ui.ui_factory.nested_progress_bar()
             try:
-                self._revmeta_cache = self.repository._revmeta_provider.get_mainline(self.get_branch_path(), self.repository.get_latest_revnum(), self.mapping, pb=pb)
+                self._revmeta_cache = self.repository._revmeta_provider.get_mainline(self.get_branch_path(), self._revnum or self.repository.get_latest_revnum(), self.mapping, pb=pb)
             finally:
                 pb.finished()
         return self._revmeta_cache

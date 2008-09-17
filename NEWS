@@ -30,6 +30,8 @@ bzr-svn-0.5			UNRELEASED
 
    * Also upgrade fileids in workingtree during svn-upgrade.
 
+   * Add --until option to svn-import.
+
   BUG FIXES
 
    * Set bzr signature revision property during commit if possible.
