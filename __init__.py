@@ -223,6 +223,7 @@ class cmd_svn_import(Command):
         from bzrlib.plugins.svn.convert import convert_repository
         from bzrlib.plugins.svn.layout.guess import repository_guess_layout
         from bzrlib.plugins.svn.repository import SvnRepository
+        from bzrlib.trace import info
 
         if to_location is None:
             to_location = os.path.basename(from_location.rstrip("/\\"))
@@ -282,6 +283,7 @@ class cmd_svn_import(Command):
                     return False
                 return True
 
+            info("Using repository layout: %s" % layout or source_repos.get_layout())
             convert_repository(from_repos, to_location, layout, 
                                not standalone, trees, all, 
                                filter_branch=filter_branch,
