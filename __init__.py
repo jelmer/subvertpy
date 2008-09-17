@@ -286,7 +286,7 @@ class cmd_svn_import(Command):
                     return False
                 return True
 
-            info("Using repository layout: %s" % layout or source_repos.get_layout())
+            info("Using repository layout: %s" % (layout or from_repos.get_layout(),))
             convert_repository(from_repos, to_location, layout, 
                                not standalone, trees, all, 
                                filter_branch=filter_branch,
