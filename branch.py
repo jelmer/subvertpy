@@ -73,9 +73,12 @@ class SvnBranch(Branch):
                 if num == ERR_FS_NO_SUCH_REVISION:
                     raise NotBranchError(self.base)
                 raise
-        (type, self.project, _, ip) = self.layout.parse(branch_path)
+        try:
+            (type, self.project, _, ip) = self.layout.parse(branch_path)
+        except NotSvnBranchPath:
+            raise NotBranchError(branch_path)
         if type not in ('branch', 'tag') or ip != '':
-            raise NotSvnBranchPath(branch_path, mapping=self.mapping)
+            raise NotBranchError(branch_path)
 
     def _make_tags(self):
         return SubversionTags(self)

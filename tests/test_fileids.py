@@ -174,8 +174,8 @@ class TestComplexFileids(SubversionTestCase):
         self.assertEqual(inv1.path2id("dir"), inv2.path2id("dir"))
         self.assertEqual(inv1.path2id("dir/file"), inv2.path2id("dir/file"))
 
-        fileid, revid = repository.get_fileid_map(2, 
-                            "branches/mybranch", mapping)["dir/file"]
+        rm_provider = repository._revmeta_provider
+        fileid, revid = repository.get_fileid_map(rm_provider.get_revision("branches/mybranch", 2), mapping)["dir/file"]
         self.assertEqual(fileid, inv1.path2id("dir/file"))
         self.assertEqual(repository.generate_revision_id(1, "trunk", mapping), revid)
 

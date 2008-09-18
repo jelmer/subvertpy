@@ -14,11 +14,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from bzrlib import registry, urlutils, ui
-from bzrlib.errors import NotBranchError
 from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn.core import SubversionException, NODE_DIR
-from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND
+from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND, NotSvnBranchPath
 from bzrlib.plugins.svn.ra import DIRENT_KIND
 
 class RepositoryLayout(object):
@@ -88,7 +87,7 @@ class RepositoryLayout(object):
         """Check whether a specified path points at a branch."""
         try:
             (type, proj, bp, rp) = self.parse(path)
-        except NotBranchError:
+        except NotSvnBranchPath:
             return False
         if (type == "branch" and rp == "" and 
             (project is None or proj == project)):
@@ -99,7 +98,7 @@ class RepositoryLayout(object):
         """Check whether a specified path points at a tag."""
         try:
             (type, proj, bp, rp) = self.parse(path)
-        except NotBranchError:
+        except NotSvnBranchPath:
             return False
         if (type == "tag" and rp == "" and
             (project is None or proj == project)):

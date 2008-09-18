@@ -16,7 +16,7 @@
 """Subversion-specific errors and conversion of Subversion-specific errors."""
 
 from bzrlib.errors import (BzrError, ConnectionError, ConnectionReset, 
-                           LockError, NotBranchError, PermissionDenied, 
+                           LockError, PermissionDenied, 
                            DependencyNotPresent, NoRepositoryPresent,
                            TransportError, UnexpectedEndOfContainerError,
                            NoSuchRevision)

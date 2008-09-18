@@ -13,9 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from bzrlib.errors import InvalidRevisionId, NotBranchError
+from bzrlib.errors import InvalidRevisionId
 from bzrlib.inventory import ROOT_ID
-from bzrlib.plugins.svn.errors import LayoutUnusable
+from bzrlib.plugins.svn.errors import LayoutUnusable, NotSvnBranchPath
 from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
 from bzrlib.plugins.svn.layout.standard import RootLayout, TrunkLayout
 from bzrlib.plugins.svn.mapping import BzrSvnMapping, escape_svn_path, unescape_svn_path, parse_svn_revprops
@@ -167,7 +167,7 @@ class TrunkLegacyLayout(LegacyLayout):
     def parse(self, path):
         parts = path.strip("/").split("/")
         if len(parts) == 0 or self.level >= len(parts):
-            raise NotBranchError(path=path)
+            raise NotSvnBranchPath(path, self)
 
         if parts[self.level] == "trunk" or parts[self.level] == "hooks":
             return ("branch", "/".join(parts[0:self.level]), "/".join(parts[0:self.level+1]).strip("/"), 
@@ -177,7 +177,7 @@ class TrunkLegacyLayout(LegacyLayout):
             return ("branch", "/".join(parts[0:self.level]), "/".join(parts[0:self.level+2]).strip("/"), 
                     "/".join(parts[self.level+2:]).strip("/"))
         else:
-            raise NotBranchError(path=path)
+            raise NotSvnBranchPath(path, self)
 
     def is_branch(self, path, project=None):
         parts = path.strip("/").split("/")

@@ -16,7 +16,7 @@
 """Generation of file-ids."""
 
 from bzrlib import ui
-from bzrlib.errors import NotBranchError, RevisionNotPresent
+from bzrlib.errors import RevisionNotPresent
 from bzrlib.knit import make_file_factory
 from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter
@@ -24,7 +24,7 @@ from bzrlib.versionedfile import ConstantMapper
 
 import urllib
 
-from bzrlib.plugins.svn import changes
+from bzrlib.plugins.svn import changes, errors
 
 def get_local_changes(paths, branch, mapping, layout, generate_revid, 
                       get_children=None):
@@ -60,7 +60,7 @@ def get_local_changes(paths, branch, mapping, layout, generate_revid,
                 else:
                     data = (data[0], crp, generate_revid(
                                   data[2], cbp, mapping))
-            except NotBranchError:
+            except errors.NotSvnBranchPath:
                 # Copied from outside of a known branch
                 # Make it look like the files were added in this revision
                 if get_children is not None:
