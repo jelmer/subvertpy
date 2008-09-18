@@ -22,9 +22,24 @@ from bzrlib.trace import mutter
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from bzrlib.plugins.svn.layout.guess import find_commit_paths
 from bzrlib.plugins.svn.layout.standard import TrunkLayout, RootLayout, CustomLayout
-from bzrlib.plugins.svn.errors import InvalidSvnBranchPath, LayoutUnusable
+from bzrlib.plugins.svn.errors import LayoutUnusable
 from bzrlib.plugins.svn import properties
 import bz2
+
+import urllib
+
+class InvalidSvnBranchPath(BzrError):
+    """Error raised when a path was specified that is not a child of or itself
+    a valid branch path in the current branching scheme."""
+    _fmt = """%(path)s is not a valid Subversion branch path in the current 
+repository layout. See 'bzr help svn-repository-layout' for details."""
+
+    def __init__(self, path, layout):
+        assert isinstance(path, str)
+        BzrError.__init__(self)
+        self.path = urllib.quote(path)
+        self.layout = layout
+
 
 class BranchingScheme(object):
     """ Divides SVN repository data up into branches. Since there

@@ -18,7 +18,7 @@ from bzrlib.errors import NotBranchError
 from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn.core import SubversionException, NODE_DIR
-from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND, InvalidSvnBranchPath
+from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND
 from bzrlib.plugins.svn.ra import DIRENT_KIND
 
 class RepositoryLayout(object):
@@ -81,7 +81,7 @@ class RepositoryLayout(object):
         """
         (pt, parsed_project, bp, ip) = self.parse(path)
         if project is not None and parsed_project != project:
-            raise InvalidSvnBranchPath(path, self)
+            raise NotSvnBranchPath(path, self)
         return (pt, bp, ip)
 
     def is_branch(self, path, project=None):

@@ -651,8 +651,6 @@ class SvnRepository(Repository):
                     else:
                         try:
                             (pt, bp, rp) = layout.split_project_path(p, project)
-                        except errors.InvalidSvnBranchPath:
-                            continue
                         except NotBranchError:
                             continue
                         if pt != "tag":

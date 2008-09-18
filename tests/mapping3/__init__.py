@@ -25,7 +25,7 @@ from bzrlib.plugins.svn import core, format, ra
 from bzrlib.plugins.svn.layout.standard import TrunkLayout, RootLayout
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID, mapping_registry
 from bzrlib.plugins.svn.mapping3 import BzrSvnMappingv3FileProps, SVN_PROP_BZR_BRANCHING_SCHEME, set_property_scheme
-from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme, ListBranchingScheme
+from bzrlib.plugins.svn.mapping3.scheme import NoBranchingScheme, ListBranchingScheme, InvalidSvnBranchPath
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.tests.test_mapping import sha1
 
@@ -515,3 +515,8 @@ class RepositoryTests(SubversionTestCase):
                 '1 initialrevid\n2 mergerevid\n',
                 self.client_get_prop(repos_url+"/trunk", SVN_PROP_BZR_REVISION_ID+"v3-trunk0",
                                      c.get_latest_revnum()))
+
+class ErrorTests(TestCase):
+    def test_invalidsvnbranchpath_nonascii(self):
+        InvalidSvnBranchPath('\xc3\xb6', None)
+
