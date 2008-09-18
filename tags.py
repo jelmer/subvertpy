@@ -39,8 +39,9 @@ class SubversionTags(BasicTags):
         if existing_bp_parts == bp_parts:
             self._parent_exists = True
             return
-        commit.create_branch_prefix(self.repository, self._revprops("Add tags base directory."),
-                             bp_parts, existing_bp_parts)
+        commit.create_branch_prefix(self.repository, 
+                self._revprops("Add tags base directory."),
+                bp_parts, existing_bp_parts)
         self._parent_exists = True
 
     def set_tag(self, tag_name, tag_target):
@@ -58,8 +59,9 @@ class SubversionTags(BasicTags):
         conn = self.repository.transport.get_connection(parent)
         deletefirst = (conn.check_path(urlutils.basename(path), self.repository.get_latest_revnum()) != core.NODE_NONE)
         try:
-            ci = svn_errors.convert_svn_error(conn.get_commit_editor)(self._revprops("Add tag %s" % tag_name.encode("utf-8"),
-                                        {tag_name.encode("utf-8"): tag_target}))
+            ci = svn_errors.convert_svn_error(conn.get_commit_editor)(
+                    self._revprops("Add tag %s" % tag_name.encode("utf-8"),
+                    {tag_name.encode("utf-8"): tag_target}))
             try:
                 root = ci.open_root()
                 if deletefirst:
@@ -95,7 +97,8 @@ class SubversionTags(BasicTags):
     def get_tag_dict(self):
         return self.repository.find_tags(project=self.branch.project, 
                               layout=self.branch.layout,
-                              mapping=self.branch.mapping)
+                              mapping=self.branch.mapping,
+                              revnum=self.branch._revnum)
 
     def get_reverse_tag_dict(self):
         """Returns a dict with revisions as keys
