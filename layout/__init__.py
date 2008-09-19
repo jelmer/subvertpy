@@ -138,7 +138,7 @@ def wildcard_matches(path, pattern):
     if len(ar) != len(br):
         return False
     for a, b in zip(ar, br):
-        if not a in (b, "*"):
+        if b != a and not (a != "" and b == "*"): 
             return False
     return True
 

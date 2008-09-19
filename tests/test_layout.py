@@ -73,3 +73,9 @@ class WildcardLayoutTests(TestCase):
         self.assertFalse(x.is_branch("foo/bar"))
         self.assertFalse(x.is_branch(""))
 
+    def test_wildcard(self):
+        x = WildcardLayout(["*"])
+        self.assertTrue(x.is_branch("foo"))
+        self.assertFalse(x.is_branch("foo/bar"))
+        self.assertFalse(x.is_branch(""))
+
