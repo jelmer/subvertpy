@@ -239,6 +239,7 @@ class CustomLayout(RepositoryLayout):
         :return: Tuple with type ('tag', 'branch'), project name, branch path and path 
             inside the branch
         """
+        path = path.strip("/")
         for bp in sorted(self.branches):
             if path.startswith("%s/" % bp) or bp == path:
                 return ("branch", bp, bp, path[len(bp):].strip("/"))
@@ -330,7 +331,8 @@ class WildcardLayout(RepositoryLayout):
         :return: Tuple with type ('tag', 'branch'), project name, branch path and path 
             inside the branch
         """
-        parts = path.strip("/").split("/")
+        path = path.strip("/")
+        parts = path.split("/")
         for i in range(len(parts)+1):
             bp = "/".join(parts[:i])
             if self.is_branch(bp):
