@@ -15,7 +15,7 @@
 
 from bzrlib import errors as bzr_errors, urlutils
 from bzrlib.plugins.svn import errors as svn_errors
-from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
+from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths, wildcard_matches
 
 from functools import partial
 
