@@ -299,7 +299,7 @@ class SvnRepository(Repository):
             branches = self.get_config().get_branches()
             tags = self.get_config().get_tags()
             if branches is not None:
-                self._layout = WildcardLayout(branches, tags)
+                self._layout = WildcardLayout(branches, tags or [])
         if self._layout is None:
             self._layout = layout.repository_registry.get(self.uuid)
         if self._layout is None:
