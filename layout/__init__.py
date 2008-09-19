@@ -244,13 +244,14 @@ This scheme is called "root" by Bazaar.
 The layout bzr-svn should use for a repository can be set in the 
 configuration file ~/.bazaar/subversion.conf. If you have a custom 
 repository, you can set the "branches" and "tags" variables. These variables 
-can contain asterisks. For example:
+can contain asterisks. Multiple locations can be separated by a semicolon. 
+For example:
 
 [203ae883-c723-44c9-aabd-cb56e4f81c9a]
-branches = path/to/*/bla
+branches = path/to/*/bla;path/to/trunk
 
-This would consider paths path/to/foo/bla and path/to/blie/bla branches, 
-if they existed.
+This would consider paths path/to/foo/bla, path/to/blie/bla and path/to/trunk 
+branches, if they existed.
 
 """
 
