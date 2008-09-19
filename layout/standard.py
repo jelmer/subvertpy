@@ -270,8 +270,8 @@ class CustomLayout(RepositoryLayout):
 class WildcardLayout(RepositoryLayout):
 
     def __init__(self, branches=[], tags=[]):
-        self.branches = branches
-        self.tags = tags
+        self.branches = [b.strip("/") for b in branches]
+        self.tags = [t.strip("/") for t in tags]
 
     def supports_tags(self):
         return (self.tags != [])
