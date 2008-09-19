@@ -217,6 +217,44 @@ def get_root_paths(repository, itemlist, revnum, verify_fn, project=None, pb=Non
                 yield project, bp, bp.split("/")[-1]
 
 
+help_layout = """Subversion repository layouts.
+
+Subversion is basically a versioned file system. It does not have 
+any notion of branches and what is a branch in Subversion is therefor
+up to the user. 
+
+In order for Bazaar to access a Subversion repository it has to know 
+what paths to consider branches. What it will and will not consider 
+a branch or tag is defined by the repository layout.
+When you connect to a repository for the first time, Bazaar
+will try to determine the layout to use using some simple 
+heuristics. It is always possible to change the branching scheme it should 
+use later.
+
+There are some conventions in use in Subversion for repository layouts. 
+The most common one is probably the trunk/branches/tags 
+layout, where the repository contains a "trunk" directory with the main 
+development branch, other branches in a "branches" directory and tags as 
+subdirectories of a "tags" directory. This layout is named 
+"trunk" in Bazaar.
+
+Another option is simply having just one branch at the root of the repository. 
+This scheme is called "root" by Bazaar.
+
+The layout bzr-svn should use for a repository can be set in the 
+configuration file ~/.bazaar/subversion.conf. If you have a custom 
+repository, you can set the "branches" and "tags" variables. These variables 
+can contain asterisks. For example:
+
+[203ae883-c723-44c9-aabd-cb56e4f81c9a]
+branches = path/to/*/bla
+
+This would consider paths path/to/foo/bla and path/to/blie/bla branches, 
+if they existed.
+
+"""
+
+
 layout_registry = registry.Registry()
 layout_registry.register_lazy("root", "bzrlib.plugins.svn.layout.standard", "RootLayout")
 layout_registry.register_lazy("none", "bzrlib.plugins.svn.layout.standard", "RootLayout")
