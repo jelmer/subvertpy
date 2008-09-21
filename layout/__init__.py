@@ -14,11 +14,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from bzrlib import registry, urlutils, ui
-from bzrlib.errors import NotBranchError
 from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn.core import SubversionException, NODE_DIR
-from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND, InvalidSvnBranchPath
+from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND, NotSvnBranchPath
 from bzrlib.plugins.svn.ra import DIRENT_KIND
 
 class RepositoryLayout(object):
@@ -81,14 +80,14 @@ class RepositoryLayout(object):
         """
         (pt, parsed_project, bp, ip) = self.parse(path)
         if project is not None and parsed_project != project:
-            raise InvalidSvnBranchPath(path, self)
+            raise NotSvnBranchPath(path, self)
         return (pt, bp, ip)
 
     def is_branch(self, path, project=None):
         """Check whether a specified path points at a branch."""
         try:
             (type, proj, bp, rp) = self.parse(path)
-        except NotBranchError:
+        except NotSvnBranchPath:
             return False
         if (type == "branch" and rp == "" and 
             (project is None or proj == project)):
@@ -99,7 +98,7 @@ class RepositoryLayout(object):
         """Check whether a specified path points at a tag."""
         try:
             (type, proj, bp, rp) = self.parse(path)
-        except NotBranchError:
+        except NotSvnBranchPath:
             return False
         if (type == "tag" and rp == "" and
             (project is None or proj == project)):
@@ -139,7 +138,7 @@ def wildcard_matches(path, pattern):
     if len(ar) != len(br):
         return False
     for a, b in zip(ar, br):
-        if not a in (b, "*"):
+        if b != a and not (a != "" and b == "*"): 
             return False
     return True
 
@@ -216,6 +215,45 @@ def get_root_paths(repository, itemlist, revnum, verify_fn, project=None, pb=Non
                 find_children, project):
             if verify_fn(bp, project):
                 yield project, bp, bp.split("/")[-1]
+
+
+help_layout = """Subversion repository layouts.
+
+Subversion is basically a versioned file system. It does not have 
+any notion of branches and what is a branch in Subversion is therefor
+up to the user. 
+
+In order for Bazaar to access a Subversion repository it has to know 
+what paths to consider branches. What it will and will not consider 
+a branch or tag is defined by the repository layout.
+When you connect to a repository for the first time, Bazaar
+will try to determine the layout to use using some simple 
+heuristics. It is always possible to change the branching scheme it should 
+use later.
+
+There are some conventions in use in Subversion for repository layouts. 
+The most common one is probably the trunk/branches/tags 
+layout, where the repository contains a "trunk" directory with the main 
+development branch, other branches in a "branches" directory and tags as 
+subdirectories of a "tags" directory. This layout is named 
+"trunk" in Bazaar.
+
+Another option is simply having just one branch at the root of the repository. 
+This scheme is called "root" by Bazaar.
+
+The layout bzr-svn should use for a repository can be set in the 
+configuration file ~/.bazaar/subversion.conf. If you have a custom 
+repository, you can set the "branches" and "tags" variables. These variables 
+can contain asterisks. Multiple locations can be separated by a semicolon. 
+For example:
+
+[203ae883-c723-44c9-aabd-cb56e4f81c9a]
+branches = path/to/*/bla;path/to/trunk
+
+This would consider paths path/to/foo/bla, path/to/blie/bla and path/to/trunk 
+branches, if they existed.
+
+"""
 
 
 layout_registry = registry.Registry()

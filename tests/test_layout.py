@@ -15,7 +15,8 @@
 
 from bzrlib.errors import NotBranchError
 from bzrlib.tests import TestCase
-from bzrlib.plugins.svn.layout.standard import RootLayout, TrunkLayout
+from bzrlib.plugins.svn.errors import NotSvnBranchPath
+from bzrlib.plugins.svn.layout.standard import RootLayout, TrunkLayout, WildcardLayout
 
 
 class LayoutTests:
@@ -61,4 +62,20 @@ class TrunkLayoutTests(TestCase,LayoutTests):
                           self.layout.parse("bla/branches/foo"))
 
     def test_parse_branches(self):
-        self.assertRaises(NotBranchError, self.layout.parse, "branches")
+        self.assertRaises(NotSvnBranchPath, self.layout.parse, "branches")
+
+
+class WildcardLayoutTests(TestCase):
+
+    def test_is_branch_simple(self):
+        x = WildcardLayout(["foo"])
+        self.assertTrue(x.is_branch("foo"))
+        self.assertFalse(x.is_branch("foo/bar"))
+        self.assertFalse(x.is_branch(""))
+
+    def test_wildcard(self):
+        x = WildcardLayout(["*"])
+        self.assertTrue(x.is_branch("foo"))
+        self.assertFalse(x.is_branch("foo/bar"))
+        self.assertFalse(x.is_branch(""))
+

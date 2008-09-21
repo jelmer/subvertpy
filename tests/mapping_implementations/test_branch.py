@@ -18,7 +18,7 @@
 from bzrlib import urlutils
 from bzrlib.branch import Branch
 from bzrlib.bzrdir import BzrDir
-from bzrlib.errors import NoSuchFile, NoSuchRevision, NotBranchError, NoSuchTag
+from bzrlib.errors import NoSuchFile, NoSuchRevision, NoSuchTag
 from bzrlib.repository import Repository
 from bzrlib.revision import NULL_REVISION
 from bzrlib.trace import mutter

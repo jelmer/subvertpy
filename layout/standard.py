@@ -14,7 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from bzrlib import errors as bzr_errors, urlutils
-from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
+from bzrlib.plugins.svn import errors as svn_errors
+from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths, wildcard_matches
 
 from functools import partial
 
@@ -86,7 +87,7 @@ class TrunkLayout(RepositoryLayout):
                         "/".join(parts[:j]).strip("/"), 
                         "/".join(parts[:i+1]).strip("/"), 
                         "/".join(parts[i+1:]).strip("/"))
-        raise bzr_errors.NotBranchError(path)
+        raise svn_errors.NotSvnBranchPath(path, self)
 
     def _add_project(self, path, project=None):
         if project is None:
@@ -238,6 +239,7 @@ class CustomLayout(RepositoryLayout):
         :return: Tuple with type ('tag', 'branch'), project name, branch path and path 
             inside the branch
         """
+        path = path.strip("/")
         for bp in sorted(self.branches):
             if path.startswith("%s/" % bp) or bp == path:
                 return ("branch", bp, bp, path[len(bp):].strip("/"))
@@ -246,7 +248,7 @@ class CustomLayout(RepositoryLayout):
             if path.startswith("%s/" % tp) or tp == path:
                 return ("tag", tp, tp, path[len(tp):].strip("/"))
 
-        raise bzr_errors.NotBranchError(path)
+        raise svn_errors.NotSvnBranchPath(path)
 
     def get_branches(self, repository, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to branches in a specific revision.
@@ -269,8 +271,8 @@ class CustomLayout(RepositoryLayout):
 class WildcardLayout(RepositoryLayout):
 
     def __init__(self, branches=[], tags=[]):
-        self.branches = branches
-        self.tags = tags
+        self.branches = [b.strip("/") for b in branches]
+        self.tags = [t.strip("/") for t in tags]
 
     def supports_tags(self):
         return (self.tags != [])
@@ -329,7 +331,8 @@ class WildcardLayout(RepositoryLayout):
         :return: Tuple with type ('tag', 'branch'), project name, branch path and path 
             inside the branch
         """
-        parts = path.strip("/").split("/")
+        path = path.strip("/")
+        parts = path.split("/")
         for i in range(len(parts)+1):
             bp = "/".join(parts[:i])
             if self.is_branch(bp):
@@ -337,7 +340,7 @@ class WildcardLayout(RepositoryLayout):
             if self.is_tag(bp):
                 return ("tag", bp, bp, path[len(bp):].strip("/"))
 
-        raise bzr_errors.NotBranchError(path)
+        raise svn_errors.NotSvnBranchPath(path)
 
     def get_branches(self, repository, revnum, project=None, pb=None):
         """Retrieve a list of paths that refer to branches in a specific revision.
@@ -410,20 +413,20 @@ class InverseTrunkLayout(RepositoryLayout):
         path = path.strip("/")
         parts = path.split("/")
         if len(parts) == 0:
-            raise bzr_errors.NotBranchError(path)
+            raise svn_errors.NotSvnBranchPath(path)
         if parts[0] == "trunk":
             if len(parts) < (self.level + 1):
-                raise bzr_errors.NotBranchError(path)
+                raise svn_errors.NotSvnBranchPath(path)
             return ("branch", "/".join(parts[1:self.level+2]), "/".join(parts[:self.level+1]), "/".join(parts[self.level+1:]))
         elif parts[0] in ("branches", "tags"):
             if len(parts) < (self.level + 2):
-                raise bzr_errors.NotBranchError(path)
+                raise svn_errors.NotSvnBranchPath(path)
             if parts[0] == "branches":
                 t = "branch"
             else:
                 t = "tag"
             return (t, "/".join(parts[1:self.level+1]), "/".join(parts[:self.level+2]), "/".join(parts[self.level+2:]))
-        raise bzr_errors.NotBranchError(path)
+        raise svn_errors.NotSvnBranchPath(path)
 
     def _add_project(self, path, project=None):
         if project is None:

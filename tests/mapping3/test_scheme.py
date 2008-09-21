@@ -16,7 +16,7 @@
 
 """Branching scheme tests."""
 
-from bzrlib.errors import NotBranchError, BzrError
+from bzrlib.errors import BzrError
 
 from bzrlib.tests import TestCase
 from bzrlib.plugins.svn.mapping3.scheme import (ListBranchingScheme, NoBranchingScheme, 
@@ -26,7 +26,8 @@ from bzrlib.plugins.svn.mapping3.scheme import (ListBranchingScheme, NoBranching
                     UnknownBranchingScheme, 
                     parse_list_scheme_text, find_commit_paths, 
                     guess_scheme_from_branch_path, guess_scheme_from_history,
-                    guess_scheme_from_path, scheme_from_branch_list)
+                    guess_scheme_from_path, scheme_from_branch_list,
+                    InvalidSvnBranchPath)
 
 class BranchingSchemeTest(TestCase):
     def test_is_branch(self):
@@ -217,7 +218,7 @@ class ListScheme(TestCase):
         self.assertTrue(self.scheme.is_branch("bar/bloe"))
 
     def test_unprefix_notbranch_empty(self):
-        self.assertRaises(NotBranchError, self.scheme.unprefix, "")
+        self.assertRaises(InvalidSvnBranchPath, self.scheme.unprefix, "")
 
     def test_unprefix_wildcard(self):
         scheme = ListBranchingScheme(["*/trunk"])
@@ -231,15 +232,15 @@ class ListScheme(TestCase):
 
     def test_unprefix_wildcard_nonexistant(self):
         scheme = ListBranchingScheme(["*/trunk"])
-        self.assertRaises(NotBranchError, self.scheme.unprefix, "bla")
-        self.assertRaises(NotBranchError, self.scheme.unprefix, "trunk")
-        self.assertRaises(NotBranchError, self.scheme.unprefix, "trunk/bla")
+        self.assertRaises(InvalidSvnBranchPath, self.scheme.unprefix, "bla")
+        self.assertRaises(InvalidSvnBranchPath, self.scheme.unprefix, "trunk")
+        self.assertRaises(InvalidSvnBranchPath, self.scheme.unprefix, "trunk/bla")
 
     def test_unprefix_notbranch_slash(self):
-        self.assertRaises(NotBranchError, self.scheme.unprefix, "/")
+        self.assertRaises(InvalidSvnBranchPath, self.scheme.unprefix, "/")
 
     def test_unprefix_notbranch_unknown(self):
-        self.assertRaises(NotBranchError, self.scheme.unprefix, "blie/bloe/bla")
+        self.assertRaises(InvalidSvnBranchPath, self.scheme.unprefix, "blie/bloe/bla")
 
     def test_unprefix_branch_slash(self):
         self.assertEqual(self.scheme.unprefix("/foo"), ("foo", "foo", ""))
@@ -356,19 +357,19 @@ class TrunkScheme(TestCase):
         self.assertTrue(scheme.is_branch("/bar/branches/trunk"))
 
     def test_unprefix_empty(self):
-        self.assertRaises(NotBranchError, TrunkBranchingScheme().unprefix, "")
+        self.assertRaises(InvalidSvnBranchPath, TrunkBranchingScheme().unprefix, "")
 
     def test_unprefix_topdir(self):
-        self.assertRaises(NotBranchError, TrunkBranchingScheme().unprefix, "branches")
+        self.assertRaises(InvalidSvnBranchPath, TrunkBranchingScheme().unprefix, "branches")
 
     def test_unprefix_slash(self):
-        self.assertRaises(NotBranchError, TrunkBranchingScheme().unprefix, "/")
+        self.assertRaises(InvalidSvnBranchPath, TrunkBranchingScheme().unprefix, "/")
 
     def test_unprefix_unknown_sub(self):
-        self.assertRaises(NotBranchError, TrunkBranchingScheme().unprefix, "blie/bloe/bla")
+        self.assertRaises(InvalidSvnBranchPath, TrunkBranchingScheme().unprefix, "blie/bloe/bla")
 
     def test_unprefix_unknown(self):
-        self.assertRaises(NotBranchError, TrunkBranchingScheme().unprefix, "aa")
+        self.assertRaises(InvalidSvnBranchPath, TrunkBranchingScheme().unprefix, "aa")
 
     def test_unprefix_slash_branch(self):
         self.assertEqual(TrunkBranchingScheme().unprefix("/trunk"), ("", "trunk", ""))
@@ -386,13 +387,13 @@ class TrunkScheme(TestCase):
         self.assertEqual(TrunkBranchingScheme().unprefix("/tags/ver2/foo/bar"), ("", "tags/ver2", "foo/bar"))
 
     def test_unprefix_level(self):
-        self.assertRaises(NotBranchError, TrunkBranchingScheme(1).unprefix, "trunk")
+        self.assertRaises(InvalidSvnBranchPath, TrunkBranchingScheme(1).unprefix, "trunk")
 
     def test_unprefix_level_wrong_level(self):
-        self.assertRaises(NotBranchError, TrunkBranchingScheme(1).unprefix, "/branches/foo")
+        self.assertRaises(InvalidSvnBranchPath, TrunkBranchingScheme(1).unprefix, "/branches/foo")
 
     def test_unprefix_level_wrong_level_nested(self):
-        self.assertRaises(NotBranchError, TrunkBranchingScheme(1).unprefix, "branches/ver1/foo")
+        self.assertRaises(InvalidSvnBranchPath, TrunkBranchingScheme(1).unprefix, "branches/ver1/foo")
 
     def test_unprefix_level_correct_branch(self):
         self.assertEqual(TrunkBranchingScheme(1).unprefix("/foo/trunk"), ("foo", "foo/trunk", ""))
@@ -497,7 +498,7 @@ class SingleBranchingSchemeTests(TestCase):
         self.assertEquals(("ha", "ha", ""), SingleBranchingScheme("ha").unprefix("ha"))
 
     def test_unprefix_raises(self):
-        self.assertRaises(NotBranchError, SingleBranchingScheme("ha").unprefix, "bla")
+        self.assertRaises(InvalidSvnBranchPath, SingleBranchingScheme("ha").unprefix, "bla")
 
     def test_is_branch_parent_not(self):
         self.assertFalse(SingleBranchingScheme("ha").is_branch_parent("bla"))

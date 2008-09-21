@@ -4,6 +4,7 @@ mappingv4:
   + remove Mapping.get_guessed_layout()
 - fix update_after_commit test
 - fix text parents
+- find tags during iter_all_changes() during fetch
 
 more tests:
 - Run all tests against repository with revprop changing allowed and without

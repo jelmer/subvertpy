@@ -17,14 +17,15 @@ from bzrlib import osutils, ui
 from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
 
-from bzrlib.plugins.svn import mapping, properties
+from bzrlib.plugins.svn import errors, mapping, properties
 from bzrlib.plugins.svn.layout.guess import GUESS_SAMPLE_SIZE
 from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
 from bzrlib.plugins.svn.mapping3.scheme import (BranchingScheme, guess_scheme_from_branch_path, 
                              guess_scheme_from_history, ListBranchingScheme, 
                              scheme_from_layout,
                              parse_list_scheme_text, NoBranchingScheme,
-                             TrunkBranchingScheme, ListBranchingScheme)
+                             TrunkBranchingScheme, ListBranchingScheme,
+                             InvalidSvnBranchPath)
 from bzrlib.plugins.svn.ra import DIRENT_KIND
 import sha
 
@@ -36,7 +37,10 @@ class SchemeDerivedLayout(RepositoryLayout):
         self.scheme = scheme
 
     def parse(self, path):
-        (proj, bp, rp) = self.scheme.unprefix(path)
+        try:
+            (proj, bp, rp) = self.scheme.unprefix(path)
+        except InvalidSvnBranchPath, e:
+            raise errors.NotSvnBranchPath(e.path)
         if self.scheme.is_tag(bp):
             type = "tag"
         else:

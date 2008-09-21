@@ -16,7 +16,7 @@
 """Subversion-specific errors and conversion of Subversion-specific errors."""
 
 from bzrlib.errors import (BzrError, ConnectionError, ConnectionReset, 
-                           LockError, NotBranchError, PermissionDenied, 
+                           LockError, PermissionDenied, 
                            DependencyNotPresent, NoRepositoryPresent,
                            TransportError, UnexpectedEndOfContainerError,
                            NoSuchRevision)
@@ -65,13 +65,14 @@ class InvalidBzrSvnRevision(NoSuchRevision):
         self.revid = revid
 
 
-class NotSvnBranchPath(NotBranchError):
+class NotSvnBranchPath(BzrError):
     """Error raised when a path was specified that did not exist."""
     _fmt = """%(path)s is not a valid Subversion branch path. 
 See 'bzr help svn-repository-layout' for details."""
 
     def __init__(self, branch_path, mapping=None):
-        NotBranchError.__init__(self, urllib.quote(branch_path))
+        BzrError.__init__(self)
+        self.branch_path = urllib.quote(branch_path)
         self.mapping = mapping
 
 
@@ -186,18 +187,6 @@ class CorruptMappingData(BzrError):
     def __init__(self, path):
         BzrError.__init__(self)
         self.path = path
-
-
-class InvalidSvnBranchPath(NotBranchError):
-    """Error raised when a path was specified that is not a child of or itself
-    a valid branch path in the current branching scheme."""
-    _fmt = """%(path)s is not a valid Subversion branch path in the current 
-repository layout. See 'bzr help svn-repository-layout' for details."""
-
-    def __init__(self, path, layout):
-        assert isinstance(path, str)
-        NotBranchError.__init__(self, urllib.quote(path))
-        self.layout = layout
 
 
 class LayoutUnusable(BzrError):

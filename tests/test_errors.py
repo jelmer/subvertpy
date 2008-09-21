@@ -81,6 +81,4 @@ class TestConvertError(TestCase):
     def test_notsvnbranchpath_nonascii(self):
         NotSvnBranchPath('\xc3\xb6', None)
 
-    def test_invalidsvnbranchpath_nonascii(self):
-        InvalidSvnBranchPath('\xc3\xb6', None)
 

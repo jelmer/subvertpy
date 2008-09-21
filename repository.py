@@ -299,7 +299,7 @@ class SvnRepository(Repository):
             branches = self.get_config().get_branches()
             tags = self.get_config().get_tags()
             if branches is not None:
-                self._layout = WildcardLayout(branches, tags)
+                self._layout = WildcardLayout(branches, tags or [])
         if self._layout is None:
             self._layout = layout.repository_registry.get(self.uuid)
         if self._layout is None:
@@ -544,6 +544,8 @@ class SvnRepository(Repository):
             revmeta, mapping = self._get_revmeta(revision_id)
         except NoSuchRevision:
             return False
+        # Make sure revprops are fresh, not cached:
+        revmeta._revprops = self.transport.revprop_list(revmeta.revnum)
         return revmeta.get_signature() is not None
 
     def get_signature_text(self, revision_id):
@@ -554,6 +556,8 @@ class SvnRepository(Repository):
         :raises NoSuchRevision: Always
         """
         revmeta, mapping = self._get_revmeta(revision_id)
+        # Make sure revprops are fresh, not cached:
+        revmeta._revprops = self.transport.revprop_list(revmeta.revnum)
         signature = revmeta.get_signature()
         if signature is None:
             raise NoSuchRevision(self, revision_id)
@@ -651,9 +655,7 @@ class SvnRepository(Repository):
                     else:
                         try:
                             (pt, bp, rp) = layout.split_project_path(p, project)
-                        except errors.InvalidSvnBranchPath:
-                            continue
-                        except NotBranchError:
+                        except errors.NotSvnBranchPath:
                             continue
                         if pt != "tag":
                             continue

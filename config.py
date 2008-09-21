@@ -61,10 +61,16 @@ class SvnRepositoryConfig(IniBasedConfig):
         return self._get_user_option("layout", use_global=False)
 
     def get_branches(self):
-        return self._get_user_option("branches", use_global=False)
+        branches_str = self._get_user_option("branches", use_global=False)
+        if branches_str is None:
+            return None
+        return filter(lambda b: b != "", branches_str.split(";"))
 
     def get_tags(self):
-        return self._get_user_option("tags", use_global=False)
+        tags_str = self._get_user_option("tags", use_global=False)
+        if tags_str is None:
+            return None
+        return filter(lambda b: b != "", branches_str.split(";"))
 
     def _get_user_option(self, name, use_global=True):
         try:
