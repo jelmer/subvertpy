@@ -29,7 +29,7 @@ from bzrlib.plugins.svn.commit import push, push_ancestors
 from bzrlib.plugins.svn.config import BranchConfig
 from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import NotSvnBranchPath, ERR_FS_NO_SUCH_REVISION
-from bzrlib.plugins.svn.foreign import FakeControlFiles
+from bzrlib.plugins.svn.foreign import ForeignBranch, FakeControlFiles
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.repository import SvnRepository
 from bzrlib.plugins.svn.tags import SubversionTags
@@ -37,7 +37,7 @@ from bzrlib.plugins.svn.transport import bzr_to_svn_url
 
 import os
 
-class SvnBranch(Branch):
+class SvnBranch(ForeignBranch):
     """Maps to a Branch in a Subversion repository """
     def __init__(self, repository, branch_path, revnum=None, _skip_check=False):
         """Instantiate a new SvnBranch.
@@ -49,13 +49,12 @@ class SvnBranch(Branch):
             look at; none for latest.
         """
         self.repository = repository
-        super(SvnBranch, self).__init__()
         assert isinstance(self.repository, SvnRepository)
+        super(SvnBranch, self).__init__(self.repository.get_mapping())
         self.control_files = FakeControlFiles()
         self._format = SvnBranchFormat()
         self._lock_mode = None
         self._lock_count = 0
-        self.mapping = self.repository.get_mapping()
         self.layout = self.repository.get_layout()
         self._branch_path = branch_path.strip("/")
         self.base = urlutils.join(self.repository.base, 
