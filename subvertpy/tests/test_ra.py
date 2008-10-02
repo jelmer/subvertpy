@@ -16,7 +16,7 @@
 """Subversion ra library tests."""
 
 from unittest import TestCase
-from bzrlib.plugins.svn.subvertpy import ra, SubversionException
+from subvertpy import ra, SubversionException
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class VersionTest(TestCase):
