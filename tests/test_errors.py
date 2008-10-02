@@ -19,7 +19,7 @@ from bzrlib.errors import (ConnectionError, ConnectionReset, LockError,
                            UnexpectedEndOfContainerError)
 from bzrlib.tests import TestCase
 
-from bzrlib.plugins.svn.subvertpy import SubversionException
+from bzrlib.plugins.svn.subvertpy import *
 from bzrlib.plugins.svn.errors import *
 
 class TestConvertError(TestCase):

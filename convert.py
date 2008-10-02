@@ -26,8 +26,7 @@ from bzrlib.revision import ensure_null
 from bzrlib.transport import get_transport
 
 from bzrlib.plugins.svn.branch import SvnBranch
-from bzrlib.plugins.svn.subvertpy import SubversionException, repos
-from bzrlib.plugins.svn.errors import ERR_STREAM_MALFORMED_DATA
+from bzrlib.plugins.svn.subvertpy import SubversionException, repos, ERR_STREAM_MALFORMED_DATA
 from bzrlib.plugins.svn.format import get_rich_root_format
 
 LATEST_IMPORT_REVISION_FILENAME = "svn-import-revision"

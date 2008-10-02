@@ -406,7 +406,7 @@ class SvnRepository(Repository):
         try:
             return (subvertpy.NODE_DIR == self.transport.check_path(path, revnum))
         except SubversionException, (_, num):
-            if num == errors.ERR_FS_NO_SUCH_REVISION:
+            if num == subvertpy.ERR_FS_NO_SUCH_REVISION:
                 return False
             raise
 
@@ -567,7 +567,7 @@ class SvnRepository(Repository):
         (path, revnum, mapping) = self.lookup_revision_id(revision_id)
         try:
             self.transport.change_rev_prop(revnum, SVN_REVPROP_BZR_SIGNATURE, signature)
-        except SubversionException, (_, errors.ERR_REPOS_DISABLED_FEATURE):
+        except SubversionException, (_, subvertpy.ERR_REPOS_DISABLED_FEATURE):
             raise errors.RevpropChangeFailed(SVN_REVPROP_BZR_SIGNATURE)
 
     @needs_read_lock
@@ -650,7 +650,7 @@ class SvnRepository(Repository):
                                         tag_changes[n] = self._revmeta_provider.get_revision(n, revnum, revprops=revprops).generate_revision_id(mapping)
                                     elif layout.is_tag_parent(n, project):
                                         parents.append(n)
-                            except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
+                            except SubversionException, (_, subvertpy.ERR_FS_NOT_DIRECTORY):
                                 pass
                     else:
                         try:
@@ -766,7 +766,7 @@ class SvnRepository(Repository):
                                             created_branches[n] = i
                                         elif layout.is_branch_or_tag_parent(n, project):
                                             parents.append(n)
-                                except SubversionException, (_, errors.ERR_FS_NOT_DIRECTORY):
+                                except SubversionException, (_, subvertpy.ERR_FS_NOT_DIRECTORY):
                                     pass
         finally:
             pb.finished()

@@ -21,8 +21,7 @@ import bzrlib.ui as ui
 
 from bzrlib.plugins.svn import changes
 from bzrlib.plugins.svn.cache import CacheTable
-from bzrlib.plugins.svn.subvertpy import SubversionException, ra, NODE_DIR
-from bzrlib.plugins.svn.errors import ERR_FS_NO_SUCH_REVISION, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY
+from bzrlib.plugins.svn.subvertpy import SubversionException, ra, NODE_DIR, ERR_FS_NO_SUCH_REVISION, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY
 from bzrlib.plugins.svn.transport import SvnRaTransport
 
 class lazy_dict(object):

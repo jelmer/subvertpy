@@ -24,10 +24,10 @@ from bzrlib.errors import (NoSuchFile, DivergedBranches, NoSuchRevision,
 from bzrlib.revision import is_null, ensure_null
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn.subvertpy import wc, SubversionException, NODE_DIR
+from bzrlib.plugins.svn.subvertpy import wc, SubversionException, NODE_DIR, ERR_FS_NO_SUCH_REVISION
 from bzrlib.plugins.svn.commit import push, push_ancestors
 from bzrlib.plugins.svn.config import BranchConfig
-from bzrlib.plugins.svn.errors import NotSvnBranchPath, ERR_FS_NO_SUCH_REVISION
+from bzrlib.plugins.svn.errors import NotSvnBranchPath
 from bzrlib.plugins.svn.foreign import ForeignBranch, FakeControlFiles
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.repository import SvnRepository

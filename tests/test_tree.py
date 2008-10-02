@@ -24,8 +24,7 @@ from bzrlib.revision import NULL_REVISION
 from bzrlib.tests import TestSkipped
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn import errors
-from bzrlib.plugins.svn.subvertpy import SubversionException
+from bzrlib.plugins.svn import subvertpy
 from bzrlib.plugins.svn.layout.standard import RootLayout
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.tree import SvnBasisTree, inventory_add_external
@@ -104,8 +103,8 @@ class TestBasisTree(SubversionTestCase):
 
         try:
             self.client_update("dc")
-        except SubversionException, (msg, num):
-            if num == errors.ERR_WC_BAD_ADM_LOG:
+        except subvertpy.SubversionException, (msg, num):
+            if num == subvertpy.ERR_WC_BAD_ADM_LOG:
                 raise TestSkipped("Unable to run test with svn 1.4")
             raise
         tree = SvnBasisTree(WorkingTree.open("dc"))
@@ -163,8 +162,8 @@ class TestBasisTree(SubversionTestCase):
 
         try:
             self.client_update("dc")
-        except SubversionException, (msg, num):
-            if num == errors.ERR_WC_BAD_ADM_LOG:
+        except subvertpy.SubversionException, (msg, num):
+            if num == subvertpy.ERR_WC_BAD_ADM_LOG:
                 raise TestSkipped("Unable to run test with svn 1.4")
             raise
 

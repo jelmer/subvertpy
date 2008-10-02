@@ -25,39 +25,6 @@ import urllib
 from bzrlib.plugins.svn import subvertpy
 
 
-ERR_UNKNOWN_HOSTNAME = 670002
-ERR_UNKNOWN_HOSTNAME = 670002
-ERR_RA_SVN_CONNECTION_CLOSED = 210002
-ERR_WC_LOCKED = 155004
-ERR_RA_NOT_AUTHORIZED = 170001
-ERR_INCOMPLETE_DATA = 200003
-ERR_RA_SVN_MALFORMED_DATA = 210004
-ERR_RA_NOT_IMPLEMENTED = 170003
-ERR_FS_NO_SUCH_REVISION = 160006
-ERR_FS_TXN_OUT_OF_DATE = 160028
-ERR_REPOS_DISABLED_FEATURE = 165006
-ERR_STREAM_MALFORMED_DATA = 140001
-ERR_RA_ILLEGAL_URL = 170000
-ERR_RA_LOCAL_REPOS_OPEN_FAILED = 180001
-ERR_BAD_URL = 125002
-ERR_RA_DAV_REQUEST_FAILED = 175002
-ERR_RA_DAV_PATH_NOT_FOUND = 175007
-ERR_FS_NOT_DIRECTORY = 160016
-ERR_FS_NOT_FOUND = 160013
-ERR_FS_ALREADY_EXISTS = 160020
-ERR_RA_SVN_REPOS_NOT_FOUND = 210005
-ERR_WC_NOT_DIRECTORY = 155007
-ERR_ENTRY_EXISTS = 150002
-ERR_WC_PATH_NOT_FOUND = 155010
-ERR_CANCELLED = 200015
-ERR_WC_UNSUPPORTED_FORMAT = 155021
-ERR_UNKNOWN_CAPABILITY = 200026
-ERR_AUTHN_NO_PROVIDER = 215001
-ERR_RA_DAV_RELOCATED = 175011
-ERR_FS_NOT_FILE = 160017
-ERR_WC_BAD_ADM_LOG = 155009
-
-
 class InvalidBzrSvnRevision(NoSuchRevision):
     _fmt = """Revision id %(revid)s was added incorrectly"""
 
@@ -128,23 +95,23 @@ def convert_error(err):
     """
     (msg, num) = err.args
 
-    if num == ERR_RA_SVN_CONNECTION_CLOSED:
+    if num == subvertpy.ERR_RA_SVN_CONNECTION_CLOSED:
         return ConnectionReset(msg=msg)
-    elif num == ERR_WC_LOCKED:
+    elif num == subvertpy.ERR_WC_LOCKED:
         return LockError(message=msg)
-    elif num == ERR_RA_NOT_AUTHORIZED:
+    elif num == subvertpy.ERR_RA_NOT_AUTHORIZED:
         return PermissionDenied('.', msg)
-    elif num == ERR_INCOMPLETE_DATA:
+    elif num == subvertpy.ERR_INCOMPLETE_DATA:
         return UnexpectedEndOfContainerError()
-    elif num == ERR_RA_SVN_MALFORMED_DATA:
+    elif num == subvertpy.ERR_RA_SVN_MALFORMED_DATA:
         return TransportError("Malformed data", msg)
-    elif num == ERR_RA_NOT_IMPLEMENTED:
+    elif num == subvertpy.ERR_RA_NOT_IMPLEMENTED:
         return NotImplementedError("Function not implemented in remote server")
-    elif num == ERR_RA_DAV_REQUEST_FAILED:
+    elif num == subvertpy.ERR_RA_DAV_REQUEST_FAILED:
         return RaRequestFailed(msg)
-    elif num == ERR_UNKNOWN_HOSTNAME:
+    elif num == subvertpy.ERR_UNKNOWN_HOSTNAME:
         return ConnectionError(msg=msg)
-    elif num == ERR_RA_DAV_REQUEST_FAILED:
+    elif num == subvertpy.ERR_RA_DAV_REQUEST_FAILED:
         return DavRequestFailed(msg)
     else:
         return err
