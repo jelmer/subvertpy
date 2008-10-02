@@ -242,7 +242,7 @@ def SvnExtension(name, *args, **kwargs):
             if "define_macros" not in kwargs:
                 kwargs["define_macros"] = []
             kwargs["define_macros"].extend((('DARWIN', None), ('SVN_KEYCHAIN_PROVIDER_AVAILABLE', '1')))
-    return Extension("bzrlib.plugins.svn.subvertpy.%s" % name, *args, **kwargs)
+    return Extension("subvertpy.%s" % name, *args, **kwargs)
 
 
 # On Windows, we install the apr binaries too.
@@ -290,7 +290,7 @@ class install_lib_with_dlls(install_lib):
 
 def source_path(filename):
     source_code_dir = os.path.dirname(__file__)
-    return os.path.join(source_code_dir, filename)
+    return os.path.join(source_code_dir, "subvertpy", filename)
 
 
 subvertpy_modules = [ 
@@ -315,7 +315,6 @@ if __name__ == "__main__":
           Alternative Python bindings for Subversion, split out from bzr-svn. The goal is to have complete, portable and "Pythonic" Python bindings. 
           """,
           packages=['subvertpy', 'subvertpy.tests'],
-          package_dir={"subvertpy":"."},
           ext_modules=subvertpy_modules,
           cmdclass = { 'install_lib': install_lib_with_dlls },
           )
