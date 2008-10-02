@@ -1,49 +1,13 @@
+Original author and maintainer:
 Jelmer Vernooij <jelmer@samba.org>
 
-Thanks to the following people for comments, code reviews, funding, bug 
-reports, testing, committing patches/bundles and generally keeping up 
-while I was asking annoying questions:
-
-David Allouche
-Erik Bågfors
-Alexander Belchenko
-Andrew Bennetts
-Wouter Bolsterlee
-Alexey Borzenkov
-Andrew Cowie
-Aaron Bentley
-Max Bowser
-John Carr
-Jerry Carter
-Chandler Carruth
-Robert Collins
-Mattias Eriksson
-David Foerster
-Mirko Friedenhagen
-Martin von Gagern
-Guillermo Gonzalez
+Windows support:
 Mark Hammond
-Wouter van Heyst
-Michael Hudson
-David James
-Matthias Klose
-Jan Kneschke
-Lukás Lalinský
-Kevin Light
-Roland Mas
-John Arbash Meinel
-Stefan Metzmacher
-Andrew Mitchell
-Gustavo Niemeyer
-Martin Pool
-Garrett Rooney
-Jean-Francois Roy
-Johan Rydberg
-Peter Samuelson
-Mark Shuttleworth
-Adeodato Simó
-Mikhail Sobolev
-John Stowers
-Reinhard Tartler
 Adrian Wilkins
-Russel Winder
+
+Mac OS X support:
+Guillermo Gonzalez
+Jean-Francois Roy
+
+Name:
+Paul Hummer
