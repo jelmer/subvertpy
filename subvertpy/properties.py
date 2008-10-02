@@ -15,10 +15,9 @@
 
 import bisect
 from bzrlib import urlutils
-from bzrlib.errors import BzrError
 
 
-class InvalidExternalsDescription(BzrError):
+class InvalidExternalsDescription(Exception):
     _fmt = """Unable to parse externals description."""
 
 
@@ -30,12 +29,14 @@ def is_valid_property_name(prop):
             return False
     return True
 
+
 def time_to_cstring(timestamp):
     import time
     tm_usec = timestamp % 1000000
     (tm_year, tm_mon, tm_mday, tm_hour, tm_min, 
             tm_sec, tm_wday, tm_yday, tm_isdst) = time.gmtime(timestamp / 1000000)
     return "%04d-%02d-%02dT%02d:%02d:%02d.%06dZ" % (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_usec)
+
 
 def time_from_cstring(text):
     import time
@@ -99,7 +100,7 @@ def parse_externals_description(base_url, val):
             raise NotImplementedError("Relative to the scheme externals not yet supported")
         if relurl.startswith("^/"):
             raise NotImplementedError("Relative to the repository root externals not yet supported")
-        ret[path] = (revno, urlutils.join(base_url, relurl))
+        ret[path] = (revno, "%s/%s" % (base_url, relurl))
     return ret
 
 

@@ -30,7 +30,8 @@ from bzrlib.trace import mutter
 from bzrlib.transport import get_transport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
-from bzrlib.plugins.svn import subvertpy, properties
+from bzrlib.plugins.svn import subvertpy
+from bzrlib.plugins.svn.subvertpy import properties
 from bzrlib.plugins.svn.subvertpy.wc import *
 from bzrlib.plugins.svn.auth import create_auth_baton
 from bzrlib.plugins.svn.branch import SvnBranch

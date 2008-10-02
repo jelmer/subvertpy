@@ -17,7 +17,8 @@ from bzrlib import osutils, ui
 from bzrlib.errors import InvalidRevisionId
 from bzrlib.trace import mutter
 
-from bzrlib.plugins.svn import errors, mapping, properties
+from bzrlib.plugins.svn import errors, mapping
+from bzrlib.plugins.svn.subvertpy import properties
 from bzrlib.plugins.svn.layout.guess import GUESS_SAMPLE_SIZE
 from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
 from bzrlib.plugins.svn.mapping3.scheme import (BranchingScheme, guess_scheme_from_branch_path, 

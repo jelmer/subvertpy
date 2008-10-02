@@ -27,8 +27,7 @@ import md5
 from cStringIO import StringIO
 import urllib
 
-from bzrlib.plugins.svn import properties
-from bzrlib.plugins.svn.subvertpy import delta, wc, NODE_DIR
+from bzrlib.plugins.svn.subvertpy import delta, wc, NODE_DIR, properties
 
 
 def inventory_add_external(inv, parent_id, path, revid, ref_revnum, url):

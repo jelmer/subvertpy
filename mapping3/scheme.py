@@ -23,7 +23,7 @@ from base64 import urlsafe_b64decode, urlsafe_b64encode
 from bzrlib.plugins.svn.layout.guess import find_commit_paths
 from bzrlib.plugins.svn.layout.standard import TrunkLayout, RootLayout, CustomLayout
 from bzrlib.plugins.svn.errors import LayoutUnusable
-from bzrlib.plugins.svn import properties
+from bzrlib.plugins.svn.subvertpy import properties
 import bz2
 
 import urllib

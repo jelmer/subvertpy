@@ -30,7 +30,8 @@ def set_revprops(repository, new_mapping, from_revnum=0, to_revnum=None):
     :param repository: Subversion Repository object.
     :param new_mapping: Mapping to upgrade to
     """
-    from bzrlib.plugins.svn import changes, logwalker, mapping, properties
+    from bzrlib.plugins.svn import changes, logwalker, mapping
+    from bzrlib.plugins.svn.subvertpy import properties
     if to_revnum is None:
         to_revnum = repository.get_latest_revnum()
     graph = repository.get_graph()

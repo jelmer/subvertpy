@@ -28,8 +28,8 @@ from bzrlib.tests import TestCaseInTempDir
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn import cache, properties
-from bzrlib.plugins.svn.subvertpy import delta, ra, repos, delta, client
+from bzrlib.plugins.svn import cache
+from bzrlib.plugins.svn.subvertpy import delta, ra, repos, delta, client, properties
 from bzrlib.plugins.svn.subvertpy.ra import Auth, RemoteAccess
 
 class TestFileEditor(object):

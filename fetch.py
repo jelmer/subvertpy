@@ -25,8 +25,8 @@ from bzrlib.trace import mutter
 from cStringIO import StringIO
 import md5
 
-from bzrlib.plugins.svn import properties
-from bzrlib.plugins.svn.subvertpy import delta
+from bzrlib.plugins.svn.subvertpy import properties
+from bzrlib.plugins.svn.subvertpy.delta import apply_txdelta_handler
 from bzrlib.plugins.svn.errors import InvalidFileName
 from bzrlib.plugins.svn.mapping import (SVN_PROP_BZR_PREFIX)
 from bzrlib.plugins.svn.repository import SvnRepository, SvnRepositoryFormat
@@ -331,7 +331,7 @@ class FileRevisionBuildEditor(FileBuildEditor):
             "base checksum mismatch: %r != %r" % (base_checksum, 
                                                   actual_checksum))
         self.file_stream = StringIO()
-        return delta.apply_txdelta_handler(self.file_data, self.file_stream)
+        return apply_txdelta_handler(self.file_data, self.file_stream)
 
     def _close(self, checksum=None):
         if self.file_stream is not None:

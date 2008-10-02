@@ -18,8 +18,8 @@
 
 from bzrlib.errors import NoSuchRevision
 
-from bzrlib.plugins.svn import logwalker, properties
-from bzrlib.plugins.svn.subvertpy import SubversionException
+from bzrlib.plugins.svn import logwalker
+from bzrlib.plugins.svn.subvertpy import SubversionException, properties
 from bzrlib.plugins.svn.errors import ERR_FS_NO_SUCH_REVISION
 
 

@@ -32,10 +32,10 @@ from copy import copy
 from itertools import chain
 import os
 
-from bzrlib.plugins.svn import cache, changes, subvertpy, errors, layout, logwalker, properties, revmeta
+from bzrlib.plugins.svn import cache, changes, subvertpy, errors, layout, logwalker, revmeta
 from bzrlib.plugins.svn.branchprops import PathPropertyProvider
 from bzrlib.plugins.svn.config import SvnRepositoryConfig
-from bzrlib.plugins.svn.subvertpy import SubversionException
+from bzrlib.plugins.svn.subvertpy import SubversionException, properties
 from bzrlib.plugins.svn.layout.standard import WildcardLayout
 from bzrlib.plugins.svn.layout.guess import repository_guess_layout
 from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
