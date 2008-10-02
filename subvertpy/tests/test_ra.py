@@ -15,7 +15,7 @@
 
 """Subversion ra library tests."""
 
-from bzrlib.tests import TestCase, TestSkipped
+from unittest import TestCase
 from bzrlib.plugins.svn.subvertpy import ra, SubversionException
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
@@ -63,7 +63,7 @@ class TestRemoteAccess(SubversionTestCase):
             self.assertRaises(SubversionException, self.ra.has_capability, "FOO")
         except NotImplementedError:
             # svn < 1.5
-            raise TestSkipped
+            return
 
     def test_get_dir(self):
         ret = self.ra.get_dir("", 0)

@@ -318,12 +318,9 @@ def test_suite():
             'test_branchprops', 
             'test_changes',
             'test_checkout',
-            'test_client',
             'test_commit',
             'test_config',
             'test_convert',
-            'test_core',
-            'test_delta',
             'test_errors',
             'test_fetch',
             'test_fileids', 
@@ -332,11 +329,8 @@ def test_suite():
             'test_logwalker',
             'test_mapping',
             'test_parents',
-            'test_properties',
             'test_push',
-            'test_ra',
             'test_radir',
-            'test_repos', 
             'test_repository', 
             'test_revids',
             'test_revmeta',
@@ -346,7 +340,6 @@ def test_suite():
             'test_tree',
             'test_upgrade',
             'test_versionedfiles',
-            'test_wc',
             'test_workingtree',
             'test_blackbox',
             'mapping_implementations',
@@ -354,5 +347,6 @@ def test_suite():
             'mapping3.test_scheme']
     suite.addTest(loader.loadTestsFromModuleNames(["%s.%s" % (__name__, i) for i in testmod_names]))
     suite.addTest(loader.loadTestsFromModuleNames(["bzrlib.plugins.svn.foreign.test_versionedfiles"]))
+    suite.addTest(loader.loadTestsFromModuleNames(["bzrlib.plugins.svn.subvertpy.tests.%s" % name for name in 'test_wc', 'test_client', 'test_ra', 'test_repos', 'test_core', 'test_delta', 'test_properties']))
 
     return suite

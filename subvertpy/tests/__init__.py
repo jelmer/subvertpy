@@ -1,5 +1,5 @@
-# Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@samba.org>
- 
+# Copyright (C) 2006-2008 Jelmer Vernooij <jelmer@samba.org>
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -11,16 +11,8 @@
 # GNU General Public License for more details.
 
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Subversion core library tests."""
+"""Tests for subvertpy."""
 
-from bzrlib.tests import TestCase
-from bzrlib.plugins.svn import subvertpy
-
-class TestCore(TestCase):
-    def setUp(self):
-        super(TestCore, self).setUp()
-
-    def test_exc(self):
-        self.assertIsInstance(subvertpy.SubversionException("foo", 1), Exception)
