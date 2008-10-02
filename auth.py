@@ -19,7 +19,7 @@ from bzrlib.config import AuthenticationConfig
 from bzrlib.trace import mutter
 from bzrlib.ui import ui_factory
 
-from bzrlib.plugins.svn import ra
+from bzrlib.plugins.svn.subvertpy import ra
 
 import urlparse
 import urllib

@@ -69,7 +69,7 @@ void PyErr_SetSubversionException(svn_error_t *error)
 		return;
 	}
 
-	coremod = PyImport_ImportModule("bzrlib.plugins.svn.core");
+	coremod = PyImport_ImportModule("bzrlib.plugins.svn.subvertpy");
 
 	if (coremod == NULL) {
 		return;

@@ -17,7 +17,7 @@ from bzrlib import osutils, urlutils
 from bzrlib.trace import warning
 from bzrlib.versionedfile import FulltextContentFactory, VersionedFiles, VirtualVersionedFiles
 
-from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.subvertpy import SubversionException
 from bzrlib.plugins.svn.errors import ERR_FS_NOT_FILE
 from bzrlib.plugins.svn.foreign.versionedfiles import VirtualSignatureTexts, VirtualRevisionTexts, VirtualInventoryTexts
 

@@ -25,9 +25,8 @@ from bzrlib.repository import InterRepository
 from bzrlib.revision import ensure_null
 from bzrlib.transport import get_transport
 
-from bzrlib.plugins.svn import repos
 from bzrlib.plugins.svn.branch import SvnBranch
-from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.subvertpy import SubversionException, repos
 from bzrlib.plugins.svn.errors import ERR_STREAM_MALFORMED_DATA
 from bzrlib.plugins.svn.format import get_rich_root_format
 

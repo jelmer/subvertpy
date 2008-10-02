@@ -21,7 +21,7 @@ from bzrlib.bzrdir import BzrDirFormat, BzrDir
 from bzrlib.errors import (NotLocalUrl, NoWorkingTree, AlreadyBranchError)
 from bzrlib.trace import warning
 
-from bzrlib.plugins.svn import core
+from bzrlib.plugins.svn import subvertpy
 from bzrlib.plugins.svn.errors import NoSvnRepositoryPresent
 from bzrlib.plugins.svn.format import SvnRemoteFormat
 from bzrlib.plugins.svn.repository import SvnRepository
@@ -138,7 +138,7 @@ class SvnRemoteAccess(BzrDir):
             repos.lock_write()
             try:
                 if repos.transport.check_path(target_branch_path,
-                    repos.get_latest_revnum()) != core.NODE_NONE:
+                    repos.get_latest_revnum()) != subvertpy.NODE_NONE:
                     raise AlreadyBranchError(target_branch_path)
                 push_new(source.repository.get_graph(), repos, target_branch_path, source.repository, stop_revision, 
                          append_revisions_only=True)

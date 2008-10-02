@@ -27,9 +27,8 @@ from bzrlib.trace import mutter, warning
 
 from cStringIO import StringIO
 
-from bzrlib.plugins.svn import core, mapping, properties
-from bzrlib.plugins.svn.core import SubversionException
-from bzrlib.plugins.svn.delta import send_stream
+from bzrlib.plugins.svn import mapping, properties
+from bzrlib.plugins.svn.subvertpy import SubversionException, delta, NODE_DIR
 from bzrlib.plugins.svn.errors import ChangesRootLHSHistory, MissingPrefix, RevpropChangeFailed, ERR_FS_TXN_OUT_OF_DATE, convert_svn_error
 from bzrlib.plugins.svn.svk import (
     generate_svk_feature, serialize_svk_features, 
@@ -65,7 +64,7 @@ def _check_dirs_exist(transport, bp_parts, base_rev):
         current = bp_parts[:i]
         path = "/".join(current).strip("/")
         assert isinstance(path, str)
-        if transport.check_path(path, base_rev) == core.NODE_DIR:
+        if transport.check_path(path, base_rev) == NODE_DIR:
             return current
     return []
 
@@ -245,7 +244,7 @@ class SvnCommitBuilder(RootCommitBuilder):
         """
         assert file_editor is not None
         txdelta = file_editor.apply_textdelta()
-        digest = send_stream(StringIO(contents), txdelta)
+        digest = delta.send_stream(StringIO(contents), txdelta)
         if 'validate' in debug.debug_flags:
             from fetch import md5_strings
             assert digest == md5_strings(contents)

@@ -242,7 +242,7 @@ def SvnExtension(name, *args, **kwargs):
             if "define_macros" not in kwargs:
                 kwargs["define_macros"] = []
             kwargs["define_macros"].extend((('DARWIN', None), ('SVN_KEYCHAIN_PROVIDER_AVAILABLE', '1')))
-    return Extension("bzrlib.plugins.svn.%s" % name, *args, **kwargs)
+    return Extension("bzrlib.plugins.svn.subvertpy.%s" % name, *args, **kwargs)
 
 
 # On Windows, we install the apr binaries too.
@@ -301,16 +301,16 @@ setup(name='bzr-svn',
       committing to Subversion repositories from 
       Bazaar.
       """,
-      package_dir={'bzrlib.plugins.svn':'.', 
-                   'bzrlib.plugins.svn.tests':'tests'},
+      package_dir={'bzrlib.plugins.svn':'.'},
       packages=['bzrlib.plugins.svn', 
                 'bzrlib.plugins.svn.mapping3', 
+                'bzrlib.plugins.svn.subvertpy', 
                 'bzrlib.plugins.svn.tests'],
       ext_modules=[
-          SvnExtension("client", ["client.c", "editor.c", "util.c", "ra.c", "wc.c"], libraries=["svn_client-1", "svn_subr-1"]), 
-          SvnExtension("ra", ["ra.c", "util.c", "editor.c"], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
-          SvnExtension("repos", ["repos.c", "util.c"], libraries=["svn_repos-1", "svn_subr-1"]),
-          SvnExtension("wc", ["wc.c", "util.c", "editor.c"], libraries=["svn_wc-1", "svn_subr-1"]),
+          SvnExtension("client", [os.path.join("subvertpy", f) for f in "client.c", "editor.c", "util.c", "ra.c", "wc.c"], libraries=["svn_client-1", "svn_subr-1"]), 
+          SvnExtension("ra", [os.path.join("subvertpy", f) for f in "ra.c", "util.c", "editor.c"], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
+          SvnExtension("repos", [os.path.join("subvertpy", f) for f in "repos.c", "util.c"], libraries=["svn_repos-1", "svn_subr-1"]),
+          SvnExtension("wc", [os.path.join("subvertpy", f) for f in "wc.c", "util.c", "editor.c"], libraries=["svn_wc-1", "svn_subr-1"]),
           ],
       cmdclass = { 'install_lib': install_lib_with_dlls },
       )

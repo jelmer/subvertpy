@@ -22,7 +22,7 @@ from bzrlib.errors import (BzrError, ConnectionError, ConnectionReset,
                            NoSuchRevision)
 
 import urllib
-from bzrlib.plugins.svn import core
+from bzrlib.plugins.svn import subvertpy
 
 
 ERR_UNKNOWN_HOSTNAME = 670002
@@ -157,7 +157,7 @@ def convert_svn_error(unbound):
     def convert(*args, **kwargs):
         try:
             return unbound(*args, **kwargs)
-        except core.SubversionException, e:
+        except subvertpy.SubversionException, e:
             raise convert_error(e)
 
     convert.__doc__ = unbound.__doc__

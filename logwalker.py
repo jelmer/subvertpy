@@ -19,11 +19,10 @@ from bzrlib import urlutils
 from bzrlib.errors import NoSuchRevision
 import bzrlib.ui as ui
 
-from bzrlib.plugins.svn import changes, core
+from bzrlib.plugins.svn import changes
 from bzrlib.plugins.svn.cache import CacheTable
-from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.subvertpy import SubversionException, ra, NODE_DIR
 from bzrlib.plugins.svn.errors import ERR_FS_NO_SUCH_REVISION, ERR_FS_NOT_FOUND, ERR_FS_NOT_DIRECTORY
-from bzrlib.plugins.svn.ra import DIRENT_KIND
 from bzrlib.plugins.svn.transport import SvnRaTransport
 
 class lazy_dict(object):
@@ -527,14 +526,14 @@ class LogWalker(object):
                 nextp = unchecked_dirs.pop()
                 num_checked += 1
                 try:
-                    dirents = conn.get_dir(nextp, revnum, DIRENT_KIND)[0]
+                    dirents = conn.get_dir(nextp, revnum, ra.DIRENT_KIND)[0]
                 except SubversionException, (_, num):
                     if num == ERR_FS_NOT_DIRECTORY:
                         continue
                     raise
                 for k, v in dirents.items():
                     childp = urlutils.join(nextp, k)
-                    if v['kind'] == core.NODE_DIR:
+                    if v['kind'] == NODE_DIR:
                         unchecked_dirs.add(childp)
                     results.append(childp)
         finally:

@@ -27,8 +27,8 @@ import md5
 from cStringIO import StringIO
 import urllib
 
-from bzrlib.plugins.svn import core, properties, wc
-from bzrlib.plugins.svn.delta import apply_txdelta_handler
+from bzrlib.plugins.svn import properties, wc
+from bzrlib.plugins.svn.subvertpy import delta, wc, NODE_DIR
 
 
 def inventory_add_external(inv, parent_id, path, revid, ref_revnum, url):
@@ -215,7 +215,7 @@ class FileTreeEditor(object):
 
     def apply_textdelta(self, base_checksum):
         self.file_stream = StringIO()
-        return apply_txdelta_handler("", self.file_stream)
+        return delta.apply_txdelta_handler("", self.file_stream)
 
 
 class SvnBasisTree(RevisionTree):
@@ -286,7 +286,7 @@ class SvnBasisTree(RevisionTree):
 
                 assert entry
                 
-                if entry.kind == core.NODE_DIR:
+                if entry.kind == NODE_DIR:
                     subwc = wc.WorkingCopy(adm, 
                             self.workingtree.abspath(subrelpath).encode("utf-8"))
                     try:

@@ -30,11 +30,11 @@ from bzrlib.trace import mutter
 from bzrlib.transport import get_transport
 from bzrlib.workingtree import WorkingTree, WorkingTreeFormat
 
-from bzrlib.plugins.svn import core, properties
+from bzrlib.plugins.svn import subvertpy, properties
+from bzrlib.plugins.svn.subvertpy.wc import *
 from bzrlib.plugins.svn.auth import create_auth_baton
 from bzrlib.plugins.svn.branch import SvnBranch
 from bzrlib.plugins.svn.commit import _revision_id_to_svk_feature
-from bzrlib.plugins.svn.core import SubversionException
 from bzrlib.plugins.svn.errors import ERR_FS_TXN_OUT_OF_DATE, ERR_ENTRY_EXISTS, ERR_WC_PATH_NOT_FOUND, ERR_WC_NOT_DIRECTORY, NotSvnBranchPath
 from bzrlib.plugins.svn.format import get_rich_root_format
 from bzrlib.plugins.svn.mapping import escape_svn_path
@@ -44,7 +44,6 @@ from bzrlib.plugins.svn.svk import SVN_PROP_SVK_MERGE, parse_svk_features, seria
 from bzrlib.plugins.svn.transport import (SvnRaTransport, bzr_to_svn_url, 
                        svn_config) 
 from bzrlib.plugins.svn.tree import SvnBasisTree
-from bzrlib.plugins.svn.wc import *
 
 import os
 import urllib
@@ -126,7 +125,7 @@ class SvnWorkingTree(WorkingTree):
                     continue
 
                 # Ignore ignores on things that aren't directories
-                if entries[entry].kind != core.NODE_DIR:
+                if entries[entry].kind != subvertpy.NODE_DIR:
                     continue
 
                 subprefix = os.path.join(prefix, entry)
@@ -351,7 +350,7 @@ class SvnWorkingTree(WorkingTree):
                 entry = entries[name]
                 assert entry
                 
-                if entry.kind == core.NODE_DIR:
+                if entry.kind == subvertpy.NODE_DIR:
                     subwc = WorkingCopy(wc, self.abspath(subrelpath))
                     try:
                         assert isinstance(subrelpath, unicode)
@@ -470,7 +469,7 @@ class SvnWorkingTree(WorkingTree):
                     wc.add(self.abspath(f))
                     if ids is not None:
                         self._change_fileid_mapping(ids.next(), f, wc)
-                except SubversionException, (_, num):
+                except subvertpy.SubversionException, (_, num):
                     if num == ERR_ENTRY_EXISTS:
                         continue
                     elif num == ERR_WC_PATH_NOT_FOUND:
@@ -719,7 +718,7 @@ class SvnCheckout(BzrDir):
         # Open related remote repository + branch
         try:
             wc = WorkingCopy(None, self.local_path)
-        except SubversionException, (msg, ERR_WC_UNSUPPORTED_FORMAT):
+        except subvertpy.SubversionException, (msg, ERR_WC_UNSUPPORTED_FORMAT):
             raise UnsupportedFormatError(msg, kind='workingtree')
         try:
             self.svn_url = wc.entry(self.local_path, True).url
@@ -800,7 +799,7 @@ class SvnCheckout(BzrDir):
 
         try:
             branch = SvnBranch(repos, self.get_remote_bzrdir().branch_path)
-        except SubversionException, (_, num):
+        except subvertpy.SubversionException, (_, num):
             if num == ERR_WC_NOT_DIRECTORY:
                 raise NotBranchError(path=self.base)
             raise

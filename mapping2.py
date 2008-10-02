@@ -15,6 +15,7 @@
 
 from bzrlib.errors import InvalidRevisionId
 from bzrlib.inventory import ROOT_ID
+
 from bzrlib.plugins.svn.errors import LayoutUnusable, NotSvnBranchPath
 from bzrlib.plugins.svn.layout import RepositoryLayout, get_root_paths
 from bzrlib.plugins.svn.layout.standard import RootLayout, TrunkLayout
