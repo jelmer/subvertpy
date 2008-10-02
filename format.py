@@ -99,7 +99,7 @@ class SvnRemoteFormat(BzrDirFormat):
         """See BzrDir.initialize_on_transport()."""
         from bzrlib.plugins.svn.transport import get_svn_ra_transport
         from bzrlib.transport.local import LocalTransport
-        from bzrlib.plugins.svn import repos
+        from bzrlib.plugins.svn.subvertpy import repos
 
         if not isinstance(transport, LocalTransport):
             raise NotImplementedError(self.initialize, 
@@ -131,7 +131,7 @@ class SvnWorkingTreeDirFormat(BzrDirFormat):
     @classmethod
     def probe_transport(klass, transport):
         from bzrlib.transport.local import LocalTransport
-        from bzrlib.plugins.svn import wc
+        from bzrlib.plugins.svn.subvertpy import wc
         format = klass()
 
         if isinstance(transport, LocalTransport) and \

@@ -16,11 +16,11 @@
 """Subversion core library tests."""
 
 from bzrlib.tests import TestCase
-from bzrlib.plugins.svn import core
+from bzrlib.plugins.svn import subvertpy
 
 class TestCore(TestCase):
     def setUp(self):
         super(TestCore, self).setUp()
 
     def test_exc(self):
-        self.assertIsInstance(core.SubversionException("foo", 1), Exception)
+        self.assertIsInstance(subvertpy.SubversionException("foo", 1), Exception)

@@ -16,7 +16,7 @@
 from bzrlib import errors, ui
 from bzrlib.revision import NULL_REVISION, Revision
 
-from bzrlib.plugins.svn import changes, core, errors as svn_errors, logwalker, properties
+from bzrlib.plugins.svn import changes, errors as svn_errors, logwalker, properties
 from bzrlib.plugins.svn.mapping import is_bzr_revision_fileprops, is_bzr_revision_revprops, estimate_bzr_ancestors, SVN_REVPROP_BZR_SIGNATURE, get_roundtrip_ancestor_revids
 from bzrlib.plugins.svn.svk import (SVN_PROP_SVK_MERGE, svk_features_merged_since, 
                  parse_svk_feature, estimate_svk_ancestors)

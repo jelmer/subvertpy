@@ -16,7 +16,7 @@
 """Subversion rpeository library tests."""
 
 import os
-from bzrlib.plugins.svn import repos
+from bzrlib.plugins.svn.subvertpy import repos
 from bzrlib.tests import TestCaseInTempDir
 
 class TestClient(TestCaseInTempDir):

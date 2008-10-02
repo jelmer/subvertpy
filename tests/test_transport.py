@@ -19,7 +19,8 @@
 from bzrlib.errors import NoSuchFile, FileExists, InvalidURL
 from bzrlib import urlutils
 
-from bzrlib.plugins.svn import core, ra
+from bzrlib.plugins.svn import subvertpy
+from bzrlib.plugins.svn.subvertpy import ra
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.transport import SvnRaTransport, bzr_to_svn_url, _url_unescape_uri
 
@@ -126,10 +127,10 @@ class SvnRaTest(SubversionTestCase):
 
         c = ra.RemoteAccess(repos_url)
         self.assertEquals(c.check_path("bla", c.get_latest_revnum()), 
-                          core.NODE_DIR)
+                          subvertpy.NODE_DIR)
         t.mkdir("bla/subdir")
         self.assertEquals(c.check_path("bla/subdir", c.get_latest_revnum()), 
-                          core.NODE_DIR)
+                          subvertpy.NODE_DIR)
 
     def test_has_dot(self):
         t = SvnRaTransport(self.make_repository('a'))
@@ -145,7 +146,7 @@ class SvnRaTest(SubversionTestCase):
         self.assertRaises(NoSuchFile, t.mkdir, "bla/subdir")
         c = ra.RemoteAccess(repos_url)
         self.assertEquals(c.check_path("bla/subdir", c.get_latest_revnum()), 
-                          core.NODE_NONE)
+                          subvertpy.NODE_NONE)
 
     def test_mkdir_twice(self):
         repos_url = self.make_repository('a')

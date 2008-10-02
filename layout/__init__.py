@@ -16,9 +16,9 @@
 from bzrlib import registry, urlutils, ui
 from bzrlib.trace import mutter
 
-from bzrlib.plugins.svn.core import SubversionException, NODE_DIR
+from bzrlib.plugins.svn.subvertpy import SubversionException, NODE_DIR
 from bzrlib.plugins.svn.errors import ERR_FS_NOT_DIRECTORY, ERR_FS_NOT_FOUND, ERR_RA_DAV_PATH_NOT_FOUND, NotSvnBranchPath
-from bzrlib.plugins.svn.ra import DIRENT_KIND
+from bzrlib.plugins.svn.subvertpy.ra import DIRENT_KIND
 
 class RepositoryLayout(object):
     """Describes a repository layout."""

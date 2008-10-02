@@ -16,7 +16,7 @@
 """Subversion ra library tests."""
 
 from bzrlib.tests import TestCase, TestSkipped
-from bzrlib.plugins.svn import core, ra
+from bzrlib.plugins.svn.subvertpy import ra, SubversionException
 from bzrlib.plugins.svn.tests import SubversionTestCase
 
 class VersionTest(TestCase):
@@ -60,7 +60,7 @@ class TestRemoteAccess(SubversionTestCase):
 
     def test_has_capability(self):
         try:
-            self.assertRaises(core.SubversionException, self.ra.has_capability, "FOO")
+            self.assertRaises(SubversionException, self.ra.has_capability, "FOO")
         except NotImplementedError:
             # svn < 1.5
             raise TestSkipped
@@ -206,7 +206,7 @@ class TestRemoteAccess(SubversionTestCase):
 class AuthTests(TestCase):
     def test_not_registered(self):
         auth = ra.Auth([])
-        self.assertRaises(core.SubversionException, auth.credentials, "svn.simple", "MyRealm")
+        self.assertRaises(SubversionException, auth.credentials, "svn.simple", "MyRealm")
 
     def test_simple(self):
         auth = ra.Auth([ra.get_simple_prompt_provider(lambda realm, uname, may_save: ("foo", "geheim", False), 0)])

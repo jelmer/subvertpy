@@ -31,7 +31,8 @@ from bzrlib.tests import TestCase, TestSkipped
 
 import os
 
-from bzrlib.plugins.svn import format, ra
+from bzrlib.plugins.svn import format
+from bzrlib.plugins.svn.subvertpy import ra
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.repository import SvnRepositoryFormat
 

@@ -27,7 +27,8 @@ from bzrlib.trace import mutter
 
 import os
 
-from bzrlib.plugins.svn import core, format, ra
+from bzrlib.plugins.svn import format
+from bzrlib.plugins.svn.subvertpy import ra
 from bzrlib.plugins.svn.errors import MissingPrefix
 from bzrlib.plugins.svn.commit import push, dpush
 from bzrlib.plugins.svn.layout.standard import RootLayout, CustomLayout

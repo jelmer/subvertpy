@@ -15,7 +15,7 @@
 
 from bzrlib.tests import TestCase
 
-from bzrlib.plugins.svn.delta import send_stream
+from bzrlib.plugins.svn.subvertpy.delta import send_stream
 
 from cStringIO import StringIO
 

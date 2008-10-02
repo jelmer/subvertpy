@@ -26,7 +26,7 @@ from bzrlib.plugins.svn.mapping3.scheme import (BranchingScheme, guess_scheme_fr
                              parse_list_scheme_text, NoBranchingScheme,
                              TrunkBranchingScheme, ListBranchingScheme,
                              InvalidSvnBranchPath)
-from bzrlib.plugins.svn.ra import DIRENT_KIND
+from bzrlib.plugins.svn.subvertpy.ra import DIRENT_KIND
 import sha
 
 SVN_PROP_BZR_BRANCHING_SCHEME = 'bzr:branching-scheme'

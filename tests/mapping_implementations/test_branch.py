@@ -26,7 +26,7 @@ from bzrlib.trace import mutter
 import os
 from unittest import TestCase
 
-from bzrlib.plugins.svn import core
+from bzrlib.plugins.svn import subvertpy
 from bzrlib.plugins.svn.branch import FakeControlFiles, SvnBranchFormat
 from bzrlib.plugins.svn.convert import load_dumpfile
 from bzrlib.plugins.svn.mapping import SVN_PROP_BZR_REVISION_ID, mapping_registry

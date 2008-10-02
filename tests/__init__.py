@@ -28,10 +28,9 @@ from bzrlib.tests import TestCaseInTempDir
 from bzrlib.trace import mutter
 from bzrlib.workingtree import WorkingTree
 
-from bzrlib.plugins.svn import cache, properties, ra, repos
-from bzrlib.plugins.svn.delta import send_stream
-from bzrlib.plugins.svn.client import Client
-from bzrlib.plugins.svn.ra import Auth, RemoteAccess
+from bzrlib.plugins.svn import cache, properties
+from bzrlib.plugins.svn.subvertpy import delta, ra, repos, delta, client
+from bzrlib.plugins.svn.subvertpy.ra import Auth, RemoteAccess
 
 class TestFileEditor(object):
     def __init__(self, file):
@@ -45,7 +44,7 @@ class TestFileEditor(object):
         if contents is None:
             contents = osutils.rand_chars(100)
         txdelta = self.file.apply_textdelta()
-        send_stream(StringIO(contents), txdelta)
+        delta.send_stream(StringIO(contents), txdelta)
 
     def close(self):
         assert not self.is_closed
@@ -129,7 +128,7 @@ class SubversionTestCase(TestCaseInTempDir):
 
     def setUp(self):
         super(SubversionTestCase, self).setUp()
-        self.client_ctx = Client()
+        self.client_ctx = client.Client()
         self.client_ctx.auth = Auth([ra.get_simple_provider(), 
                                      ra.get_username_provider(),
                                      ra.get_ssl_client_cert_file_provider(),

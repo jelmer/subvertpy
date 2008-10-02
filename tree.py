@@ -27,7 +27,7 @@ import md5
 from cStringIO import StringIO
 import urllib
 
-from bzrlib.plugins.svn import properties, wc
+from bzrlib.plugins.svn import properties
 from bzrlib.plugins.svn.subvertpy import delta, wc, NODE_DIR
 
 

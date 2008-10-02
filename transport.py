@@ -25,7 +25,7 @@ from bzrlib.transport import Transport
 
 import bzrlib.plugins.svn
 from bzrlib.plugins.svn.auth import create_auth_baton
-from bzrlib.plugins.svn.client import get_config
+from bzrlib.plugins.svn.subvertpy.client import get_config
 from bzrlib.plugins.svn.subvertpy import SubversionException, ra
 from bzrlib.plugins.svn.errors import convert_svn_error, NoSvnRepositoryPresent, ERR_BAD_URL, ERR_RA_SVN_REPOS_NOT_FOUND, ERR_FS_ALREADY_EXISTS, ERR_FS_NOT_DIRECTORY, ERR_RA_DAV_RELOCATED, ERR_RA_DAV_PATH_NOT_FOUND, ERR_UNKNOWN_CAPABILITY
 import urlparse

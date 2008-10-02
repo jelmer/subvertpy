@@ -20,7 +20,7 @@ from bzrlib.errors import (InvalidRevisionId, NoSuchRevision)
 from bzrlib.trace import mutter
 
 from bzrlib.plugins.svn.cache import CacheTable
-from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.subvertpy import SubversionException
 from bzrlib.plugins.svn.errors import InvalidPropertyValue, ERR_FS_NO_SUCH_REVISION, InvalidBzrSvnRevision
 from bzrlib.plugins.svn.mapping import (BzrSvnMapping, 
                      SVN_PROP_BZR_REVISION_ID, parse_revid_property,

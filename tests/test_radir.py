@@ -22,7 +22,7 @@ from bzrlib.bzrdir import BzrDir, format_registry
 from bzrlib.errors import (NoRepositoryPresent, NotLocalUrl,
                            NoWorkingTree, AlreadyBranchError)
 
-from bzrlib.plugins.svn import core
+from bzrlib.plugins.svn import subvertpy
 from bzrlib.plugins.svn.format import SvnRemoteFormat
 from bzrlib.plugins.svn.tests import SubversionTestCase
 from bzrlib.plugins.svn.transport import SvnRaTransport
@@ -80,7 +80,7 @@ class TestRemoteAccess(SubversionTestCase):
         b = x.create_branch()
         self.assertEquals(repos_url+"/trunk", b.base)
         transport = SvnRaTransport(repos_url)
-        self.assertEquals(core.NODE_DIR, 
+        self.assertEquals(subvertpy.NODE_DIR, 
                 transport.check_path("trunk", 1))
 
     def test_bad_dir(self):

@@ -91,7 +91,7 @@ def check_subversion_version():
             return False
         return True
     try:
-        from bzrlib.plugins.svn import client, ra, repos, wc
+        from bzrlib.plugins.svn.subvertpy import client, ra, repos, wc
         for x in client, ra, repos, wc:
             if not check_mtime(x):
                 warning("bzr-svn extensions are outdated and need to be rebuilt")

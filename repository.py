@@ -32,10 +32,10 @@ from copy import copy
 from itertools import chain
 import os
 
-from bzrlib.plugins.svn import cache, changes, core, errors, layout, logwalker, properties, revmeta
+from bzrlib.plugins.svn import cache, changes, subvertpy, errors, layout, logwalker, properties, revmeta
 from bzrlib.plugins.svn.branchprops import PathPropertyProvider
 from bzrlib.plugins.svn.config import SvnRepositoryConfig
-from bzrlib.plugins.svn.core import SubversionException
+from bzrlib.plugins.svn.subvertpy import SubversionException
 from bzrlib.plugins.svn.layout.standard import WildcardLayout
 from bzrlib.plugins.svn.layout.guess import repository_guess_layout
 from bzrlib.plugins.svn.mapping import (SVN_REVPROP_BZR_SIGNATURE,
@@ -404,7 +404,7 @@ class SvnRepository(Repository):
             return False
 
         try:
-            return (core.NODE_DIR == self.transport.check_path(path, revnum))
+            return (subvertpy.NODE_DIR == self.transport.check_path(path, revnum))
         except SubversionException, (_, num):
             if num == errors.ERR_FS_NO_SUCH_REVISION:
                 return False
