@@ -14,6 +14,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Python bindings for Subversion."""
+
+__author__ = "Jelmer Vernooij <jelmer@samba.org>"
+__version__ = (0, 5, 0)
+
 NODE_DIR = 2
 NODE_FILE = 1
 NODE_NONE = 0
