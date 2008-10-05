@@ -15,9 +15,10 @@
 
 """Subversion ra library tests."""
 
+from cStringIO import StringIO
 from unittest import TestCase
 from subvertpy import ra, SubversionException
-from bzrlib.plugins.svn.tests import SubversionTestCase
+from subvertpy.tests import SubversionTestCase
 
 class VersionTest(TestCase):
     def test_version_length(self):
@@ -174,6 +175,18 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertEquals(2, rets[1][1])
         self.assertEquals("/bar", rets[0][0])
         self.assertEquals("/bar", rets[1][0])
+
+    def test_get_file(self):
+        cb = self.commit_editor()
+        cb.add_file("bar").modify("a")
+        cb.close()
+
+        stream = StringIO()
+
+        self.ra.get_file("bar", stream, 1)
+
+        stream.seek(0)
+        self.assertEquals("a", stream.read())
 
     def test_get_locations_root(self):
         self.assertEquals({0: "/"}, self.ra.get_locations("", 0, [0]))
