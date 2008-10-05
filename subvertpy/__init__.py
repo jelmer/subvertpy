@@ -76,8 +76,8 @@ try:
     import client, ra, repos, wc
     for x in client, ra, repos, wc:
         if not _check_mtime(x):
-            warn("bzr-svn extensions are outdated and need to be rebuilt")
+            warn("subvertpy extensions are outdated and need to be rebuilt")
             break
 except ImportError:
-    raise ImportError("Unable to load bzr-svn extensions - did you build it?")
+    raise ImportError("Unable to load subvertpy extensions - did you build it?")
 
