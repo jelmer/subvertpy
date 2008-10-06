@@ -80,7 +80,8 @@ class SVNServer:
         return NODE_DIR
 
     def log(self, target_path, start_rev, end_rev, changed_paths, 
-            strict_node, limit=None):
+            strict_node, limit=None, include_merged_revisions=False, 
+            all_revprops=None, revprops=None):
         def send_revision(revno, author, date, message, changed_paths=None):
             changes = []
             if changed_paths is not None:
