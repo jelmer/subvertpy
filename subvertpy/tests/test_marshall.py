@@ -14,8 +14,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from bzrlib.tests import TestCase
-from marshall import literal, MarshallError, marshall, unmarshall
+from unittest import TestCase
+from subvertpy.marshall import literal, MarshallError, marshall, unmarshall
 
 class TestMarshalling(TestCase):
     def test_literal_txt(self):
