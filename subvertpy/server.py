@@ -36,6 +36,9 @@ class ServerRepositoryBackend:
     def get_latest_revnum(self):
         raise NotImplementedError(self.get_latest_revnum)
 
+    def log(self, send_revision, target_path, start_rev, end_rev, changed_paths,
+            strict_node, limit):
+        raise NotImplementedError(self.log)
 
 
 SVN_MAJOR_VERSION = 1
@@ -76,29 +79,12 @@ class SVNServer:
 
     def log(self, target_path, start_rev, end_rev, changed_paths, 
             strict_node, limit=None):
-        def send_revision(revno, rev):
-            self.send_msg([[], revno, [rev.committer], 
-              [time.strftime("%Y-%m-%dT%H:%M:%S.00000Z", time.gmtime(rev.timestamp))],
-                          [rev.message]])
+        def send_revision(revno, author, date, message):
+            self.send_msg([[], revno, [author], [date], [message]])
         self.send_success([], "")
-        revno = start_rev[0]
-        i = 0
-        self.branch.repository.lock_read()
-        try:
-            # FIXME: check whether start_rev and end_rev actually exist
-            while revno != end_rev[0]:
-                #TODO: Honor target_path, strict_node, changed_paths
-                if end_rev[0] > revno:
-                    revno+=1
-                else:
-                    revno-=1
-                if limit != 0 and i == limit:
-                    break
-                if revno != 0:
-                    send_revision(revno, self.branch.repository.get_revision(self.branch.get_rev_id(revno)))
-        finally:
-            self.branch.repository.unlock()
-
+        self.repo_backend.log(send_revision, target_path, start_rev[0], 
+                              end_rev[0],
+                              changed_paths, strict_node, limit)
         self.send_msg(literal("done"))
         self.send_success()
 
