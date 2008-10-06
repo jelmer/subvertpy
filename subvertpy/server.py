@@ -206,4 +206,4 @@ class SVNServer:
 
     def mutter(self, text):
         if self._logf is not None:
-            self._logf.write(text)
+            self._logf.write("%s\n" % text)
