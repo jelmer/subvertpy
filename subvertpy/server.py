@@ -41,8 +41,10 @@ class ServerRepositoryBackend:
         raise NotImplementedError(self.log)
 
 
-SVN_MAJOR_VERSION = 1
-SVN_MINOR_VERSION = 2
+MAJOR_VERSION = 1
+MINOR_VERSION = 2
+CAPABILITIES = ["edit-pipeline"]
+
 
 class SVNServer:
     def __init__(self, backend, recv_fn, send_fn, logf=None):
@@ -55,7 +57,7 @@ class SVNServer:
 
     def send_greeting(self):
         self.send_success(
-            SVN_MAJOR_VERSION, SVN_MINOR_VERSION, [literal("ANONYMOUS")], [])
+            MAJOR_VERSION, MINOR_VERSION, [literal("ANONYMOUS")], CAPABILITIES)
 
     def send_mechs(self):
         self.send_success([literal("ANONYMOUS")], "")
