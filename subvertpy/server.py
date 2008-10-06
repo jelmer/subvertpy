@@ -43,7 +43,7 @@ class ServerRepositoryBackend:
 
 MAJOR_VERSION = 1
 MINOR_VERSION = 2
-CAPABILITIES = ["edit-pipeline"]
+CAPABILITIES = [literal("edit-pipeline")]
 
 
 class SVNServer:
