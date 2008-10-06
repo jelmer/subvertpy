@@ -18,7 +18,7 @@ import copy
 import os
 import time
 
-from subvertpy import SVN_NODE_NONE, SVN_NODE_FILE, SVN_NODE_DIR
+from subvertpy import NODE_NONE, NODE_FILE, NODE_DIR
 from subvertpy.marshall import marshall, unmarshall, literal, MarshallError
 
 
@@ -72,7 +72,7 @@ class SVNServer:
         self.send_success(self.repo_backend.get_latest_revnum())
 
     def check_path(self, path, revnum):
-        return SVN_NODE_DIR
+        return NODE_DIR
 
     def log(self, target_path, start_rev, end_rev, changed_paths, 
             strict_node, limit=None):
