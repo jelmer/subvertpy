@@ -16,7 +16,7 @@
 """Subversion client library tests."""
 
 from subvertpy import client
-from bzrlib.plugins.svn.tests import SubversionTestCase
+from subvertpy.tests import SubversionTestCase
 
 class TestClient(SubversionTestCase):
     def setUp(self):

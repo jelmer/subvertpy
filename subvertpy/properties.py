@@ -13,8 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import bisect
-from bzrlib import urlutils
+import bisect, urlutils
 
 
 class InvalidExternalsDescription(Exception):
@@ -100,7 +99,7 @@ def parse_externals_description(base_url, val):
             raise NotImplementedError("Relative to the scheme externals not yet supported")
         if relurl.startswith("^/"):
             raise NotImplementedError("Relative to the repository root externals not yet supported")
-        ret[path] = (revno, "%s/%s" % (base_url, relurl))
+        ret[path] = (revno, urlutils.urljoin(base_url, relurl))
     return ret
 
 
