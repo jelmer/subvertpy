@@ -21,16 +21,34 @@ import time
 from subvertpy import SVN_NODE_NONE, SVN_NODE_FILE, SVN_NODE_DIR
 from subvertpy.marshall import marshall, unmarshall, literal, MarshallError
 
+
+class ServerBackend:
+
+    def open_repository(self, location):
+        raise NotImplementedError(self.open_repository)
+
+
+class ServerRepositoryBackend:
+    
+    def get_uuid(self):
+        raise NotImplementedError(self.get_uuid)
+
+    def get_latest_revnum(self):
+        raise NotImplementedError(self.get_latest_revnum)
+
+
+
 SVN_MAJOR_VERSION = 1
 SVN_MINOR_VERSION = 2
 
 class SVNServer:
-    def __init__(self, rootdir, recv_fn, send_fn):
-        self.rootdir = rootdir
+    def __init__(self, backend, recv_fn, send_fn, logf=None):
+        self.backend = backend
         self.recv_fn = recv_fn
         self.send_fn = send_fn
         self.inbuffer = ""
         self._stop = False
+        self._logf = logf
 
     def send_greeting(self):
         self.send_success(
@@ -51,7 +69,7 @@ class SVNServer:
 
     def get_latest_rev(self):
         self.send_success([], "")
-        self.send_success(self.branch.revno())
+        self.send_success(self.repo_backend.get_latest_revnum())
 
     def check_path(self, path, revnum):
         return SVN_NODE_DIR
@@ -147,15 +165,6 @@ class SVNServer:
             # FIXME: replay
     }
 
-    def get_branch_uuid(self):
-        config = self.branch.get_config()
-        uuid = config.get_user_option('svn_uuid')
-        if uuid is None:
-            import uuid
-            uuid = uuid.uuid4()
-            config.set_user_option('svn_uuid', uuid)
-        return str(uuid)
-
     def send_auth_request(self):
         pass
 
@@ -165,20 +174,20 @@ class SVNServer:
         self.capabilities = capabilities
         self.version = version
         self.url = url
-        mutter("client supports:")
-        mutter("  version %r" % version)
-        mutter("  capabilities %r " % capabilities)
+        self.mutter("client supports:")
+        self.mutter("  version %r" % version)
+        self.mutter("  capabilities %r " % capabilities)
         self.send_mechs()
 
         (mech, args) = self.recv_msg()
         # TODO: Proper authentication
         self.send_success()
 
-        import bzrlib.urlutils as urlutils
-        (rooturl, location) = urlutils.split(url)
+        import urllib
+        (rooturl, location) = urllib.splithost(url)
 
-        self.branch, branch_path = Branch.open_containing(os.path.join(self.rootdir, location))
-        self.send_success(self.get_branch_uuid(), url)
+        self.repo_backend, self.relpath = self.backend.open_repository(location)
+        self.send_success(self.repo_backend.get_uuid(), url)
 
         # Expect:
         while not self._stop:
@@ -198,11 +207,15 @@ class SVNServer:
             try:
                 self.inbuffer += self.recv_fn()
                 (self.inbuffer, ret) = unmarshall(self.inbuffer)
-                mutter('in: %r' % ret)
+                self.mutter('in: %r' % ret)
                 return ret
             except MarshallError, e:
-                mutter('ERROR: %r' % e)
+                self.mutter('ERROR: %r' % e)
 
     def send_msg(self, data):
-        mutter('out: %r' % data)
+        self.mutter('out: %r' % data)
         self.send_fn(marshall(data))
+
+    def mutter(self, text):
+        if self._logf is not None:
+            self._logf.write(text)

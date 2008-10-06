@@ -17,7 +17,7 @@
 
 from unittest import TestCase
 from subvertpy import ra, SubversionException
-from bzrlib.plugins.svn.tests import SubversionTestCase
+from subvertpy.tests import SubversionTestCase
 
 class VersionTest(TestCase):
     def test_version_length(self):
