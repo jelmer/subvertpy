@@ -81,13 +81,14 @@ class SVNServer:
 
     def log(self, target_path, start_rev, end_rev, changed_paths, 
             strict_node, limit=None):
-        def send_revision(revno, author, date, message, changed_paths):
+        def send_revision(revno, author, date, message, changed_paths=None):
             changes = []
-            for p, (action, cf, cr) in changed_paths.items():
-                if cf is not None:
-                    changes.append((p, literal(action), cf, cr))
-                else:
-                    changes.append((p, literal(action)))
+            if changed_paths is not None:
+                for p, (action, cf, cr) in changed_paths.items():
+                    if cf is not None:
+                        changes.append((p, literal(action), cf, cr))
+                    else:
+                        changes.append((p, literal(action)))
             self.send_msg([changes, revno, [author], [date], [message]])
         self.send_success([], "")
         self.repo_backend.log(send_revision, target_path, start_rev[0], 
