@@ -17,7 +17,7 @@
 
 from cStringIO import StringIO
 from unittest import TestCase
-from subvertpy import ra, SubversionException
+from subvertpy import ra, SubversionException, NODE_DIR, NODE_NONE
 from subvertpy.tests import SubversionTestCase
 
 class VersionTest(TestCase):
@@ -190,6 +190,15 @@ class TestRemoteAccess(SubversionTestCase):
 
     def test_get_locations_root(self):
         self.assertEquals({0: "/"}, self.ra.get_locations("", 0, [0]))
+
+    def test_check_path(self):
+        cb = self.commit_editor()
+        cb.add_dir("bar")
+        cb.close()
+
+        self.assertEquals(NODE_DIR, self.ra.check_path("bar", 1))
+        self.assertEquals(NODE_DIR, self.ra.check_path("bar/", 1))
+        self.assertEquals(NODE_NONE, self.ra.check_path("blaaaa", 1))
 
     def test_get_locations_dir(self):
         cb = self.commit_editor()

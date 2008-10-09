@@ -1520,7 +1520,7 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	RUN_RA_WITH_POOL(temp_pool, ra,
-					  svn_ra_check_path(ra->ra, path, revision, &kind, 
+					  svn_ra_check_path(ra->ra, svn_path_canonicalize(path, temp_pool), revision, &kind, 
 					 temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyInt_FromLong(kind);
