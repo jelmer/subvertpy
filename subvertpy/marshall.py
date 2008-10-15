@@ -43,6 +43,10 @@ class MarshallError(Exception):
     """A Marshall error."""
 
 
+class NeedMoreData(MarshallError):
+    """More data needed."""
+
+
 def marshall(x):
     if isinstance(x, int):
         return "%d " % x
@@ -50,15 +54,17 @@ def marshall(x):
         return "( " + "".join(map(marshall, x)) + ") "
     elif isinstance(x, literal):
         return "%s " % x
-    elif isinstance(x, basestring):
+    elif isinstance(x, str):
         return "%d:%s " % (len(x), x)
+    elif isinstance(x, unicode):
+        return "%d:%s " % (len(x), x.encode("utf-8"))
     raise MarshallError("Unable to marshall type %s" % x)
 
 
 def unmarshall(x):
     whitespace = ['\n', ' ']
     if len(x) == 0:
-        raise MarshallError("Not enough data")
+        raise NeedMoreData("Not enough data")
     if x[0] == "(" and x[1] == " ": # list follows
         x = x[2:]
         ret = []
@@ -67,7 +73,7 @@ def unmarshall(x):
                 (x, n) = unmarshall(x)
                 ret.append(n)
         except IndexError:
-            raise MarshallError("List not terminated")
+            raise NeedMoreData("List not terminated")
         
         if not x[1] in whitespace:
             raise MarshallError("Expected space, got %c" % x[1])
@@ -85,7 +91,7 @@ def unmarshall(x):
             return (x[1:], num)
         elif x[0] == ":":
             if len(x) < num:
-                raise MarshallError("Expected string of length %r" % num)
+                raise NeedMoreData("Expected string of length %r" % num)
             return (x[num+2:], x[1:num+1])
         else:
             raise MarshallError("Expected whitespace or ':', got '%c" % x[0])

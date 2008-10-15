@@ -18,14 +18,25 @@ import copy
 import os
 import time
 
-from subvertpy import NODE_NONE, NODE_FILE, NODE_DIR
-from subvertpy.marshall import marshall, unmarshall, literal, MarshallError
+from subvertpy import ERR_RA_SVN_UNKNOWN_CMD, NODE_DIR, NODE_FILE, NODE_UNKNOWN, NODE_NONE, ERR_UNSUPPORTED_FEATURE
+from subvertpy.marshall import marshall, unmarshall, literal, MarshallError, NeedMoreData
 
 
 class ServerBackend:
 
     def open_repository(self, location):
         raise NotImplementedError(self.open_repository)
+
+
+def generate_random_id():
+    import uuid
+    return str(uuid.uuid4())
+
+
+def txdelta_to_svndiff(delta):
+    ret = "SVN\2"
+    # FIXME
+    return ret
 
 
 class ServerRepositoryBackend:
@@ -36,10 +47,133 @@ class ServerRepositoryBackend:
     def get_latest_revnum(self):
         raise NotImplementedError(self.get_latest_revnum)
 
+    def log(self, send_revision, target_path, start_rev, end_rev, changed_paths,
+            strict_node, limit):
+        raise NotImplementedError(self.log)
+
+    def update(self, editor, revnum, target_path, recurse=True):
+        raise NotImplementedError(self.update)
+
+    def check_path(self, path, revnum):
+        raise NotImplementedError(self.check_path)
+
+    def stat(self, path, revnum):
+        """Stat a path.
+
+        Should return a dictionary with the following keys: name, kind, size, has-props, 
+        created-rev, created-date, last-author.
+        """
+        raise NotImplementedError(self.stat)
+
+    def rev_proplist(self, revnum):
+        raise NotImplementedError(self.rev_proplist)
+
+    def get_locations(self, path, peg_revnum, revnums):
+        raise NotImplementedError(self.get_locations)
 
 
-SVN_MAJOR_VERSION = 1
-SVN_MINOR_VERSION = 2
+MAJOR_VERSION = 1
+MINOR_VERSION = 2
+CAPABILITIES = ["edit-pipeline"]
+MECHANISMS = ["ANONYMOUS"]
+
+class Editor:
+
+    def __init__(self, conn):
+        self.conn = conn
+
+    def set_target_revision(self, revnum):
+        self.conn.send_msg([literal("target-rev"), [revnum]])
+
+    def open_root(self, base_revision=None):
+        id = generate_random_id()
+        if base_revision is None:
+            baserev = []
+        else:
+            baserev = [base_revision]
+        self.conn.send_msg([literal("open-root"), [baserev, id]])
+        return DirectoryEditor(self.conn, id)
+
+    def close(self):
+        self.conn.send_msg([literal("close-edit"), []])
+
+    def abort(self):
+        self.conn.send_msg([literal("abort-edit"), []])
+
+class DirectoryEditor:
+
+    def __init__(self, conn, id):
+        self.conn = conn
+        self.id = id
+
+    def add_file(self, path):
+        child = generate_random_id()
+        self.conn.send_msg([literal("add-file"), [path, self.id, child]])
+        return FileEditor(self.conn, child)
+
+    def open_file(self, path, base_revnum):
+        child = generate_random_id()
+        self.conn.send_msg([literal("open-file"), [path, self.id, child, base_revnum]])
+        return FileEditor(self.conn, child)
+
+    def delete_entry(self, path, base_revnum):
+        self.conn.send_msg([literal("delete-entry"), [path, base_revnum, self.id]])
+
+    def add_directory(self, path):
+        child = generate_random_id()
+        self.conn.send_msg([literal("add-dir"), [path, self.id, child]])
+        return DirectoryEditor(self.conn, child)
+
+    def open_directory(self, path, base_revnum):
+        child = generate_random_id()
+        self.conn.send_msg([literal("open-dir"), [path, self.id, child, base_revnum]])
+        return DirectoryEditor(self.conn, child)
+
+    def change_prop(self, name, value):
+        if value is None:
+            value = []
+        else:
+            value = [value]
+        self.conn.send_msg([literal("change-dir-prop"), [self.id, name, value]])
+
+    def close(self):
+        self.conn.send_msg([literal("close-dir"), [self.id]])
+
+class FileEditor:
+
+    def __init__(self, conn, id):
+        self.conn = conn
+        self.id = id
+
+    def close(self, checksum=None):
+        if checksum is None:
+            checksum = []
+        else:
+            checksum = [checksum]
+        self.conn.send_msg([literal("close-file"), [self.id, checksum]])
+
+    def apply_textdelta(self, base_checksum=None):
+        if base_checksum is None:
+            base_check = []
+        else:
+            base_check = [base_checksum]
+        self.conn.send_msg([literal("apply-textdelta"), [self.id, base_check]])
+        def send_textdelta(delta):
+            if delta is None:
+                self.conn.send_msg([literal("textdelta-end"), [self.id]])
+            else:
+                self.conn.send_msg([literal("textdelta-chunk"), [self.id, txdelta_to_svndiff(delta)]])
+        return send_textdelta
+
+    def change_prop(self, name, value):
+        if value is None:
+            value = []
+        else:
+            value = [value]
+        self.conn.send_msg([literal("change-dir-prop"), [self.id, name, value]])
+
+
+
 
 class SVNServer:
     def __init__(self, backend, recv_fn, send_fn, logf=None):
@@ -52,10 +186,11 @@ class SVNServer:
 
     def send_greeting(self):
         self.send_success(
-            SVN_MAJOR_VERSION, SVN_MINOR_VERSION, [literal("ANONYMOUS")], [])
+            MAJOR_VERSION, MINOR_VERSION, [literal(x) for x in MECHANISMS], 
+            [literal(x) for x in CAPABILITIES])
 
     def send_mechs(self):
-        self.send_success([literal("ANONYMOUS")], "")
+        self.send_success([literal(x) for x in MECHANISMS], "")
 
     def send_failure(self, *contents):
         self.send_msg([literal("failure"), list(contents)])
@@ -63,86 +198,120 @@ class SVNServer:
     def send_success(self, *contents):
         self.send_msg([literal("success"), list(contents)])
 
+    def send_ack(self):
+        self.send_success([], "")
+
     def send_unknown(self, cmd):
-        self.send_failure([210001, "Unknown command '%s'" % cmd, __file__, \
-                          52])
+        self.send_failure([ERR_RA_SVN_UNKNOWN_CMD, 
+            "Unknown command '%s'" % cmd, __file__, 52])
 
     def get_latest_rev(self):
-        self.send_success([], "")
+        self.send_ack()
         self.send_success(self.repo_backend.get_latest_revnum())
 
-    def check_path(self, path, revnum):
-        return NODE_DIR
+    def check_path(self, path, rev):
+        if len(rev) == 0:
+            revnum = None
+        else:
+            revnum = rev[0]
+        kind = self.repo_backend.check_path(path, revnum)
+        self.send_ack()
+        self.send_success(literal({NODE_NONE: "none", 
+                           NODE_DIR: "dir",
+                           NODE_FILE: "file",
+                           NODE_UNKNOWN: "unknown"}[kind]))
 
     def log(self, target_path, start_rev, end_rev, changed_paths, 
-            strict_node, limit=None):
-        def send_revision(revno, rev):
-            self.send_msg([[], revno, [rev.committer], 
-              [time.strftime("%Y-%m-%dT%H:%M:%S.00000Z", time.gmtime(rev.timestamp))],
-                          [rev.message]])
-        self.send_success([], "")
-        revno = start_rev[0]
-        i = 0
-        self.branch.repository.lock_read()
-        try:
-            # FIXME: check whether start_rev and end_rev actually exist
-            while revno != end_rev[0]:
-                #TODO: Honor target_path, strict_node, changed_paths
-                if end_rev[0] > revno:
-                    revno+=1
-                else:
-                    revno-=1
-                if limit != 0 and i == limit:
-                    break
-                if revno != 0:
-                    send_revision(revno, self.branch.repository.get_revision(self.branch.get_rev_id(revno)))
-        finally:
-            self.branch.repository.unlock()
-
+            strict_node, limit=None, include_merged_revisions=False, 
+            all_revprops=None, revprops=None):
+        def send_revision(revno, author, date, message, changed_paths=None):
+            changes = []
+            if changed_paths is not None:
+                for p, (action, cf, cr) in changed_paths.items():
+                    if cf is not None:
+                        changes.append((p, literal(action), (cf, cr)))
+                    else:
+                        changes.append((p, literal(action), ()))
+            self.send_msg([changes, revno, [author], [date], [message]])
+        self.send_ack()
+        if len(start_rev) == 0:
+            start_revnum = None
+        else:
+            start_revnum = start_rev[0]
+        if len(end_rev) == 0:
+            end_revnum = None
+        else:
+            end_revnum = end_rev[0]
+        self.repo_backend.log(send_revision, target_path, start_revnum, 
+                              end_revnum, changed_paths, strict_node, limit)
         self.send_msg(literal("done"))
         self.send_success()
 
+    def open_backend(self, url):
+        import urllib
+        (rooturl, location) = urllib.splithost(url)
+        self.repo_backend, self.relpath = self.backend.open_repository(location)
+
     def reparent(self, parent):
-        self.send_success([], "")
+        self.open_backend(parent)
+        self.send_ack()
         self.send_success()
 
-    def stat(self, path, revnum):
-        self.send_success([], "")
+    def stat(self, path, rev):
+        if len(rev) == 0:
+            revnum = None
+        else:
+            revnum = rev[0]
+        self.send_ack()
+        dirent = self.repo_backend.stat(path, revnum)
+        if dirent is None:
+            self.send_success([])
+        else:
+            self.send_success([dirent["name"], dirent["kind"], dirent["size"],
+                          dirent["has-props"], dirent["created-rev"],
+                          dirent["created-date"], dirent["last-author"]])
+
+    def commit(self, logmsg, locks, keep_locks=False, rev_props=None):
+        self.send_failure([ERR_UNSUPPORTED_FEATURE, 
+            "commit not yet supported", __file__, 42])
+
+    def rev_proplist(self, revnum):
+        self.send_ack()
+        revprops = self.repo_backend.rev_proplist(revnum)
+        self.send_success(revprops.items())
+
+    def rev_prop(self, revnum, name):
+        self.send_ack()
+        revprops = self.repo_backend.rev_proplist(revnum)
+        if name in revprops:
+            self.send_success([revprops[name]])
+        else:
+            self.send_success()
+
+    def get_locations(self, path, peg_revnum, revnums):
+        self.send_ack()
+        locations = self.repo_backend.get_locations(path, peg_revnum, revnums)
+        for rev, path in locations.items():
+            self.send_msg([rev, path])
+        self.send_msg(literal("done"))
         self.send_success()
 
-    def update(self, rev, target, recurse):
-        self.send_success([], "")
+    def update(self, rev, target, recurse, depth=None, send_copyfrom_param=True):
+        self.send_ack()
         while True:
             msg = self.recv_msg()
             assert msg[0] in ["set-path", "finish-report"]
             if msg[0] == "finish-report":
                 break
 
-        self.send_success([], "")
-        self.send_msg(["target-rev", rev])
-        tree = self.branch.repository.revision_tree(
-                self.branch.get_rev_id(rev[0]))
-        path2id = {}
-        id2path = {}
-        self.send_msg(["open-root", [rev, tree.inventory.root.file_id]])
-        def send_children(self, id):
-            for child in tree.inventory[id].children:
-                if tree.inventory[child].kind in ('symlink', 'file'):
-                    self.send_msg(["add-file", [tree.inventory.id2path(child),
-                                                id, child]])
-                    # FIXME
-                    self.send_msg(["close-file", [child]])
-                else:
-                    self.send_msg(["add-dir", [tree.inventory.id2path(child),
-                                                id, child]])
-                    send_children(child)
-                    self.send_msg(["close-dir", [child]])
-        #send_children(tree.inventory.root.file_id)
-        self.send_msg(["close-dir", [tree.inventory.root.file_id]])
-        self.send_msg(["close-edit", []])
-        #msg = self.recv_msg()
-        #self.send_msg(msg)
+        self.send_ack()
 
+        if len(rev) == 0:
+            revnum = None
+        else:
+            revnum = rev[0]
+        self.repo_backend.update(Editor(self), revnum, target, recurse)
+        self.send_success()
 
     commands = {
             "get-latest-rev": get_latest_rev,
@@ -151,16 +320,17 @@ class SVNServer:
             "check-path": check_path,
             "reparent": reparent,
             "stat": stat,
+            "commit": commit,
+            "rev-proplist": rev_proplist,
+            "rev-prop": rev_prop,
+            "get-locations": get_locations,
             # FIXME: get-dated-rev
-            # FIXME: rev-proplist
-            # FIXME: rev-prop
             # FIXME: get-file
             # FIXME: get-dir
             # FIXME: check-path
             # FIXME: switch
             # FIXME: status
             # FIXME: diff
-            # FIXME: get-locations
             # FIXME: get-file-revs
             # FIXME: replay
     }
@@ -183,16 +353,14 @@ class SVNServer:
         # TODO: Proper authentication
         self.send_success()
 
-        import urllib
-        (rooturl, location) = urllib.splithost(url)
-
-        self.repo_backend, self.relpath = self.backend.open_repository(location)
+        self.open_backend(url)
         self.send_success(self.repo_backend.get_uuid(), url)
 
         # Expect:
         while not self._stop:
             ( cmd, args ) = self.recv_msg()
             if not self.commands.has_key(cmd):
+                self.mutter("client used unknown command %r" % cmd)
                 self.send_unknown(cmd)
                 return
             else:
@@ -202,20 +370,59 @@ class SVNServer:
         self._stop = True
 
     def recv_msg(self):
-        # FIXME: Blocking read?
+        # TODO: socket read should be blocking
         while True:
             try:
-                self.inbuffer += self.recv_fn()
                 (self.inbuffer, ret) = unmarshall(self.inbuffer)
-                self.mutter('in: %r' % ret)
                 return ret
+            except NeedMoreData:
+                newdata = self.recv_fn(512)
+                if newdata != "":
+                    self.mutter("IN: %r" % newdata)
+                    self.inbuffer += newdata
             except MarshallError, e:
                 self.mutter('ERROR: %r' % e)
+                raise
 
     def send_msg(self, data):
-        self.mutter('out: %r' % data)
+        self.mutter("OUT: %r" % data)
         self.send_fn(marshall(data))
 
     def mutter(self, text):
         if self._logf is not None:
-            self._logf.write(text)
+            self._logf.write("%s\n" % text)
+
+
+SVN_PORT = 3690
+
+class TCPSVNServer(object):
+
+    def __init__(self, backend, port=None, logf=None):
+        if port is None:
+            self._port = SVN_PORT
+        else:
+            self._port = int(port)
+        self._backend = backend
+        self._logf = logf
+
+    def serve(self):
+        import socket
+        import threading
+        server_sock = socket.socket()
+        server_sock.bind(('0.0.0.0', self._port))
+        server_sock.listen(5)
+        def handle_new_client(sock):
+            def handle_connection():
+                server.serve()
+                sock.close()
+            sock.setblocking(True)
+            server = SVNServer(self._backend, sock.recv, sock.send, self._logf)
+            server_thread = threading.Thread(None, handle_connection, name='svn-smart-server')
+            server_thread.setDaemon(True)
+            server_thread.start()
+            
+        while True:
+            sock, _ = server_sock.accept()
+            handle_new_client(sock)
+
+
