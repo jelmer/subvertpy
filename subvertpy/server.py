@@ -173,8 +173,6 @@ class FileEditor:
         self.conn.send_msg([literal("change-dir-prop"), [self.id, name, value]])
 
 
->>>>>>> MERGE-SOURCE
-
 
 class SVNServer:
     def __init__(self, backend, recv_fn, send_fn, logf=None):
