@@ -56,7 +56,7 @@ ERR_AUTHN_NO_PROVIDER = 215001
 ERR_RA_DAV_RELOCATED = 175011
 ERR_FS_NOT_FILE = 160017
 ERR_WC_BAD_ADM_LOG = 155009
-
+ERR_RA_DAV_NOT_VCC = 20014
 
 class SubversionException(Exception):
     """A Subversion exception"""
