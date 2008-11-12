@@ -1,0 +1,5 @@
+subvertpy (0.5-1) unstable; urgency=low
+
+  * Initial release.
+
+ -- Jelmer Vernooij <jelmer@samba.org>  Wed, 12 Nov 2008 12:49:45 +0100
