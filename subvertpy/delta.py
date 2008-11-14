@@ -15,6 +15,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Subversion delta operations."""
 
+__author__ = "Jelmer Vernooij <jelmer@samba.org>"
+__docformat__ = "restructuredText"
+
 import md5
 
 TXDELTA_SOURCE = 0
@@ -67,6 +70,11 @@ def send_stream(stream, handler, block_size=SEND_STREAM_BLOCK_SIZE):
 
 
 def encode_length(len):
+    """Encode a length variable.
+
+    :param len: Length to encode
+    :return: String with encoded length
+    """
     # Based on encode_int() in subversion/libsvn_delta/svndiff.c
     assert len >= 0
     assert isinstance(len, int), "expected int, got %r" % (len,)
@@ -93,6 +101,11 @@ def encode_length(len):
 
 
 def decode_length(text):
+    """Decode a length variable.
+
+    :param text: Bytestring to decode
+    :return: Integer with actual length
+    """
     # Decode bytes until we're done.  */
     ret = 0
     next = True

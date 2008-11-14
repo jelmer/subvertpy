@@ -13,6 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Handling of Subversion properties."""
+
+__author__ = "Jelmer Vernooij <jelmer@samba.org>"
+__docformat__ = "restructuredText"
+
 import bisect, urllib
 
 
@@ -21,6 +26,11 @@ class InvalidExternalsDescription(Exception):
 
 
 def is_valid_property_name(prop):
+    """Check the validity of a property name.
+
+    :param prop: Property name
+    :return: Whether prop is a valid property name
+    """
     if not prop[0].isalnum() and not prop[0] in ":_":
         return False
     for c in prop[1:]:
@@ -104,6 +114,10 @@ def parse_externals_description(base_url, val):
 
 
 def parse_mergeinfo_property(text):
+    """Parse a mergeinfo property.
+
+    :param text: Property contents
+    """
     ret = {}
     for l in text.splitlines():
         (path, ranges) = l.rsplit(":", 1)
@@ -215,6 +229,14 @@ PROP_REVISION_AUTHOR = "svn:author"
 PROP_REVISION_DATE = "svn:date"
 
 def diff(current, previous):
+    """Find the differences between two property dictionaries.
+
+    :param current: Dictionary with current (new) properties
+    :param previous: Dictionary with previous (old) properties
+    :return: Dictionary that contains an entry for 
+             each property that was changed. Value is a tuple 
+             with the old and the new property value.
+    """
     ret = {}
     for key, val in current.items():
         if previous.get(key) != val:
