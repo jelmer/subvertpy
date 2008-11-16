@@ -208,7 +208,7 @@ class SVNClient(SVNConnection):
             # FIXME: Support other mechanisms as well
             self.send_msg([literal("ANONYMOUS"), [base64.b64encode("anonymous@%s" % socket.gethostname())]])
             self.recv_msg()
-        (self._uuid, self._url, other_caps) = self._unpack()
+        (self._uuid, self._root_url, other_caps) = self._unpack()
         self._server_capabilities += other_caps
 
     def _unpack(self):
@@ -311,7 +311,7 @@ class SVNClient(SVNConnection):
         raise NotImplementedError(self.do_diff)
 
     def get_repos_root(self):
-        raise NotImplementedError(self.get_repos_root)
+        return self._root_url
 
     def get_latest_revnum(self):
         self.send_msg([literal("get-latest-rev"), []])
@@ -319,7 +319,9 @@ class SVNClient(SVNConnection):
         return self._unpack()[0]
 
     def reparent(self, url):
-        raise NotImplementedError(self.reparent)
+        self.send_msg([literal("reparent"), [url]])
+        self._recv_ack()
+        self._unpack()
 
     def get_uuid(self, uuid):
         return self._uuid
