@@ -17,23 +17,5 @@
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 
-from __init__ import SubversionException, ERR_RA_ILLEGAL_URL 
-
-import _ra
-from _ra import *
-import ra_svn
-
-import urllib
-
-url_handlers = {
-        "svn": ra_svn.RemoteAccess,
-        "svn+ssh": _ra.RemoteAccess,
-        "http": _ra.RemoteAccess,
-        "file": _ra.RemoteAccess,
-}
-
-def RemoteAccess(url, *args, **kwargs):
-    (type, opaque) = urllib.splittype(url)
-    if not type in url_handlers:
-        raise SubversionException(ERR_RA_ILLEGAL_URL, "Unknown URL type '%s'" % type)
-    return url_handlers[type](url, *args, **kwargs)
+class RemoteAccess(object):
+    pass
