@@ -423,7 +423,7 @@ class SVNServer:
             self._logf.write("%s\n" % text)
 
 
-SVN_PORT = 3690
+from subvertpy.ra_svn import SVN_PORT
 
 
 class TCPSVNServer(object):
