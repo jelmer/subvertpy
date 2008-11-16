@@ -185,6 +185,17 @@ class FileEditor:
         self.conn.send_msg([literal("change-file-prop"), [self.id, name, value]])
 
 
+def mark_busy(unbound):
+    
+    def convert(self, *args, **kwargs):
+        self.busy = True
+        try:
+            ret = unbound(self, *args, **kwargs)
+        finally:
+            self.busy = False
+        return ret
+
+
 class SVNClient(SVNConnection):
 
     def __init__(self, url, progress_cb=None, auth=None, config=None, 
@@ -210,6 +221,7 @@ class SVNClient(SVNConnection):
             self.recv_msg()
         (self._uuid, self._root_url, other_caps) = self._unpack()
         self._server_capabilities += other_caps
+        self.busy = False
 
     def _unpack(self):
         msg = self.recv_msg()
@@ -313,6 +325,7 @@ class SVNClient(SVNConnection):
     def get_repos_root(self):
         return self._root_url
 
+    @mark_busy
     def get_latest_revnum(self):
         self.send_msg([literal("get-latest-rev"), []])
         self._recv_ack()
