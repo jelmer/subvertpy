@@ -295,8 +295,8 @@ def source_path(filename):
 
 def subvertpy_modules(basemodule):
     return [
-        SvnExtension("%s.client" % basemodule, [source_path(n) for n in "client.c", "editor.c", "util.c", "ra.c", "wc.c"], libraries=["svn_client-1", "svn_subr-1"]), 
-        SvnExtension("%s.ra" % basemodule, [source_path(n) for n in "ra.c", "util.c", "editor.c"], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
+        SvnExtension("%s.client" % basemodule, [source_path(n) for n in "client.c", "editor.c", "util.c", "_ra.c", "wc.c"], libraries=["svn_client-1", "svn_subr-1"]), 
+        SvnExtension("%s._ra" % basemodule, [source_path(n) for n in "_ra.c", "util.c", "editor.c"], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
         SvnExtension("%s.repos" % basemodule, [source_path(n) for n in "repos.c", "util.c"], libraries=["svn_repos-1", "svn_subr-1"]),
         SvnExtension("%s.wc" % basemodule, [source_path(n) for n in "wc.c", "util.c", "editor.c"], libraries=["svn_wc-1", "svn_subr-1"])
         ]

@@ -74,8 +74,8 @@ def _check_mtime(m):
     return True
 
 try:
-    import client, ra, repos, wc
-    for x in client, ra, repos, wc:
+    import client, _ra, repos, wc
+    for x in client, _ra, repos, wc:
         if not _check_mtime(x):
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
