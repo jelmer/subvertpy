@@ -17,6 +17,7 @@
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 
+import base64
 import copy
 import os
 import socket
@@ -204,9 +205,11 @@ class SVNClient(SVNConnection):
         self.send_msg([max_version, [literal(x) for x in CAPABILITIES if x in self._server_capabilities], self.url])
         (self._server_mechanisms, mech_arg) = self._unpack()
         if self._server_mechanisms != []:
-            self.send_msg([literal(self._server_mechanisms[0])])
+            # FIXME: Support other mechanisms as well
+            self.send_msg([literal("ANONYMOUS"), [base64.b64encode("anonymous@%s" % socket.gethostname())]])
             self.recv_msg()
-        (self._uuid, self._url) = self._unpack()
+        (self._uuid, self._url, other_caps) = self._unpack()
+        self._server_capabilities += other_caps
 
     def _unpack(self):
         msg = self.recv_msg()
