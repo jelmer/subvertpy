@@ -313,6 +313,20 @@ def mark_busy(unbound):
     convert.__name__ = unbound.__name__
     return convert
 
+def unmarshall_dirent(d):
+    ret = {
+        "name": d[0],
+        "kind": d[1],
+        "size": d[2],
+        "has-props": bool(d[3]),
+        "created-rev": d[4],
+        }
+    if d[5] != []:
+        ret["created-date"] = d[5]
+    if d[6] != []:
+        ret["last-author"] = d[6]
+    return ret
+
 
 class SVNClient(SVNConnection):
 
@@ -450,18 +464,25 @@ class SVNClient(SVNConnection):
         props = dict(ret[1])
         dirents = {}
         for d in ret[2]:
-            name = d[0]
-            dirents[name] = {}
-            dirents[name]["kind"] = d[1]
-            dirents[name]["size"] = d[2]
-            dirents[name]["has-props"] = bool(d[3])
-            dirents[name]["created-rev"] = d[4]
-            if d[5] != []:
-                dirents[name]["created-date"] = d[5]
-            if d[6] != []:
-                dirents[name]["last-author"] = d[6]
+            entry = unmarshall_dirent(d)
+            dirents[entry["name"]] = entry
 
         return (dirents, fetch_rev, props)
+
+    @mark_busy
+    def stat(self, path, revision=-1):
+        args = [path]
+        if revision is None or revision == -1:
+            args.append([revision])
+        else:
+            args.append([])
+
+        self.send_msg([literal("stat"), args])
+        self._recv_ack()
+        ret = self._unpack()
+        if len(ret) == 0:
+            return None
+        return unmarshall_dirent(ret[0])
 
     @mark_busy
     def get_file(self, path, stream, revision=-1):
@@ -683,7 +704,6 @@ class SVNServer(SVNConnection):
         self.send_success()
 
     def open_backend(self, url):
-        import urllib
         (rooturl, location) = urllib.splithost(url)
         self.repo_backend, self.relpath = self.backend.open_repository(location)
 
@@ -702,9 +722,17 @@ class SVNServer(SVNConnection):
         if dirent is None:
             self.send_success([])
         else:
-            self.send_success([dirent["name"], dirent["kind"], dirent["size"],
-                          dirent["has-props"], dirent["created-rev"],
-                          dirent["created-date"], dirent["last-author"]])
+            args = [dirent["name"], dirent["kind"], dirent["size"],
+                          dirent["has-props"], dirent["created-rev"]]
+            if dirent.has_key("created-date"):
+                args.append([dirent["created-date"]])
+            else:
+                args.append([])
+            if dirent.has_key("last-author"):
+                args.append([dirent["last-author"]])
+            else:
+                args.append([])
+            self.send_success([args])
 
     def commit(self, logmsg, locks, keep_locks=False, rev_props=None):
         self.send_failure([ERR_UNSUPPORTED_FEATURE, 
