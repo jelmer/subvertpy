@@ -27,7 +27,9 @@ import urllib
 
 url_handlers = {
         "svn": _ra.RemoteAccess,
+#       "svn": ra_svn.Client,
         "svn+ssh": _ra.RemoteAccess,
+#       "svn+ssh": ra_svn.Client,
         "http": _ra.RemoteAccess,
         "file": _ra.RemoteAccess,
 }

@@ -21,6 +21,8 @@ import base64
 import copy
 import os
 import socket
+import subprocess
+from cStringIO import StringIO
 import time
 import urllib
 from subvertpy import SubversionException, ERR_RA_SVN_UNKNOWN_CMD, NODE_DIR, NODE_FILE, NODE_UNKNOWN, NODE_NONE, ERR_UNSUPPORTED_FEATURE, properties
@@ -334,16 +336,18 @@ class SVNClient(SVNConnection):
                  client_string_func=None, open_tmp_file_func=None):
         self.url = url
         (type, opaque) = urllib.splittype(url)
-        assert type == "svn"
+        assert type in ("svn", "svn+ssh")
         (host, path) = urllib.splithost(opaque)
-        (self.host, self.port) = urllib.splitnport(host, SVN_PORT)
         self._progress_cb = progress_cb
         self._auth = auth
         self._config = config
         self._client_string_func = client_string_func
         # open_tmp_file_func is ignored, as it is not needed for svn://
-        self._connect()
-        super(SVNClient, self).__init__(self._socket.recv, self._socket.send)
+        if type == "svn":
+            (recv_func, send_func) = self._connect(host)
+        else:
+            (recv_func, send_func) = self._connect_ssh(host)
+        super(SVNClient, self).__init__(recv_func, send_func)
         (min_version, max_version, _, self._server_capabilities) = self._recv_greeting()
         self.send_msg([max_version, [literal(x) for x in CAPABILITIES if x in self._server_capabilities], self.url])
         (self._server_mechanisms, mech_arg) = self._unpack()
@@ -374,8 +378,9 @@ class SVNClient(SVNConnection):
 
     _recv_ack = _unpack
 
-    def _connect(self):
-        sockaddrs = socket.getaddrinfo(self.host, self.port, socket.AF_UNSPEC,
+    def _connect(self, host):
+        (host, port) = urllib.splitnport(host, SVN_PORT)
+        sockaddrs = socket.getaddrinfo(host, port, socket.AF_UNSPEC,
                socket.SOCK_STREAM, 0, 0)
         self._socket = None
         for (family, socktype, proto, canonname, sockaddr) in sockaddrs:
@@ -391,6 +396,13 @@ class SVNClient(SVNConnection):
         if self._socket is None:
             raise err
         self._socket.setblocking(True)
+        return (self._socket.recv, self._socket.send)
+
+    def _connect_ssh(self, host):
+        instream = StringIO()
+        outstream = StringIO()
+        subprocess.Popen(["ssh", host, "svnserve", "-t"], stdin=insteam, stdout=outstream)
+        return (outstream.read, instream.write)
 
     def get_file_revs(self, path, start, end, file_rev_handler):
         raise NotImplementedError(self.get_file_revs)
