@@ -117,6 +117,82 @@ class SVNConnection(object):
 
 SVN_PORT = 3690
 
+
+def feed_editor(conn, editor):
+    tokens = {}
+    diff = {}
+    txdelta_handler = {}
+    # Process commands
+    while True:
+        command, args = conn.recv_msg()
+        if command == "target-rev":
+            editor.set_target_revision(args[0])
+        elif command == "open-root":
+            if len(args[0]) == 0:
+                token = editor.open_root()
+            else:
+                token = editor.open_root(args[0][0])
+            tokens[args[1]] = token
+        elif command == "delete-entry":
+            tokens[args[2]].delete_entry(args[0], args[1])
+        elif command == "add-dir":
+            if len(args[3]) == 0:
+                token = tokens[args[1]].add_directory(args[0])
+            else:
+                token = tokens[args[1]].add_directory(args[0], args[3][0], args[4][0])
+            tokens[args[2]] = token
+        elif command == "open-dir":
+            tokens[args[2]] = tokens[args[1]].open_directory(args[0], args[3])
+        elif command == "change-dir-prop":
+            if len(args[2]) == 0:
+                tokens[args[0]].change_prop(args[1], None)
+            else:
+                tokens[args[0]].change_prop(args[1], args[2][0])
+        elif command == "close-dir":
+            tokens[args[0]].close()
+        elif command == "absent-dir":
+            tokens[args[1]].absent(args[0])
+        elif command == "add-file":
+            if len(args[3]) == 0:
+                token = tokens[args[1]].add_file(args[0])
+            else:
+                token = tokens[args[1]].add_file(args[0], args[3][0], args[4][0])
+            tokens[args[2]] = token
+        elif command == "open-file":
+            tokens[args[2]] = tokens[args[1]].open_file(args[0], args[3])
+        elif command == "apply-textdelta":
+            if len(args[1]) == 0:
+                txdelta_handler[args[0]] = tokens[args[0]].apply_textdelta(None)
+            else:
+                txdelta_handler[args[0]] = tokens[args[0]].apply_textdelta(args[1][0])
+            diff[args[0]] = ""
+        elif command == "textdelta-chunk":
+            diff[args[0]] += args[1]
+        elif command == "textdelta-end":
+            for w in unpack_svndiff0(diff[args[0]]):
+                txdelta_handler[args[0]](w)
+            txdelta_handler[args[0]](None)
+        elif command == "change-file-prop":
+            if len(args[2]) == 0:
+                tokens[args[0]].change_prop(args[1], None)
+            else:
+                tokens[args[0]].change_prop(args[1], args[2][0])
+        elif command == "close-file":
+            if len(args[1]) == 0:
+                tokens[args[0]].close()
+            else:
+                tokens[args[0]].close(args[1][0])
+        elif command == "close-edit":
+            editor.close()
+            break
+        elif command == "abort-edit":
+            editor.abort()
+            break
+
+    conn.send_success()
+    conn._unpack()
+
+
 class Reporter:
 
     def __init__(self, conn, editor):
@@ -153,78 +229,7 @@ class Reporter:
     def finish(self):
         self.conn.send_msg([literal("finish-report"), []])
         auth = self.conn.recv_msg()
-        tokens = {}
-        diff = {}
-        txdelta_handler = {}
-        # Process commands
-        while True:
-            command, args = self.conn.recv_msg()
-            if command == "target-rev":
-                self.editor.set_target_revision(args[0])
-            elif command == "open-root":
-                if len(args[0]) == 0:
-                    token = self.editor.open_root()
-                else:
-                    token = self.editor.open_root(args[0][0])
-                tokens[args[1]] = token
-            elif command == "delete-entry":
-                tokens[args[2]].delete_entry(args[0], args[1])
-            elif command == "add-dir":
-                if len(args[3]) == 0:
-                    token = tokens[args[1]].add_directory(args[0])
-                else:
-                    token = tokens[args[1]].add_directory(args[0], args[3][0], args[4][0])
-                tokens[args[2]] = token
-            elif command == "open-dir":
-                tokens[args[2]] = tokens[args[1]].open_directory(args[0], args[3])
-            elif command == "change-dir-prop":
-                if len(args[2]) == 0:
-                    tokens[args[0]].change_prop(args[1], None)
-                else:
-                    tokens[args[0]].change_prop(args[1], args[2][0])
-            elif command == "close-dir":
-                tokens[args[0]].close()
-            elif command == "absent-dir":
-                tokens[args[1]].absent(args[0])
-            elif command == "add-file":
-                if len(args[3]) == 0:
-                    token = tokens[args[1]].add_file(args[0])
-                else:
-                    token = tokens[args[1]].add_file(args[0], args[3][0], args[4][0])
-                tokens[args[2]] = token
-            elif command == "open-file":
-                tokens[args[2]] = tokens[args[1]].open_file(args[0], args[3])
-            elif command == "apply-textdelta":
-                if len(args[1]) == 0:
-                    txdelta_handler[args[0]] = tokens[args[0]].apply_textdelta(None)
-                else:
-                    txdelta_handler[args[0]] = tokens[args[0]].apply_textdelta(args[1][0])
-                diff[args[0]] = ""
-            elif command == "textdelta-chunk":
-                diff[args[0]] += args[1]
-            elif command == "textdelta-end":
-                for w in unpack_svndiff0(diff[args[0]]):
-                    txdelta_handler[args[0]](w)
-                txdelta_handler[args[0]](None)
-            elif command == "change-file-prop":
-                if len(args[2]) == 0:
-                    tokens[args[0]].change_prop(args[1], None)
-                else:
-                    tokens[args[0]].change_prop(args[1], args[2][0])
-            elif command == "close-file":
-                if len(args[1]) == 0:
-                    tokens[args[0]].close()
-                else:
-                    tokens[args[0]].close(args[1][0])
-            elif command == "close-edit":
-                self.editor.close()
-                break
-            elif command == "abort-edit":
-                self.editor.abort()
-                break
-
-        self.conn.send_success()
-        self.conn._unpack()
+        feed_editor(self.conn, self.editor)
         self.conn.busy = False
 
     def abort(self):
@@ -641,12 +646,25 @@ class SVNClient(SVNConnection):
         else:
             return ret[0]
 
+    @mark_busy
     def replay(self, revision, low_water_mark, update_editor, send_deltas=True):
-        raise NotImplementedError(self.replay)
+        self.send_msg([literal("replay"), [revision, low_water_mark, send_deltas]])
+        self._recv_ack()
+        feed_editor(self, update_editor)
+        self._unpack()
 
+    @mark_busy
     def replay_range(self, start_revision, end_revision, low_water_mark, cbs, 
                      send_deltas=True):
-        raise NotImplementedError(self.replay_range)
+        self.send_msg([literal("replay-range"), [start_revision, end_revision, low_water_mark, send_deltas]])
+        self._recv_ack()
+        for i in range(start_revision, end_revision+1):
+            msg = self.recv_msg()
+            assert msg[0] == "revprops"
+            edit = cbs[0](i, dict(msg[1]))
+            feed_editor(self, edit)
+            cbs[1](i, dict(msg[1]), edit)
+        self._unpack()
 
     def do_switch(self, revision_to_update_to, update_target, recurse, 
                   switch_url, update_editor, depth=None):
