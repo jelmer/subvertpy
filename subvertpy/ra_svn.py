@@ -193,7 +193,7 @@ def feed_editor(conn, editor):
     conn._unpack()
 
 
-class Reporter:
+class Reporter(object):
 
     def __init__(self, conn, editor):
         self.conn = conn
@@ -237,7 +237,7 @@ class Reporter:
         self.conn.busy = False
 
 
-class Editor:
+class Editor(object):
 
     def __init__(self, conn):
         self.conn = conn

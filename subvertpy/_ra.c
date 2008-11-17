@@ -206,7 +206,7 @@ static void reporter_dealloc(PyObject *self)
 
 PyTypeObject Reporter_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.Reporter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.Reporter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(ReporterObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
@@ -1942,7 +1942,7 @@ static PyMemberDef ra_members[] = {
 
 PyTypeObject RemoteAccess_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.RemoteAccess", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.RemoteAccess", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(RemoteAccessObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
@@ -2026,7 +2026,7 @@ static void auth_provider_dealloc(PyObject *self)
 
 PyTypeObject AuthProvider_Type = { 
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.AuthProvider", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.AuthProvider", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthProviderObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
@@ -2215,7 +2215,7 @@ static PyObject *credentials_iter_next(CredentialsIterObject *iterator)
 
 PyTypeObject CredentialsIter_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.CredentialsIter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.CredentialsIter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(CredentialsIterObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
@@ -2287,7 +2287,7 @@ static void auth_dealloc(PyObject *self)
 
 PyTypeObject Auth_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.Auth", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.Auth", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
@@ -2872,7 +2872,7 @@ void init_ra(void)
 	PyModule_AddObject(mod, "Auth", (PyObject *)&Auth_Type);
 	Py_INCREF(&Auth_Type);
 
-	busy_exc = PyErr_NewException("ra.BusyException", NULL, NULL);
+	busy_exc = PyErr_NewException("_ra.BusyException", NULL, NULL);
 	PyModule_AddObject(mod, "BusyException", busy_exc);
 
 	PyModule_AddIntConstant(mod, "DIRENT_KIND", SVN_DIRENT_KIND);

@@ -131,7 +131,7 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 
 PyTypeObject TxDeltaWindowHandler_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.TxDeltaWindowHandler", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.TxDeltaWindowHandler", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(TxDeltaWindowHandlerObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
@@ -229,7 +229,7 @@ static PyMethodDef py_file_editor_methods[] = {
 
 PyTypeObject FileEditor_Type = { 
 	PyObject_HEAD_INIT(NULL) 0, 
-	"ra.FileEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.FileEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EditorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
@@ -486,7 +486,7 @@ static PyMethodDef py_dir_editor_methods[] = {
 
 PyTypeObject DirectoryEditor_Type = { 
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.DirEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.DirEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EditorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
@@ -629,7 +629,7 @@ static PyMethodDef py_editor_methods[] = {
 
 PyTypeObject Editor_Type = { 
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.Editor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.Editor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EditorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
