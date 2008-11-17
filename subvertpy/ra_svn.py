@@ -598,9 +598,13 @@ class SVNClient(SVNConnection):
             args.append(literal(depth))
 
         self.busy = True
-        self.send_msg([literal("switch"), args])
-        self._recv_ack()
-        return Reporter(self, update_editor)
+        try:
+            self.send_msg([literal("switch"), args])
+            self._recv_ack()
+            return Reporter(self, update_editor)
+        except:
+            self.busy = False
+            raise
 
     def do_update(self, revision_to_update_to, update_target, recurse, 
                   update_editor, depth=None):
@@ -615,9 +619,13 @@ class SVNClient(SVNConnection):
             args.append(literal(depth))
 
         self.busy = True
-        self.send_msg([literal("update"), args])
-        self._recv_ack()
-        return Reporter(self, update_editor)
+        try:
+            self.send_msg([literal("update"), args])
+            self._recv_ack()
+            return Reporter(self, update_editor)
+        except:
+            self.busy = False
+            raise
 
     def do_diff(self, revision_to_update, diff_target, versus_url, diff_editor,
                 recurse=True, ignore_ancestry=False, text_deltas=False, depth=None):
@@ -630,9 +638,13 @@ class SVNClient(SVNConnection):
         if depth is not None:
             args.append(literal(depth))
         self.busy = True
-        self.send_msg([literal("diff"), args])
-        self._recv_ack()
-        return Reporter(self, diff_editor)
+        try:
+            self.send_msg([literal("diff"), args])
+            self._recv_ack()
+            return Reporter(self, diff_editor)
+        except:
+            self.busy = False
+            raise
 
     def get_repos_root(self):
         return self._root_url
