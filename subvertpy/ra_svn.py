@@ -315,6 +315,7 @@ class DirectoryEditor:
         self.conn._open_ids.pop()
         self.conn.send_msg([literal("close-dir"), [self.id]])
 
+
 class FileEditor:
 
     def __init__(self, conn, id):
@@ -428,7 +429,7 @@ class SVNClient(SVNConnection):
             if num == ERR_RA_SVN_UNKNOWN_CMD:
                 raise NotImplementedError(msg)
             raise SubversionException(msg, num)
-        assert msg[0] == "success"
+        assert msg[0] == "success", "Got: %r" % msg
         assert len(msg) == 2
         return msg[1]
 
@@ -472,11 +473,23 @@ class SVNClient(SVNConnection):
     def get_file_revs(self, path, start, end, file_rev_handler):
         raise NotImplementedError(self.get_file_revs)
 
+    @mark_busy
     def get_locations(self, path, peg_revision, location_revisions):
-        raise NotImplementedError(self.get_locations)
+        self.send_msg([literal("get-locations"), [path, peg_revision, location_revisions]])
+        self._recv_ack()
+        ret = {}
+        while True:
+            msg = self.recv_msg()
+            if msg == "done":
+                break
+            ret[msg[0]] = msg[1]
+        self._unparse()
+        return ret
 
     def get_locks(self, path):
-        raise NotImplementedError(self.get_locks)
+        self.send_msg([literal("get-lock"), [path]])
+        self._recv_ack()
+        return self._unpack()
 
     def lock(self, path_revs, comment, steal_lock, lock_func):
         raise NotImplementedError(self.lock)
@@ -487,9 +500,30 @@ class SVNClient(SVNConnection):
     def mergeinfo(self, paths, revision=-1, inherit=None, include_descendants=False):
         raise NotImplementedError(self.mergeinfo)
 
-    def get_location_segments(self, path, peg_revision, start_revision,
-                              end_revision, py_rcvr):
-        raise NotImplementedError(self.get_location_segments)
+    def location_segments(self, path, start_revision, end_revision, 
+                          include_merged_revisions=False):
+        args = [path]
+        if start_revision is None or start_revision == -1:
+            args.append([])
+        else:
+            args.append([start_revision])
+        if end_revision is None or end_revision == -1:
+            args.append([])
+        else:
+            args.append([end_revision])
+        args.append(include_merged_revisions)
+        self.send_msg([literal("get-location-segments"), args])
+        self._recv_ack()
+        while True:
+            msg = self.recv_msg()
+            if msg == "done":
+                break
+            yield msg
+        self._unpack()
+
+    def get_location_segments(self, path, start_revision, end_revision, rcvr):
+        for msg in self.location_segments(path, start_revision, end_revision):
+            rcvr(*msg)
 
     def has_capability(self, capability):
         return capability in self._server_capabilities
@@ -507,7 +541,13 @@ class SVNClient(SVNConnection):
         return {"dir": NODE_DIR, "file": NODE_FILE, "unknown": NODE_UNKNOWN, "none": NODE_NONE}[ret]
 
     def get_lock(self, path):
-        raise NotImplementedError(self.get_lock)
+        self.send_msg([literal("get-lock"), [path]])
+        self._recv_ack()
+        ret = self._unpack()
+        if len(ret) == 0:
+            return None
+        else:
+            return ret[0]
 
     @mark_busy
     def get_dir(self, path, revision=-1, dirent_fields=0, want_props=True, want_contents=True):
@@ -566,16 +606,40 @@ class SVNClient(SVNConnection):
         raise NotImplementedError(self.get_file)
 
     def change_rev_prop(self, rev, name, value):
-        raise NotImplementedError(self.change_rev_prop)
+        args = [rev, name]
+        if value is not None:
+            args.append(value)
+        self.send_msg([literal("change-rev-prop"), args])
+        self._recv_ack()
+        self._unparse()
 
     def get_commit_editor(self, revprops, callback=None, lock_tokens=None, 
                           keep_locks=False):
+        args = [revprops[properties.PROP_REVISION_LOG]]
+        if lock_tokens is not None:
+            args.append(lock_tokens.items())
+        else:
+            args.append([])
+        args.append(keep_locks)
+        if len(revprops) > 1:
+            args.append(revprops.items())
+        self.send_msg([literal("commit"), args])
+        self._recv_ack()
         raise NotImplementedError(self.get_commit_editor)
 
     def rev_proplist(self, revision):
         self.send_msg([literal("rev-proplist"), [revision]])
         self._recv_ack()
         return dict(self._unpack()[0])
+
+    def rev_prop(self, revision, name):
+        self.send_msg([literal("rev-prop"), [revision, name]])
+        self._recv_ack()
+        ret = self._unpack()
+        if len(ret) == 0:
+            return None
+        else:
+            return ret[0]
 
     def replay(self, revision, low_water_mark, update_editor, send_deltas=True):
         raise NotImplementedError(self.replay)
@@ -655,6 +719,13 @@ class SVNClient(SVNConnection):
         self._recv_ack()
         return self._unpack()[0]
 
+    @mark_busy
+    def get_dated_rev(self, date):
+        self.send_msg([literal("get-dated-rev"), [date]])
+        self._recv_ack()
+        return self._unpack()[0]
+
+    @mark_busy
     def reparent(self, url):
         self.send_msg([literal("reparent"), [url]])
         self._recv_ack()
