@@ -30,6 +30,64 @@ from subvertpy.marshall import marshall, unmarshall, literal, MarshallError, Nee
 from subvertpy.ra import DIRENT_KIND, DIRENT_TIME, DIRENT_HAS_PROPS, DIRENT_SIZE, DIRENT_CREATED_REV, DIRENT_LAST_AUTHOR
 from subvertpy.server import generate_random_id
 
+class SSHSubprocess(object):
+    """A socket-like object that talks to an ssh subprocess via pipes."""
+
+    def __init__(self, proc):
+        self.proc = proc
+
+    def send(self, data):
+        return os.write(self.proc.stdin.fileno(), data)
+
+    def recv(self, count):
+        return os.read(self.proc.stdout.fileno(), count)
+
+    def close(self):
+        self.proc.stdin.close()
+        self.proc.stdout.close()
+        self.proc.wait()
+
+
+class SSHVendor(object):
+
+    def connect_ssh(self, username, password, host, port, command):
+        args = ['ssh', '-x']
+        if port is not None:
+            args.extend(['-p', str(port)])
+        if username is not None:
+            host = "%s@%s" % (username, host)
+        args.append(host)
+        proc = subprocess.Popen(args + command,
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE)
+        return SSHSubprocess(proc)
+
+
+# Can be overridden by users
+get_ssh_vendor = SSHVendor
+
+
+class SSHSubprocess(object):
+    """A socket-like object that talks to an ssh subprocess via pipes."""
+
+    def __init__(self, proc):
+        self.proc = proc
+
+    def send(self, data):
+        return os.write(self.proc.stdin.fileno(), data)
+
+    def recv(self, count):
+        return os.read(self.proc.stdout.fileno(), count)
+
+    def close(self):
+        self.proc.stdin.close()
+        self.proc.stdout.close()
+        self.proc.wait()
+
+    def get_filelike_channels(self):
+        return (self.proc.stdout, self.proc.stdin)
+
+
 class SVNConnection(object):
 
     def __init__(self, recv_fn, send_fn):
@@ -402,10 +460,14 @@ class SVNClient(SVNConnection):
         return (self._socket.recv, self._socket.send)
 
     def _connect_ssh(self, host):
-        # FIXME: Support paramiko as well?
-        self._tunnel = subprocess.Popen(["ssh", host, "svnserve", "-t"], stdin=subprocess.PIPE, 
-                                        stdout=subprocess.PIPE)
-        return (lambda x: os.read(self._tunnel.stdout.fileno(), x), self._tunnel.stdin.write)
+        (user, host) = urllib.splituser(host)
+        if user is not None:
+            (user, password) = urllib.splitpassword(user)
+        else:
+            password = None
+        (host, port) = urllib.splitnport(host, 22)
+        self._tunnel = get_ssh_vendor().connect_ssh(user, password, host, port, ["svnserve", "-t"])
+        return (self._tunnel.recv, self._tunnel.send)
 
     def get_file_revs(self, path, start, end, file_rev_handler):
         raise NotImplementedError(self.get_file_revs)
