@@ -365,7 +365,11 @@ class SVNClient(SVNConnection):
         if msg[0] == "failure":
             if isinstance(msg[1], str):
                 raise SubversionException(*msg[1])
-            raise SubversionException(msg[1][0][1], msg[1][0][0])
+            num = msg[1][0][0]
+            msg = msg[1][0][1]
+            if num == ERR_RA_SVN_UNKNOWN_CMD:
+                raise NotImplementedError(msg)
+            raise SubversionException(msg, num)
         assert msg[0] == "success"
         assert len(msg) == 2
         return msg[1]
@@ -554,8 +558,19 @@ class SVNClient(SVNConnection):
         return Reporter(self, update_editor)
 
     def do_diff(self, revision_to_update, diff_target, versus_url, diff_editor,
-                recurse=True, ignore_ancestry=False, text_deltas=False):
-        raise NotImplementedError(self.do_diff)
+                recurse=True, ignore_ancestry=False, text_deltas=False, depth=None):
+        args = []
+        if revision_to_update is None or revision_to_update == -1:
+            args.append([])
+        else:
+            args.append([revision_to_update])
+        args += [diff_target, recurse, ignore_ancestry, versus_url, text_deltas]
+        if depth is not None:
+            args.append(literal(depth))
+        self.busy = True
+        self.send_msg([literal("diff"), args])
+        self._recv_ack()
+        return Reporter(self, diff_editor)
 
     def get_repos_root(self):
         return self._root_url
