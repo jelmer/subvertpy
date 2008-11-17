@@ -22,7 +22,6 @@ import copy
 import os
 import socket
 import subprocess
-from cStringIO import StringIO
 import time
 import urllib
 from subvertpy import SubversionException, ERR_RA_SVN_UNKNOWN_CMD, NODE_DIR, NODE_FILE, NODE_UNKNOWN, NODE_NONE, ERR_UNSUPPORTED_FEATURE, properties
@@ -399,10 +398,10 @@ class SVNClient(SVNConnection):
         return (self._socket.recv, self._socket.send)
 
     def _connect_ssh(self, host):
-        instream = StringIO()
-        outstream = StringIO()
-        subprocess.Popen(["ssh", host, "svnserve", "-t"], stdin=insteam, stdout=outstream)
-        return (outstream.read, instream.write)
+        # FIXME: Support paramiko as well?
+        self._tunnel = subprocess.Popen(["ssh", host, "svnserve", "-t"], stdin=subprocess.PIPE, 
+                                        stdout=subprocess.PIPE)
+        return (lambda x: os.read(self._tunnel.stdout.fileno(), x), self._tunnel.stdin.write)
 
     def get_file_revs(self, path, start, end, file_rev_handler):
         raise NotImplementedError(self.get_file_revs)
