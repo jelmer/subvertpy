@@ -17,7 +17,7 @@
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 
-from __init__ import SubversionException, ERR_RA_ILLEGAL_URL 
+from __init__ import SubversionException, ERR_RA_BAD_URL 
 
 import _ra
 from _ra import *
@@ -37,5 +37,5 @@ url_handlers = {
 def RemoteAccess(url, *args, **kwargs):
     (type, opaque) = urllib.splittype(url)
     if not type in url_handlers:
-        raise SubversionException(ERR_RA_ILLEGAL_URL, "Unknown URL type '%s'" % type)
+        raise SubversionException("Unknown URL type '%s'" % type, ERR_RA_BAD_URL)
     return url_handlers[type](url, *args, **kwargs)
