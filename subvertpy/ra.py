@@ -31,6 +31,7 @@ url_handlers = {
         "svn+ssh": _ra.RemoteAccess,
 #       "svn+ssh": ra_svn.Client,
         "http": _ra.RemoteAccess,
+        "https": _ra.RemoteAccess,
         "file": _ra.RemoteAccess,
 }
 
