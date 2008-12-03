@@ -15,6 +15,6 @@
 
 """Subversion server tests."""
 
-from subvertpy.server import SVNServer
+from subvertpy.ra_svn import SVNServer
 from subvertpy.tests import SubversionTestCase
 
