@@ -151,6 +151,25 @@ class TestRemoteAccess(SubversionTestCase):
         subdir.close()
         dir.close()
         editor.close()
+
+    def test_commit_file_props(self):
+        cb = self.commit_editor()
+        f = cb.add_file("bar")
+        f.modify("a")
+        f.change_prop("bla:bar", "blie")
+        cb.close()
+
+        cb = self.commit_editor()
+        f = cb.open_file("bar")
+        f.change_prop("bla:bar", None)
+        cb.close()
+        
+        stream = StringIO()
+        props = self.ra.get_file("bar", stream, 1)[1]
+        self.assertEquals("blie", props.get("bla:bar"))
+        stream = StringIO()
+        props = self.ra.get_file("bar", stream, 2)[1]
+        self.assertIs(None, props.get("bla:bar"))
     
     def test_get_file_revs(self):
         cb = self.commit_editor()
