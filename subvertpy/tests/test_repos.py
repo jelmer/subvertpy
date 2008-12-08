@@ -17,7 +17,7 @@
 
 import os
 from subvertpy import repos
-from bzrlib.tests import TestCaseInTempDir
+from subvertpy.tests import TestCaseInTempDir
 
 class TestClient(TestCaseInTempDir):
     def setUp(self):
