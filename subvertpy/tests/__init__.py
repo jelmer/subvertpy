@@ -20,13 +20,42 @@ from cStringIO import StringIO
 
 import urllib, urllib2, urlparse
 
-# FIXME: Remove dependency on bzrlib
-from bzrlib.tests import TestCaseInTempDir
-
-import os, sys
+import os
+import shutil
+import sys
+import tempfile
+from unittest import TestCase
 
 from subvertpy import delta, ra, repos, delta, client, properties
 from subvertpy.ra import Auth, RemoteAccess
+
+
+class TestCaseInTempDir(TestCase):
+
+    def setUp(self):
+        TestCase.setUp(self)
+        self._oldcwd = os.getcwd()
+        self.test_dir = tempfile.mkdtemp()
+        os.chdir(self.test_dir)
+
+    def tearDown(self):
+        TestCase.tearDown(self)
+        os.chdir(self._oldcwd)
+        shutil.rmtree(self.test_dir)
+
+    def assertIsInstance(self, obj, kls):
+        """Fail if obj is not an instance of kls"""
+        if not isinstance(obj, kls):
+            self.fail("%r is an instance of %s rather than %s" % (
+                obj, obj.__class__, kls))
+
+    def assertIs(self, left, right, message=None):
+        if not (left is right):
+            if message is not None:
+                raise AssertionError(message)
+            else:
+                raise AssertionError("%r is not %r." % (left, right))
+
 
 
 class TestFileEditor(object):
