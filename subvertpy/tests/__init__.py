@@ -18,8 +18,9 @@
 
 from cStringIO import StringIO
 
+import urllib, urllib2, urlparse
+
 # FIXME: Remove dependency on bzrlib
-from bzrlib import osutils, urlutils
 from bzrlib.tests import TestCaseInTempDir
 
 import os, sys
@@ -38,7 +39,7 @@ class TestFileEditor(object):
 
     def modify(self, contents=None):
         if contents is None:
-            contents = osutils.rand_chars(100)
+            contents = urllib2.random_bytes(100)
         txdelta = self.file.apply_textdelta()
         delta.send_stream(StringIO(contents), txdelta)
 
@@ -85,7 +86,7 @@ class TestDirEditor(object):
     def add_dir(self, path, copyfrom_path=None, copyfrom_rev=-1):
         self.close_children()
         if copyfrom_path is not None:
-            copyfrom_path = urlutils.join(self.baseurl, copyfrom_path)
+            copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
         assert (copyfrom_path is None and copyfrom_rev == -1) or \
@@ -97,7 +98,7 @@ class TestDirEditor(object):
     def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
         self.close_children()
         if copyfrom_path is not None:
-            copyfrom_path = urlutils.join(self.baseurl, copyfrom_path)
+            copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
         child = TestFileEditor(self.dir.add_file(path, copyfrom_path, copyfrom_rev))
@@ -154,7 +155,7 @@ class SubversionTestCase(TestCaseInTempDir):
                 open(revprop_hook, 'w').write("#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
-        return urlutils.local_path_to_url(abspath)
+        return "file://" + abspath
 
 
     def make_checkout(self, repos_url, relpath):
