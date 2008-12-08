@@ -18,7 +18,7 @@
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 __docformat__ = "restructuredText"
 
-import bisect, urllib
+import bisect, urlparse
 
 
 class InvalidExternalsDescription(Exception):
@@ -109,7 +109,7 @@ def parse_externals_description(base_url, val):
             raise NotImplementedError("Relative to the scheme externals not yet supported")
         if relurl.startswith("^/"):
             raise NotImplementedError("Relative to the repository root externals not yet supported")
-        ret[path] = (revno, urllib.basejoin(base_url, relurl))
+        ret[path] = (revno, urlparse.urljoin(base_url+"/", relurl))
     return ret
 
 
