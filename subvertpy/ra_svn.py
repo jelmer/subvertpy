@@ -24,11 +24,14 @@ import socket
 import subprocess
 import time
 import urllib
+import SocketServer
+
 from subvertpy import SubversionException, ERR_RA_SVN_UNKNOWN_CMD, NODE_DIR, NODE_FILE, NODE_UNKNOWN, NODE_NONE, ERR_UNSUPPORTED_FEATURE, properties
 from subvertpy.delta import pack_svndiff0_window, SVNDIFF0_HEADER, unpack_svndiff0
 from subvertpy.marshall import marshall, unmarshall, literal, MarshallError, NeedMoreData
 from subvertpy.ra import DIRENT_KIND, DIRENT_TIME, DIRENT_HAS_PROPS, DIRENT_SIZE, DIRENT_CREATED_REV, DIRENT_LAST_AUTHOR
 from subvertpy.server import generate_random_id
+
 
 class SSHSubprocess(object):
     """A socket-like object that talks to an ssh subprocess via pipes."""
@@ -101,7 +104,7 @@ class SVNConnection(object):
                 (self.inbuffer, ret) = unmarshall(self.inbuffer)
                 return ret
             except NeedMoreData:
-                newdata = self.recv_fn(512)
+                newdata = self.recv_fn(1)
                 if newdata != "":
                     #self.mutter("IN: %r" % newdata)
                     self.inbuffer += newdata
@@ -826,6 +829,7 @@ MECHANISMS = ["ANONYMOUS"]
 
 
 class SVNServer(SVNConnection):
+
     def __init__(self, backend, recv_fn, send_fn, logf=None):
         self.backend = backend
         self._stop = False
@@ -872,7 +876,7 @@ class SVNServer(SVNConnection):
         def send_revision(revno, author, date, message, changed_paths=None):
             changes = []
             if changed_paths is not None:
-                for p, (action, cf, cr) in changed_paths.items():
+                for p, (action, cf, cr) in changed_paths.iteritems():
                     if cf is not None:
                         changes.append((p, literal(action), (cf, cr)))
                     else:
@@ -943,7 +947,7 @@ class SVNServer(SVNConnection):
     def get_locations(self, path, peg_revnum, revnums):
         self.send_ack()
         locations = self.repo_backend.get_locations(path, peg_revnum, revnums)
-        for rev, path in locations.items():
+        for rev, path in locations.iteritems():
             self.send_msg([rev, path])
         self.send_msg(literal("done"))
         self.send_success()
@@ -1033,37 +1037,26 @@ class SVNServer(SVNConnection):
             self._logf.write("%s\n" % text)
 
 
-class TCPSVNServer(object):
+class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
 
-    def __init__(self, backend, port=None, logf=None):
-        if port is None:
-            self._port = SVN_PORT
-        else:
-            self._port = int(port)
-        self._backend = backend
+    def __init__(self, request, client_address, server):
+        self._server = server
+        SocketServer.StreamRequestHandler.__init__(self, request, client_address, 
+            server)
+
+    def handle(self):
+        server = SVNServer(self._server._backend, self.rfile.read, 
+            self.wfile.write, self._server._logf)
+        server.serve()
+
+
+class TCPSVNServer(SocketServer.TCPServer):
+
+    allow_reuse_address = True
+    serve = SocketServer.TCPServer.serve_forever
+
+    def __init__(self, backend, addr, logf=None):
         self._logf = logf
-
-    def serve(self):
-        import socket
-        import threading
-        server_sock = socket.socket()
-        server_sock.bind(('0.0.0.0', self._port))
-        server_sock.listen(5)
-        def handle_new_client(sock):
-            def handle_connection():
-                try:
-                    server.serve()
-                finally:
-                    sock.close()
-            self._logf.write("New client connection from %s:%d\n" % sock.getsockname())
-            sock.setblocking(True)
-            server = SVNServer(self._backend, sock.recv, sock.send, self._logf)
-            server_thread = threading.Thread(None, handle_connection, name='svn-smart-server')
-            server_thread.setDaemon(True)
-            server_thread.start()
-            
-        while True:
-            sock, _ = server_sock.accept()
-            handle_new_client(sock)
-
+        self._backend = backend
+        SocketServer.TCPServer.__init__(self, addr, TCPSVNRequestHandler)
 
