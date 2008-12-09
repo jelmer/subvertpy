@@ -1041,13 +1041,18 @@ class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
 
     def __init__(self, request, client_address, server):
         self._server = server
-        SocketServer.StreamRequestHandler.__init__(self, request, client_address, 
-            server)
+        SocketServer.StreamRequestHandler.__init__(self, request, 
+            client_address, server)
 
     def handle(self):
         server = SVNServer(self._server._backend, self.rfile.read, 
             self.wfile.write, self._server._logf)
-        server.serve()
+        try:
+            server.serve()
+        except socket.error, e:
+            if e.args[0] == 32:# EPIPE
+                return
+            raise
 
 
 class TCPSVNServer(SocketServer.TCPServer):
