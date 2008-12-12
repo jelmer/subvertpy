@@ -68,7 +68,7 @@ class TestFileEditor(object):
 
     def modify(self, contents=None):
         if contents is None:
-            contents = urllib2.random_bytes(100)
+            contents = urllib2.randombytes(100)
         txdelta = self.file.apply_textdelta()
         delta.send_stream(StringIO(contents), txdelta)
 
