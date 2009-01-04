@@ -535,14 +535,16 @@ static PyObject *client_update(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef client_methods[] = {
-	{ "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS, NULL },
-	{ "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS, NULL },
-	{ "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, NULL },
-	{ "delete", client_delete, METH_VARARGS, NULL },
-	{ "copy", client_copy, METH_VARARGS, NULL },
-	{ "propset", client_propset, METH_VARARGS, NULL },
-	{ "propget", client_propget, METH_VARARGS, NULL },
-	{ "update", client_update, METH_VARARGS, NULL },
+	{ "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS, 
+		"S.add(path, recursive=True, force=False, no_ignore=False)" },
+	{ "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS, 
+		"S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False)" },
+	{ "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True) -> (revnum, date, author)" },
+	{ "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
+	{ "copy", client_copy, METH_VARARGS, "S.copy(src_path, dest_path, srv_rev=None)" },
+	{ "propset", client_propset, METH_VARARGS, "S.propset(name, value, target, recurse=True, skip_checks=False)" },
+	{ "propget", client_propget, METH_VARARGS, "S.propget(name, target, peg_revision, revision=None, recurse=False) -> value" },
+	{ "update", client_update, METH_VARARGS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
 	{ NULL, }
 };
 
@@ -797,7 +799,7 @@ static PyObject *get_config(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef client_mod_methods[] = {
-	{ "get_config", get_config, METH_VARARGS, NULL },
+	{ "get_config", get_config, METH_VARARGS, "get_config(config_dir=None) -> config" },
 	{ NULL }
 };
 
