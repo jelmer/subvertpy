@@ -309,7 +309,7 @@ if __name__ == "__main__":
           version='0.5.0',
           url='http://samba.org/~jelmer/subvertpy',
           download_url='http://launchpad.net/subvertpy',
-          license='GPLv3',
+          license='GPLv2 or later',
           author='Jelmer Vernooij',
           author_email='jelmer@samba.org',
           long_description="""
