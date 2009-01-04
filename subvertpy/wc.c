@@ -938,16 +938,24 @@ static PyObject *check_wc(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef wc_methods[] = {
-	{ "check_wc", check_wc, METH_VARARGS, NULL },
-	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS, NULL },
-	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS, NULL },
-	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS, NULL },
-	{ "is_adm_dir", is_adm_dir, METH_VARARGS, NULL },
-	{ "is_normal_prop", is_normal_prop, METH_VARARGS, NULL },
-	{ "is_entry_prop", is_entry_prop, METH_VARARGS, NULL },
-	{ "is_wc_prop", is_wc_prop, METH_VARARGS, NULL },
-	{ "revision_status", (PyCFunction)revision_status, METH_KEYWORDS|METH_VARARGS, NULL },
-	{ "version", (PyCFunction)version, METH_NOARGS, NULL },
+	{ "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> bool\n"
+		"Check whether path contains a Subversion working copy" },
+	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS, 
+		"ensure_adm(path, uuid, url, repos=None, rev=None)" },
+	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS, 
+		"get_adm_dir() -> name" },
+	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS, 
+		"get_pristine_copy_path(path) -> path" },
+	{ "is_adm_dir", is_adm_dir, METH_VARARGS, 
+		"is_adm_dir(name) -> bool" },
+	{ "is_normal_prop", is_normal_prop, METH_VARARGS, 
+		"is_normal_prop(name) -> bool" },
+	{ "is_entry_prop", is_entry_prop, METH_VARARGS, 
+		"is_entry_prop(name) -> bool" },
+	{ "is_wc_prop", is_wc_prop, METH_VARARGS, 
+		"is_wc_prop(name) -> bool" },
+	{ "revision_status", (PyCFunction)revision_status, METH_KEYWORDS|METH_VARARGS, "revision_status(wc_path, trail_url=None, committed=False, cancel_func=None) -> (min_rev, max_rev, switched, modified)" },
+	{ "version", (PyCFunction)version, METH_NOARGS, "version() -> (major, minor, patch, tag)" },
 	{ NULL, }
 };
 
