@@ -667,7 +667,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 
 	apr_pool_destroy(temp_pool);
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *adm_close(PyObject *self)
