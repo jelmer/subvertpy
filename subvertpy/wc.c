@@ -153,18 +153,30 @@ static void entry_dealloc(PyObject *self)
 }
 
 static PyMemberDef entry_members[] = {
-	{ "name", T_STRING, offsetof(EntryObject, entry.name), READONLY, NULL },
-	{ "copyfrom_url", T_STRING, offsetof(EntryObject, entry.copyfrom_url), READONLY, NULL },
-	{ "copyfrom_rev", T_LONG, offsetof(EntryObject, entry.copyfrom_rev), READONLY, NULL },
-	{ "url", T_STRING, offsetof(EntryObject, entry.url), READONLY, NULL },
-	{ "repos", T_STRING, offsetof(EntryObject, entry.repos), READONLY, NULL },
-	{ "schedule", T_INT, offsetof(EntryObject, entry.schedule), READONLY, NULL },
-	{ "kind", T_INT, offsetof(EntryObject, entry.kind), READONLY, NULL },
-	{ "revision", T_LONG, offsetof(EntryObject, entry.revision), READONLY, NULL },
-	{ "cmt_rev", T_LONG, offsetof(EntryObject, entry.cmt_rev), READONLY, NULL },
-	{ "checksum", T_STRING, offsetof(EntryObject, entry.checksum), READONLY, NULL },
-	{ "cmt_date", T_LONG, offsetof(EntryObject, entry.cmt_date), READONLY, NULL },
-	{ "cmt_author", T_STRING, offsetof(EntryObject, entry.cmt_author), READONLY, NULL },
+	{ "name", T_STRING, offsetof(EntryObject, entry.name), READONLY, 
+		"Name of the file"},
+	{ "copyfrom_url", T_STRING, offsetof(EntryObject, entry.copyfrom_url), READONLY, 
+		"Copyfrom location" },
+	{ "copyfrom_rev", T_LONG, offsetof(EntryObject, entry.copyfrom_rev), READONLY, 
+		"Copyfrom revision" },
+	{ "url", T_STRING, offsetof(EntryObject, entry.url), READONLY, 
+		"URL in repository" },
+	{ "repos", T_STRING, offsetof(EntryObject, entry.repos), READONLY, 
+		"Canonical repository URL" },
+	{ "schedule", T_INT, offsetof(EntryObject, entry.schedule), READONLY, 
+		"Scheduling (add, replace, delete, etc)" },
+	{ "kind", T_INT, offsetof(EntryObject, entry.kind), READONLY, 
+		"Kind of file (file, dir, etc)" },
+	{ "revision", T_LONG, offsetof(EntryObject, entry.revision), READONLY, 
+		"Base revision", },
+	{ "cmt_rev", T_LONG, offsetof(EntryObject, entry.cmt_rev), READONLY, 
+		"Last revision this was changed" },
+	{ "checksum", T_STRING, offsetof(EntryObject, entry.checksum), READONLY, 
+		"Hex MD5 checksum for the untranslated text base file" },
+	{ "cmt_date", T_LONG, offsetof(EntryObject, entry.cmt_date), READONLY, 
+		"Last date this was changed" },
+	{ "cmt_author", T_STRING, offsetof(EntryObject, entry.cmt_author), READONLY, 
+		"Last commit author of this item" },
 	{ NULL, }
 };
 
@@ -655,7 +667,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 
 	apr_pool_destroy(temp_pool);
 
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject *adm_close(PyObject *self)
@@ -678,17 +690,24 @@ static void adm_dealloc(PyObject *self)
 }
 
 static PyMethodDef adm_methods[] = { 
-	{ "prop_set", adm_prop_set, METH_VARARGS, NULL },
-	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, NULL },
-	{ "prop_get", adm_prop_get, METH_VARARGS, NULL },
-	{ "entries_read", adm_entries_read, METH_VARARGS, NULL },
-	{ "walk_entries", adm_walk_entries, METH_VARARGS, NULL },
-	{ "locked", (PyCFunction)adm_locked, METH_NOARGS, NULL },
-	{ "get_prop_diffs", adm_get_prop_diffs, METH_VARARGS, NULL },
-	{ "add", adm_add, METH_VARARGS, NULL },
-	{ "copy", adm_copy, METH_VARARGS, NULL },
-	{ "delete", adm_delete, METH_VARARGS, NULL },
-	{ "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS, NULL },
+	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
+	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
+		"S.access_path() -> path\n"
+		"Returns the base path for this working copy handle." },
+	{ "prop_get", adm_prop_get, METH_VARARGS, "S.prop_get(name, path) -> value" },
+	{ "entries_read", adm_entries_read, METH_VARARGS, "S.entries_read(include_hidden=False) -> dict" },
+	{ "walk_entries", adm_walk_entries, METH_VARARGS, 
+		"S.walk_entries(path, callback, show_hidden=False, cancel_func=None)\n"
+		"callback should be a function that takes a path and a wc entry" },
+	{ "locked", (PyCFunction)adm_locked, METH_NOARGS, 
+		"S.locked() -> bool" },
+	{ "get_prop_diffs", adm_get_prop_diffs, METH_VARARGS, 
+		"S.get_prop_diffs(path) -> (propchanges, originalprops)" },
+	{ "add", adm_add, METH_VARARGS, "S.add(path, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None, notify_func=None" },
+	{ "copy", adm_copy, METH_VARARGS, "S.copy(src_path, dest_path, cancel_func=None, notify_func=None" },
+	{ "delete", adm_delete, METH_VARARGS, "S.delete(path, cancel_func=None, notify_func=None)" },
+	{ "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS, 
+		"S.crawl_revisions(path, reporter, restore_files=True, recurse=True, use_commit_times=True, notify_func=None) -> None" },
 	{ "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
 	{ "close", (PyCFunction)adm_close, METH_NOARGS, NULL },
 	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, NULL },
@@ -919,16 +938,24 @@ static PyObject *check_wc(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef wc_methods[] = {
-	{ "check_wc", check_wc, METH_VARARGS, NULL },
-	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS, NULL },
-	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS, NULL },
-	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS, NULL },
-	{ "is_adm_dir", is_adm_dir, METH_VARARGS, NULL },
-	{ "is_normal_prop", is_normal_prop, METH_VARARGS, NULL },
-	{ "is_entry_prop", is_entry_prop, METH_VARARGS, NULL },
-	{ "is_wc_prop", is_wc_prop, METH_VARARGS, NULL },
-	{ "revision_status", (PyCFunction)revision_status, METH_KEYWORDS|METH_VARARGS, NULL },
-	{ "version", (PyCFunction)version, METH_NOARGS, NULL },
+	{ "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> bool\n"
+		"Check whether path contains a Subversion working copy" },
+	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS, 
+		"ensure_adm(path, uuid, url, repos=None, rev=None)" },
+	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS, 
+		"get_adm_dir() -> name" },
+	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS, 
+		"get_pristine_copy_path(path) -> path" },
+	{ "is_adm_dir", is_adm_dir, METH_VARARGS, 
+		"is_adm_dir(name) -> bool" },
+	{ "is_normal_prop", is_normal_prop, METH_VARARGS, 
+		"is_normal_prop(name) -> bool" },
+	{ "is_entry_prop", is_entry_prop, METH_VARARGS, 
+		"is_entry_prop(name) -> bool" },
+	{ "is_wc_prop", is_wc_prop, METH_VARARGS, 
+		"is_wc_prop(name) -> bool" },
+	{ "revision_status", (PyCFunction)revision_status, METH_KEYWORDS|METH_VARARGS, "revision_status(wc_path, trail_url=None, committed=False, cancel_func=None) -> (min_rev, max_rev, switched, modified)" },
+	{ "version", (PyCFunction)version, METH_NOARGS, "version() -> (major, minor, patch, tag)" },
 	{ NULL, }
 };
 
@@ -953,6 +980,8 @@ void initwc(void)
 
 	if (PyType_Ready(&TxDeltaWindowHandler_Type) < 0)
 		return;
+
+	initeditor();
 
 	apr_initialize();
 

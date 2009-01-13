@@ -2,7 +2,7 @@
  
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
@@ -13,7 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import bisect, urllib
+"""Handling of Subversion properties."""
+
+__author__ = "Jelmer Vernooij <jelmer@samba.org>"
+__docformat__ = "restructuredText"
+
+import bisect, urlparse
 
 
 class InvalidExternalsDescription(Exception):
@@ -21,6 +26,11 @@ class InvalidExternalsDescription(Exception):
 
 
 def is_valid_property_name(prop):
+    """Check the validity of a property name.
+
+    :param prop: Property name
+    :return: Whether prop is a valid property name
+    """
     if not prop[0].isalnum() and not prop[0] in ":_":
         return False
     for c in prop[1:]:
@@ -99,11 +109,15 @@ def parse_externals_description(base_url, val):
             raise NotImplementedError("Relative to the scheme externals not yet supported")
         if relurl.startswith("^/"):
             raise NotImplementedError("Relative to the repository root externals not yet supported")
-        ret[path] = (revno, urllib.basejoin(base_url, relurl))
+        ret[path] = (revno, urlparse.urljoin(base_url+"/", relurl))
     return ret
 
 
 def parse_mergeinfo_property(text):
+    """Parse a mergeinfo property.
+
+    :param text: Property contents
+    """
     ret = {}
     for l in text.splitlines():
         (path, ranges) = l.rsplit(":", 1)
@@ -215,6 +229,14 @@ PROP_REVISION_AUTHOR = "svn:author"
 PROP_REVISION_DATE = "svn:date"
 
 def diff(current, previous):
+    """Find the differences between two property dictionaries.
+
+    :param current: Dictionary with current (new) properties
+    :param previous: Dictionary with previous (old) properties
+    :return: Dictionary that contains an entry for 
+             each property that was changed. Value is a tuple 
+             with the old and the new property value.
+    """
     ret = {}
     for key, val in current.items():
         if previous.get(key) != val:

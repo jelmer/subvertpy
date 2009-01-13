@@ -131,13 +131,13 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 
 PyTypeObject TxDeltaWindowHandler_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.TxDeltaWindowHandler", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.TxDeltaWindowHandler", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(TxDeltaWindowHandlerObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
 	/* Methods to implement standard operations */
 	
-	(destructor)PyObject_Del, /*	destructor tp_dealloc;	*/
+	NULL, /* destructor tp_dealloc;	(done in initeditor()) */
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
@@ -199,7 +199,7 @@ static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
 	c_value.len = vallen;
 
 	RUN_SVN(editor->editor->change_file_prop(editor->baton, name, 
-				&c_value, editor->pool));
+				(c_value.data == NULL)?NULL:&c_value, editor->pool));
 	Py_RETURN_NONE;
 }
 
@@ -229,13 +229,13 @@ static PyMethodDef py_file_editor_methods[] = {
 
 PyTypeObject FileEditor_Type = { 
 	PyObject_HEAD_INIT(NULL) 0, 
-	"ra.FileEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.FileEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EditorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
 	/* Methods to implement standard operations */
 	
-	(destructor)PyObject_Del, /*	destructor tp_dealloc;	*/
+	NULL, /*	destructor tp_dealloc; (Done in initeditor()) 	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
@@ -370,7 +370,7 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 	c_value.len = vallen;
 
 	RUN_SVN(editor->editor->change_dir_prop(editor->baton, name, 
-					&c_value, editor->pool));
+					(c_value.data == NULL)?NULL:&c_value, editor->pool));
 
 	Py_RETURN_NONE;
 }
@@ -486,13 +486,13 @@ static PyMethodDef py_dir_editor_methods[] = {
 
 PyTypeObject DirectoryEditor_Type = { 
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.DirEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.DirEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EditorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
 	/* Methods to implement standard operations */
 	
-	(destructor)PyObject_Del, /*	destructor tp_dealloc;	*/
+	NULL, /* destructor tp_dealloc;	(Done in initeditor()) */
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
@@ -629,7 +629,7 @@ static PyMethodDef py_editor_methods[] = {
 
 PyTypeObject Editor_Type = { 
 	PyObject_HEAD_INIT(NULL) 0,
-	"ra.Editor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	"_ra.Editor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EditorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
@@ -688,3 +688,9 @@ PyTypeObject Editor_Type = {
 };
 
 
+void initeditor(void)
+{
+    TxDeltaWindowHandler_Type.tp_dealloc = (destructor)PyObject_Del;
+    FileEditor_Type.tp_dealloc = (destructor)PyObject_Del;
+    DirectoryEditor_Type.tp_dealloc = (destructor)PyObject_Del;
+}

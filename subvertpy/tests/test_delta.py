@@ -2,7 +2,7 @@
  
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
@@ -15,7 +15,7 @@
 
 from unittest import TestCase
 
-from subvertpy.delta import send_stream
+from subvertpy.delta import send_stream, encode_length, decode_length, pack_svndiff0, unpack_svndiff0
 
 from cStringIO import StringIO
 
@@ -33,3 +33,17 @@ class DeltaTests(TestCase):
         send_stream(stream, self.storing_window_handler)
         self.assertEquals([(0, 0, 3, 0, [(2, 0, 3)], 'foo'), None], 
                           self.windows)
+
+
+class MarshallTests(TestCase):
+
+    def test_encode_length(self):
+        self.assertEquals("\x81\x02", encode_length(130))
+
+    def test_roundtrip_length(self):
+        self.assertEquals((42, ""), decode_length(encode_length(42)))
+
+
+    def test_roundtrip_window(self):
+        mywindow = (0, 0, 3, 1, [(2, 0, 3)], 'foo')
+        self.assertEquals([mywindow], list(unpack_svndiff0(pack_svndiff0([mywindow]))))

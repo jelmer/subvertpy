@@ -2,7 +2,7 @@
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
@@ -18,14 +18,44 @@
 
 from cStringIO import StringIO
 
-# FIXME: Remove dependency on bzrlib
-from bzrlib import osutils, urlutils
-from bzrlib.tests import TestCaseInTempDir
+import urllib, urllib2, urlparse
 
-import os, sys
+import os
+import shutil
+import sys
+import tempfile
+from unittest import TestCase
 
 from subvertpy import delta, ra, repos, delta, client, properties
 from subvertpy.ra import Auth, RemoteAccess
+
+
+class TestCaseInTempDir(TestCase):
+
+    def setUp(self):
+        TestCase.setUp(self)
+        self._oldcwd = os.getcwd()
+        self.test_dir = tempfile.mkdtemp()
+        os.chdir(self.test_dir)
+
+    def tearDown(self):
+        TestCase.tearDown(self)
+        os.chdir(self._oldcwd)
+        shutil.rmtree(self.test_dir)
+
+    def assertIsInstance(self, obj, kls):
+        """Fail if obj is not an instance of kls"""
+        if not isinstance(obj, kls):
+            self.fail("%r is an instance of %s rather than %s" % (
+                obj, obj.__class__, kls))
+
+    def assertIs(self, left, right, message=None):
+        if not (left is right):
+            if message is not None:
+                raise AssertionError(message)
+            else:
+                raise AssertionError("%r is not %r." % (left, right))
+
 
 
 class TestFileEditor(object):
@@ -38,7 +68,7 @@ class TestFileEditor(object):
 
     def modify(self, contents=None):
         if contents is None:
-            contents = osutils.rand_chars(100)
+            contents = urllib2.randombytes(100)
         txdelta = self.file.apply_textdelta()
         delta.send_stream(StringIO(contents), txdelta)
 
@@ -85,7 +115,7 @@ class TestDirEditor(object):
     def add_dir(self, path, copyfrom_path=None, copyfrom_rev=-1):
         self.close_children()
         if copyfrom_path is not None:
-            copyfrom_path = urlutils.join(self.baseurl, copyfrom_path)
+            copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
         assert (copyfrom_path is None and copyfrom_rev == -1) or \
@@ -97,7 +127,7 @@ class TestDirEditor(object):
     def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
         self.close_children()
         if copyfrom_path is not None:
-            copyfrom_path = urlutils.join(self.baseurl, copyfrom_path)
+            copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
         child = TestFileEditor(self.dir.add_file(path, copyfrom_path, copyfrom_rev))
@@ -154,7 +184,7 @@ class SubversionTestCase(TestCaseInTempDir):
                 open(revprop_hook, 'w').write("#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
-        return urlutils.local_path_to_url(abspath)
+        return "file://" + abspath
 
 
     def make_checkout(self, repos_url, relpath):

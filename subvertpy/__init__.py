@@ -2,7 +2,7 @@
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
@@ -56,7 +56,7 @@ ERR_AUTHN_NO_PROVIDER = 215001
 ERR_RA_DAV_RELOCATED = 175011
 ERR_FS_NOT_FILE = 160017
 ERR_WC_BAD_ADM_LOG = 155009
-
+ERR_RA_DAV_NOT_VCC = 20014
 
 class SubversionException(Exception):
     """A Subversion exception"""
@@ -74,8 +74,8 @@ def _check_mtime(m):
     return True
 
 try:
-    import client, ra, repos, wc
-    for x in client, ra, repos, wc:
+    import client, _ra, repos, wc
+    for x in client, _ra, repos, wc:
         if not _check_mtime(x):
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break

@@ -48,16 +48,21 @@ class NeedMoreData(MarshallError):
 
 
 def marshall(x):
-    if isinstance(x, int):
+    if type(x) is int:
         return "%d " % x
-    elif isinstance(x, list) or isinstance(x, tuple):
+    elif type(x) is list or type(x) is tuple:
         return "( " + "".join(map(marshall, x)) + ") "
     elif isinstance(x, literal):
         return "%s " % x
-    elif isinstance(x, str):
+    elif type(x) is str:
         return "%d:%s " % (len(x), x)
-    elif isinstance(x, unicode):
+    elif type(x) is unicode:
         return "%d:%s " % (len(x), x.encode("utf-8"))
+    elif type(x) is bool:
+        if x == True:
+            return "true "
+        elif x == False:
+            return "false "
     raise MarshallError("Unable to marshall type %s" % x)
 
 
@@ -65,7 +70,11 @@ def unmarshall(x):
     whitespace = ['\n', ' ']
     if len(x) == 0:
         raise NeedMoreData("Not enough data")
-    if x[0] == "(" and x[1] == " ": # list follows
+    if x[0] == "(": # list follows
+        if len(x) <= 1:
+            raise NeedMoreData("Missing whitespace")
+        if x[1] != " ": 
+            raise MarshallError("missing whitespace after list start")
         x = x[2:]
         ret = []
         try:
@@ -74,6 +83,9 @@ def unmarshall(x):
                 ret.append(n)
         except IndexError:
             raise NeedMoreData("List not terminated")
+
+        if len(x) <= 1:
+            raise NeedMoreData("Missing whitespace")
         
         if not x[1] in whitespace:
             raise MarshallError("Expected space, got %c" % x[1])
@@ -103,7 +115,7 @@ def unmarshall(x):
                 ret += x[0]
                 x = x[1:]
         except IndexError:
-            raise MarshallError("Expected literal")
+            raise NeedMoreData("Expected literal")
 
         if not x[0] in whitespace:
             raise MarshallError("Expected whitespace, got %c" % x[0])
@@ -111,3 +123,4 @@ def unmarshall(x):
         return (x[1:], ret)
     else:
         raise MarshallError("Unexpected character '%c'" % x[0])
+
