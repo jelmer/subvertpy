@@ -1,7 +1,7 @@
 Source: subvertpy
 Section: python
 Priority: optional
-Maintainer: Jelmer Vernooij <jelmer@samba.org>
+Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Homepage: http://launchpad.net/subvertpy
 Build-Depends: python-central (>= 0.5), cdbs (>= 0.4.43), python, debhelper (>= 5.0.37.2), libsvn-dev, python-all-dev
 Standards-Version: 3.8.0
@@ -10,9 +10,12 @@ Vcs-Bzr: http://people.samba.org/bzr/jelmer/subvertpy/debian
 
 Package: python-subvertpy
 Architecture: any
-Depends: ${shlibs:Depends}, ${python:Depends}
+Depends: ${shlibs:Depends}, ${python:Depends}, ${misc:Depends}
 XB-Python-Version: ${python:Versions}
 Description: Alternative Python bindings for Subversion
  Python bindings for the Subversion version control system. The aim of 
  these bindings is to be fast, complete and providing an API that feels native 
  to Python programmers.
+ .
+ This also includes an experimental server-side implementation of the 
+ Subversion protocol.
