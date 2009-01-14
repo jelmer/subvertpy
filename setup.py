@@ -306,7 +306,7 @@ if __name__ == "__main__":
     setup(name='subvertpy',
           description='Alternative Python bindings for Subversion',
           keywords='plugin svn',
-          version='0.5.0',
+          version='0.6.0',
           url='http://samba.org/~jelmer/subvertpy',
           download_url='http://launchpad.net/subvertpy',
           license='GPLv2 or later',
