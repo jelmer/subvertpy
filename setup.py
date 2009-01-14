@@ -302,7 +302,7 @@ def subvertpy_modules(basemodule):
         ]
 
 
-from subvertpy import __version__ as subvertpy_version
+subvertpy_version = (0, 6, 0)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
