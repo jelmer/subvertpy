@@ -1,0 +1,24 @@
+Requirements
+------------
+
+Subversion development files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You need the Subversion libraries, including the development files. This should
+be readily packaged for most platforms. The package name for Debian 
+and Debian-based distributions such as Ubuntu is ``libsvn-dev``. 
+
+Python
+~~~~~~
+
+At least version 2.4 is required.
+
+Building
+--------
+
+To build, simply run ``make`` or ``./setup.py build``.
+
+Installation
+------------
+
+To install, run ``./setup.py install``.

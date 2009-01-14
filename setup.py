@@ -302,13 +302,17 @@ def subvertpy_modules(basemodule):
         ]
 
 
+from subvertpy import __version__ as subvertpy_version
+subvertpy_version_string = ".".join(map(str, subvertpy_version))
+
+
 if __name__ == "__main__":
     setup(name='subvertpy',
           description='Alternative Python bindings for Subversion',
           keywords='plugin svn',
-          version='0.6.0',
+          version=subvertpy_version_string,
           url='http://samba.org/~jelmer/subvertpy',
-          download_url='http://launchpad.net/subvertpy',
+          download_url="http://samba.org/~jelmer/subvertpy/subvertpy-%s.tar.gz" % subvertpy_version_string,
           license='GPLv2 or later',
           author='Jelmer Vernooij',
           author_email='jelmer@samba.org',

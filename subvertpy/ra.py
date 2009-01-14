@@ -17,7 +17,7 @@
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 
-from __init__ import SubversionException, ERR_BAD_URL 
+from subvertpy import SubversionException, ERR_BAD_URL 
 
 import _ra
 from _ra import *
