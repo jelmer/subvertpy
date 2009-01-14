@@ -1,2 +1,3 @@
-- Remove last dependencies on bzrlib in the testsuite
 - Add more docstrings
+- Add more examples
+- More protocol tests
