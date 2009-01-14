@@ -10,6 +10,7 @@ Vcs-Bzr: http://people.samba.org/bzr/jelmer/subvertpy/debian
 
 Package: python-subvertpy
 Architecture: any
+Conflicts: bzr-svn (<< 0.5.0~rc2)
 Depends: ${shlibs:Depends}, ${python:Depends}, ${misc:Depends}
 XB-Python-Version: ${python:Versions}
 Description: Alternative Python bindings for Subversion
