@@ -635,7 +635,7 @@ static bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_arra
 
 static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-	char *path, *rev_date, *rev_author;
+	char *path, *rev_date = NULL, *rev_author = NULL;
 	bool recurse, remove_lock = false;
 	unsigned char *digest = NULL;
 	svn_revnum_t new_revnum;
@@ -646,7 +646,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author", 
 						"wcprop_changes", "remove_lock", "digest", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblss|Obs", kwnames, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblzz|Obz", kwnames, 
 									 &path, &recurse, &new_revnum, &rev_date,
 									 &rev_author, &py_wcprop_changes, 
 									 &remove_lock, &digest))

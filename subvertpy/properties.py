@@ -148,7 +148,7 @@ def generate_mergeinfo_property(merges):
         else:
             return "%d-%d%s" % (start, end, suffix)
     text = ""
-    for (path, ranges) in merges.items():
+    for (path, ranges) in merges.iteritems():
         assert path.startswith("/")
         text += "%s:%s\n" % (path, ",".join(map(formatrange, ranges)))
     return text
@@ -238,7 +238,8 @@ def diff(current, previous):
              with the old and the new property value.
     """
     ret = {}
-    for key, val in current.items():
-        if previous.get(key) != val:
-            ret[key] = val
+    for key, newval in current.iteritems():
+        oldval = previous.get(key)
+        if oldval != newval:
+            ret[key] = (oldval, newval)
     return ret
