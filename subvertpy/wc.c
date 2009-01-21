@@ -457,7 +457,10 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	py_propchanges = PyList_New(propchanges->nelts);
 	for (i = 0; i < propchanges->nelts; i++) {
 		el = APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-		pyval = Py_BuildValue("(ss#)", el.name, el.value->data, el.value->len);
+		if (el.value != NULL)
+			pyval = Py_BuildValue("(sz#)", el.name, el.value->data, el.value->len);
+		else
+			pyval = Py_BuildValue("(sO)", el.name, Py_None);
 		if (pyval == NULL) {
 			apr_pool_destroy(temp_pool);
 			return NULL;

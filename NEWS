@@ -2,6 +2,8 @@
 
  * Fixed bdist_rpm. (#311712)
 
+ * Fixed segfault when unsetting property values. (#319313)
+
 0.6		2009-01-13
 
  Initial release.
