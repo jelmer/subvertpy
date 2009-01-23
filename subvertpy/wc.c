@@ -715,7 +715,7 @@ static PyMethodDef adm_methods[] = {
 	{ "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
 	{ "close", (PyCFunction)adm_close, METH_NOARGS, NULL },
 	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, NULL },
-	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, NULL },
+	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, "S.process_committed(path, recurse, new_revnum, rev_date, rev_author, wcprop_changes=None, remove_lock=False, digest=None)" },
 	{ NULL, }
 };
 
