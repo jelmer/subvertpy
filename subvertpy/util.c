@@ -82,7 +82,7 @@ void PyErr_SetSubversionException(svn_error_t *error)
 		return;
 	}
 
-	excval = Py_BuildValue("(si)", error->message, error->apr_err);
+	excval = PyErr_NewSubversionException(error);
 	PyErr_SetObject(excobj, excval);
 }
 
