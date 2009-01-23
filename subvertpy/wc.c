@@ -693,6 +693,13 @@ static void adm_dealloc(PyObject *self)
 	PyObject_Del(self);
 }
 
+static PyObject *adm_repr(PyObject *self)
+{
+	AdmObject *admobj = (AdmObject *)self;
+	return PyString_FromFormat("<wc.WorkingCopy at '%s'>", 
+							   svn_wc_adm_access_path(admobj->adm));
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -734,7 +741,7 @@ PyTypeObject Adm_Type = {
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
-	NULL, /*	reprfunc tp_repr;	*/
+	adm_repr, /*	reprfunc tp_repr;	*/
 	
 	/* Method suites for standard classes */
 	
