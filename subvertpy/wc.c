@@ -289,9 +289,10 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 		parent_wc = ((AdmObject *)associated)->adm;
 	}
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_wc_adm_open3(&ret->adm, parent_wc, path, 
-					 write_lock, depth, py_cancel_func, cancel_func, 
-					 ret->pool);
+	err = svn_wc_adm_open3(&ret->adm, parent_wc, 
+						   svn_path_canonicalize(path, ret->pool),
+						   write_lock, depth, py_cancel_func, cancel_func, 
+						   ret->pool);
 	Py_END_ALLOW_THREADS
 	
 	if (!check_error(err)) {
