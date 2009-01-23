@@ -64,6 +64,11 @@ ERR_RA_DAV_NOT_VCC = 20014
 class SubversionException(Exception):
     """A Subversion exception"""
 
+    def __init__(self, msg, num, child=None, location=None):
+        self.args = (msg, num)
+        self.child = child
+        self.location = location
+
 
 def _check_mtime(m):
     """Check whether a C extension is out of date."""
