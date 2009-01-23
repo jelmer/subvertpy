@@ -665,7 +665,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 		return NULL;
 	}
 
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(path, admobj->adm, recurse, new_revnum, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
 														   rev_date, rev_author, wcprop_changes, 
 														   remove_lock, digest, temp_pool));
 
