@@ -289,9 +289,10 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 		parent_wc = ((AdmObject *)associated)->adm;
 	}
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_wc_adm_open3(&ret->adm, parent_wc, path, 
-					 write_lock, depth, py_cancel_func, cancel_func, 
-					 ret->pool);
+	err = svn_wc_adm_open3(&ret->adm, parent_wc, 
+						   svn_path_canonicalize(path, ret->pool),
+						   write_lock, depth, py_cancel_func, cancel_func, 
+						   ret->pool);
 	Py_END_ALLOW_THREADS
 	
 	if (!check_error(err)) {
@@ -457,7 +458,10 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	py_propchanges = PyList_New(propchanges->nelts);
 	for (i = 0; i < propchanges->nelts; i++) {
 		el = APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-		pyval = Py_BuildValue("(ss#)", el.name, el.value->data, el.value->len);
+		if (el.value != NULL)
+			pyval = Py_BuildValue("(sz#)", el.name, el.value->data, el.value->len);
+		else
+			pyval = Py_BuildValue("(sO)", el.name, Py_None);
 		if (pyval == NULL) {
 			apr_pool_destroy(temp_pool);
 			return NULL;
@@ -661,7 +665,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 		return NULL;
 	}
 
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(path, admobj->adm, recurse, new_revnum, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
 														   rev_date, rev_author, wcprop_changes, 
 														   remove_lock, digest, temp_pool));
 
@@ -689,6 +693,13 @@ static void adm_dealloc(PyObject *self)
 	PyObject_Del(self);
 }
 
+static PyObject *adm_repr(PyObject *self)
+{
+	AdmObject *admobj = (AdmObject *)self;
+	return PyString_FromFormat("<wc.WorkingCopy at '%s'>", 
+							   svn_wc_adm_access_path(admobj->adm));
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -709,9 +720,11 @@ static PyMethodDef adm_methods[] = {
 	{ "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS, 
 		"S.crawl_revisions(path, reporter, restore_files=True, recurse=True, use_commit_times=True, notify_func=None) -> None" },
 	{ "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
-	{ "close", (PyCFunction)adm_close, METH_NOARGS, NULL },
-	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, NULL },
-	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, NULL },
+	{ "close", (PyCFunction)adm_close, METH_NOARGS, 
+		"S.close()" },
+	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, 
+		"s.entry(path, show_hidden=False) -> entry" },
+	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, "S.process_committed(path, recurse, new_revnum, rev_date, rev_author, wcprop_changes=None, remove_lock=False, digest=None)" },
 	{ NULL, }
 };
 
@@ -728,7 +741,7 @@ PyTypeObject Adm_Type = {
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
-	NULL, /*	reprfunc tp_repr;	*/
+	adm_repr, /*	reprfunc tp_repr;	*/
 	
 	/* Method suites for standard classes */
 	

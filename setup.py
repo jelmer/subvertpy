@@ -229,7 +229,7 @@ if os.name == "nt":
 (svn_includedirs, svn_libdirs, extra_libs) = svn_build_data()
 
 def SvnExtension(name, *args, **kwargs):
-    kwargs["include_dirs"] = [apr_includedir] + svn_includedirs
+    kwargs["include_dirs"] = [apr_includedir] + svn_includedirs + ["subvertpy"]
     kwargs["library_dirs"] = svn_libdirs
     if os.name == 'nt':
         # on windows, just ignore and overwrite the libraries!
@@ -282,15 +282,14 @@ class install_lib_with_dlls(install_lib):
                 self.copy_file(s, d)
 
     def get_outputs(self):
-        ret = install_lib.get_outputs()
+        ret = install_lib.get_outputs(self)
         if os.name == 'nt':
             ret.extend([info[1] for info in self._get_dlls()])
         return ret
 
 
 def source_path(filename):
-    source_code_dir = os.path.dirname(__file__)
-    return os.path.join(source_code_dir, "subvertpy", filename)
+    return os.path.join("subvertpy", filename)
 
 
 def subvertpy_modules(basemodule):
@@ -302,7 +301,7 @@ def subvertpy_modules(basemodule):
         ]
 
 
-subvertpy_version = (0, 6, 0)
+subvertpy_version = (0, 6, 1)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 

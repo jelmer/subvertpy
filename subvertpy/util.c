@@ -54,14 +54,52 @@ apr_pool_t *Pool(apr_pool_t *parent)
 	return ret;
 }
 
+PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void)
+{
+	PyObject *coremod, *excobj;
+	coremod = PyImport_ImportModule("subvertpy");
+
+	if (coremod == NULL) {
+		return NULL;
+	}
+		
+	excobj = PyObject_GetAttrString(coremod, "SubversionException");
+	
+	if (excobj == NULL) {
+		PyErr_BadInternalCall();
+		return NULL;
+	}
+
+	return (PyTypeObject *)excobj;
+}
+
 PyObject *PyErr_NewSubversionException(svn_error_t *error)
 {
-	return Py_BuildValue("(si)", error->message, error->apr_err);
+	PyObject *loc, *child;
+
+	if (error->file != NULL) {
+		loc = Py_BuildValue("(si)", error->file, error->line);
+	} else {
+		loc = Py_None;
+		Py_INCREF(loc);
+	}
+
+	if (error->child != NULL) {
+		PyTypeObject *cls = PyErr_GetSubversionExceptionTypeObject();
+		PyObject *args = PyErr_NewSubversionException(error->child);
+		child = cls->tp_new(cls, args, NULL);
+		if (cls->tp_init != NULL)
+			cls->tp_init(child, args, NULL);
+		Py_DECREF(args);
+	} else {
+		child = Py_None;
+	}
+
+	return Py_BuildValue("(siOO)", error->message, error->apr_err, child, loc);
 }
 
 void PyErr_SetSubversionException(svn_error_t *error)
 {
-	PyObject *coremod;
 	PyObject *excval, *excobj;
 
 	if (error->apr_err < 1000) {
@@ -69,20 +107,11 @@ void PyErr_SetSubversionException(svn_error_t *error)
 		return;
 	}
 
-	coremod = PyImport_ImportModule("subvertpy");
-
-	if (coremod == NULL) {
+	excobj = (PyObject *)PyErr_GetSubversionExceptionTypeObject();
+	if (excobj == NULL)
 		return;
-	}
-		
-	excobj = PyObject_GetAttrString(coremod, "SubversionException");
-	
-	if (excobj == NULL) {
-		PyErr_BadInternalCall();
-		return;
-	}
 
-	excval = Py_BuildValue("(si)", error->message, error->apr_err);
+	excval = PyErr_NewSubversionException(error);
 	PyErr_SetObject(excobj, excval);
 }
 

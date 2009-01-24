@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 6, 0)
+__version__ = (0, 6, 1)
 
 NODE_DIR = 2
 NODE_FILE = 1
@@ -40,6 +40,7 @@ ERR_STREAM_MALFORMED_DATA = 140001
 ERR_RA_ILLEGAL_URL = 170000
 ERR_RA_LOCAL_REPOS_OPEN_FAILED = 180001
 ERR_BAD_URL = 125002
+ERR_BAD_DATE = 125003
 ERR_RA_DAV_REQUEST_FAILED = 175002
 ERR_RA_DAV_PATH_NOT_FOUND = 175007
 ERR_FS_NOT_DIRECTORY = 160016
@@ -56,10 +57,17 @@ ERR_AUTHN_NO_PROVIDER = 215001
 ERR_RA_DAV_RELOCATED = 175011
 ERR_FS_NOT_FILE = 160017
 ERR_WC_BAD_ADM_LOG = 155009
+ERR_WC_BAD_ADM_LOG_START = 155020
+ERR_WC_NOT_LOCKED = 155005
 ERR_RA_DAV_NOT_VCC = 20014
 
 class SubversionException(Exception):
     """A Subversion exception"""
+
+    def __init__(self, msg, num, child=None, location=None):
+        self.args = (msg, num)
+        self.child = child
+        self.location = location
 
 
 def _check_mtime(m):
