@@ -1,4 +1,4 @@
-0.6.1	UNRELEASED
+0.6.1	2009-01-25
 
  * Fixed bdist_rpm. (#311712)
 
