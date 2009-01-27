@@ -1,8 +1,9 @@
 subvertpy (0.6.1-1) unstable; urgency=low
 
   * New upstream release.
+  * Add watch file.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sat, 24 Jan 2009 01:57:55 +0100
+ -- Jelmer Vernooij <jelmer@debian.org>  Tue, 27 Jan 2009 04:25:49 +0100
 
 subvertpy (0.6.0+bzr1991-1) unstable; urgency=low
 
