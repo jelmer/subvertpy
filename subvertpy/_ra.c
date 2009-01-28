@@ -705,7 +705,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	char *kwnames[] = { "url", "progress_cb", "auth", "config", "client_string_func", 
 						"open_tmp_file_func", NULL };
-	char *url;
+	char *url = NULL;
 	PyObject *progress_cb = Py_None;
 	AuthObject *auth = (AuthObject *)Py_None;
 	PyObject *config = Py_None;
@@ -1913,30 +1913,52 @@ static PyMethodDef ra_methods[] = {
 	{ "unlock", ra_unlock, METH_VARARGS, NULL },
 	{ "mergeinfo", ra_mergeinfo, METH_VARARGS, NULL },
 	{ "get_location_segments", ra_get_location_segments, METH_VARARGS, NULL },
-	{ "has_capability", ra_has_capability, METH_VARARGS, NULL },
-	{ "check_path", ra_check_path, METH_VARARGS, NULL },
+	{ "has_capability", ra_has_capability, METH_VARARGS, 
+		"S.has_capability(name) -> bool\n"
+		"Check whether the specified capability is supported by the client and server" },
+	{ "check_path", ra_check_path, METH_VARARGS, 
+		"S.check_path(path, revnum) -> node_kind\n"
+		"Check the type of a path (one of NODE_DIR, NODE_FILE, NODE_UNKNOWN)" },
 	{ "get_lock", ra_get_lock, METH_VARARGS, NULL },
-	{ "get_dir", ra_get_dir, METH_VARARGS, NULL },
-	{ "get_file", ra_get_file, METH_VARARGS, NULL },
-	{ "change_rev_prop", ra_change_rev_prop, METH_VARARGS, NULL },
+	{ "get_dir", ra_get_dir, METH_VARARGS, 
+		"S.get_dir(path, revision, dirent_fields=-1) -> (dirents, fetched_rev, properties)\n"
+		"Get the contents of a directory. "},
+	{ "get_file", ra_get_file, METH_VARARGS, 
+		"S.get_file(path, stream, revnum=-1) -> (fetched_rev, properties)\n"
+		"Fetch a file. The contents will be written to stream." },
+	{ "change_rev_prop", ra_change_rev_prop, METH_VARARGS, 
+		"S.change_rev_prop(revnum, name, value)\n"
+		"Change a revision property" },
 	{ "get_commit_editor", (PyCFunction)get_commit_editor, METH_VARARGS|METH_KEYWORDS, NULL },
-	{ "rev_proplist", ra_rev_proplist, METH_VARARGS, NULL },
+	{ "rev_proplist", ra_rev_proplist, METH_VARARGS, 
+		"S.rev_proplist(revnum) -> properties\n"
+		"Return a dictionary with the properties set on the specified revision" },
 	{ "replay", ra_replay, METH_VARARGS, NULL },
 	{ "replay_range", ra_replay_range, METH_VARARGS, NULL },
 	{ "do_switch", ra_do_switch, METH_VARARGS, NULL },
 	{ "do_update", ra_do_update, METH_VARARGS, NULL },
 	{ "do_diff", ra_do_diff, METH_VARARGS, NULL },
-	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_VARARGS|METH_NOARGS, NULL },
+	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_VARARGS|METH_NOARGS, 
+		"S.get_repos_root() -> url\n"
+		"Return the URL to the root of the repository." },
 	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, NULL },
-	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, NULL },
-	{ "reparent", ra_reparent, METH_VARARGS, NULL },
-	{ "get_uuid", (PyCFunction)ra_get_uuid, METH_NOARGS, NULL },
+	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, 
+		"S.get_latest_revnum() -> int\n"
+		"Return the last revision committed in the repository." },
+	{ "reparent", ra_reparent, METH_VARARGS, 
+		"S.reparent(url)\n"
+		"Reparent to a new URL" },
+	{ "get_uuid", (PyCFunction)ra_get_uuid, METH_NOARGS, 
+		"S.get_uuid() -> uuid\n"
+		"Return the UUID of the repository." },
 	{ NULL, }
 };
 
 static PyMemberDef ra_members[] = {
-	{ "busy", T_BYTE, offsetof(RemoteAccessObject, busy), READONLY, NULL },
-	{ "url", T_STRING, offsetof(RemoteAccessObject, url), READONLY, NULL },
+	{ "busy", T_BYTE, offsetof(RemoteAccessObject, busy), READONLY, 
+		"Whether this connection is in use at the moment" },
+	{ "url", T_STRING, offsetof(RemoteAccessObject, url), READONLY, 
+		"URL this connection is to" },
 	{ NULL, }
 };
 
@@ -2272,8 +2294,12 @@ PyTypeObject CredentialsIter_Type = {
 };
 
 static PyMethodDef auth_methods[] = {
-	{ "set_parameter", auth_set_parameter, METH_VARARGS, NULL },
-	{ "get_parameter", auth_get_parameter, METH_VARARGS, NULL },
+	{ "set_parameter", auth_set_parameter, METH_VARARGS, 
+		"S.set_parameter(key, value)\n"
+		"Set a parameter" },
+	{ "get_parameter", auth_get_parameter, METH_VARARGS, 
+		"S.get_parameter(key) -> value\n"
+		"Get a parameter" },
 	{ "credentials", auth_first_credentials, METH_VARARGS, NULL },
 	{ NULL, }
 };
@@ -2798,7 +2824,9 @@ static PyObject *get_keychain_simple_provider(PyObject* self)
 #endif
 
 static PyMethodDef ra_module_methods[] = {
-	{ "version", (PyCFunction)version, METH_NOARGS, NULL },
+	{ "version", (PyCFunction)version, METH_NOARGS, 
+		"version() -> (major, minor, micro, tag)\n"
+		"Return version string of ra library."},
 	{ "get_ssl_client_cert_pw_file_provider", (PyCFunction)get_ssl_client_cert_pw_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_client_cert_file_provider", (PyCFunction)get_ssl_client_cert_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_server_trust_file_provider", (PyCFunction)get_ssl_server_trust_file_provider, METH_NOARGS, NULL },
