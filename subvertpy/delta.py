@@ -26,6 +26,11 @@ TXDELTA_NEW = 2
 TXDELTA_INVALID = 3
 
 def apply_txdelta_handler(sbuf, target_stream):
+    """Return a function that can be called repeatedly with txdelta windows.
+
+    :param sbuf: Source buffer
+    :param target_stream: Target stream
+    """
     def apply_window(window):
         if window is None:
             return # Last call
@@ -38,6 +43,14 @@ def apply_txdelta_handler(sbuf, target_stream):
 
 
 def txdelta_apply_ops(src_ops, ops, new_data, sview):
+    """Apply txdelta operations to a source view.
+
+    :param src_ops: Source operations, ignored.
+    :param ops: List of operations (action, offset, length).
+    :param new_data: Buffer to fetch fragments with new data from
+    :param sview: Source data
+    :return: Result data
+    """
     tview = ""
     for (action, offset, length) in ops:
         if action == TXDELTA_SOURCE:
@@ -58,6 +71,12 @@ SEND_STREAM_BLOCK_SIZE = 1024 * 1024 # 1 Mb
 
 
 def send_stream(stream, handler, block_size=SEND_STREAM_BLOCK_SIZE):
+    """Send txdelta windows that create stream to handler
+
+    :param stream: file-like object to read the file from
+    :param handler: txdelta window handler function
+    :return: MD5 hash over the stream
+    """
     hash = md5.new()
     text = stream.read(block_size)
     while text != "":
@@ -117,6 +136,13 @@ def decode_length(text):
 
 
 def pack_svndiff_instruction((action, offset, length)):
+    """Pack a SVN diff instruction
+
+    :param action: Action
+    :param offset: Offset
+    :param length: Length
+    :return: encoded text
+    """
     if length < 0x3f:
         text = chr((action << 6) + length)
     else:
@@ -127,6 +153,11 @@ def pack_svndiff_instruction((action, offset, length)):
 
 
 def unpack_svndiff_instruction(text):
+    """Unpack a SVN diff instruction
+
+    :param text: Text to parse
+    :return: tuple with operation, remaining text
+    """
     action = (ord(text[0]) >> 6)
     length = (ord(text[0]) & 0x3f)
     text = text[1:]

@@ -14,7 +14,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Marshalling for the svn_ra protocol."""
+
 class literal:
+    """A protocol literal."""
+
     def __init__(self, txt):
         self.txt = txt
 
@@ -48,6 +52,11 @@ class NeedMoreData(MarshallError):
 
 
 def marshall(x):
+    """Marshall a Python data item.
+    
+    :param x: Data item
+    :return: encoded string
+    """
     if type(x) is int:
         return "%d " % x
     elif type(x) is list or type(x) is tuple:
@@ -67,6 +76,11 @@ def marshall(x):
 
 
 def unmarshall(x):
+    """Unmarshall the next item from a text.
+
+    :param x: Text to parse
+    :return: tuple with unpacked item and remaining text
+    """
     whitespace = ['\n', ' ']
     if len(x) == 0:
         raise NeedMoreData("Not enough data")

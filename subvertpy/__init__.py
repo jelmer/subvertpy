@@ -71,7 +71,10 @@ class SubversionException(Exception):
 
 
 def _check_mtime(m):
-    """Check whether a C extension is out of date."""
+    """Check whether a C extension is out of date.
+    
+    :param m: Python module that is a C extension
+    """
     import os
     (base, _) = os.path.splitext(m.__file__)
     c_file = "%s.c" % base

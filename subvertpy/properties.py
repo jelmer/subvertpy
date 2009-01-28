@@ -18,7 +18,7 @@
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 __docformat__ = "restructuredText"
 
-import bisect, urlparse
+import bisect, time, urlparse
 
 
 class InvalidExternalsDescription(Exception):
@@ -40,7 +40,11 @@ def is_valid_property_name(prop):
 
 
 def time_to_cstring(timestamp):
-    import time
+    """Determine string representation of a time.
+
+    :param timestamp: Timestamp
+    :return: string with date
+    """
     tm_usec = timestamp % 1000000
     (tm_year, tm_mon, tm_mday, tm_hour, tm_min, 
             tm_sec, tm_wday, tm_yday, tm_isdst) = time.gmtime(timestamp / 1000000)
@@ -48,7 +52,11 @@ def time_to_cstring(timestamp):
 
 
 def time_from_cstring(text):
-    import time
+    """Parse a time from a cstring.
+    
+    :param text: Parse text
+    :return: timestamp
+    """
     (basestr, usecstr) = text.split(".", 1)
     assert usecstr[-1] == "Z"
     tm_usec = int(usecstr[:-1])
@@ -139,6 +147,11 @@ def parse_mergeinfo_property(text):
 
 
 def generate_mergeinfo_property(merges):
+    """Generate the contents of the svn:mergeinfo property
+
+    :param merges: dictionary mapping paths to lists of ranges
+    :return: Property contents
+    """
     def formatrange((start, end, inheritable)):
         suffix = ""
         if not inheritable:
@@ -155,6 +168,12 @@ def generate_mergeinfo_property(merges):
 
 
 def range_includes_revnum(ranges, revnum):
+    """Check if the specified range contains the mentioned revision number.
+
+    :param ranges: list of ranges
+    :param revnum: revision number
+    :return: Whether or not the revision number is included
+    """
     i = bisect.bisect(ranges, (revnum, revnum, True))
     if i == 0:
         return False
@@ -163,6 +182,13 @@ def range_includes_revnum(ranges, revnum):
 
 
 def range_add_revnum(ranges, revnum, inheritable=True):
+    """Add revision number to a list of ranges
+
+    :param ranges: List of ranges
+    :param revnum: Revision number to add
+    :param inheritable: TODO
+    :return: New list of ranges
+    """
     # TODO: Deal with inheritable
     item = (revnum, revnum, inheritable)
     if len(ranges) == 0:
@@ -189,6 +215,13 @@ def range_add_revnum(ranges, revnum, inheritable=True):
 
 
 def mergeinfo_includes_revision(merges, path, revnum):
+    """Check if the specified mergeinfo contains a path in revnum.
+
+    :param merges: Dictionary with merges
+    :param path: Merged path
+    :param revnum: Revision number
+    :return: Whether the revision is included
+    """
     assert path.startswith("/")
     try:
         ranges = merges[path]
@@ -199,6 +232,13 @@ def mergeinfo_includes_revision(merges, path, revnum):
 
 
 def mergeinfo_add_revision(mergeinfo, path, revnum):
+    """Add a revision to a mergeinfo dictionary
+
+    :param mergeinfo: Merginfo dictionary
+    :param path: Merged path to add
+    :param revnum: Merged revision to add
+    :return: Updated dictionary
+    """
     assert path.startswith("/")
     mergeinfo[path] = range_add_revnum(mergeinfo.get(path, []), revnum)
     return mergeinfo
