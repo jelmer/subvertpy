@@ -1,4 +1,5 @@
 PYTHON = python
+PYDOCTOR = pydoctor
 SETUP = $(PYTHON) setup.py
 TRIAL = trial
 
@@ -19,3 +20,6 @@ check::
 
 clean::
 	$(SETUP) clean
+
+pydoctor:
+	$(PYDOCTOR) -c subvertpy.cfg --make-html
