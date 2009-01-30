@@ -18,7 +18,16 @@
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 __docformat__ = "restructuredText"
 
-import md5
+import sys
+
+if sys.version_info < (2, 5):
+    import md5 as _mod_md5
+    md5 = _mod_md5.new
+else:
+    from hashlib import (
+        md5,
+        )
+
 
 TXDELTA_SOURCE = 0
 TXDELTA_TARGET = 1
@@ -77,7 +86,7 @@ def send_stream(stream, handler, block_size=SEND_STREAM_BLOCK_SIZE):
     :param handler: txdelta window handler function
     :return: MD5 hash over the stream
     """
-    hash = md5.new()
+    hash = md5()
     text = stream.read(block_size)
     while text != "":
         hash.update(text)
