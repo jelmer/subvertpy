@@ -264,8 +264,7 @@ class install_lib_with_dlls(install_lib):
             for look in look_dirs:
                 f = os.path.join(look, bin)
                 if os.path.isfile(f):
-                    target = os.path.join(self.install_dir, "bzrlib",
-                                          "plugins", "svn", bin)
+                    target = os.path.join(self.install_dir, "subvertpy", bin)
                     ret.append((f, target))
                     break
             else:

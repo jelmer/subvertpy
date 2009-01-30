@@ -1,3 +1,9 @@
+0.6.2	UNRELEASED
+
+ BUG FIXES
+
+  * Install Windows binaries to the right directory. (#323276)
+
 0.6.1	2009-01-25
 
  API BREAKS
