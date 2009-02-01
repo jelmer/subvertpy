@@ -106,6 +106,12 @@ void PyErr_SetSubversionException(svn_error_t *error)
 		PyErr_SetObject(PyExc_OSError, Py_BuildValue("(iz)", error->apr_err, error->message));
 		return;
 	}
+	
+	if (error->apr_err >= APR_OS_START_SYSERR && 
+		error->apr_err < APR_OS_START_SYSERR + 1000) {
+		PyErr_SetObject(PyExc_OSError, Py_BuildValue("(iz)", error->apr_err - APR_OS_START_SYSERR, error->message));
+		return;
+	}
 
 	excobj = (PyObject *)PyErr_GetSubversionExceptionTypeObject();
 	if (excobj == NULL)

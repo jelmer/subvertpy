@@ -23,6 +23,8 @@
 
  * Allow non-canonical path arguments in subvertpy.wc.WorkingCopy()
 
+ * Convert APR-based OSError properly. (#323548)
+
 0.6		2009-01-13
 
  Initial release.
