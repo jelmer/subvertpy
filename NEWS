@@ -4,6 +4,10 @@
 
   * Install Windows binaries to the right directory. (#323276)
 
+ FEATUREs
+
+  * Add WorkingCopy.remove_lock(path)
+
 0.6.1	2009-01-25
 
  API BREAKS
