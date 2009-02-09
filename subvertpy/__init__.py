@@ -61,6 +61,8 @@ ERR_WC_BAD_ADM_LOG_START = 155020
 ERR_WC_NOT_LOCKED = 155005
 ERR_RA_DAV_NOT_VCC = 20014
 ERR_REPOS_HOOK_FAILURE = 165001
+ERR_XML_MALFORMED = 130003
+
 
 class SubversionException(Exception):
     """A Subversion exception"""
