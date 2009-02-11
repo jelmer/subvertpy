@@ -267,6 +267,7 @@ PROP_ENTRY_UUID = 'svn:entry:uuid'
 PROP_REVISION_LOG = "svn:log"
 PROP_REVISION_AUTHOR = "svn:author"
 PROP_REVISION_DATE = "svn:date"
+PROP_REVISION_ORIGINAL_DATE = "svn:original-date"
 
 def diff(current, previous):
     """Find the differences between two property dictionaries.
