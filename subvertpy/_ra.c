@@ -759,6 +759,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	callbacks2->progress_func = py_progress_func;
 	callbacks2->auth_baton = auth_baton;
 	callbacks2->open_tmp_file = py_open_tmp_file;
+	Py_INCREF(progress_cb);
 	ret->progress_func = progress_cb;
 	callbacks2->progress_baton = (void *)ret;
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
