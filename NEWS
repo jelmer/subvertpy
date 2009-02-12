@@ -1,8 +1,14 @@
-0.6.3	UNRELEASED
+0.6.4	UNRELEASED
 
  BUG FIXES
 
   * Fix reference counting for progress callback in RemoteAccess.
+
+0.6.3	2009-02-12
+
+  FEATURES
+
+   * Add svn:original-date constant.
 
 0.6.2	2009-02-10
 
