@@ -91,6 +91,7 @@ try:
     import client, _ra, repos, wc
     for x in client, _ra, repos, wc:
         if not _check_mtime(x):
+            from warnings import warn
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
 except ImportError:

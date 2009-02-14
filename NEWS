@@ -16,6 +16,8 @@
 
   * Install Windows binaries to the right directory. (#323276)
 
+  * Fix import of warn().
+
  FEATUREs
 
   * Add WorkingCopy.remove_lock(path)
