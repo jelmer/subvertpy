@@ -4,6 +4,8 @@
 
   * Fix reference counting for progress callback in RemoteAccess.
 
+  * Fix several (major) object leaks. 
+
 0.6.3	2009-02-12
 
   FEATURES

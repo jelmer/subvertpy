@@ -442,14 +442,12 @@ static svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void
 			py_new_data = Py_None;
 			Py_INCREF(py_new_data);
 		}
-		py_window = Py_BuildValue("((LIIiOO))", 
+		py_window = Py_BuildValue("((LIIiNN))", 
 								  window->sview_offset, 
 								  window->sview_len, 
 								  window->tview_len, 
 								  window->src_ops, ops, py_new_data);
 		CB_CHECK_PYRETVAL(py_window);
-		Py_DECREF(ops);
-		Py_DECREF(py_new_data);
 	}
 	ret = PyObject_CallFunction(fn, "O", py_window);
 	Py_DECREF(py_window);

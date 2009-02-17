@@ -96,7 +96,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 		Py_INCREF(child);
 	}
 
-	return Py_BuildValue("(siOO)", error->message, error->apr_err, child, loc);
+	return Py_BuildValue("(siNN)", error->message, error->apr_err, child, loc);
 }
 
 void PyErr_SetSubversionException(svn_error_t *error)
