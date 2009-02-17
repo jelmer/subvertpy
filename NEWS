@@ -1,10 +1,45 @@
+0.6.4	2009-02-17
+
+ BUG FIXES
+
+  * Fix reference counting for progress callback in RemoteAccess.
+
+  * Fix several (major) object leaks. 
+
+0.6.3	2009-02-12
+
+  FEATURES
+
+   * Add svn:original-date constant.
+
+0.6.2	2009-02-10
+
+ BUG FIXES
+
+  * Install Windows binaries to the right directory. (#323276)
+
+  * Fix import of warn().
+
+ FEATUREs
+
+  * Add WorkingCopy.remove_lock(path)
+
 0.6.1	2009-01-25
+
+ API BREAKS
+
+ * subvertpy.properties.diff() now returns not just the new property value
+   but a tuple with the old property value and the new property value.
+
+ BUG FIXES
 
  * Fixed bdist_rpm. (#311712)
 
  * Fixed segfault when unsetting property values. (#319313)
 
  * Allow non-canonical path arguments in subvertpy.wc.WorkingCopy()
+
+ * Convert APR-based OSError properly. (#323548)
 
 0.6		2009-01-13
 

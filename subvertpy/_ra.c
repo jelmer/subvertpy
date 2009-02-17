@@ -76,6 +76,8 @@ static svn_error_t *py_lock_func (void *baton, const char *path, int do_lock,
 	PyGILState_STATE state = PyGILState_Ensure();
 	if (ra_err != NULL) {
 		py_ra_err = PyErr_NewSubversionException(ra_err);
+	} else {
+		Py_INCREF(py_ra_err);
 	}
 	py_lock = pyify_lock(lock);
 	ret = PyObject_CallFunction((PyObject *)baton, "zbOO", path, do_lock, 
@@ -438,15 +440,14 @@ static svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void
 			py_new_data = PyString_FromStringAndSize(window->new_data->data, window->new_data->len);
 		} else {
 			py_new_data = Py_None;
+			Py_INCREF(py_new_data);
 		}
-		py_window = Py_BuildValue("((LIIiOO))", 
+		py_window = Py_BuildValue("((LIIiNN))", 
 								  window->sview_offset, 
 								  window->sview_len, 
 								  window->tview_len, 
 								  window->src_ops, ops, py_new_data);
 		CB_CHECK_PYRETVAL(py_window);
-		Py_DECREF(ops);
-		Py_DECREF(py_new_data);
 	}
 	ret = PyObject_CallFunction(fn, "O", py_window);
 	Py_DECREF(py_window);
@@ -705,7 +706,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	char *kwnames[] = { "url", "progress_cb", "auth", "config", "client_string_func", 
 						"open_tmp_file_func", NULL };
-	char *url;
+	char *url = NULL;
 	PyObject *progress_cb = Py_None;
 	AuthObject *auth = (AuthObject *)Py_None;
 	PyObject *config = Py_None;
@@ -759,6 +760,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	callbacks2->progress_func = py_progress_func;
 	callbacks2->auth_baton = auth_baton;
 	callbacks2->open_tmp_file = py_open_tmp_file;
+	Py_INCREF(progress_cb);
 	ret->progress_func = progress_cb;
 	callbacks2->progress_baton = (void *)ret;
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
@@ -1400,36 +1402,50 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 		fetch_rev = revision;
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_dir2(ra->ra, &dirents, &fetch_rev, &props,
-					 path, revision, dirent_fields, temp_pool));
+					 svn_path_canonicalize(path, temp_pool), revision, dirent_fields, temp_pool));
 
 	if (dirents == NULL) {
 		py_dirents = Py_None;
+		Py_INCREF(py_dirents);
 	} else {
 		py_dirents = PyDict_New();
 		idx = apr_hash_first(temp_pool, dirents);
 		while (idx != NULL) {
-			PyObject *py_dirent;
+			PyObject *py_dirent, *obj;
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
 			py_dirent = PyDict_New();
-			if (dirent_fields & 0x1)
-				PyDict_SetItemString(py_dirent, "kind", 
-									 PyInt_FromLong(dirent->kind));
-			if (dirent_fields & 0x2)
-				PyDict_SetItemString(py_dirent, "size", 
-									 PyLong_FromLong(dirent->size));
-			if (dirent_fields & 0x4)
-				PyDict_SetItemString(py_dirent, "has_props",
-									 PyBool_FromLong(dirent->has_props));
-			if (dirent_fields & 0x8)
-				PyDict_SetItemString(py_dirent, "created_rev", 
-									 PyLong_FromLong(dirent->created_rev));
-			if (dirent_fields & 0x10)
-				PyDict_SetItemString(py_dirent, "time", 
-									 PyLong_FromLong(dirent->time));
-			if (dirent_fields & 0x20)
-				PyDict_SetItemString(py_dirent, "last_author",
-									 PyString_FromString(dirent->last_author));
+			if (dirent_fields & 0x1) {
+				obj = PyInt_FromLong(dirent->kind);
+				PyDict_SetItemString(py_dirent, "kind", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x2) {
+				obj = PyLong_FromLong(dirent->size);
+				PyDict_SetItemString(py_dirent, "size", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x4) {
+				obj = PyBool_FromLong(dirent->has_props);
+				PyDict_SetItemString(py_dirent, "has_props", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x8) {
+				obj = PyLong_FromLong(dirent->created_rev);
+				PyDict_SetItemString(py_dirent, "created_rev", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x10) {
+				obj = PyLong_FromLong(dirent->time);
+				PyDict_SetItemString(py_dirent, "time", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x20) {
+				obj = PyString_FromString(dirent->last_author);
+				PyDict_SetItemString(py_dirent, "last_author", obj);
+				Py_DECREF(obj);
+			}
 			PyDict_SetItemString(py_dirents, key, py_dirent);
+			Py_DECREF(py_dirent);
 			idx = apr_hash_next(idx);
 		}
 	}
@@ -1466,7 +1482,7 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 	if (revision != SVN_INVALID_REVNUM)
 		fetch_rev = revision;
 
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file(ra->ra, path, revision, 
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file(ra->ra, svn_path_canonicalize(path, temp_pool), revision, 
 													new_py_stream(temp_pool, py_stream), 
 													&fetch_rev, &props, temp_pool));
 
@@ -1656,6 +1672,7 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 			return NULL;
 		}
 		PyDict_SetItemString(ret, key, pyval);
+		Py_DECREF(pyval);
 	}
 
 	apr_pool_destroy(temp_pool);
@@ -1738,6 +1755,7 @@ static PyObject *mergeinfo_to_dict(svn_mergeinfo_t mergeinfo, apr_pool_t *temp_p
 		if (pyval == NULL)
 			return NULL;
 		PyDict_SetItemString(ret, key, pyval);
+		Py_DECREF(pyval);
 	}
 
 	return ret;
@@ -1791,6 +1809,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 				return NULL;
 			}
 			PyDict_SetItemString(ret, key, pyval);
+			Py_DECREF(pyval);
 		}
 	}
 
@@ -1913,30 +1932,52 @@ static PyMethodDef ra_methods[] = {
 	{ "unlock", ra_unlock, METH_VARARGS, NULL },
 	{ "mergeinfo", ra_mergeinfo, METH_VARARGS, NULL },
 	{ "get_location_segments", ra_get_location_segments, METH_VARARGS, NULL },
-	{ "has_capability", ra_has_capability, METH_VARARGS, NULL },
-	{ "check_path", ra_check_path, METH_VARARGS, NULL },
+	{ "has_capability", ra_has_capability, METH_VARARGS, 
+		"S.has_capability(name) -> bool\n"
+		"Check whether the specified capability is supported by the client and server" },
+	{ "check_path", ra_check_path, METH_VARARGS, 
+		"S.check_path(path, revnum) -> node_kind\n"
+		"Check the type of a path (one of NODE_DIR, NODE_FILE, NODE_UNKNOWN)" },
 	{ "get_lock", ra_get_lock, METH_VARARGS, NULL },
-	{ "get_dir", ra_get_dir, METH_VARARGS, NULL },
-	{ "get_file", ra_get_file, METH_VARARGS, NULL },
-	{ "change_rev_prop", ra_change_rev_prop, METH_VARARGS, NULL },
+	{ "get_dir", ra_get_dir, METH_VARARGS, 
+		"S.get_dir(path, revision, dirent_fields=-1) -> (dirents, fetched_rev, properties)\n"
+		"Get the contents of a directory. "},
+	{ "get_file", ra_get_file, METH_VARARGS, 
+		"S.get_file(path, stream, revnum=-1) -> (fetched_rev, properties)\n"
+		"Fetch a file. The contents will be written to stream." },
+	{ "change_rev_prop", ra_change_rev_prop, METH_VARARGS, 
+		"S.change_rev_prop(revnum, name, value)\n"
+		"Change a revision property" },
 	{ "get_commit_editor", (PyCFunction)get_commit_editor, METH_VARARGS|METH_KEYWORDS, NULL },
-	{ "rev_proplist", ra_rev_proplist, METH_VARARGS, NULL },
+	{ "rev_proplist", ra_rev_proplist, METH_VARARGS, 
+		"S.rev_proplist(revnum) -> properties\n"
+		"Return a dictionary with the properties set on the specified revision" },
 	{ "replay", ra_replay, METH_VARARGS, NULL },
 	{ "replay_range", ra_replay_range, METH_VARARGS, NULL },
 	{ "do_switch", ra_do_switch, METH_VARARGS, NULL },
 	{ "do_update", ra_do_update, METH_VARARGS, NULL },
 	{ "do_diff", ra_do_diff, METH_VARARGS, NULL },
-	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_VARARGS|METH_NOARGS, NULL },
+	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_VARARGS|METH_NOARGS, 
+		"S.get_repos_root() -> url\n"
+		"Return the URL to the root of the repository." },
 	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, NULL },
-	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, NULL },
-	{ "reparent", ra_reparent, METH_VARARGS, NULL },
-	{ "get_uuid", (PyCFunction)ra_get_uuid, METH_NOARGS, NULL },
+	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, 
+		"S.get_latest_revnum() -> int\n"
+		"Return the last revision committed in the repository." },
+	{ "reparent", ra_reparent, METH_VARARGS, 
+		"S.reparent(url)\n"
+		"Reparent to a new URL" },
+	{ "get_uuid", (PyCFunction)ra_get_uuid, METH_NOARGS, 
+		"S.get_uuid() -> uuid\n"
+		"Return the UUID of the repository." },
 	{ NULL, }
 };
 
 static PyMemberDef ra_members[] = {
-	{ "busy", T_BYTE, offsetof(RemoteAccessObject, busy), READONLY, NULL },
-	{ "url", T_STRING, offsetof(RemoteAccessObject, url), READONLY, NULL },
+	{ "busy", T_BYTE, offsetof(RemoteAccessObject, busy), READONLY, 
+		"Whether this connection is in use at the moment" },
+	{ "url", T_STRING, offsetof(RemoteAccessObject, url), READONLY, 
+		"URL this connection is to" },
 	{ NULL, }
 };
 
@@ -2272,8 +2313,12 @@ PyTypeObject CredentialsIter_Type = {
 };
 
 static PyMethodDef auth_methods[] = {
-	{ "set_parameter", auth_set_parameter, METH_VARARGS, NULL },
-	{ "get_parameter", auth_get_parameter, METH_VARARGS, NULL },
+	{ "set_parameter", auth_set_parameter, METH_VARARGS, 
+		"S.set_parameter(key, value)\n"
+		"Set a parameter" },
+	{ "get_parameter", auth_get_parameter, METH_VARARGS, 
+		"S.get_parameter(key) -> value\n"
+		"Get a parameter" },
 	{ "credentials", auth_first_credentials, METH_VARARGS, NULL },
 	{ NULL, }
 };
@@ -2499,6 +2544,7 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 
 	if (cert_info == NULL) {
 		py_cert = Py_None;
+		Py_INCREF(py_cert);
 	} else {
 		py_cert = Py_BuildValue("(sssss)", cert_info->hostname, cert_info->fingerprint, 
 						  cert_info->valid_from, cert_info->valid_until, 
@@ -2798,7 +2844,9 @@ static PyObject *get_keychain_simple_provider(PyObject* self)
 #endif
 
 static PyMethodDef ra_module_methods[] = {
-	{ "version", (PyCFunction)version, METH_NOARGS, NULL },
+	{ "version", (PyCFunction)version, METH_NOARGS, 
+		"version() -> (major, minor, micro, tag)\n"
+		"Return version string of ra library."},
 	{ "get_ssl_client_cert_pw_file_provider", (PyCFunction)get_ssl_client_cert_pw_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_client_cert_file_provider", (PyCFunction)get_ssl_client_cert_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_server_trust_file_provider", (PyCFunction)get_ssl_server_trust_file_provider, METH_NOARGS, NULL },

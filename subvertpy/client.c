@@ -98,6 +98,7 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
 			}
 		} else {
 			copyfrom = Py_None;
+			Py_INCREF(copyfrom);
 		}
 
 		item = Py_BuildValue("(szlNi)", 
@@ -421,7 +422,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 static PyObject *client_copy(PyObject *self, PyObject *args)
 {
 	char *src_path, *dst_path;
-	PyObject *src_rev=Py_None;
+	PyObject *src_rev = Py_None;
 	svn_commit_info_t *commit_info = NULL;
 	apr_pool_t *temp_pool;
 	svn_opt_revision_t c_src_rev;
@@ -598,6 +599,7 @@ static PyObject *config_get_dict(PyObject *self, void *closure)
 		data = PyObject_New(ConfigItemObject, &ConfigItem_Type);
 		data->item = val;
 		PyDict_SetItemString(ret, key, (PyObject *)data);
+		Py_DECREF(data);
 	}
 
 	return ret;

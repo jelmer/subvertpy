@@ -1,4 +1,6 @@
 PYTHON = python
+PYDOCTOR = pydoctor
+EPYDOC = epydoc
 SETUP = $(PYTHON) setup.py
 TRIAL = trial
 
@@ -19,3 +21,10 @@ check::
 
 clean::
 	$(SETUP) clean
+	rm -f subvertpy/*.so subvertpy/*.o subvertpy/*.pyc
+
+pydoctor:
+	$(PYDOCTOR) -c subvertpy.cfg --make-html
+
+epydoc:
+	$(EPYDOC) subvertpy

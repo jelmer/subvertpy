@@ -37,6 +37,7 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 	PyGILState_STATE state = PyGILState_Ensure();
 	if (lock_token == NULL) {
 		py_lock_token = Py_None;
+		Py_INCREF(py_lock_token);
 	} else {
 		py_lock_token = PyString_FromString(lock_token);
 	}
@@ -62,6 +63,7 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 	PyGILState_STATE state = PyGILState_Ensure();
 	if (lock_token == NULL) {
 		py_lock_token = Py_None;
+		Py_INCREF(py_lock_token);
 	} else { 
 		py_lock_token = PyString_FromString(lock_token);
 	}
@@ -331,6 +333,7 @@ static PyObject *adm_prop_get(PyObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_get(&value, name, path, admobj->adm, temp_pool));
 	if (value == NULL || value->data == NULL) {
 		ret = Py_None;
+		Py_INCREF(ret);
 	} else {
 		ret = PyString_FromStringAndSize(value->data, value->len);
 	}
@@ -371,7 +374,7 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 	const char *key;
 	apr_ssize_t klen;
 	svn_wc_entry_t *entry;
-	PyObject *py_entries;
+	PyObject *py_entries, *obj;
 
 	if (!PyArg_ParseTuple(args, "|b", &show_hidden))
 		return NULL;
@@ -385,7 +388,9 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 	idx = apr_hash_first(temp_pool, entries);
 	while (idx != NULL) {
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&entry);
-		PyDict_SetItemString(py_entries, key, py_entry(entry));
+		obj = py_entry(entry);
+		PyDict_SetItemString(py_entries, key, obj);
+		Py_DECREF(obj);
 		idx = apr_hash_next(idx);
 	}
 	apr_pool_destroy(temp_pool);
@@ -700,6 +705,27 @@ static PyObject *adm_repr(PyObject *self)
 							   svn_wc_adm_access_path(admobj->adm));
 }
 
+static PyObject *adm_remove_lock(PyObject *self, PyObject *args)
+{
+	char *path;
+	AdmObject *admobj = (AdmObject *)self;
+	apr_pool_t *temp_pool;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_remove_lock(path, admobj->adm, temp_pool))
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -725,6 +751,7 @@ static PyMethodDef adm_methods[] = {
 	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, 
 		"s.entry(path, show_hidden=False) -> entry" },
 	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, "S.process_committed(path, recurse, new_revnum, rev_date, rev_author, wcprop_changes=None, remove_lock=False, digest=None)" },
+	{ "remove_lock", (PyCFunction)adm_remove_lock, METH_VARARGS, "S.remove_lock(path)" }, 
 	{ NULL, }
 };
 

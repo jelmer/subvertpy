@@ -16,6 +16,9 @@
 
 """Tests for subvertpy."""
 
+__author__ = 'Jelmer Vernooij <jelmer@samba.org>'
+__docformat__ = 'restructuredText'
+
 from cStringIO import StringIO
 
 import urllib, urllib2, urlparse
@@ -207,6 +210,13 @@ class SubversionTestCase(TestCaseInTempDir):
             return ret.values()[0]
 
     def client_get_revprop(self, url, revnum, name):
+        """Get the revision property.
+
+        :param url: URL of the repository
+        :param revnum: Revision number
+        :param name: Property name
+        :return: Revision property value
+        """
         r = ra.RemoteAccess(url)
         return r.rev_proplist(revnum)[name]
 
@@ -217,7 +227,7 @@ class SubversionTestCase(TestCaseInTempDir):
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.
         
-        :param relpath: List of paths to commit.
+        :param dir: List of paths to commit.
         """
         olddir = os.path.abspath('.')
         self.next_message = message
@@ -235,6 +245,13 @@ class SubversionTestCase(TestCaseInTempDir):
         self.client_ctx.add(relpath, recursive, False, False)
 
     def client_log(self, url, start_revnum, stop_revnum):
+        """Fetch the log
+
+        :param url: URL to log
+        :param start_revnum: Start revision of the range to log over
+        :param start_revnum: Stop revision of the range to log over
+        :return: Dictionary
+        """
         r = ra.RemoteAccess(url)
         assert isinstance(url, str)
         ret = {}
@@ -264,6 +281,10 @@ class SubversionTestCase(TestCaseInTempDir):
         self.client_ctx.copy(oldpath, newpath, rev)
 
     def client_update(self, path):
+        """Update path.
+
+        :param path: Path
+        """
         self.client_ctx.update([path], "HEAD", True)
 
     def build_tree(self, files):
@@ -288,7 +309,7 @@ class SubversionTestCase(TestCaseInTempDir):
     def make_client(self, repospath, clientpath, allow_revprop_changes=True):
         """Create a repository and a checkout. Return the checkout.
 
-        :param relpath: Optional relpath to check out if not the full 
+        :param repospath: Optional relpath to check out if not the full 
             repository.
         :param clientpath: Path to checkout
         :return: Repository URL.
@@ -306,6 +327,12 @@ class SubversionTestCase(TestCaseInTempDir):
         return repos.Repository(relpath).fs()
 
     def get_commit_editor(self, url, message="Test commit"):
+        """Obtain a commit editor.
+
+        :param url: URL to connect to
+        :param message: Commit message
+        :return: Commit editor object
+        """
         ra = RemoteAccess(url.encode("utf-8"))
         revnum = ra.get_latest_revnum()
         return TestCommitEditor(ra.get_commit_editor({"svn:log": message}), ra.url, revnum)

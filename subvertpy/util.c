@@ -93,9 +93,10 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 		Py_DECREF(args);
 	} else {
 		child = Py_None;
+		Py_INCREF(child);
 	}
 
-	return Py_BuildValue("(siOO)", error->message, error->apr_err, child, loc);
+	return Py_BuildValue("(siNN)", error->message, error->apr_err, child, loc);
 }
 
 void PyErr_SetSubversionException(svn_error_t *error)
@@ -104,6 +105,12 @@ void PyErr_SetSubversionException(svn_error_t *error)
 
 	if (error->apr_err < 1000) {
 		PyErr_SetObject(PyExc_OSError, Py_BuildValue("(iz)", error->apr_err, error->message));
+		return;
+	}
+	
+	if (error->apr_err >= APR_OS_START_SYSERR && 
+		error->apr_err < APR_OS_START_SYSERR + 1000) {
+		PyErr_SetObject(PyExc_OSError, Py_BuildValue("(iz)", error->apr_err - APR_OS_START_SYSERR, error->message));
 		return;
 	}
 
@@ -201,10 +208,12 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 		 idx = apr_hash_next(idx)) {
 		PyObject *py_val;
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-		if (val == NULL || val->data == NULL)
+		if (val == NULL || val->data == NULL) {
 			py_val = Py_None;
-		else
+			Py_INCREF(py_val);
+		} else {
 			py_val = PyString_FromStringAndSize(val->data, val->len);
+		}
 		PyDict_SetItemString(py_props, key, py_val);
 		Py_DECREF(py_val);
 	}
@@ -262,6 +271,7 @@ static PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool
 
 	if (changed_paths == NULL) {
 		py_changed_paths = Py_None;
+		Py_INCREF(py_changed_paths);
 	} else {
 		py_changed_paths = PyDict_New();
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
@@ -272,6 +282,7 @@ static PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool
 			if (pyval == NULL)
 				return NULL;
 			PyDict_SetItemString(py_changed_paths, key, pyval);
+			Py_DECREF(pyval);
 		}
 	}
 
@@ -304,7 +315,7 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 
 svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
-	PyObject *revprops, *py_changed_paths, *ret;
+	PyObject *revprops, *py_changed_paths, *ret, *obj;
 	PyGILState_STATE state = PyGILState_Ensure();
 
 	py_changed_paths = pyify_changed_paths(changed_paths, pool);
@@ -313,16 +324,20 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revn
 	revprops = PyDict_New();
 	CB_CHECK_PYRETVAL(revprops);
 	if (message != NULL) {
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, 
-							 PyString_FromString(message));
+		obj = PyString_FromString(message);
+		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, obj);
+		Py_DECREF(obj);
 	}
 	if (author != NULL) {
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, 
-							 PyString_FromString(author));
+		obj = PyString_FromString(author);
+		PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, obj);
+		Py_DECREF(obj);
 	}
 	if (date != NULL) {
+		obj = PyString_FromString(date);
 		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, 
-							 PyString_FromString(date));
+							 obj);
+		Py_DECREF(obj);
 	}
 	ret = PyObject_CallFunction((PyObject *)baton, "OlO", py_changed_paths, 
 								 revision, revprops);

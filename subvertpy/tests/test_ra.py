@@ -105,11 +105,18 @@ class TestRemoteAccess(SubversionTestCase):
             returned.append(args)
         def check_results(returned):
             self.assertEquals(2, len(returned))
-            (paths, revnum, props, has_children) = returned[0]
+            self.assert_(len(returned[0]) in (3,4))
+            if len(returned[0]) == 3:
+                (paths, revnum, props) = returned[0]
+            else:
+                (paths, revnum, props, has_children) = returned[0]
             self.assertEquals(None, paths)
             self.assertEquals(revnum, 0)
             self.assertEquals(["svn:date"], props.keys())
-            (paths, revnum, props, has_children) = returned[1]
+            if len(returned[1]) == 3:
+                (paths, revnum, props) = returned[1]
+            else:
+                (paths, revnum, props, has_children) = returned[1]
             self.assertEquals({'/foo': ('A', None, -1)}, paths)
             self.assertEquals(revnum, 1)
             self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
@@ -245,6 +252,7 @@ class TestRemoteAccess(SubversionTestCase):
                           self.ra.get_locations("bla", 3, [1,2,3]))
 
 class AuthTests(TestCase):
+
     def test_not_registered(self):
         auth = ra.Auth([])
         self.assertRaises(SubversionException, auth.credentials, "svn.simple", "MyRealm")

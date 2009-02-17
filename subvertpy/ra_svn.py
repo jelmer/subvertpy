@@ -50,6 +50,9 @@ class SSHSubprocess(object):
         self.proc.stdout.close()
         self.proc.wait()
 
+    def get_filelike_channels(self):
+        return (self.proc.stdout, self.proc.stdin)
+
 
 class SSHVendor(object):
 
@@ -68,27 +71,6 @@ class SSHVendor(object):
 
 # Can be overridden by users
 get_ssh_vendor = SSHVendor
-
-
-class SSHSubprocess(object):
-    """A socket-like object that talks to an ssh subprocess via pipes."""
-
-    def __init__(self, proc):
-        self.proc = proc
-
-    def send(self, data):
-        return os.write(self.proc.stdin.fileno(), data)
-
-    def recv(self, count):
-        return os.read(self.proc.stdout.fileno(), count)
-
-    def close(self):
-        self.proc.stdin.close()
-        self.proc.stdout.close()
-        self.proc.wait()
-
-    def get_filelike_channels(self):
-        return (self.proc.stdout, self.proc.stdin)
 
 
 class SVNConnection(object):

@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 6, 1)
+__version__ = (0, 6, 4)
 
 NODE_DIR = 2
 NODE_FILE = 1
@@ -60,6 +60,9 @@ ERR_WC_BAD_ADM_LOG = 155009
 ERR_WC_BAD_ADM_LOG_START = 155020
 ERR_WC_NOT_LOCKED = 155005
 ERR_RA_DAV_NOT_VCC = 20014
+ERR_REPOS_HOOK_FAILURE = 165001
+ERR_XML_MALFORMED = 130003
+
 
 class SubversionException(Exception):
     """A Subversion exception"""
@@ -71,7 +74,10 @@ class SubversionException(Exception):
 
 
 def _check_mtime(m):
-    """Check whether a C extension is out of date."""
+    """Check whether a C extension is out of date.
+    
+    :param m: Python module that is a C extension
+    """
     import os
     (base, _) = os.path.splitext(m.__file__)
     c_file = "%s.c" % base
@@ -85,6 +91,7 @@ try:
     import client, _ra, repos, wc
     for x in client, _ra, repos, wc:
         if not _check_mtime(x):
+            from warnings import warn
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
 except ImportError:
