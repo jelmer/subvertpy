@@ -37,6 +37,7 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 	PyGILState_STATE state = PyGILState_Ensure();
 	if (lock_token == NULL) {
 		py_lock_token = Py_None;
+		Py_INCREF(py_lock_token);
 	} else {
 		py_lock_token = PyString_FromString(lock_token);
 	}
@@ -62,6 +63,7 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 	PyGILState_STATE state = PyGILState_Ensure();
 	if (lock_token == NULL) {
 		py_lock_token = Py_None;
+		Py_INCREF(py_lock_token);
 	} else { 
 		py_lock_token = PyString_FromString(lock_token);
 	}
@@ -331,6 +333,7 @@ static PyObject *adm_prop_get(PyObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_get(&value, name, path, admobj->adm, temp_pool));
 	if (value == NULL || value->data == NULL) {
 		ret = Py_None;
+		Py_INCREF(ret);
 	} else {
 		ret = PyString_FromStringAndSize(value->data, value->len);
 	}
@@ -371,7 +374,7 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 	const char *key;
 	apr_ssize_t klen;
 	svn_wc_entry_t *entry;
-	PyObject *py_entries;
+	PyObject *py_entries, *obj;
 
 	if (!PyArg_ParseTuple(args, "|b", &show_hidden))
 		return NULL;
@@ -385,7 +388,9 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 	idx = apr_hash_first(temp_pool, entries);
 	while (idx != NULL) {
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&entry);
-		PyDict_SetItemString(py_entries, key, py_entry(entry));
+		obj = py_entry(entry);
+		PyDict_SetItemString(py_entries, key, obj);
+		Py_DECREF(obj);
 		idx = apr_hash_next(idx);
 	}
 	apr_pool_destroy(temp_pool);

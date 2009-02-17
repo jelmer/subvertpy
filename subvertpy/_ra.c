@@ -76,6 +76,8 @@ static svn_error_t *py_lock_func (void *baton, const char *path, int do_lock,
 	PyGILState_STATE state = PyGILState_Ensure();
 	if (ra_err != NULL) {
 		py_ra_err = PyErr_NewSubversionException(ra_err);
+	} else {
+		Py_INCREF(py_ra_err);
 	}
 	py_lock = pyify_lock(lock);
 	ret = PyObject_CallFunction((PyObject *)baton, "zbOO", path, do_lock, 
@@ -438,6 +440,7 @@ static svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void
 			py_new_data = PyString_FromStringAndSize(window->new_data->data, window->new_data->len);
 		} else {
 			py_new_data = Py_None;
+			Py_INCREF(py_new_data);
 		}
 		py_window = Py_BuildValue("((LIIiOO))", 
 								  window->sview_offset, 
@@ -1405,32 +1408,46 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 
 	if (dirents == NULL) {
 		py_dirents = Py_None;
+		Py_INCREF(py_dirents);
 	} else {
 		py_dirents = PyDict_New();
 		idx = apr_hash_first(temp_pool, dirents);
 		while (idx != NULL) {
-			PyObject *py_dirent;
+			PyObject *py_dirent, *obj;
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
 			py_dirent = PyDict_New();
-			if (dirent_fields & 0x1)
-				PyDict_SetItemString(py_dirent, "kind", 
-									 PyInt_FromLong(dirent->kind));
-			if (dirent_fields & 0x2)
-				PyDict_SetItemString(py_dirent, "size", 
-									 PyLong_FromLong(dirent->size));
-			if (dirent_fields & 0x4)
-				PyDict_SetItemString(py_dirent, "has_props",
-									 PyBool_FromLong(dirent->has_props));
-			if (dirent_fields & 0x8)
-				PyDict_SetItemString(py_dirent, "created_rev", 
-									 PyLong_FromLong(dirent->created_rev));
-			if (dirent_fields & 0x10)
-				PyDict_SetItemString(py_dirent, "time", 
-									 PyLong_FromLong(dirent->time));
-			if (dirent_fields & 0x20)
-				PyDict_SetItemString(py_dirent, "last_author",
-									 PyString_FromString(dirent->last_author));
+			if (dirent_fields & 0x1) {
+				obj = PyInt_FromLong(dirent->kind);
+				PyDict_SetItemString(py_dirent, "kind", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x2) {
+				obj = PyLong_FromLong(dirent->size);
+				PyDict_SetItemString(py_dirent, "size", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x4) {
+				obj = PyBool_FromLong(dirent->has_props);
+				PyDict_SetItemString(py_dirent, "has_props", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x8) {
+				obj = PyLong_FromLong(dirent->created_rev);
+				PyDict_SetItemString(py_dirent, "created_rev", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x10) {
+				obj = PyLong_FromLong(dirent->time);
+				PyDict_SetItemString(py_dirent, "time", obj);
+				Py_DECREF(obj);
+			}
+			if (dirent_fields & 0x20) {
+				obj = PyString_FromString(dirent->last_author);
+				PyDict_SetItemString(py_dirent, "last_author", obj);
+				Py_DECREF(obj);
+			}
 			PyDict_SetItemString(py_dirents, key, py_dirent);
+			Py_DECREF(py_dirent);
 			idx = apr_hash_next(idx);
 		}
 	}
@@ -1657,6 +1674,7 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 			return NULL;
 		}
 		PyDict_SetItemString(ret, key, pyval);
+		Py_DECREF(pyval);
 	}
 
 	apr_pool_destroy(temp_pool);
@@ -1739,6 +1757,7 @@ static PyObject *mergeinfo_to_dict(svn_mergeinfo_t mergeinfo, apr_pool_t *temp_p
 		if (pyval == NULL)
 			return NULL;
 		PyDict_SetItemString(ret, key, pyval);
+		Py_DECREF(pyval);
 	}
 
 	return ret;
@@ -1792,6 +1811,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 				return NULL;
 			}
 			PyDict_SetItemString(ret, key, pyval);
+			Py_DECREF(pyval);
 		}
 	}
 
@@ -2526,6 +2546,7 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 
 	if (cert_info == NULL) {
 		py_cert = Py_None;
+		Py_INCREF(py_cert);
 	} else {
 		py_cert = Py_BuildValue("(sssss)", cert_info->hostname, cert_info->fingerprint, 
 						  cert_info->valid_from, cert_info->valid_until, 
