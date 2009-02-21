@@ -311,7 +311,7 @@ if __name__ == "__main__":
           version=subvertpy_version_string,
           url='http://samba.org/~jelmer/subvertpy',
           download_url="http://samba.org/~jelmer/subvertpy/subvertpy-%s.tar.gz" % subvertpy_version_string,
-          license='GPLv2 or later',
+          license='LGPLv2.1 or later',
           author='Jelmer Vernooij',
           author_email='jelmer@samba.org',
           long_description="""

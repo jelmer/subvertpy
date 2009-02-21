@@ -4,6 +4,8 @@
 
    * Add subvertpy.wc.cleanup()
 
+  Relicensed to LGPLv2.1 or later.
+
 0.6.4	2009-02-17
 
  BUG FIXES
