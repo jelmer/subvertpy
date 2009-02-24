@@ -28,6 +28,7 @@ import shutil
 import sys
 import tempfile
 from unittest import TestCase
+import urllib
 
 from subvertpy import delta, ra, repos, delta, client, properties
 from subvertpy.ra import Auth, RemoteAccess
@@ -187,7 +188,7 @@ class SubversionTestCase(TestCaseInTempDir):
                 open(revprop_hook, 'w').write("#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
-        return "file://" + abspath
+        return "file://" + urllib.pathname2url(abspath)
 
 
     def make_checkout(self, repos_url, relpath):
