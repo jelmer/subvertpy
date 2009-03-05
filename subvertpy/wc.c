@@ -20,6 +20,7 @@
 #include <apr_general.h>
 #include <svn_wc.h>
 #include <svn_path.h>
+#include <svn_props.h>
 #include <structmember.h>
 #include <stdbool.h>
 

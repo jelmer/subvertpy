@@ -26,6 +26,7 @@
 #include <svn_config.h>
 #include <svn_version.h>
 #include <svn_path.h>
+#include <svn_props.h>
 
 #include "util.h"
 
