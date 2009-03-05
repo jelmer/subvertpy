@@ -559,8 +559,10 @@ static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnu
 	Py_DECREF(py_rev_props);
 	CB_CHECK_PYRETVAL(ret);
 
-	*delta_baton = (void *)ret;
-	*delta_handler = py_txdelta_window_handler;
+	if (delta_baton != NULL && delta_handler != NULL) {
+		*delta_baton = (void *)ret;
+		*delta_handler = py_txdelta_window_handler;
+	}
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -1925,7 +1927,8 @@ static PyGetSetDef ra_getsetters[] = {
 };
 
 static PyMethodDef ra_methods[] = {
-	{ "get_file_revs", ra_get_file_revs, METH_VARARGS, NULL },
+	{ "get_file_revs", ra_get_file_revs, METH_VARARGS, 
+		"S.get_file_revs(path, start_rev, end_revs, handler)" },
 	{ "get_locations", ra_get_locations, METH_VARARGS, NULL },
 	{ "get_locks", ra_get_locks, METH_VARARGS, NULL },
 	{ "lock", ra_lock, METH_VARARGS, NULL },
