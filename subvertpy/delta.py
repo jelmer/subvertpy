@@ -34,6 +34,14 @@ TXDELTA_TARGET = 1
 TXDELTA_NEW = 2
 TXDELTA_INVALID = 3
 
+def apply_txdelta_window(sbuf, window):
+    (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
+    sview = sbuf[sview_offset:sview_offset+sview_len]
+    tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
+    assert len(tview) == tview_len
+    return tview
+
+
 def apply_txdelta_handler(sbuf, target_stream):
     """Return a function that can be called repeatedly with txdelta windows.
 
@@ -43,11 +51,7 @@ def apply_txdelta_handler(sbuf, target_stream):
     def apply_window(window):
         if window is None:
             return # Last call
-        (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
-        sview = sbuf[sview_offset:sview_offset+sview_len]
-        tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
-        assert len(tview) == tview_len
-        target_stream.write(tview)
+        target_stream.write(apply_txdelta_window(sbuf, window))
     return apply_window
 
 
