@@ -1,16 +1,16 @@
 # Copyright (C) 2005-2006 Jelmer Vernooij <jelmer@samba.org>
 
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 2.1 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 
-# You should have received a copy of the GNU General Public License
+# You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Subversion delta operations."""
@@ -34,6 +34,14 @@ TXDELTA_TARGET = 1
 TXDELTA_NEW = 2
 TXDELTA_INVALID = 3
 
+def apply_txdelta_window(sbuf, window):
+    (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
+    sview = sbuf[sview_offset:sview_offset+sview_len]
+    tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
+    assert len(tview) == tview_len
+    return tview
+
+
 def apply_txdelta_handler(sbuf, target_stream):
     """Return a function that can be called repeatedly with txdelta windows.
 
@@ -43,11 +51,7 @@ def apply_txdelta_handler(sbuf, target_stream):
     def apply_window(window):
         if window is None:
             return # Last call
-        (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
-        sview = sbuf[sview_offset:sview_offset+sview_len]
-        tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
-        assert len(tview) == tview_len
-        target_stream.write(tview)
+        target_stream.write(apply_txdelta_window(sbuf, window))
     return apply_window
 
 

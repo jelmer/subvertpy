@@ -2,16 +2,16 @@
  * -*- coding: utf-8 -*-
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
@@ -559,8 +559,10 @@ static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnu
 	Py_DECREF(py_rev_props);
 	CB_CHECK_PYRETVAL(ret);
 
-	*delta_baton = (void *)ret;
-	*delta_handler = py_txdelta_window_handler;
+	if (delta_baton != NULL && delta_handler != NULL) {
+		*delta_baton = (void *)ret;
+		*delta_handler = py_txdelta_window_handler;
+	}
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -1925,7 +1927,8 @@ static PyGetSetDef ra_getsetters[] = {
 };
 
 static PyMethodDef ra_methods[] = {
-	{ "get_file_revs", ra_get_file_revs, METH_VARARGS, NULL },
+	{ "get_file_revs", ra_get_file_revs, METH_VARARGS, 
+		"S.get_file_revs(path, start_rev, end_revs, handler)" },
 	{ "get_locations", ra_get_locations, METH_VARARGS, NULL },
 	{ "get_locks", ra_get_locks, METH_VARARGS, NULL },
 	{ "lock", ra_lock, METH_VARARGS, NULL },

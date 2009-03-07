@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Setup file for subvertpy
-# Copyright (C) 2005-2008 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2005-2009 Jelmer Vernooij <jelmer@samba.org>
 
 from distutils.core import setup
 from distutils.extension import Extension
@@ -22,9 +22,6 @@ import re
 # * Set SVN_DEV to point at this directory.
 # * Install the APR BDB and INTL packages - see README.txt from the devkit
 # * Set SVN_BDB and SVN_LIBINTL to point at these dirs.
-#
-#  To install into a particular bzr location, use:
-#  % python setup.py install --install-lib=c:\root\of\bazaar
 
 class CommandException(Exception):
     """Encapsulate exit status of apr-config execution"""
@@ -300,7 +297,7 @@ def subvertpy_modules(basemodule):
         ]
 
 
-subvertpy_version = (0, 6, 4)
+subvertpy_version = (0, 6, 5)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
@@ -311,7 +308,7 @@ if __name__ == "__main__":
           version=subvertpy_version_string,
           url='http://samba.org/~jelmer/subvertpy',
           download_url="http://samba.org/~jelmer/subvertpy/subvertpy-%s.tar.gz" % subvertpy_version_string,
-          license='GPLv2 or later',
+          license='LGPLv2.1 or later',
           author='Jelmer Vernooij',
           author_email='jelmer@samba.org',
           long_description="""

@@ -3,16 +3,16 @@
  * -*- coding: utf-8 -*-
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
@@ -20,6 +20,7 @@
 #include <apr_general.h>
 #include <svn_wc.h>
 #include <svn_path.h>
+#include <svn_props.h>
 #include <structmember.h>
 #include <stdbool.h>
 
@@ -977,9 +978,33 @@ static PyObject *check_wc(PyObject *self, PyObject *args)
 	return PyLong_FromLong(wc_format);
 }
 
+static PyObject *cleanup_wc(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	PyObject *cancel_func = Py_None;
+	char *path;
+	char *diff3_cmd = NULL;
+	char *kwnames[] = { "path", "diff3_cmd", "cancel_func", NULL };
+	apr_pool_t *temp_pool;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zO", kwnames, 
+									 &path, &diff3_cmd, &cancel_func)) 
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, 
+				svn_wc_cleanup2(path, diff3_cmd, py_cancel_func, cancel_func,
+								temp_pool));
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef wc_methods[] = {
 	{ "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> bool\n"
 		"Check whether path contains a Subversion working copy" },
+	{ "cleanup", (PyCFunction)cleanup_wc, METH_VARARGS|METH_KEYWORDS, "cleanup(path, diff3_cmd=None, cancel_func=None)\n" },
 	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS, 
 		"ensure_adm(path, uuid, url, repos=None, rev=None)" },
 	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS, 

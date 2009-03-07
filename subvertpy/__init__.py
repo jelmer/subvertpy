@@ -1,23 +1,23 @@
 # Copyright (C) 2006-2008 Jelmer Vernooij <jelmer@samba.org>
 
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 2.1 of the License, or
 # (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 
-# You should have received a copy of the GNU General Public License
+# You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 6, 4)
+__version__ = (0, 6, 5)
 
 NODE_DIR = 2
 NODE_FILE = 1
@@ -62,6 +62,7 @@ ERR_WC_NOT_LOCKED = 155005
 ERR_RA_DAV_NOT_VCC = 20014
 ERR_REPOS_HOOK_FAILURE = 165001
 ERR_XML_MALFORMED = 130003
+ERR_FS_PATH_SYNTAX = 160005
 
 
 class SubversionException(Exception):
