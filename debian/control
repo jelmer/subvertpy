@@ -2,7 +2,7 @@ Source: subvertpy
 Section: python
 Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@debian.org>
-Homepage: http://launchpad.net/subvertpy
+Homepage: http://samba.org/~jelmer/subvertpy
 Build-Depends: python-central (>= 0.5), cdbs (>= 0.4.43), python, debhelper (>= 5.0.37.2), libsvn-dev, python-all-dev
 Standards-Version: 3.8.0
 XS-Python-Version: >= 2.4
