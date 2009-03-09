@@ -742,8 +742,8 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     }
 
 	if ((PyObject *)auth == Py_None) {
-		auth_baton = NULL;
 		ret->auth = NULL;
+		svn_auth_open(&auth_baton, apr_array_make(ret->pool, 0, sizeof(svn_auth_provider_object_t *)), ret->pool);
 	} else {
 		/* FIXME: check auth is an instance of Auth_Type */
 		Py_INCREF(auth);

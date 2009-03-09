@@ -1,5 +1,9 @@
 0.6.6	UNRELEASED
 
+ BUG FIXES
+
+  * Fix RemoteAccess against http:// without an auth baton.
+
 0.6.5	2009-03-07
 
   FEATURES
