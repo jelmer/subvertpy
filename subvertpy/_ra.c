@@ -1955,8 +1955,16 @@ static PyMethodDef ra_methods[] = {
 	{ "rev_proplist", ra_rev_proplist, METH_VARARGS, 
 		"S.rev_proplist(revnum) -> properties\n"
 		"Return a dictionary with the properties set on the specified revision" },
-	{ "replay", ra_replay, METH_VARARGS, NULL },
-	{ "replay_range", ra_replay_range, METH_VARARGS, NULL },
+	{ "replay", ra_replay, METH_VARARGS, 
+		"S.replay(revision, low_water_mark, update_editor, send_deltas=True)\n" 
+		"Replay a revision, reporting changes to update_editor." },
+	{ "replay_range", ra_replay_range, METH_VARARGS, 
+		"S.replay_range(start_rev, end_rev, low_water_mark, cbs, send_deltas=True)\n"
+		"Replay a range of revisions, reporting them to an update editor.\n"
+		"cbs is a two-tuple with two callbacks:\n"
+		"  start_rev_cb(revision, revprops) -> editor\n"
+		"  finish_rev_cb(revision, revprops, editor)\n"
+	},
 	{ "do_switch", ra_do_switch, METH_VARARGS, NULL },
 	{ "do_update", ra_do_update, METH_VARARGS, NULL },
 	{ "do_diff", ra_do_diff, METH_VARARGS, NULL },
