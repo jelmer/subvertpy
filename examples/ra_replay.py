@@ -24,16 +24,16 @@ class MyDirEditor:
         print "Open dir: %s (base revnum: %r)" % args
         return MyDirEditor()
 
-    def add_directory(self, *args):
-        print "Add dir: %s (from %r:%r)" % args
+    def add_directory(self, path, copyfrom_path=None, copyfrom_rev=-1):
+        print "Add dir: %s (from %r:%r)" % (path, copyfrom_path, copyfrom_rev)
         return MyDirEditor()
 
     def open_file(self, *args):
         print "Open file: %s (base revnum: %r)" % args
         return MyFileEditor()
 
-    def add_file(self, *args):
-        print "Add file: %s (from %r:%r)" % args
+    def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
+        print "Add file: %s (from %r:%r)" % (path, copyfrom_path, copyfrom_rev)
         return MyFileEditor()
 
     def change_prop(self, key, value):
