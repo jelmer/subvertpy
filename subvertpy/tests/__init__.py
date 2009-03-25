@@ -188,7 +188,10 @@ class SubversionTestCase(TestCaseInTempDir):
                 open(revprop_hook, 'w').write("#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
-        return "file://" + urllib.pathname2url(abspath)
+        if sys.platform == 'win32':
+            return "file://%s" % abspath.replace("\\", "/")
+        else:
+            return "file://%s" % abspath
 
 
     def make_checkout(self, repos_url, relpath):
