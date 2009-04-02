@@ -598,6 +598,7 @@ static PyObject *config_get_dict(PyObject *self, void *closure)
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
 		data = PyObject_New(ConfigItemObject, &ConfigItem_Type);
 		data->item = val;
+		data->parent = NULL;
 		PyDict_SetItemString(ret, key, (PyObject *)data);
 		Py_DECREF(data);
 	}
