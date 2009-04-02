@@ -91,6 +91,7 @@ class TestFileEditor(object):
 
 
 class TestDirEditor(object):
+
     def __init__(self, dir, baseurl, revnum):
         self.dir = dir
         self.baseurl = baseurl
@@ -151,6 +152,7 @@ class TestDirEditor(object):
 
 
 class TestCommitEditor(TestDirEditor):
+
     def __init__(self, editor, baseurl, revnum):
         self.editor = editor
         TestDirEditor.__init__(self, self.editor.open_root(), baseurl, revnum)
