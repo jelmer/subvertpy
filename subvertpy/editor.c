@@ -20,6 +20,7 @@
 #include <apr_general.h>
 #include <svn_types.h>
 #include <svn_delta.h>
+#include <svn_path.h>
 
 #include "editor.h"
 #include "util.h"
@@ -301,8 +302,8 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|l", &path, &revision))
 		return NULL;
 
-	RUN_SVN(editor->editor->delete_entry(path, revision, editor->baton,
-											 editor->pool));
+	RUN_SVN(editor->editor->delete_entry(svn_path_canonicalize(path, editor->pool),
+										 revision, editor->baton, editor->pool));
 
 	Py_RETURN_NONE;
 }
@@ -323,8 +324,10 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copyfrom_path, &copyfrom_rev))
 		return NULL;
 
-	RUN_SVN(editor->editor->add_directory(path, editor->baton,
-					copyfrom_path, copyfrom_rev, editor->pool, &child_baton));
+	RUN_SVN(editor->editor->add_directory(
+		svn_path_canonicalize(path, editor->pool), editor->baton,
+		copyfrom_path == NULL?NULL:svn_path_canonicalize(copyfrom_path, editor->pool), 
+		copyfrom_rev, editor->pool, &child_baton));
 
 	return new_editor_object(editor->editor, child_baton, editor->pool, 
 							 &DirectoryEditor_Type, NULL, NULL);
@@ -345,7 +348,8 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
 
-	RUN_SVN(editor->editor->open_directory(path, editor->baton,
+	RUN_SVN(editor->editor->open_directory(
+		svn_path_canonicalize(path, editor->pool), editor->baton,
 					base_revision, editor->pool, &child_baton));
 
 	return new_editor_object(editor->editor, child_baton, editor->pool, 
@@ -403,7 +407,8 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 	
-	RUN_SVN(editor->editor->absent_directory(path, editor->baton, editor->pool));
+	RUN_SVN(editor->editor->absent_directory(
+		svn_path_canonicalize(path, editor->pool), editor->baton, editor->pool));
 
 	Py_RETURN_NONE;
 }
@@ -423,8 +428,10 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copy_path, &copy_rev))
 		return NULL;
 
-	RUN_SVN(editor->editor->add_file(path, editor->baton, copy_path,
-					copy_rev, editor->pool, &file_baton));
+	RUN_SVN(editor->editor->add_file(svn_path_canonicalize(path, editor->pool),
+		editor->baton, 
+		copy_path == NULL?NULL:svn_path_canonicalize(copy_path, editor->pool),
+		copy_rev, editor->pool, &file_baton));
 
 	return new_editor_object(editor->editor, file_baton, editor->pool,
 							 &FileEditor_Type, NULL, NULL);
@@ -445,8 +452,9 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
 
-	RUN_SVN(editor->editor->open_file(path, editor->baton, 
-					base_revision, editor->pool, &file_baton));
+	RUN_SVN(editor->editor->open_file(svn_path_canonicalize(path, editor->pool),
+									  editor->baton, base_revision, 
+									  editor->pool, &file_baton));
 
 	return new_editor_object(editor->editor, file_baton, editor->pool,
 							 &FileEditor_Type, NULL, NULL);
@@ -465,7 +473,8 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
-	RUN_SVN(editor->editor->absent_file(path, editor->baton, editor->pool));
+	RUN_SVN(editor->editor->absent_file(
+		svn_path_canonicalize(path, editor->pool), editor->baton, editor->pool));
 
 	Py_RETURN_NONE;
 }

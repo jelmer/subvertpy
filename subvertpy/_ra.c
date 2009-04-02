@@ -327,8 +327,6 @@ static svn_error_t *py_cb_editor_add_directory(const char *path, void *parent_ba
 	PyGILState_STATE state = PyGILState_Ensure();
 	*child_baton = NULL;
 
-	path = svn_path_canonicalize(path, pool);
-
 	if (copyfrom_path == NULL) {
 		ret = PyObject_CallMethod(self, "add_directory", "s", path);
 	} else {
