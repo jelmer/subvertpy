@@ -20,18 +20,26 @@ __author__ = 'Jelmer Vernooij <jelmer@samba.org>'
 __docformat__ = 'restructuredText'
 
 from cStringIO import StringIO
-
-import urllib, urllib2, urlparse
-
 import os
 import shutil
 import sys
 import tempfile
 from unittest import TestCase
 import urllib
+import urllib2
+import urlparse
 
-from subvertpy import delta, ra, repos, delta, client, properties
-from subvertpy.ra import Auth, RemoteAccess
+from subvertpy import (
+    client,
+    delta,
+    properties,
+    ra,
+    repos,
+    )
+from subvertpy.ra import (
+    Auth,
+    RemoteAccess,
+    )
 
 
 class TestCaseInTempDir(TestCase):

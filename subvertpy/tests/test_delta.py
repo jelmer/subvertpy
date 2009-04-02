@@ -13,11 +13,16 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from cStringIO import StringIO
 from unittest import TestCase
 
-from subvertpy.delta import send_stream, encode_length, decode_length, pack_svndiff0, unpack_svndiff0
-
-from cStringIO import StringIO
+from subvertpy.delta import (
+    decode_length,
+    encode_length,
+    pack_svndiff0,
+    send_stream,
+    unpack_svndiff0,
+    )
 
 class DeltaTests(TestCase):
 

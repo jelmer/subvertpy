@@ -16,10 +16,12 @@
 """Subversion rpeository library tests."""
 
 import os
+
 from subvertpy import repos
 from subvertpy.tests import TestCaseInTempDir
 
 class TestClient(TestCaseInTempDir):
+
     def setUp(self):
         super(TestClient, self).setUp()
 

@@ -16,13 +16,18 @@
 """Subversion ra library tests."""
 
 from unittest import TestCase
-from subvertpy import wc
+
+from subvertpy import (
+    wc,
+    )
 
 class VersionTest(TestCase):
+
     def test_version_length(self):
         self.assertEquals(4, len(wc.version()))
 
 class WorkingCopyTests(TestCase):
+
     def test_get_adm_dir(self):
         self.assertEquals(".svn", wc.get_adm_dir())
 

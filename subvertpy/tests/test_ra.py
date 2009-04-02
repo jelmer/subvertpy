@@ -17,7 +17,12 @@
 
 from cStringIO import StringIO
 from unittest import TestCase
-from subvertpy import ra, SubversionException, NODE_DIR, NODE_NONE
+
+from subvertpy import (
+    NODE_DIR, NODE_NONE,
+    SubversionException,
+    ra,
+    )
 from subvertpy.tests import SubversionTestCase
 
 class VersionTest(TestCase):

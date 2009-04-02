@@ -15,9 +15,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from unittest import TestCase
-from subvertpy.marshall import literal, MarshallError, marshall, unmarshall
+
+from subvertpy.marshall import (
+    MarshallError,
+    literal,
+    marshall,
+    unmarshall,
+    )
 
 class TestMarshalling(TestCase):
+
     def test_literal_txt(self):
         l = literal("foo")
         self.assertEqual("foo", l.txt)
