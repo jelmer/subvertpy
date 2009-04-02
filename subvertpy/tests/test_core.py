@@ -15,10 +15,13 @@
 
 """Subversion core library tests."""
 
-from unittest import TestCase
+from unittest import (
+    TestCase,
+    )
 import subvertpy
 
 class TestCore(TestCase):
+
     def setUp(self):
         super(TestCore, self).setUp()
 

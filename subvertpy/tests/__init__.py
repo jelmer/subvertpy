@@ -20,18 +20,26 @@ __author__ = 'Jelmer Vernooij <jelmer@samba.org>'
 __docformat__ = 'restructuredText'
 
 from cStringIO import StringIO
-
-import urllib, urllib2, urlparse
-
 import os
 import shutil
 import sys
 import tempfile
 from unittest import TestCase
 import urllib
+import urllib2
+import urlparse
 
-from subvertpy import delta, ra, repos, delta, client, properties
-from subvertpy.ra import Auth, RemoteAccess
+from subvertpy import (
+    client,
+    delta,
+    properties,
+    ra,
+    repos,
+    )
+from subvertpy.ra import (
+    Auth,
+    RemoteAccess,
+    )
 
 
 class TestCaseInTempDir(TestCase):
@@ -83,6 +91,7 @@ class TestFileEditor(object):
 
 
 class TestDirEditor(object):
+
     def __init__(self, dir, baseurl, revnum):
         self.dir = dir
         self.baseurl = baseurl
@@ -143,6 +152,7 @@ class TestDirEditor(object):
 
 
 class TestCommitEditor(TestDirEditor):
+
     def __init__(self, editor, baseurl, revnum):
         self.editor = editor
         TestDirEditor.__init__(self, self.editor.open_root(), baseurl, revnum)
@@ -337,6 +347,8 @@ class SubversionTestCase(TestCaseInTempDir):
         :param message: Commit message
         :return: Commit editor object
         """
-        ra = RemoteAccess(url.encode("utf-8"))
-        revnum = ra.get_latest_revnum()
-        return TestCommitEditor(ra.get_commit_editor({"svn:log": message}), ra.url, revnum)
+        ra_ctx = RemoteAccess(url.encode("utf-8"), 
+            auth=Auth([ra.get_username_provider()]))
+        revnum = ra_ctx.get_latest_revnum()
+        return TestCommitEditor(ra_ctx.get_commit_editor({"svn:log": message}),
+            ra_ctx.url, revnum)

@@ -19,6 +19,7 @@ from unittest import TestCase
 from subvertpy import properties
 
 class TestProperties(TestCase):
+
     def setUp(self):
         super(TestProperties, self).setUp()
 
