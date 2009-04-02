@@ -29,7 +29,8 @@ class TestRemoteAccess(SubversionTestCase):
     def setUp(self):
         super(TestRemoteAccess, self).setUp()
         self.repos_url = self.make_repository("d")
-        self.ra = ra.RemoteAccess(self.repos_url)
+        self.ra = ra.RemoteAccess(self.repos_url,
+                auth=ra.Auth([ra.get_username_provider()]))
 
     def commit_editor(self):
         return self.get_commit_editor(self.repos_url)

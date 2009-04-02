@@ -337,6 +337,8 @@ class SubversionTestCase(TestCaseInTempDir):
         :param message: Commit message
         :return: Commit editor object
         """
-        ra = RemoteAccess(url.encode("utf-8"))
-        revnum = ra.get_latest_revnum()
-        return TestCommitEditor(ra.get_commit_editor({"svn:log": message}), ra.url, revnum)
+        ra_ctx = RemoteAccess(url.encode("utf-8"), 
+            auth=Auth([ra.get_username_provider()]))
+        revnum = ra_ctx.get_latest_revnum()
+        return TestCommitEditor(ra_ctx.get_commit_editor({"svn:log": message}),
+            ra_ctx.url, revnum)
