@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# Demonstrates how to use the replay function to fetch the 
+# changes made in a revision.
 
 from subvertpy.ra import RemoteAccess
 
