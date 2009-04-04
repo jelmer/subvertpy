@@ -1918,7 +1918,7 @@ static void ra_dealloc(PyObject *self)
 static PyObject *ra_repr(PyObject *self)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	return PyString_FromFormat("RemoteAccess(%s)", ra->url);
+	return PyString_FromFormat("RemoteAccess(\"%s\")", ra->url);
 }
 
 static int ra_set_progress_func(PyObject *self, PyObject *value, void *closure)
