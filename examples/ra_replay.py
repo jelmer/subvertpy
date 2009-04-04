@@ -2,9 +2,10 @@
 # Demonstrates how to use the replay function to fetch the 
 # changes made in a revision.
 
-from subvertpy.ra import RemoteAccess
+from subvertpy.ra import RemoteAccess, Auth, get_username_provider
 
-conn = RemoteAccess("svn://svn.gnome.org/svn/gnome-specimen/trunk")
+conn = RemoteAccess("svn://svn.gnome.org/svn/gnome-specimen/trunk",
+        auth=Auth([get_username_provider()]))
 
 class MyFileEditor:
     
