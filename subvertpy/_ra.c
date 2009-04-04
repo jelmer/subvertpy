@@ -1226,7 +1226,8 @@ static PyObject *ra_replay_range(PyObject *self, PyObject *args)
 
 	Py_RETURN_NONE;
 #else
-	PyErr_SetString(PyExc_NotImplementedError, "svn_ra_replay not available with Subversion 1.4");
+	PyErr_SetString(PyExc_NotImplementedError, 
+		"svn_ra_replay not available with Subversion 1.4");
 	return NULL;
 #endif
 }

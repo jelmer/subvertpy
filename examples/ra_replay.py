@@ -42,7 +42,7 @@ class MyDirEditor:
     def change_prop(self, key, value):
         print "Change prop %s -> %r" % (key, value)
 
-    def delete_entry(self, path):
+    def delete_entry(self, path, revision):
         print "Delete: %s" % path
 
     def close(self):
