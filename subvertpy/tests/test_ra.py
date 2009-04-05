@@ -46,7 +46,7 @@ class TestRemoteAccess(SubversionTestCase):
         dc.close()
 
     def test_repr(self):
-        self.assertEquals("RemoteAccess(%s)" % self.repos_url,
+        self.assertEquals("RemoteAccess(\"%s\")" % self.repos_url,
                           repr(self.ra))
 
     def test_latest_revnum(self):
