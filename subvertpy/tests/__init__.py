@@ -237,6 +237,9 @@ class SubversionTestCase(TestCaseInTempDir):
     def client_set_revprop(self, url, revnum, name, value):
         r = ra.RemoteAccess(url)
         r.change_rev_prop(revnum, name, value)
+
+    def client_resolve(self, path, choice, depth=0):
+        self.client_ctx.resolve(path, depth, choice)
         
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.
