@@ -648,7 +648,7 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 		const char *path;
 
 		SVN_ERR (svn_io_temp_dir (&path, pool));
-		path = svn_path_join (path, "tempfile", pool);
+		path = svn_path_join (path, "subvertpy", pool);
 		SVN_ERR (svn_io_open_unique_file (fp, NULL, path, ".tmp", TRUE, pool));
 
 		return NULL;
@@ -752,11 +752,14 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if ((PyObject *)auth == Py_None) {
 		ret->auth = NULL;
 		svn_auth_open(&auth_baton, apr_array_make(ret->pool, 0, sizeof(svn_auth_provider_object_t *)), ret->pool);
-	} else {
-		/* FIXME: check auth is an instance of Auth_Type */
+	} else if (PyObject_TypeCheck(auth, &Auth_Type)) {
 		Py_INCREF(auth);
 		ret->auth = auth;
 		auth_baton = ret->auth->auth_baton;
+	} else {
+		PyErr_SetString(PyExc_TypeError, "auth argument is not an Auth object");
+		Py_DECREF(ret);
+		return NULL;
 	}
 
 	if (!check_error(svn_ra_create_callbacks(&callbacks2, ret->pool))) {
@@ -2134,13 +2137,15 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 	if (!PyList_Check(providers)) {
 		PyErr_SetString(PyExc_TypeError, "Auth providers should be list");
-		Py_DECREF(ret);
+		PyObject_Del(ret);
 		return NULL;
 	}
 
 	ret->pool = Pool(NULL);
 	if (ret->pool == NULL) {
-		Py_DECREF(ret);
+		PyErr_NoMemory();
+		apr_pool_destroy(ret->pool);
+		PyObject_Del(ret);
 		return NULL;
 	}
 
@@ -2150,7 +2155,8 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	c_providers = apr_array_make(ret->pool, PyList_Size(providers), sizeof(svn_auth_provider_object_t *));
 	if (c_providers == NULL) {
 		PyErr_NoMemory();
-		Py_DECREF(ret);
+		apr_pool_destroy(ret->pool);
+		PyObject_Del(ret);
 		return NULL;
 	}
 	for (i = 0; i < PyList_Size(providers); i++) {
@@ -2158,6 +2164,12 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		el = (svn_auth_provider_object_t **)apr_array_push(c_providers);
 		/* FIXME: Check that provider is indeed a AuthProviderObject object */
 		provider = (AuthProviderObject *)PyList_GetItem(providers, i);
+		if (!PyObject_TypeCheck(provider, &AuthProvider_Type)) {
+			PyErr_SetString(PyExc_TypeError, "Invalid auth provider");
+			apr_pool_destroy(ret->pool);
+			PyObject_Del(ret);
+			return NULL;
+		}
 		*el = provider->provider;
 	}
 	svn_auth_open(&ret->auth_baton, c_providers, ret->pool);

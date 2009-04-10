@@ -259,6 +259,9 @@ class TestRemoteAccess(SubversionTestCase):
 
 class AuthTests(TestCase):
 
+    def test_not_list(self):
+        self.assertRaises(TypeError, ra.Auth, ra.get_simple_provider())
+
     def test_not_registered(self):
         auth = ra.Auth([])
         self.assertRaises(SubversionException, auth.credentials, "svn.simple", "MyRealm")
