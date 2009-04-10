@@ -1059,6 +1059,23 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "SCHEDULE_DELETE", 2);
 	PyModule_AddIntConstant(mod, "SCHEDULE_REPLACE", 3);
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_POSTPONE",
+							svn_wc_conflict_choose_postpone);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_BASE",
+							svn_wc_conflict_choose_base);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_FULL",
+							svn_wc_conflict_choose_theirs_full);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_FULL",
+							svn_wc_conflict_choose_mine_full);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_CONFLICT",
+							svn_wc_conflict_choose_theirs_conflict);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_CONFLICT",
+							svn_wc_conflict_choose_mine_conflict);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED",
+							svn_wc_conflict_choose_merged);
+#endif
+
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
 }

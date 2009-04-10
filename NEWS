@@ -6,6 +6,8 @@
 
   * Cope with invalid arguments to Auth(). (#347155)
 
+  * Support svn.client.resolve.
+
 0.6.5	2009-03-07
 
   FEATURES
