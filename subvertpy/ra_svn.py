@@ -985,7 +985,14 @@ class SVNServer(SVNConnection):
 
     def serve(self):
         self.send_greeting()
-        (version, capabilities, url) = self.recv_msg()
+        msg = self.recv_msg()
+        version = msg[0]
+        capabilities = msg[1]
+        url = msg[2]
+        if len(msg) > 3:
+            self.client_user_agent = msg[3]
+        else:
+            self.client_user_agent = None
         self.capabilities = capabilities
         self.version = version
         self.url = url
