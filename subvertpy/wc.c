@@ -496,7 +496,8 @@ static PyObject *adm_add(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|zlOO", &path, &copyfrom_url, &copyfrom_rev, &cancel_func, &notify_func))
 		return NULL;
 
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add2(path, admobj->adm, copyfrom_url, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add2(
+						   svn_path_canonicalize(path, temp_pool), admobj->adm, copyfrom_url, 
 							copyfrom_rev, py_cancel_func, 
 							(void *)cancel_func,
 							py_wc_notify_func, 
