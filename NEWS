@@ -1,5 +1,9 @@
 0.6.6	UNRELEASED
 
+ FEATURES
+
+  * wc.Entry.uuid is now provided
+
  BUG FIXES
 
   * Fix RemoteAccess against http:// without an auth baton.
@@ -7,6 +11,8 @@
   * Cope with invalid arguments to Auth(). (#347155)
 
   * Support svn.client.resolve.
+
+  * Allow non-canonical paths to some working copy methods
 
 0.6.5	2009-03-07
 

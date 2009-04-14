@@ -162,6 +162,8 @@ static PyMemberDef entry_members[] = {
 		"Copyfrom location" },
 	{ "copyfrom_rev", T_LONG, offsetof(EntryObject, entry.copyfrom_rev), READONLY, 
 		"Copyfrom revision" },
+	{ "uuid", T_STRING, offsetof(EntryObject, entry.uuid), READONLY,
+		"UUID of repository" },
 	{ "url", T_STRING, offsetof(EntryObject, entry.url), READONLY, 
 		"URL in repository" },
 	{ "repos", T_STRING, offsetof(EntryObject, entry.repos), READONLY, 
@@ -247,7 +249,12 @@ PyTypeObject Entry_Type = {
 
 static PyObject *py_entry(const svn_wc_entry_t *entry)
 {
-	EntryObject *ret = PyObject_New(EntryObject, &Entry_Type);
+	EntryObject *ret;
+
+	if (entry == NULL)
+		Py_RETURN_NONE;
+	
+	ret = PyObject_New(EntryObject, &Entry_Type);
 	if (ret == NULL)
 		return NULL;
 
@@ -436,7 +443,7 @@ static PyObject *adm_entry(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entry(&entry, path, admobj->adm, show_hidden, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entry(&entry, svn_path_canonicalize(path, temp_pool), admobj->adm, show_hidden, temp_pool));
 	apr_pool_destroy(temp_pool);
 
 	return py_entry(entry);
@@ -935,7 +942,7 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(pool, svn_wc_get_pristine_copy_path(path, &pristine_path, pool));
+	RUN_SVN_WITH_POOL(pool, svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool), &pristine_path, pool));
 	ret = PyString_FromString(pristine_path);
 	apr_pool_destroy(pool);
 	return ret;
