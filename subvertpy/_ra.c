@@ -1145,7 +1145,8 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	Py_INCREF(update_editor);
+	/* Only INCREF here, py_editor takes care of the DECREF */
+	Py_INCREF(update_editor); 
 	RUN_RA_WITH_POOL(temp_pool, ra,
 					  svn_ra_replay(ra->ra, revision, low_water_mark,
 									send_deltas, &py_editor, update_editor, 
