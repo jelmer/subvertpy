@@ -2,7 +2,7 @@ PYTHON = python
 PYDOCTOR = pydoctor
 EPYDOC = epydoc
 SETUP = $(PYTHON) setup.py
-TRIAL = trial
+TRIAL = $(shell which trial)
 
 all: build build-inplace
 
@@ -17,7 +17,7 @@ install::
 
 check::
 	$(SETUP) build_ext --inplace
-	PYTHONPATH=. $(TRIAL) subvertpy
+	PYTHONPATH=. $(PYTHON) $(TRIAL) subvertpy
 
 clean::
 	$(SETUP) clean
