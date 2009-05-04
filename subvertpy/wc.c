@@ -162,6 +162,8 @@ static PyMemberDef entry_members[] = {
 		"Copyfrom location" },
 	{ "copyfrom_rev", T_LONG, offsetof(EntryObject, entry.copyfrom_rev), READONLY, 
 		"Copyfrom revision" },
+	{ "uuid", T_STRING, offsetof(EntryObject, entry.uuid), READONLY,
+		"UUID of repository" },
 	{ "url", T_STRING, offsetof(EntryObject, entry.url), READONLY, 
 		"URL in repository" },
 	{ "repos", T_STRING, offsetof(EntryObject, entry.repos), READONLY, 
@@ -247,7 +249,12 @@ PyTypeObject Entry_Type = {
 
 static PyObject *py_entry(const svn_wc_entry_t *entry)
 {
-	EntryObject *ret = PyObject_New(EntryObject, &Entry_Type);
+	EntryObject *ret;
+
+	if (entry == NULL)
+		Py_RETURN_NONE;
+	
+	ret = PyObject_New(EntryObject, &Entry_Type);
 	if (ret == NULL)
 		return NULL;
 
@@ -436,7 +443,7 @@ static PyObject *adm_entry(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entry(&entry, path, admobj->adm, show_hidden, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entry(&entry, svn_path_canonicalize(path, temp_pool), admobj->adm, show_hidden, temp_pool));
 	apr_pool_destroy(temp_pool);
 
 	return py_entry(entry);
@@ -496,7 +503,8 @@ static PyObject *adm_add(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|zlOO", &path, &copyfrom_url, &copyfrom_rev, &cancel_func, &notify_func))
 		return NULL;
 
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add2(path, admobj->adm, copyfrom_url, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add2(
+						   svn_path_canonicalize(path, temp_pool), admobj->adm, copyfrom_url, 
 							copyfrom_rev, py_cancel_func, 
 							(void *)cancel_func,
 							py_wc_notify_func, 
@@ -934,7 +942,7 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(pool, svn_wc_get_pristine_copy_path(path, &pristine_path, pool));
+	RUN_SVN_WITH_POOL(pool, svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool), &pristine_path, pool));
 	ret = PyString_FromString(pristine_path);
 	apr_pool_destroy(pool);
 	return ret;
@@ -1058,6 +1066,23 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "SCHEDULE_ADD", 1);
 	PyModule_AddIntConstant(mod, "SCHEDULE_DELETE", 2);
 	PyModule_AddIntConstant(mod, "SCHEDULE_REPLACE", 3);
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_POSTPONE",
+							svn_wc_conflict_choose_postpone);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_BASE",
+							svn_wc_conflict_choose_base);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_FULL",
+							svn_wc_conflict_choose_theirs_full);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_FULL",
+							svn_wc_conflict_choose_mine_full);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_CONFLICT",
+							svn_wc_conflict_choose_theirs_conflict);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_CONFLICT",
+							svn_wc_conflict_choose_mine_conflict);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED",
+							svn_wc_conflict_choose_merged);
+#endif
 
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);

@@ -1,3 +1,23 @@
+0.6.6	2009-05-04
+
+ FEATURES
+
+  * wc.Entry.uuid is now provided
+
+  * New error code ERR_MALFORMED_FILE.
+
+ BUG FIXES
+
+  * Fix RemoteAccess against http:// without an auth baton.
+
+  * Cope with invalid arguments to Auth(). (#347155)
+
+  * Support svn.client.resolve.
+
+  * Allow non-canonical paths to some working copy methods
+
+  * Fixed uninitialized memory bug when reading configuration.
+
 0.6.5	2009-03-07
 
   FEATURES

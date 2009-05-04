@@ -131,6 +131,16 @@ bool check_error(svn_error_t *error)
 	if (error->apr_err == BZR_SVN_APR_ERROR_OFFSET)
 		return false; /* Just let Python deal with it */
 
+	if (error->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD) {
+		/* svnserve doesn't handle the 'failure' command sent back 
+		 * by the client if one of the editor commands failed.
+		 * Rather than bouncing the error sent by the client 
+		 * (BZR_SVN_APR_ERROR_OFFSET for example), it will send 
+		 * SVN_ERR_RA_SVN_UNKNOWN_CMD. */
+		if (PyErr_Occurred() != NULL)
+			return false;
+	}
+
 	if (error->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED) {
 		PyErr_SetString(PyExc_NotImplementedError, error->message);
 		return false;

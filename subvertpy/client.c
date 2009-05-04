@@ -495,6 +495,34 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
 	return ret;
 }
 
+static PyObject *client_resolve(PyObject *self, PyObject *args)
+{
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	svn_depth_t depth;
+	svn_wc_conflict_choice_t choice;
+	ClientObject *client = (ClientObject *)self;
+	apr_pool_t *temp_pool;
+	char *path;
+	
+	if (!PyArg_ParseTuple(args, "sii", &path, &depth, &choice))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_resolve(path, depth, choice,
+			client->client, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+#else
+	PyErr_SetString(PyExc_NotImplementedError, 
+		"svn_client_resolve not available with Subversion < 1.5");
+	return NULL;
+#endif
+}
+
 static PyObject *client_update(PyObject *self, PyObject *args)
 {
 	bool recurse = true;
@@ -545,6 +573,7 @@ static PyMethodDef client_methods[] = {
 	{ "copy", client_copy, METH_VARARGS, "S.copy(src_path, dest_path, srv_rev=None)" },
 	{ "propset", client_propset, METH_VARARGS, "S.propset(name, value, target, recurse=True, skip_checks=False)" },
 	{ "propget", client_propget, METH_VARARGS, "S.propget(name, target, peg_revision, revision=None, recurse=False) -> value" },
+	{ "resolve", client_resolve, METH_VARARGS, "S.resolve(path, depth, choice)" },
 	{ "update", client_update, METH_VARARGS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
 	{ NULL, }
 };
@@ -598,6 +627,7 @@ static PyObject *config_get_dict(PyObject *self, void *closure)
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
 		data = PyObject_New(ConfigItemObject, &ConfigItem_Type);
 		data->item = val;
+		data->parent = NULL;
 		PyDict_SetItemString(ret, key, (PyObject *)data);
 		Py_DECREF(data);
 	}

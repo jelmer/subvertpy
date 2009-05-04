@@ -190,11 +190,18 @@ static PyObject *reporter_abort(PyObject *self)
 }
 
 static PyMethodDef reporter_methods[] = {
-	{ "abort", (PyCFunction)reporter_abort, METH_NOARGS, NULL },
-	{ "finish", (PyCFunction)reporter_finish, METH_NOARGS, NULL },
-	{ "link_path", (PyCFunction)reporter_link_path, METH_VARARGS, NULL },
-	{ "set_path", (PyCFunction)reporter_set_path, METH_VARARGS, NULL },
-	{ "delete_path", (PyCFunction)reporter_delete_path, METH_VARARGS, NULL },
+	{ "abort", (PyCFunction)reporter_abort, METH_NOARGS, 
+		"S.abort()\n"
+		"Abort this report." },
+	{ "finish", (PyCFunction)reporter_finish, METH_NOARGS, 
+		"S.finish()\n"
+		"Finish this report." },
+	{ "link_path", (PyCFunction)reporter_link_path, METH_VARARGS, 
+		"S.link_path(path, url, revision, start_empty, lock_token=None)\n" },
+	{ "set_path", (PyCFunction)reporter_set_path, METH_VARARGS, 
+		"S.set_path(path, revision, start_empty, lock_token=None)\n" },
+	{ "delete_path", (PyCFunction)reporter_delete_path, METH_VARARGS, 
+		"S.delete_path(path)\n" },
 	{ NULL, }
 };
 
@@ -319,6 +326,7 @@ static svn_error_t *py_cb_editor_add_directory(const char *path, void *parent_ba
 	PyObject *self = (PyObject *)parent_baton, *ret;
 	PyGILState_STATE state = PyGILState_Ensure();
 	*child_baton = NULL;
+
 	if (copyfrom_path == NULL) {
 		ret = PyObject_CallMethod(self, "add_directory", "s", path);
 	} else {
@@ -640,7 +648,7 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 		const char *path;
 
 		SVN_ERR (svn_io_temp_dir (&path, pool));
-		path = svn_path_join (path, "tempfile", pool);
+		path = svn_path_join (path, "subvertpy", pool);
 		SVN_ERR (svn_io_open_unique_file (fp, NULL, path, ".tmp", TRUE, pool));
 
 		return NULL;
@@ -742,13 +750,16 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     }
 
 	if ((PyObject *)auth == Py_None) {
-		auth_baton = NULL;
 		ret->auth = NULL;
-	} else {
-		/* FIXME: check auth is an instance of Auth_Type */
+		svn_auth_open(&auth_baton, apr_array_make(ret->pool, 0, sizeof(svn_auth_provider_object_t *)), ret->pool);
+	} else if (PyObject_TypeCheck(auth, &Auth_Type)) {
 		Py_INCREF(auth);
 		ret->auth = auth;
 		auth_baton = ret->auth->auth_baton;
+	} else {
+		PyErr_SetString(PyExc_TypeError, "auth argument is not an Auth object");
+		Py_DECREF(ret);
+		return NULL;
 	}
 
 	if (!check_error(svn_ra_create_callbacks(&callbacks2, ret->pool))) {
@@ -1134,7 +1145,8 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	Py_INCREF(update_editor);
+	/* Only INCREF here, py_editor takes care of the DECREF */
+	Py_INCREF(update_editor); 
 	RUN_RA_WITH_POOL(temp_pool, ra,
 					  svn_ra_replay(ra->ra, revision, low_water_mark,
 									send_deltas, &py_editor, update_editor, 
@@ -1218,7 +1230,8 @@ static PyObject *ra_replay_range(PyObject *self, PyObject *args)
 
 	Py_RETURN_NONE;
 #else
-	PyErr_SetString(PyExc_NotImplementedError, "svn_ra_replay not available with Subversion 1.4");
+	PyErr_SetString(PyExc_NotImplementedError, 
+		"svn_ra_replay not available with Subversion 1.4");
 	return NULL;
 #endif
 }
@@ -1909,7 +1922,7 @@ static void ra_dealloc(PyObject *self)
 static PyObject *ra_repr(PyObject *self)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	return PyString_FromFormat("RemoteAccess(%s)", ra->url);
+	return PyString_FromFormat("RemoteAccess(\"%s\")", ra->url);
 }
 
 static int ra_set_progress_func(PyObject *self, PyObject *value, void *closure)
@@ -1929,19 +1942,29 @@ static PyGetSetDef ra_getsetters[] = {
 static PyMethodDef ra_methods[] = {
 	{ "get_file_revs", ra_get_file_revs, METH_VARARGS, 
 		"S.get_file_revs(path, start_rev, end_revs, handler)" },
-	{ "get_locations", ra_get_locations, METH_VARARGS, NULL },
-	{ "get_locks", ra_get_locks, METH_VARARGS, NULL },
-	{ "lock", ra_lock, METH_VARARGS, NULL },
-	{ "unlock", ra_unlock, METH_VARARGS, NULL },
-	{ "mergeinfo", ra_mergeinfo, METH_VARARGS, NULL },
-	{ "get_location_segments", ra_get_location_segments, METH_VARARGS, NULL },
+	{ "get_locations", ra_get_locations, METH_VARARGS, 
+		"S.get_locations(path, peg_revision, location_revisions)" },
+	{ "get_locks", ra_get_locks, METH_VARARGS, 
+		"S.get_locks(path)" },
+	{ "lock", ra_lock, METH_VARARGS, 
+		"S.lock(path_revs, comment, steal_lock, lock_func)\n" },
+	{ "unlock", ra_unlock, METH_VARARGS, 
+		"S.unlock(path_tokens, break_lock, lock_func)\n" },
+	{ "mergeinfo", ra_mergeinfo, METH_VARARGS, 
+		"S.mergeinfo(&paths, revision, inherit, include_descendants)\n" },
+	{ "get_location_segments", ra_get_location_segments, METH_VARARGS, 
+		"S.get_location_segments(path, peg_revision, start_revision, "
+			"end_revision, rcvr)" 
+	},
 	{ "has_capability", ra_has_capability, METH_VARARGS, 
 		"S.has_capability(name) -> bool\n"
 		"Check whether the specified capability is supported by the client and server" },
 	{ "check_path", ra_check_path, METH_VARARGS, 
 		"S.check_path(path, revnum) -> node_kind\n"
 		"Check the type of a path (one of NODE_DIR, NODE_FILE, NODE_UNKNOWN)" },
-	{ "get_lock", ra_get_lock, METH_VARARGS, NULL },
+	{ "get_lock", ra_get_lock, METH_VARARGS, 
+		"S.get_lock(path) -> lock\n"
+	},
 	{ "get_dir", ra_get_dir, METH_VARARGS, 
 		"S.get_dir(path, revision, dirent_fields=-1) -> (dirents, fetched_rev, properties)\n"
 		"Get the contents of a directory. "},
@@ -1951,19 +1974,36 @@ static PyMethodDef ra_methods[] = {
 	{ "change_rev_prop", ra_change_rev_prop, METH_VARARGS, 
 		"S.change_rev_prop(revnum, name, value)\n"
 		"Change a revision property" },
-	{ "get_commit_editor", (PyCFunction)get_commit_editor, METH_VARARGS|METH_KEYWORDS, NULL },
+	{ "get_commit_editor", (PyCFunction)get_commit_editor, METH_VARARGS|METH_KEYWORDS, 
+		"S.get_commit_editor(revprops, commit_callback, lock_tokens, keep_locks) -> editor\n"
+	},
 	{ "rev_proplist", ra_rev_proplist, METH_VARARGS, 
 		"S.rev_proplist(revnum) -> properties\n"
 		"Return a dictionary with the properties set on the specified revision" },
-	{ "replay", ra_replay, METH_VARARGS, NULL },
-	{ "replay_range", ra_replay_range, METH_VARARGS, NULL },
-	{ "do_switch", ra_do_switch, METH_VARARGS, NULL },
-	{ "do_update", ra_do_update, METH_VARARGS, NULL },
-	{ "do_diff", ra_do_diff, METH_VARARGS, NULL },
+	{ "replay", ra_replay, METH_VARARGS, 
+		"S.replay(revision, low_water_mark, update_editor, send_deltas=True)\n" 
+		"Replay a revision, reporting changes to update_editor." },
+	{ "replay_range", ra_replay_range, METH_VARARGS, 
+		"S.replay_range(start_rev, end_rev, low_water_mark, cbs, send_deltas=True)\n"
+		"Replay a range of revisions, reporting them to an update editor.\n"
+		"cbs is a two-tuple with two callbacks:\n"
+		"  start_rev_cb(revision, revprops) -> editor\n"
+		"  finish_rev_cb(revision, revprops, editor)\n"
+	},
+	{ "do_switch", ra_do_switch, METH_VARARGS, 
+		"S.do_switch(revision_to_update_to, update_target, recurse, switch_url, update_editor)\n" },
+	{ "do_update", ra_do_update, METH_VARARGS, 
+		"S.do_update(revision_to_update_to, update_target, recurse, update_editor)\n" },
+	{ "do_diff", ra_do_diff, METH_VARARGS, 
+		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse, ignore_ancestry, text_deltas)\n"
+	},
 	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_VARARGS|METH_NOARGS, 
 		"S.get_repos_root() -> url\n"
 		"Return the URL to the root of the repository." },
-	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, NULL },
+	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, 
+		"S.get_log(paths, start, end, limit, discover_changed_paths, "
+		"strict_node_history, include_merged_revisions, revprops)\n"
+	},
 	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, 
 		"S.get_latest_revnum() -> int\n"
 		"Return the last revision committed in the repository." },
@@ -2098,13 +2138,15 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 	if (!PyList_Check(providers)) {
 		PyErr_SetString(PyExc_TypeError, "Auth providers should be list");
-		Py_DECREF(ret);
+		PyObject_Del(ret);
 		return NULL;
 	}
 
 	ret->pool = Pool(NULL);
 	if (ret->pool == NULL) {
-		Py_DECREF(ret);
+		PyErr_NoMemory();
+		apr_pool_destroy(ret->pool);
+		PyObject_Del(ret);
 		return NULL;
 	}
 
@@ -2114,7 +2156,8 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	c_providers = apr_array_make(ret->pool, PyList_Size(providers), sizeof(svn_auth_provider_object_t *));
 	if (c_providers == NULL) {
 		PyErr_NoMemory();
-		Py_DECREF(ret);
+		apr_pool_destroy(ret->pool);
+		PyObject_Del(ret);
 		return NULL;
 	}
 	for (i = 0; i < PyList_Size(providers); i++) {
@@ -2122,6 +2165,12 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		el = (svn_auth_provider_object_t **)apr_array_push(c_providers);
 		/* FIXME: Check that provider is indeed a AuthProviderObject object */
 		provider = (AuthProviderObject *)PyList_GetItem(providers, i);
+		if (!PyObject_TypeCheck(provider, &AuthProvider_Type)) {
+			PyErr_SetString(PyExc_TypeError, "Invalid auth provider");
+			apr_pool_destroy(ret->pool);
+			PyObject_Del(ret);
+			return NULL;
+		}
 		*el = provider->provider;
 	}
 	svn_auth_open(&ret->auth_baton, c_providers, ret->pool);
@@ -2322,7 +2371,8 @@ static PyMethodDef auth_methods[] = {
 	{ "get_parameter", auth_get_parameter, METH_VARARGS, 
 		"S.get_parameter(key) -> value\n"
 		"Get a parameter" },
-	{ "credentials", auth_first_credentials, METH_VARARGS, NULL },
+	{ "credentials", auth_first_credentials, METH_VARARGS, 
+		"Credentials" },
 	{ NULL, }
 };
 

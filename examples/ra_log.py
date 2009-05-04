@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# Demonstrates how to iterate over the log of a Subversion repository.
 
 from subvertpy.ra import RemoteAccess
 

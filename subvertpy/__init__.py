@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 6, 5)
+__version__ = (0, 6, 6)
 
 NODE_DIR = 2
 NODE_FILE = 1
@@ -62,6 +62,7 @@ ERR_WC_NOT_LOCKED = 155005
 ERR_RA_DAV_NOT_VCC = 20014
 ERR_REPOS_HOOK_FAILURE = 165001
 ERR_XML_MALFORMED = 130003
+ERR_MALFORMED_FILE = 200002
 ERR_FS_PATH_SYNTAX = 160005
 
 
@@ -95,6 +96,6 @@ try:
             from warnings import warn
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
-except ImportError:
-    raise ImportError("Unable to load subvertpy extensions - did you build it?")
+except ImportError, e:
+    raise ImportError("Unable to load subvertpy extensions: %s", e.message)
 

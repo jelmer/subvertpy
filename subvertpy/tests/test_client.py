@@ -15,10 +15,15 @@
 
 """Subversion client library tests."""
 
-from subvertpy import client
-from subvertpy.tests import SubversionTestCase
+from subvertpy import (
+    client,
+    )
+from subvertpy.tests import (
+    SubversionTestCase,
+    )
 
 class TestClient(SubversionTestCase):
+
     def setUp(self):
         super(TestClient, self).setUp()
         self.repos_url = self.make_client("d", "dc")

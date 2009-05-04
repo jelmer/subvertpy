@@ -17,7 +17,12 @@
 
 from cStringIO import StringIO
 from unittest import TestCase
-from subvertpy import ra, SubversionException, NODE_DIR, NODE_NONE
+
+from subvertpy import (
+    NODE_DIR, NODE_NONE,
+    SubversionException,
+    ra,
+    )
 from subvertpy.tests import SubversionTestCase
 
 class VersionTest(TestCase):
@@ -29,7 +34,8 @@ class TestRemoteAccess(SubversionTestCase):
     def setUp(self):
         super(TestRemoteAccess, self).setUp()
         self.repos_url = self.make_repository("d")
-        self.ra = ra.RemoteAccess(self.repos_url)
+        self.ra = ra.RemoteAccess(self.repos_url,
+                auth=ra.Auth([ra.get_username_provider()]))
 
     def commit_editor(self):
         return self.get_commit_editor(self.repos_url)
@@ -40,7 +46,7 @@ class TestRemoteAccess(SubversionTestCase):
         dc.close()
 
     def test_repr(self):
-        self.assertEquals("RemoteAccess(%s)" % self.repos_url,
+        self.assertEquals("RemoteAccess(\"%s\")" % self.repos_url,
                           repr(self.ra))
 
     def test_latest_revnum(self):
@@ -252,6 +258,9 @@ class TestRemoteAccess(SubversionTestCase):
                           self.ra.get_locations("bla", 3, [1,2,3]))
 
 class AuthTests(TestCase):
+
+    def test_not_list(self):
+        self.assertRaises(TypeError, ra.Auth, ra.get_simple_provider())
 
     def test_not_registered(self):
         auth = ra.Auth([])
