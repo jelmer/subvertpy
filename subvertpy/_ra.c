@@ -1417,7 +1417,12 @@ static PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
 		Py_DECREF(obj);
 	}
 	if (dirent_fields & 0x20) {
-		obj = PyString_FromString(dirent->last_author);
+		if (dirent->last_author != NULL) {
+			obj = PyString_FromString(dirent->last_author);
+		} else {
+			obj = Py_None;
+			Py_INCREF(obj);
+		}
 		PyDict_SetItemString(ret, "last_author", obj);
 		Py_DECREF(obj);
 	}
