@@ -232,6 +232,14 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertEquals(NODE_DIR, self.ra.check_path("bar/", 1))
         self.assertEquals(NODE_NONE, self.ra.check_path("blaaaa", 1))
 
+    def test_stat(self):
+        cb = self.commit_editor()
+        cb.add_dir("bar")
+        cb.close()
+
+        ret = self.ra.stat("bar", 1)
+        self.assertEquals(set(['last_author', 'kind', 'created_rev', 'has_props', 'time', 'size']), set(ret.keys()))
+
     def test_get_locations_dir(self):
         cb = self.commit_editor()
         cb.add_dir("bar")

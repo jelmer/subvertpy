@@ -1386,6 +1386,43 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
+
+static PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
+{
+	PyObject *ret, *obj;
+	ret = PyDict_New();
+	if (dirent_fields & 0x1) {
+		obj = PyInt_FromLong(dirent->kind);
+		PyDict_SetItemString(ret, "kind", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & 0x2) {
+		obj = PyLong_FromLong(dirent->size);
+		PyDict_SetItemString(ret, "size", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & 0x4) {
+		obj = PyBool_FromLong(dirent->has_props);
+		PyDict_SetItemString(ret, "has_props", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & 0x8) {
+		obj = PyLong_FromLong(dirent->created_rev);
+		PyDict_SetItemString(ret, "created_rev", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & 0x10) {
+		obj = PyLong_FromLong(dirent->time);
+		PyDict_SetItemString(ret, "time", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & 0x20) {
+		obj = PyString_FromString(dirent->last_author);
+		PyDict_SetItemString(ret, "last_author", obj);
+		Py_DECREF(obj);
+	}
+	return ret;
+}
 	
 static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 {
@@ -1426,41 +1463,15 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 		py_dirents = PyDict_New();
 		idx = apr_hash_first(temp_pool, dirents);
 		while (idx != NULL) {
-			PyObject *py_dirent, *obj;
+			PyObject *item;
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
-			py_dirent = PyDict_New();
-			if (dirent_fields & 0x1) {
-				obj = PyInt_FromLong(dirent->kind);
-				PyDict_SetItemString(py_dirent, "kind", obj);
-				Py_DECREF(obj);
+			item = py_dirent(dirent, dirent_fields);
+			if (item == NULL) {
+				Py_DECREF(py_dirents);
+				return NULL;
 			}
-			if (dirent_fields & 0x2) {
-				obj = PyLong_FromLong(dirent->size);
-				PyDict_SetItemString(py_dirent, "size", obj);
-				Py_DECREF(obj);
-			}
-			if (dirent_fields & 0x4) {
-				obj = PyBool_FromLong(dirent->has_props);
-				PyDict_SetItemString(py_dirent, "has_props", obj);
-				Py_DECREF(obj);
-			}
-			if (dirent_fields & 0x8) {
-				obj = PyLong_FromLong(dirent->created_rev);
-				PyDict_SetItemString(py_dirent, "created_rev", obj);
-				Py_DECREF(obj);
-			}
-			if (dirent_fields & 0x10) {
-				obj = PyLong_FromLong(dirent->time);
-				PyDict_SetItemString(py_dirent, "time", obj);
-				Py_DECREF(obj);
-			}
-			if (dirent_fields & 0x20) {
-				obj = PyString_FromString(dirent->last_author);
-				PyDict_SetItemString(py_dirent, "last_author", obj);
-				Py_DECREF(obj);
-			}
-			PyDict_SetItemString(py_dirents, key, py_dirent);
-			Py_DECREF(py_dirent);
+			PyDict_SetItemString(py_dirents, key, item);
+			Py_DECREF(item);
 			idx = apr_hash_next(idx);
 		}
 	}
@@ -1555,6 +1566,31 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 					 temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyInt_FromLong(kind);
+}
+
+static PyObject *ra_stat(PyObject *self, PyObject *args)
+{
+	char *path; 
+	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+	PyObject *ret;
+	svn_revnum_t revision;
+	svn_dirent_t *dirent;
+	apr_pool_t *temp_pool;
+
+	if (!PyArg_ParseTuple(args, "sl", &path, &revision))
+		return NULL;
+	if (ra_check_busy(ra))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_RA_WITH_POOL(temp_pool, ra,
+					  svn_ra_stat(ra->ra, svn_path_canonicalize(path, temp_pool), revision, &dirent,
+					 temp_pool));
+	ret = py_dirent(dirent, SVN_DIRENT_ALL);
+	apr_pool_destroy(temp_pool);
+	return ret;
 }
 
 static PyObject *ra_has_capability(PyObject *self, PyObject *args)
@@ -1962,6 +1998,8 @@ static PyMethodDef ra_methods[] = {
 	{ "check_path", ra_check_path, METH_VARARGS, 
 		"S.check_path(path, revnum) -> node_kind\n"
 		"Check the type of a path (one of NODE_DIR, NODE_FILE, NODE_UNKNOWN)" },
+	{ "stat", ra_stat, METH_VARARGS,
+		"S.stat(path, revnum) -> dirent\n" },
 	{ "get_lock", ra_get_lock, METH_VARARGS, 
 		"S.get_lock(path) -> lock\n"
 	},
