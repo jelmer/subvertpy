@@ -1442,10 +1442,10 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 	apr_ssize_t klen;
 	char *path;
 	svn_revnum_t revision = -1;
-	int dirent_fields = 0;
+	long dirent_fields = 0;
 	PyObject *py_dirents, *py_props;
 
-	if (!PyArg_ParseTuple(args, "s|li", &path, &revision, &dirent_fields))
+	if (!PyArg_ParseTuple(args, "s|lI", &path, &revision, &dirent_fields))
 		return NULL;
 
 	if (ra_check_busy(ra))
