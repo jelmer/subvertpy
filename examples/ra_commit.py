@@ -5,10 +5,11 @@ import os
 from subvertpy import repos
 from subvertpy.ra import RemoteAccess, Auth, get_username_provider
 
+# Create a repository
 repos.create("tmprepo")
 
 conn = RemoteAccess("file://%s" % os.path.abspath("tmprepo"),
-            auth=Auth([get_username_provider()]))
+                    auth=Auth([get_username_provider()]))
 
 editor = conn.get_commit_editor({"svn:log": "Commit message"})
 root = editor.open_root()
