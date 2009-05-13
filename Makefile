@@ -2,7 +2,7 @@ PYTHON = python
 PYDOCTOR = pydoctor
 EPYDOC = epydoc
 SETUP = $(PYTHON) setup.py
-TRIAL = $(shell which trial)
+TESTRUNNER = $(shell which nosetests)
 
 all: build build-inplace
 
@@ -15,9 +15,11 @@ build-inplace::
 install::
 	$(SETUP) install
 
-check::
-	$(SETUP) build_ext --inplace
-	PYTHONPATH=. $(PYTHON) $(TRIAL) subvertpy
+check:: build-inplace
+	PYTHONPATH=. $(PYTHON) $(TESTRUNNER) subvertpy
+
+coverage::
+	PYTHONPATH=. $(PYTHON) $(TESTRUNNER) --cover-package=subvertpy --with-coverage --cover-erase --cover-inclusive subvertpy
 
 clean::
 	$(SETUP) clean
