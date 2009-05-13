@@ -26,11 +26,19 @@ from subvertpy import (
 from subvertpy.tests import SubversionTestCase
 
 class VersionTest(TestCase):
+
     def test_version_length(self):
         self.assertEquals(4, len(ra.version()))
 
 
+class TestRemoteAccessUnknown(TestCase):
+
+    def test_unknown_url(self):
+        self.assertRaises(SubversionException, ra.RemoteAccess, "bla://")
+
+
 class TestRemoteAccess(SubversionTestCase):
+
     def setUp(self):
         super(TestRemoteAccess, self).setUp()
         self.repos_url = self.make_repository("d")
