@@ -3,6 +3,8 @@
  FEATURES
 
   * Support RemoteAccess.stat.
+  
+  * Support svn.client.add(parents=false)
 
 0.6.6	2009-05-04
 
