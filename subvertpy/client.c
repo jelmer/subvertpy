@@ -333,16 +333,18 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (temp_pool == NULL)
 		return NULL;
 
-	RUN_SVN_WITH_POOL(temp_pool, 
 #if SVN_VER_MAJOR < 2 && SVN_VER_MINOR == 4
+	RUN_SVN_WITH_POOL(temp_pool, 
 		svn_client_add3(path, recursive, force, no_ignore, client->client, 
 						temp_pool)
+		);
 #else
+	RUN_SVN_WITH_POOL(temp_pool, 
 		svn_client_add4(path, recursive?svn_depth_infinity:svn_depth_empty, 
 						force, no_ignore, add_parents, 
 						client->client, temp_pool)
-#endif
 		);
+#endif
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
