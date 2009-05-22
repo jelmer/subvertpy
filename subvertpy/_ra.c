@@ -715,8 +715,8 @@ static void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, a
 static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	char *kwnames[] = { "url", "progress_cb", "auth", "config", "client_string_func", 
-						"open_tmp_file_func", NULL };
-	char *url = NULL;
+						"open_tmp_file_func", "uuid", NULL };
+	char *url = NULL, *uuid = NULL;
 	PyObject *progress_cb = Py_None;
 	AuthObject *auth = (AuthObject *)Py_None;
 	PyObject *config = Py_None;
@@ -727,9 +727,10 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	svn_auth_baton_t *auth_baton;
 	svn_error_t *err;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOOOO", kwnames, &url, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOOOOz", kwnames, &url, 
 									 &progress_cb, (PyObject **)&auth, &config, 
-									 &client_string_func, &open_tmp_file_func))
+									 &client_string_func, &open_tmp_file_func, 
+									 &uuid))
 		return NULL;
 
 	ret = PyObject_New(RemoteAccessObject, &RemoteAccess_Type);
@@ -785,8 +786,19 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	err = svn_ra_open3(&ret->ra, ret->url, uuid,
+			   callbacks2, ret, config_hash, ret->pool);
+#else
+	if (uuid != NULL) {
+		PyErr_SetString(PyExc_ArgumentError, 
+			"uuid argument not supported with svn 1.4");
+		Py_DECREF(ret);
+		return NULL;
+	}
 	err = svn_ra_open2(&ret->ra, ret->url,
 			   callbacks2, ret, config_hash, ret->pool);
+#endif
 	Py_END_ALLOW_THREADS
 	if (!check_error(err)) {
 		Py_DECREF(ret);

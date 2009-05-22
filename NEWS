@@ -6,6 +6,8 @@
   
   * Support svn.client.add(parents=false)
 
+  * Support uuid argument to svn.ra.RemoteAccess().
+
 0.6.6	2009-05-04
 
  FEATURES
