@@ -791,7 +791,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			   callbacks2, ret, config_hash, ret->pool);
 #else
 	if (uuid != NULL) {
-		PyErr_SetString(PyExc_ArgumentError, 
+		PyErr_SetString(PyExc_TypeError, 
 			"uuid argument not supported with svn 1.4");
 		Py_DECREF(ret);
 		return NULL;
