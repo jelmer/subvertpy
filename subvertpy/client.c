@@ -312,20 +312,39 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
 	char *path; 
 	ClientObject *client = (ClientObject *)self;
 	bool recursive=true, force=false, no_ignore=false;
+	bool add_parents = true;
 	apr_pool_t *temp_pool;
-	char *kwnames[] = { "path", "recursive", "force", "no_ignore", NULL };
+	char *kwnames[] = { "path", "recursive", "force", "no_ignore", 
+						"add_parents", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|bbb", kwnames, 
-						  &path, &recursive, &force, &no_ignore))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|bbbb", kwnames, 
+						  &path, &recursive, &force, &no_ignore, &add_parents))
 		return NULL;
+
+#if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 4
+	if (add_parents == false) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+			"Subversion < 1.4 does not support add_parents=false");
+		return NULL;
+	}
+#endif
 	
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
 
+#if SVN_VER_MAJOR < 2 && SVN_VER_MINOR == 4
 	RUN_SVN_WITH_POOL(temp_pool, 
-					  svn_client_add3(path, recursive, force, no_ignore, 
-				client->client, temp_pool));
+		svn_client_add3(path, recursive, force, no_ignore, client->client, 
+						temp_pool)
+		);
+#else
+	RUN_SVN_WITH_POOL(temp_pool, 
+		svn_client_add4(path, recursive?svn_depth_infinity:svn_depth_empty, 
+						force, no_ignore, add_parents, 
+						client->client, temp_pool)
+		);
+#endif
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }

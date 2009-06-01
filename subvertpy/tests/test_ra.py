@@ -26,11 +26,19 @@ from subvertpy import (
 from subvertpy.tests import SubversionTestCase
 
 class VersionTest(TestCase):
+
     def test_version_length(self):
         self.assertEquals(4, len(ra.version()))
 
 
+class TestRemoteAccessUnknown(TestCase):
+
+    def test_unknown_url(self):
+        self.assertRaises(SubversionException, ra.RemoteAccess, "bla://")
+
+
 class TestRemoteAccess(SubversionTestCase):
+
     def setUp(self):
         super(TestRemoteAccess, self).setUp()
         self.repos_url = self.make_repository("d")
@@ -231,6 +239,14 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertEquals(NODE_DIR, self.ra.check_path("bar", 1))
         self.assertEquals(NODE_DIR, self.ra.check_path("bar/", 1))
         self.assertEquals(NODE_NONE, self.ra.check_path("blaaaa", 1))
+
+    def test_stat(self):
+        cb = self.commit_editor()
+        cb.add_dir("bar")
+        cb.close()
+
+        ret = self.ra.stat("bar", 1)
+        self.assertEquals(set(['last_author', 'kind', 'created_rev', 'has_props', 'time', 'size']), set(ret.keys()))
 
     def test_get_locations_dir(self):
         cb = self.commit_editor()

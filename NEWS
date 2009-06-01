@@ -1,3 +1,19 @@
+0.6.7	2009-06-01
+
+ BUG FIXES
+ 
+  * Replace PyExc_ArgumentError with PyExc_TypeError.
+
+  * Fix compilation with MSVC++.
+
+ FEATURES
+
+  * Support RemoteAccess.stat.
+  
+  * Support svn.client.add(parents=false)
+
+  * Support uuid argument to svn.ra.RemoteAccess().
+
 0.6.6	2009-05-04
 
  FEATURES
