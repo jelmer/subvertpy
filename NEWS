@@ -1,4 +1,10 @@
-0.6.7	UNRELEASED
+0.6.7	2009-06-01
+
+ BUG FIXES
+ 
+  * Replace PyExc_ArgumentError with PyExc_TypeError.
+
+  * Fix compilation with MSVC++.
 
  FEATURES
 
