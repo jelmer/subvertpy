@@ -1,5 +1,9 @@
 0.6.8	UNRELEASED
 
+ FEATURES
+
+  * Support svn.client.delete(keep_local=True)
+
 0.6.7	2009-06-01
 
  BUG FIXES
