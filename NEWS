@@ -4,6 +4,8 @@
 
   * Support svn.client.delete(keep_local=True)
 
+  * Define ERR_RA_DAV_FORBIDDEN.
+
 0.6.7	2009-06-01
 
  BUG FIXES
