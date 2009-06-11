@@ -1411,7 +1411,7 @@ static PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
 		PyDict_SetItemString(ret, "kind", obj);
 		Py_DECREF(obj);
 	}
-	if (dirent_fields & SVN_DIERNT_SIZE) {
+	if (dirent_fields & SVN_DIRENT_SIZE) {
 		obj = PyLong_FromLong(dirent->size);
 		PyDict_SetItemString(ret, "size", obj);
 		Py_DECREF(obj);
