@@ -38,7 +38,7 @@ def apply_txdelta_window(sbuf, window):
     (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
     sview = sbuf[sview_offset:sview_offset+sview_len]
     tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
-    assert len(tview) == tview_len
+    assert len(tview) == tview_len, "%d != %d" % (len(tview), tview_len)
     return tview
 
 
