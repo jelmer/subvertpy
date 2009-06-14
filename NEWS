@@ -2,7 +2,9 @@
 
  FEATURES
 
-  * Support svn.client.delete(keep_local=True)
+  * Support svn.client.Client.delete(keep_local=True)
+
+  * Support svn.wc.WorkingCopy.delete(keep_local=True)
 
   * Define ERR_RA_DAV_FORBIDDEN.
 
