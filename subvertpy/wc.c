@@ -488,10 +488,12 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	return Py_BuildValue("(NN)", py_propchanges, py_orig_props);
 }
 
-static PyObject *adm_add(PyObject *self, PyObject *args)
+static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	char *path, *copyfrom_url=NULL;
 	svn_revnum_t copyfrom_rev=-1; 
+	char *kwnames[] = { "path", "copyfrom_url", "copyfrom_rev", "cancel_func", 
+		                "notify_func", NULL };
 	PyObject *cancel_func=Py_None, *notify_func=Py_None;
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
@@ -500,7 +502,7 @@ static PyObject *adm_add(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-	if (!PyArg_ParseTuple(args, "s|zlOO", &path, &copyfrom_url, &copyfrom_rev, &cancel_func, &notify_func))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zlOO", kwnames, &path, &copyfrom_url, &copyfrom_rev, &cancel_func, &notify_func))
 		return NULL;
 
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add2(
@@ -537,16 +539,19 @@ static PyObject *adm_copy(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-static PyObject *adm_delete(PyObject *self, PyObject *args)
+static PyObject *adm_delete(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
+	char *kwnames[] = { "path", "cancel_func", "notify_func", "keep_local",
+		                NULL };
 	char *path;
 	PyObject *cancel_func=Py_None, *notify_func=Py_None;
 	bool keep_local = false;
 
-	if (!PyArg_ParseTuple(args, "s|OOb", &path, &cancel_func, &notify_func, 
-						  &keep_local))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOb", kwnames, 
+									 &path, &cancel_func, &notify_func, 
+									 &keep_local))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -766,9 +771,9 @@ static PyMethodDef adm_methods[] = {
 		"S.locked() -> bool" },
 	{ "get_prop_diffs", adm_get_prop_diffs, METH_VARARGS, 
 		"S.get_prop_diffs(path) -> (propchanges, originalprops)" },
-	{ "add", adm_add, METH_VARARGS, "S.add(path, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None, notify_func=None" },
+	{ "add", (PyCFunction)adm_add, METH_VARARGS|METH_KEYWORDS, "S.add(path, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None, notify_func=None)" },
 	{ "copy", adm_copy, METH_VARARGS, "S.copy(src_path, dest_path, cancel_func=None, notify_func=None" },
-	{ "delete", adm_delete, METH_VARARGS, "S.delete(path, cancel_func=None, notify_func=None, keep_local=False)" },
+	{ "delete", (PyCFunction)adm_delete, METH_VARARGS|METH_KEYWORDS, "S.delete(path, cancel_func=None, notify_func=None, keep_local=False)" },
 	{ "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS, 
 		"S.crawl_revisions(path, reporter, restore_files=True, recurse=True, use_commit_times=True, notify_func=None) -> None" },
 	{ "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
