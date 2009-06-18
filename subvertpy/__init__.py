@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 6, 7)
+__version__ = (0, 6, 8)
 
 NODE_DIR = 2
 NODE_FILE = 1
@@ -64,6 +64,17 @@ ERR_REPOS_HOOK_FAILURE = 165001
 ERR_XML_MALFORMED = 130003
 ERR_MALFORMED_FILE = 200002
 ERR_FS_PATH_SYNTAX = 160005
+ERR_RA_DAV_FORBIDDEN = 175013
+ERR_WC_SCHEDULE_CONFLICT = 155013
+
+AUTH_PARAM_DEFAULT_USERNAME = 'svn:auth:username'
+AUTH_PARAM_DEFAULT_PASSWORD = 'svn:auth:password'
+
+SSL_NOTYETVALID = 0x00000001
+SSL_EXPIRED     = 0x00000002
+SSL_CNMISMATCH  = 0x00000004
+SSL_UNKNOWNCA   = 0x00000008
+SSL_OTHER       = 0x40000000
 
 
 class SubversionException(Exception):

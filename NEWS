@@ -1,3 +1,13 @@
+0.6.8	2009-06-18
+
+ FEATURES
+
+  * Support svn.client.Client.delete(keep_local=True)
+
+  * Support svn.wc.WorkingCopy.delete(keep_local=True)
+
+  * Define ERR_RA_DAV_FORBIDDEN.
+
 0.6.7	2009-06-01
 
  BUG FIXES

@@ -409,14 +409,14 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *client_delete(PyObject *self, PyObject *args)
 {
 	PyObject *paths; 
-	bool force=false;
+	bool force=false, keep_local=false;
 	apr_pool_t *temp_pool;
 	svn_commit_info_t *commit_info = NULL;
 	PyObject *ret;
 	apr_array_header_t *apr_paths;
 	ClientObject *client = (ClientObject *)self;
 
-	if (!PyArg_ParseTuple(args, "O|b", &paths, &force))
+	if (!PyArg_ParseTuple(args, "O|bb", &paths, &force, &keep_local))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -427,9 +427,21 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_delete3(&commit_info, 
+													apr_paths,
+				force, keep_local, NULL, client->client, temp_pool));
+#else
+	if (keep_local) {
+		PyErr_SetString(PyExc_ValueError, 
+						"keep_local not supported against svn 1.4");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_delete2(&commit_info, 
 													apr_paths,
 				force, client->client, temp_pool));
+#endif
 
 	ret = py_commit_info_tuple(commit_info);
 

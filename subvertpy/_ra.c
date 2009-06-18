@@ -1,4 +1,5 @@
-/* Copyright © 2008 Jelmer Vernooij <jelmer@samba.org>
+/*
+ * Copyright © 2008-2009 Jelmer Vernooij <jelmer@samba.org>
  * -*- coding: utf-8 -*-
  *
  * This program is free software; you can redistribute it and/or modify
@@ -714,8 +715,9 @@ static void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, a
 
 static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-	char *kwnames[] = { "url", "progress_cb", "auth", "config", "client_string_func", 
-						"open_tmp_file_func", "uuid", NULL };
+	char *kwnames[] = { "url", "progress_cb", "auth", "config",
+		                "client_string_func", "open_tmp_file_func", "uuid", 
+						NULL };
 	char *url = NULL, *uuid = NULL;
 	PyObject *progress_cb = Py_None;
 	AuthObject *auth = (AuthObject *)Py_None;
@@ -934,7 +936,8 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	}
 
 	if (include_merged_revisions) {
-		PyErr_SetString(PyExc_NotImplementedError, "include_merged_revisions not supported in Subversion 1.4");
+		PyErr_SetString(PyExc_NotImplementedError, 
+			"include_merged_revisions not supported in Subversion 1.4");
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
@@ -1403,32 +1406,32 @@ static PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
 {
 	PyObject *ret, *obj;
 	ret = PyDict_New();
-	if (dirent_fields & 0x1) {
+	if (dirent_fields & SVN_DIRENT_KIND) {
 		obj = PyInt_FromLong(dirent->kind);
 		PyDict_SetItemString(ret, "kind", obj);
 		Py_DECREF(obj);
 	}
-	if (dirent_fields & 0x2) {
+	if (dirent_fields & SVN_DIRENT_SIZE) {
 		obj = PyLong_FromLong(dirent->size);
 		PyDict_SetItemString(ret, "size", obj);
 		Py_DECREF(obj);
 	}
-	if (dirent_fields & 0x4) {
+	if (dirent_fields & SVN_DIRENT_HAS_PROPS) {
 		obj = PyBool_FromLong(dirent->has_props);
 		PyDict_SetItemString(ret, "has_props", obj);
 		Py_DECREF(obj);
 	}
-	if (dirent_fields & 0x8) {
+	if (dirent_fields & SVN_DIRENT_CREATED_REV) {
 		obj = PyLong_FromLong(dirent->created_rev);
 		PyDict_SetItemString(ret, "created_rev", obj);
 		Py_DECREF(obj);
 	}
-	if (dirent_fields & 0x10) {
+	if (dirent_fields & SVN_DIRENT_TIME) {
 		obj = PyLong_FromLong(dirent->time);
 		PyDict_SetItemString(ret, "time", obj);
 		Py_DECREF(obj);
 	}
-	if (dirent_fields & 0x20) {
+	if (dirent_fields & SVN_DIRENT_LAST_AUTHOR) {
 		if (dirent->last_author != NULL) {
 			obj = PyString_FromString(dirent->last_author);
 		} else {
