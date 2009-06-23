@@ -42,6 +42,20 @@ def apply_txdelta_window(sbuf, window):
     return tview
 
 
+def apply_txdelta_handler_chunks(source_chunks, target_chunks):
+    """Return a function that can be called repeatedly with txdelta windows.
+
+    :param sbuf: Source buffer
+    :param target_stream: Target stream
+    """
+    sbuf = "".join(source_chunks)
+    def apply_window(window):
+        if window is None:
+            return # Last call
+        target_chunks.append(apply_txdelta_window(sbuf, window))
+    return apply_window
+
+
 def apply_txdelta_handler(sbuf, target_stream):
     """Return a function that can be called repeatedly with txdelta windows.
 
