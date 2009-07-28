@@ -439,8 +439,13 @@ static svn_error_t *py_stream_close(void *baton)
 svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py)
 {
 	svn_stream_t *stream;
-	Py_INCREF(py);
 	stream = svn_stream_create((void *)py, pool);
+	if (stream == NULL) {
+		PyErr_SetString(PyExc_RuntimeError,
+						"Unable to create a Subversion stream");
+		return NULL;
+	}
+	Py_INCREF(py);
 	svn_stream_set_read(stream, py_stream_read);
 	svn_stream_set_write(stream, py_stream_write);
 	svn_stream_set_close(stream, py_stream_close);
