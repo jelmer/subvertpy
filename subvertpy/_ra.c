@@ -1473,6 +1473,9 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 	if (revision != SVN_INVALID_REVNUM)
 		fetch_rev = revision;
 
+	/* Yuck. Subversion doesn't like leading slashes.. */
+	while (*path == '/') path++;
+
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_dir2(ra->ra, &dirents, &fetch_rev, &props,
 					 svn_path_canonicalize(path, temp_pool), revision, dirent_fields, temp_pool));
 
@@ -1527,6 +1530,9 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 
 	if (revision != SVN_INVALID_REVNUM)
 		fetch_rev = revision;
+
+	/* Yuck. Subversion doesn't like leading slashes.. */
+	while (*path == '/') path++;
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file(ra->ra, svn_path_canonicalize(path, temp_pool), revision, 
 													new_py_stream(temp_pool, py_stream), 

@@ -1,5 +1,11 @@
 0.6.9	UNRELEASED
 
+ BUG FIXES
+
+  * Cope with leading slashes in paths specified to 
+    subvertpy.ra.RemoteAccess.get_{dir,file}(). Thanks Ronny for the bugreport.
+    (#405713)
+
 0.6.8	2009-06-18
 
  FEATURES
