@@ -629,10 +629,18 @@ static PyObject *py_editor_abort(PyObject *self)
 }
 
 static PyMethodDef py_editor_methods[] = { 
-	{ "abort", (PyCFunction)py_editor_abort, METH_NOARGS, NULL },
-	{ "close", (PyCFunction)py_editor_close, METH_NOARGS, NULL },
-	{ "open_root", py_editor_open_root, METH_VARARGS, NULL },
-	{ "set_target_revision", py_editor_set_target_revision, METH_VARARGS, NULL },
+	{ "abort", (PyCFunction)py_editor_abort, METH_NOARGS, 
+		"S.abort()\n"
+		"Close the editor, aborting the commit." },
+	{ "close", (PyCFunction)py_editor_close, METH_NOARGS, 
+		"S.close()\n"
+		"Close the editor, finalizing the commit." },
+	{ "open_root", py_editor_open_root, METH_VARARGS, 
+		"S.open_root(base_revision=None) -> DirectoryEditor\n"
+		"Open the root directory." },
+	{ "set_target_revision", py_editor_set_target_revision, METH_VARARGS,
+		"S.set_target_revision(target_revision)\n"
+		"Set the target revision created by the reported revision."},
 	{ NULL, }
 };
 

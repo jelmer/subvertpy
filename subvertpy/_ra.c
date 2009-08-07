@@ -3037,6 +3037,9 @@ void init_ra(void)
 	PyModule_AddObject(mod, "Auth", (PyObject *)&Auth_Type);
 	Py_INCREF(&Auth_Type);
 
+	PyModule_AddObject(mod, "Editor", (PyObject *)&Editor_Type);
+	Py_INCREF(&Editor_Type);
+
 	busy_exc = PyErr_NewException("_ra.BusyException", NULL, NULL);
 	PyModule_AddObject(mod, "BusyException", busy_exc);
 
