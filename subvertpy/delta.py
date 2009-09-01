@@ -90,7 +90,6 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
             tview += new_data[offset:offset+length]
         else:
             raise Exception("Invalid delta instruction code")
-
     return tview
 
 
@@ -202,30 +201,40 @@ SVNDIFF0_HEADER = "SVN\0"
 
 def pack_svndiff0_window(window):
     (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
-    ret = encode_length(sview_offset) + \
-          encode_length(sview_len) + \
-          encode_length(tview_len)
+    ret = [encode_length(sview_offset) + \
+           encode_length(sview_len) + \
+           encode_length(tview_len)]
 
     instrdata = ""
     for op in ops:
         instrdata += pack_svndiff_instruction(op)
 
-    ret += encode_length(len(instrdata))
-    ret += encode_length(len(new_data))
-    ret += instrdata
-    ret += new_data
-    return ret
+    ret.append(encode_length(len(instrdata)))
+    ret.append(encode_length(len(new_data)))
+    ret.append(instrdata)
+    ret.append(new_data)
+    return "".join(ret)
+
 
 def pack_svndiff0(windows):
-    ret = SVNDIFF0_HEADER
+    """Pack a SVN diff file.
 
+    :param windows: Iterator over diff windows
+    :return: text
+    """
+    ret = SVNDIFF0_HEADER
     for window in windows:
         ret += pack_svndiff0_window(window)
-
     return ret
 
 
 def unpack_svndiff0(text):
+    """Unpack a version 0 svndiff text.
+    
+    :param text: Text to unpack.
+    :return: yields tuples with sview_offset, sview_len, tview_len, ops_len, 
+        ops, newdata
+    """
     assert text.startswith(SVNDIFF0_HEADER)
     text = text[4:]
 
