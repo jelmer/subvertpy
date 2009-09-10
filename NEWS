@@ -5,6 +5,9 @@
   * Cope with leading slashes in paths specified to 
     subvertpy.ra.RemoteAccess.get_{dir,file}(). Thanks Ronny for the bugreport.
     (#405713)
+ 
+  * Don't send too large svndiff windows as newer versions of libsvn 
+    will barf. (CVE2009-2411, #413113)
 
 0.6.8	2009-06-18
 

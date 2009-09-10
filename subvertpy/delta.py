@@ -34,6 +34,10 @@ TXDELTA_TARGET = 1
 TXDELTA_NEW = 2
 TXDELTA_INVALID = 3
 
+MAX_ENCODED_INT_LEN = 10
+
+DELTA_WINDOW_SIZE = 102400
+
 def apply_txdelta_window(sbuf, window):
     (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
     sview = sbuf[sview_offset:sview_offset+sview_len]
@@ -93,10 +97,7 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
     return tview
 
 
-SEND_STREAM_BLOCK_SIZE = 1024 * 1024 # 1 Mb
-
-
-def send_stream(stream, handler, block_size=SEND_STREAM_BLOCK_SIZE):
+def send_stream(stream, handler, block_size=DELTA_WINDOW_SIZE):
     """Send txdelta windows that create stream to handler
 
     :param stream: file-like object to read the file from
@@ -131,9 +132,9 @@ def encode_length(len):
         v = v >> 7
         n+=1
 
+    assert n <= MAX_ENCODED_INT_LEN
+
     ret = ""
-    # Encode the remaining bytes; n is always the number of bytes
-    # coming after the one we're encoding.  */
     while n > 0:
         n-=1
         if n > 0:
