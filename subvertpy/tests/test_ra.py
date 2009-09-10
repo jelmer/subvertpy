@@ -84,6 +84,9 @@ class TestRemoteAccess(SubversionTestCase):
         ret = self.ra.get_dir("", 0)
         self.assertIsInstance(ret, tuple)
 
+        ret = self.ra.get_dir("/", 0)
+        self.assertIsInstance(ret, tuple)
+
     def test_change_rev_prop(self):
         self.do_commit()
         self.ra.change_rev_prop(1, "foo", "bar")
@@ -222,9 +225,12 @@ class TestRemoteAccess(SubversionTestCase):
         cb.close()
 
         stream = StringIO()
-
         self.ra.get_file("bar", stream, 1)
+        stream.seek(0)
+        self.assertEquals("a", stream.read())
 
+        stream = StringIO()
+        self.ra.get_file("/bar", stream, 1)
         stream.seek(0)
         self.assertEquals("a", stream.read())
 

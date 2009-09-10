@@ -1,6 +1,5 @@
 PYTHON = python
 PYDOCTOR = pydoctor
-EPYDOC = epydoc
 SETUP = $(PYTHON) setup.py
 TESTRUNNER = $(shell which nosetests)
 
@@ -27,6 +26,3 @@ clean::
 
 pydoctor:
 	$(PYDOCTOR) -c subvertpy.cfg --make-html
-
-epydoc:
-	$(EPYDOC) subvertpy

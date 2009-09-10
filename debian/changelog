@@ -1,3 +1,10 @@
+subvertpy (0.6.9-1) unstable; urgency=low
+
+  * New upstream release.
+  * Bump standards version to 3.8.3.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Thu, 10 Sep 2009 17:28:15 +0200
+
 subvertpy (0.6.8-1) unstable; urgency=low
 
   * New upstream release.
