@@ -49,7 +49,7 @@ from subvertpy.ra import (
     DIRENT_CREATED_REV,
     DIRENT_HAS_PROPS,
     DIRENT_KIND,
-    DIRENT_LAST_AUTHOR
+    DIRENT_LAST_AUTHOR,
     DIRENT_SIZE,
     DIRENT_TIME,
     )
