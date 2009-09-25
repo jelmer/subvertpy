@@ -18,17 +18,15 @@
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 
 import base64
-import copy
 import os
 import socket
 import subprocess
-import time
 import urllib
 import SocketServer
 
 from subvertpy import SubversionException, ERR_RA_SVN_UNKNOWN_CMD, NODE_DIR, NODE_FILE, NODE_UNKNOWN, NODE_NONE, ERR_UNSUPPORTED_FEATURE, properties
 from subvertpy.delta import pack_svndiff0_window, SVNDIFF0_HEADER, unpack_svndiff0
-from subvertpy.marshall import marshall, unmarshall, literal, MarshallError, NeedMoreData
+from subvertpy.marshall import marshall, unmarshall, literal, NeedMoreData
 from subvertpy.ra import DIRENT_KIND, DIRENT_TIME, DIRENT_HAS_PROPS, DIRENT_SIZE, DIRENT_CREATED_REV, DIRENT_LAST_AUTHOR
 from subvertpy.server import generate_random_id
 
