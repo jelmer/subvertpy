@@ -1,5 +1,9 @@
 0.7.0	UNRELEASED
 
+ FEATURES
+
+  * Add definition for ERR_EAI_NONAME. (John Szakmeister)
+
 0.6.9	2009-09-10
 
  BUG FIXES
