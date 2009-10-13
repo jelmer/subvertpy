@@ -316,5 +316,6 @@ if __name__ == "__main__":
           """,
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules("subvertpy"),
+          scripts=['bin/subvertpy-fast-export.py'],
           cmdclass = { 'install_lib': install_lib_with_dlls },
           )
