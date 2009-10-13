@@ -17,7 +17,7 @@
 
 import os
 
-from subvertpy import repos
+from subvertpy import repos, SubversionException
 from subvertpy.tests import TestCaseInTempDir
 
 class TestClient(TestCaseInTempDir):
@@ -39,3 +39,11 @@ class TestClient(TestCaseInTempDir):
     def test_youngest_rev(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         self.assertEquals(0, repos.Repository("foo").fs().youngest_revision())
+
+    def test_rev_root(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        self.assertTrue(repos.Repository("foo").fs().revision_root(0) is not None)
+
+    def test_rev_root_invalid(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        self.assertRaises(SubversionException, repos.Repository("foo").fs().revision_root, 1)

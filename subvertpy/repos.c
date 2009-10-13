@@ -24,6 +24,7 @@
 
 #include "util.h"
 
+extern PyTypeObject FileSystemRoot_Type;
 extern PyTypeObject Repository_Type;
 extern PyTypeObject FileSystem_Type;
 
@@ -107,6 +108,12 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 
 typedef struct {
 	PyObject_HEAD
+	apr_pool_t *pool;
+	svn_fs_root_t *root;
+} FileSystemRootObject;
+
+typedef struct {
+	PyObject_HEAD
 	RepositoryObject *repos;
 	apr_pool_t *pool;
 	svn_fs_t *fs;
@@ -170,9 +177,36 @@ static PyObject *fs_get_youngest_revision(FileSystemObject *self)
 	return ret;
 }
 
+static PyObject *fs_get_revision_root(FileSystemObject *self, PyObject *args)
+{
+	svn_revnum_t rev;
+	FileSystemRootObject *ret;
+	apr_pool_t *pool;
+	svn_fs_root_t *root;
+
+	if (!PyArg_ParseTuple(args, "l", &rev))
+		return NULL;
+
+	pool = Pool(NULL);
+	if (pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(pool, svn_fs_revision_root(&root, self->fs, rev, pool));
+
+	ret = PyObject_New(FileSystemRootObject, &FileSystemRoot_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->root = root;
+	ret->pool = pool;
+
+	return (PyObject *)ret;
+}
+
 static PyMethodDef fs_methods[] = {
 	{ "get_uuid", (PyCFunction)fs_get_uuid, METH_NOARGS, NULL },
 	{ "youngest_revision", (PyCFunction)fs_get_youngest_revision, METH_NOARGS, NULL },
+	{ "revision_root", (PyCFunction)fs_get_revision_root, METH_VARARGS, NULL },
 	{ NULL, }
 };
 
@@ -357,6 +391,77 @@ PyTypeObject Repository_Type = {
 	NULL, /*	allocfunc tp_alloc;	*/
 	repos_init, /*	newfunc tp_new;	*/
 
+};
+
+static void fs_root_dealloc(PyObject *self)
+{
+	FileSystemRootObject *fsobj = (FileSystemRootObject *)self;
+
+	apr_pool_destroy(fsobj->pool);
+}
+
+static PyMethodDef fs_root_methods[] = {
+	{ NULL, }
+};
+
+PyTypeObject FileSystemRoot_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	"repos.FileSystemRoot", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(FileSystemRootObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	fs_root_dealloc, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+	
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+	
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+	
+	NULL, /*	const char *tp_doc;  Documentation string */
+	
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+	
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+	
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+	
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+	
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+	
+	/* Attribute descriptor and subclassing stuff */
+	fs_root_methods, /*	struct PyMethodDef *tp_methods;	*/
 };
 
 void initrepos(void)

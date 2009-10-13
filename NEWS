@@ -6,6 +6,8 @@
 
   * Add svn.fs.FileSystem.youngest_revision(). (Jelmer Vernooij)
 
+  * Add svn.fs.FileSystem.revision_root(). (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES
