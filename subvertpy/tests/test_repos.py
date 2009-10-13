@@ -57,6 +57,18 @@ class TestClient(TestCaseInTempDir):
         root = repos.Repository("foo").fs().revision_root(0)
         self.assertEquals({}, root.paths_changed())
 
+    def test_is_dir(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        root = repos.Repository("foo").fs().revision_root(0)
+        self.assertEquals(True, root.is_dir(""))
+        self.assertEquals(False, root.is_dir("nonexistant"))
+
+    def test_is_file(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        root = repos.Repository("foo").fs().revision_root(0)
+        self.assertEquals(False, root.is_file(""))
+        self.assertEquals(False, root.is_file("nonexistant"))
+
 
 class StreamTests(TestCase):
 
