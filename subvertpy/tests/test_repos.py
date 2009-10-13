@@ -47,3 +47,8 @@ class TestClient(TestCaseInTempDir):
     def test_rev_root_invalid(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         self.assertRaises(SubversionException, repos.Repository("foo").fs().revision_root, 1)
+
+    def test_paths_changed(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        root = repos.Repository("foo").fs().revision_root(0)
+        self.assertEquals({}, root.paths_changed())

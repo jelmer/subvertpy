@@ -8,6 +8,8 @@
 
   * Add svn.fs.FileSystem.revision_root(). (Jelmer Vernooij)
 
+  * Add svn.fs.FileSystemRoot.paths_changed(). (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES

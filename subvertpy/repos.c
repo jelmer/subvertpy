@@ -400,7 +400,62 @@ static void fs_root_dealloc(PyObject *self)
 	apr_pool_destroy(fsobj->pool);
 }
 
+static PyObject *py_string_from_svn_node_id(const svn_fs_id_t *id)
+{
+	apr_pool_t *temp_pool;
+	temp_pool = Pool(NULL);
+	svn_string_t *str;
+	if (temp_pool == NULL)
+		return NULL;
+	str = svn_fs_unparse_id(id, temp_pool);
+	if (str == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	return PyString_FromStringAndSize(str->data, str->len);
+}
+
+static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
+{
+	apr_pool_t *temp_pool;
+	apr_hash_t *changed_paths;
+	const char *key;
+	apr_ssize_t klen;
+	apr_hash_index_t *idx;
+	PyObject *ret;
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, 
+					  svn_fs_paths_changed(&changed_paths, self->root, temp_pool));
+	ret = PyDict_New();
+	for (idx = apr_hash_first(temp_pool, changed_paths); idx != NULL;
+		 idx = apr_hash_next(idx)) {
+		PyObject *py_val, *py_node_id;
+		svn_fs_path_change_t *val;
+		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
+		py_node_id = py_string_from_svn_node_id(val->node_rev_id);
+		if (py_node_id == NULL) {
+			apr_pool_destroy(temp_pool);
+			PyObject_Del(ret);
+			return NULL;
+		}
+		py_val = Py_BuildValue("(sibb)", py_node_id,
+							   val->change_kind, val->text_mod, val->prop_mod);
+		if (py_val == NULL) {
+			apr_pool_destroy(temp_pool);
+			PyObject_Del(ret);
+			return NULL;
+		}
+		PyDict_SetItemString(ret, key, py_val);
+		Py_DECREF(py_val);
+	}
+	apr_pool_destroy(temp_pool);
+	return ret;
+}
+
 static PyMethodDef fs_root_methods[] = {
+	{ "paths_changed", (PyCFunction)fs_root_paths_changed, METH_NOARGS, NULL },
 	{ NULL, }
 };
 
@@ -473,6 +528,9 @@ void initrepos(void)
 		return;
 
 	if (PyType_Ready(&FileSystem_Type) < 0)
+		return;
+
+	if (PyType_Ready(&FileSystemRoot_Type) < 0)
 		return;
 
 	apr_initialize();
