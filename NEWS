@@ -18,6 +18,8 @@
 
   * Add svn.repos.FileSystem.revision_proplist(). (Jelmer Vernooij)
 
+  * Add svn.repos.delete(). (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES

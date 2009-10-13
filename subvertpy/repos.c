@@ -342,8 +342,27 @@ static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 	Py_RETURN_NONE;
 }
 
+static PyObject *repos_delete(PyObject *self, PyObject *args)
+{
+	char *path;
+	apr_pool_t *temp_pool;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_delete_fs(path, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef repos_module_methods[] = {
 	{ "create", repos_create, METH_VARARGS, NULL },
+	{ "delete", repos_delete, METH_VARARGS, NULL },
 	{ NULL, }
 };
 
