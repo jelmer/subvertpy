@@ -353,7 +353,7 @@ static PyObject *repos_delete(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_fs_delete_fs(path, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_repos_delete(path, temp_pool));
 
 	apr_pool_destroy(temp_pool);
 
