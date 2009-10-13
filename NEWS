@@ -12,6 +12,8 @@
 
   * Add svn.fs.FileSystemRoot.is_dir(). (Jelmer Vernooij)
 
+  * Add svn.fs.FileSystemRoot.file_length(). (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES
