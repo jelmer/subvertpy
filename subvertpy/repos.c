@@ -360,9 +360,30 @@ static PyObject *repos_delete(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *repos_hotcopy(RepositoryObject *self, PyObject *args)
+{
+	char *src_path, *dest_path;
+	svn_boolean_t clean_logs = FALSE;
+	apr_pool_t *temp_pool;
+
+	if (!PyArg_ParseTuple(args, "ss|b", &src_path, &dest_path, &clean_logs))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_repos_hotcopy(src_path, dest_path, clean_logs, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef repos_module_methods[] = {
 	{ "create", repos_create, METH_VARARGS, NULL },
 	{ "delete", repos_delete, METH_VARARGS, NULL },
+	{ "hotcopy", repos_hotcopy, METH_VARARGS, NULL },
 	{ NULL, }
 };
 

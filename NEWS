@@ -22,6 +22,8 @@
 
   * Add svn.repos.Repository.has_capability(). (Jelmer Vernooij)
 
+  * Add svn.repos.hotcopy(). (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES
