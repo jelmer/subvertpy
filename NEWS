@@ -9,6 +9,9 @@
 
   * Add subvertpy.repos.{delete,Repository.has_capability,hotcopy}. (Jelmer Vernooij)
 
+  * Add subvertpy-fast-export script, based on svn-fast-export.py by Chris Lee included with 
+    bzr-fast-import. (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES
