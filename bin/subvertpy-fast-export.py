@@ -18,7 +18,7 @@ import sys, os.path
 from optparse import OptionParser
 from time import mktime, strptime
 
-from subvertpy.repos import Repository
+from subvertpy.repos import PATH_CHANGE_DELETE, Repository
 
 ct_short = ['M', 'A', 'D', 'R', 'X']
 
@@ -84,7 +84,7 @@ class RegexStringMatcher(Matcher):
 
 MATCHER = None
 
-def export_revision(rev, repo, fs):
+def export_revision(rev, fs):
     sys.stderr.write("Exporting revision %s... " % rev)
 
     # Open a root object representing the youngest (HEAD) revision.
@@ -98,14 +98,13 @@ def export_revision(rev, repo, fs):
     file_changes = []
 
     for path, (node_id, change_type, text_changed, prop_changed) in changes.iteritems():
-        c_t = ct_short[change_type]
         if root.is_dir(path):
             continue
         if not MATCHER.matches(path):
             # We don't handle branches. Or tags. Yet.
             pass
         else:
-            if c_t == 'D':
+            if change_type == PATH_CHANGE_DELETE:
                 file_changes.append("D %s" % MATCHER.replace(path))
             else:
                 marks[i] = MATCHER.replace(path)
@@ -145,14 +144,13 @@ def crawl_revisions(repos_path, first_rev=1, final_rev=None):
 
     # Open the repository at REPOS_PATH, and get a reference to its
     # versioning filesystem.
-    repos_obj = Repository(repos_path)
-    fs_obj = repos_obj.fs()
+    fs_obj = Repository(repos_path).fs()
 
     # Query the current youngest revision.
     if final_rev is None:
         final_rev = fs_obj.youngest_revision()
     for rev in xrange(first_rev, final_rev + 1):
-        export_revision(rev, repos_obj, fs_obj)
+        export_revision(rev, fs_obj)
 
 
 if __name__ == '__main__':
