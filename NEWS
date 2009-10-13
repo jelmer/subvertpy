@@ -10,6 +10,8 @@
 
   * Add svn.fs.FileSystemRoot.paths_changed(). (Jelmer Vernooij)
 
+  * Add svn.fs.FileSystemRoot.is_dir(). (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES

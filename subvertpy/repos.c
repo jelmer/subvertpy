@@ -454,8 +454,27 @@ static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
 	return ret;
 }
 
+static PyObject *fs_root_is_dir(FileSystemRootObject *self, PyObject *args)
+{
+	svn_boolean_t is_dir;
+	apr_pool_t *temp_pool;
+	char *path;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_is_dir(&is_dir, self->root, 
+											   path, temp_pool));
+	apr_pool_destroy(temp_pool);
+	return PyBool_FromLong(is_dir);
+}
+
 static PyMethodDef fs_root_methods[] = {
 	{ "paths_changed", (PyCFunction)fs_root_paths_changed, METH_NOARGS, NULL },
+	{ "is_dir", (PyCFunction)fs_root_is_dir, METH_VARARGS, NULL },
 	{ NULL, }
 };
 
