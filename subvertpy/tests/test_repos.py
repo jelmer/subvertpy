@@ -18,7 +18,7 @@
 import os
 
 from subvertpy import repos, SubversionException
-from subvertpy.tests import TestCaseInTempDir
+from subvertpy.tests import TestCase, TestCaseInTempDir
 
 class TestClient(TestCaseInTempDir):
 
@@ -56,3 +56,12 @@ class TestClient(TestCaseInTempDir):
         repos.create(os.path.join(self.test_dir, "foo"))
         root = repos.Repository("foo").fs().revision_root(0)
         self.assertEquals({}, root.paths_changed())
+
+
+class StreamTests(TestCase):
+
+    def test_read(self):
+        s = repos.Stream()
+        self.assertEquals("", s.read())
+        self.assertEquals("", s.read(15))
+        s.close()

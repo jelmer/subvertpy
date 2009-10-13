@@ -4,17 +4,19 @@
 
   * Add definition for ERR_EAI_NONAME. (John Szakmeister)
 
-  * Add svn.fs.FileSystem.youngest_revision(). (Jelmer Vernooij)
+  * Add svn.repos.FileSystem.youngest_revision(). (Jelmer Vernooij)
 
-  * Add svn.fs.FileSystem.revision_root(). (Jelmer Vernooij)
+  * Add svn.repos.FileSystem.revision_root(). (Jelmer Vernooij)
 
-  * Add svn.fs.FileSystemRoot.paths_changed(). (Jelmer Vernooij)
+  * Add svn.repos.FileSystemRoot.paths_changed(). (Jelmer Vernooij)
 
-  * Add svn.fs.FileSystemRoot.is_dir(). (Jelmer Vernooij)
+  * Add svn.repos.FileSystemRoot.is_dir(). (Jelmer Vernooij)
 
-  * Add svn.fs.FileSystemRoot.file_length(). (Jelmer Vernooij)
+  * Add svn.repos.FileSystemRoot.file_length(). (Jelmer Vernooij)
 
-  * Add svn.fs.FileSystem.revision_proplist(). (Jelmer Vernooij)
+  * Add svn.repos.FileSystemRoot.file_contents(). (Jelmer Vernooij)
+
+  * Add svn.repos.FileSystem.revision_proplist(). (Jelmer Vernooij)
 
 0.6.9	2009-09-10
 

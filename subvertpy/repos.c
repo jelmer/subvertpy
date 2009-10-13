@@ -27,6 +27,13 @@
 extern PyTypeObject FileSystemRoot_Type;
 extern PyTypeObject Repository_Type;
 extern PyTypeObject FileSystem_Type;
+extern PyTypeObject Stream_Type;
+
+typedef struct {
+	PyObject_HEAD
+	svn_stream_t *stream;
+	apr_pool_t *pool;
+} StreamObject;
 
 typedef struct { 
 	PyObject_HEAD
@@ -514,10 +521,37 @@ static PyObject *fs_root_file_length(FileSystemRootObject *self, PyObject *args)
 	return PyInt_FromLong(filesize);
 }
 
+static PyObject *fs_root_file_contents(FileSystemRootObject *self, PyObject *args)
+{
+	svn_stream_t *stream;
+	apr_pool_t *pool;
+	StreamObject *ret;
+	char *path;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	pool = Pool(NULL);
+	if (pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(pool, svn_fs_file_contents(&stream, self->root, 
+											   path, pool));
+
+	ret = PyObject_New(StreamObject, &Stream_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->pool = pool;
+	ret->stream = stream;
+
+    return (PyObject *)ret;
+}
+
 static PyMethodDef fs_root_methods[] = {
 	{ "paths_changed", (PyCFunction)fs_root_paths_changed, METH_NOARGS, NULL },
 	{ "is_dir", (PyCFunction)fs_root_is_dir, METH_VARARGS, NULL },
 	{ "file_length", (PyCFunction)fs_root_file_length, METH_VARARGS, NULL },
+	{ "file_content", (PyCFunction)fs_root_file_contents, METH_VARARGS, NULL },
 	{ NULL, }
 };
 
@@ -581,6 +615,152 @@ PyTypeObject FileSystemRoot_Type = {
 	fs_root_methods, /*	struct PyMethodDef *tp_methods;	*/
 };
 
+
+static void stream_dealloc(PyObject *self)
+{
+	StreamObject *streamself = (StreamObject *)self;
+
+	apr_pool_destroy(streamself->pool);
+}
+
+static PyObject *stream_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+	char *kwnames[] = { NULL };
+	StreamObject *ret;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwnames))
+		return NULL;
+
+	ret = PyObject_New(StreamObject, &Stream_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->pool = Pool(NULL);
+	if (ret->pool == NULL)
+		return NULL;
+	ret->stream = svn_stream_empty(ret->pool);
+
+	return (PyObject *)ret;
+}
+
+static PyObject *stream_close(StreamObject *self)
+{
+	svn_stream_close(self->stream);
+	Py_RETURN_NONE;
+}
+
+static PyObject *stream_read(StreamObject *self, PyObject *args)
+{
+	PyObject *ret;
+	apr_pool_t *temp_pool;
+	long len = -1;
+	if (!PyArg_ParseTuple(args, "|l", &len))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL) 
+		return NULL;
+	if (len != -1) {
+		char *buffer;
+		apr_size_t size = len;
+		buffer = apr_palloc(temp_pool, len);
+		if (buffer == NULL) {
+			PyErr_NoMemory();
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+		RUN_SVN_WITH_POOL(temp_pool, svn_stream_read(self->stream, buffer, &size));
+		ret = PyString_FromStringAndSize(buffer, size);
+		apr_pool_destroy(temp_pool);
+		return ret;
+	} else {
+		svn_string_t *result;
+		RUN_SVN_WITH_POOL(temp_pool, svn_string_from_stream(&result, 
+							   self->stream,
+							   temp_pool,
+							   temp_pool));
+		ret = PyString_FromStringAndSize(result->data, result->len);
+		apr_pool_destroy(temp_pool);
+		return ret;
+	}
+}
+
+static PyMethodDef stream_methods[] = {
+	{ "read", (PyCFunction)stream_read, METH_VARARGS, NULL },
+	{ "close", (PyCFunction)stream_close, METH_NOARGS, NULL },
+	{ NULL, }
+};
+
+PyTypeObject Stream_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	"repos.Stream", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(StreamObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	stream_dealloc, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+	
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+	
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+	
+	NULL, /*	const char *tp_doc;  Documentation string */
+	
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+	
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+	
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+	
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+	
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+	
+	/* Attribute descriptor and subclassing stuff */
+	stream_methods, /*	struct PyMethodDef *tp_methods;	*/
+	NULL, /*	struct PyMemberDef *tp_members;	*/
+	NULL, /*	struct PyGetSetDef *tp_getset;	*/
+	NULL, /*	struct _typeobject *tp_base;	*/
+	NULL, /*	PyObject *tp_dict;	*/
+	NULL, /*	descrgetfunc tp_descr_get;	*/
+	NULL, /*	descrsetfunc tp_descr_set;	*/
+	0, /*	Py_ssize_t tp_dictoffset;	*/
+	NULL, /*	initproc tp_init;	*/
+	NULL, /*	allocfunc tp_alloc;	*/
+	stream_init, /* tp_new tp_new */
+};
+
 void initrepos(void)
 {
 	static apr_pool_t *pool;
@@ -593,6 +773,9 @@ void initrepos(void)
 		return;
 
 	if (PyType_Ready(&FileSystemRoot_Type) < 0)
+		return;
+
+	if (PyType_Ready(&Stream_Type) < 0)
 		return;
 
 	apr_initialize();
@@ -612,4 +795,7 @@ void initrepos(void)
 
 	PyModule_AddObject(mod, "Repository", (PyObject *)&Repository_Type);
 	Py_INCREF(&Repository_Type);
+
+	PyModule_AddObject(mod, "Stream", (PyObject *)&Stream_Type);
+	Py_INCREF(&Stream_Type);
 }
