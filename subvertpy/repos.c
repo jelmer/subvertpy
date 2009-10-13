@@ -387,9 +387,9 @@ static PyMethodDef repos_module_methods[] = {
 	{ NULL, }
 };
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 static PyObject *repos_has_capability(RepositoryObject *self, PyObject *args)
 {
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	char *name;
 	svn_boolean_t has;
 	apr_pool_t *temp_pool;
@@ -401,15 +401,16 @@ static PyObject *repos_has_capability(RepositoryObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(temp_pool, svn_repos_has_capability(self->repos, &has, name, temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(has);
-}
+#else
+	PyErr_SetString(PyExc_NotImplementedError, "has_capability is only supported in Subversion >= 1.5");
+	return NULL;
 #endif
+}
 
 static PyMethodDef repos_methods[] = {
 	{ "load_fs", (PyCFunction)repos_load_fs, METH_VARARGS|METH_KEYWORDS, NULL },
 	{ "fs", (PyCFunction)repos_fs, METH_NOARGS, NULL },
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	{ "has_capability", (PyCFunction)repos_has_capability, METH_VARARGS, NULL },
-#endif
 	{ NULL, }
 };
 
