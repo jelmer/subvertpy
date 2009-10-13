@@ -33,6 +33,7 @@ typedef struct {
 	PyObject_HEAD
 	svn_stream_t *stream;
 	apr_pool_t *pool;
+	svn_boolean_t closed;
 } StreamObject;
 
 typedef struct { 
@@ -381,9 +382,9 @@ static PyObject *repos_hotcopy(RepositoryObject *self, PyObject *args)
 }
 
 static PyMethodDef repos_module_methods[] = {
-	{ "create", repos_create, METH_VARARGS, NULL },
-	{ "delete", repos_delete, METH_VARARGS, NULL },
-	{ "hotcopy", repos_hotcopy, METH_VARARGS, NULL },
+	{ "create", (PyCFunction)repos_create, METH_VARARGS, NULL },
+	{ "delete", (PyCFunction)repos_delete, METH_VARARGS, NULL },
+	{ "hotcopy", (PyCFunction)repos_hotcopy, METH_VARARGS, NULL },
 	{ NULL, }
 };
 
@@ -622,6 +623,7 @@ static PyObject *fs_root_file_contents(FileSystemRootObject *self, PyObject *arg
 		return NULL;
 
 	ret->pool = pool;
+	ret->closed = FALSE;
 	ret->stream = stream;
 
     return (PyObject *)ret;
@@ -720,13 +722,17 @@ static PyObject *stream_init(PyTypeObject *type, PyObject *args, PyObject *kwarg
 	if (ret->pool == NULL)
 		return NULL;
 	ret->stream = svn_stream_empty(ret->pool);
+	ret->closed = FALSE;
 
 	return (PyObject *)ret;
 }
 
 static PyObject *stream_close(StreamObject *self)
 {
-	svn_stream_close(self->stream);
+	if (!self->closed) {
+		svn_stream_close(self->stream);
+		self->closed = TRUE;
+	}
 	Py_RETURN_NONE;
 }
 
@@ -736,6 +742,11 @@ static PyObject *stream_write(StreamObject *self, PyObject *args)
 	size_t len;
 	if (!PyArg_ParseTuple(args, "s#", &buffer, &len))
 		return NULL;
+
+	if (self->closed) {
+		PyErr_SetString(PyExc_RuntimeError, "unable to write: stream already closed");
+		return NULL;
+	}
 
 	RUN_SVN(svn_stream_write(self->stream, buffer, &len));
 
@@ -749,6 +760,10 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 	long len = -1;
 	if (!PyArg_ParseTuple(args, "|l", &len))
 		return NULL;
+
+	if (self->closed) {
+		return PyString_FromString("");
+	}
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL) 
@@ -772,6 +787,7 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 							   self->stream,
 							   temp_pool,
 							   temp_pool));
+		self->closed = TRUE;
 		ret = PyString_FromStringAndSize(result->data, result->len);
 		apr_pool_destroy(temp_pool);
 		return ret;
