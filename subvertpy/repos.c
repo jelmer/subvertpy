@@ -154,8 +154,25 @@ static PyObject *fs_get_uuid(PyObject *self)
 	return ret;
 }
 
+static PyObject *fs_get_youngest_revision(FileSystemObject *self)
+{
+	svn_revnum_t rev;
+	apr_pool_t *temp_pool;
+	PyObject *ret;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_youngest_rev(&rev, self->fs, temp_pool));
+	ret = PyInt_FromLong(rev);
+	apr_pool_destroy(temp_pool);
+
+	return ret;
+}
+
 static PyMethodDef fs_methods[] = {
 	{ "get_uuid", (PyCFunction)fs_get_uuid, METH_NOARGS, NULL },
+	{ "youngest_revision", (PyCFunction)fs_get_youngest_revision, METH_NOARGS, NULL },
 	{ NULL, }
 };
 

@@ -4,6 +4,8 @@
 
   * Add definition for ERR_EAI_NONAME. (John Szakmeister)
 
+  * Add svn.fs.FileSystem.youngest_revision(). (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES
