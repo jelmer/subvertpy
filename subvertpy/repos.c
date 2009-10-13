@@ -429,6 +429,7 @@ static void fs_root_dealloc(PyObject *self)
 	FileSystemRootObject *fsobj = (FileSystemRootObject *)self;
 
 	apr_pool_destroy(fsobj->pool);
+	PyObject_DEL(fsobj);
 }
 
 static PyObject *py_string_from_svn_node_id(const svn_fs_id_t *id)
@@ -503,6 +504,24 @@ static PyObject *fs_root_is_dir(FileSystemRootObject *self, PyObject *args)
 	return PyBool_FromLong(is_dir);
 }
 
+static PyObject *fs_root_is_file(FileSystemRootObject *self, PyObject *args)
+{
+	svn_boolean_t is_file;
+	apr_pool_t *temp_pool;
+	char *path;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_is_file(&is_file, self->root, 
+											   path, temp_pool));
+	apr_pool_destroy(temp_pool);
+	return PyBool_FromLong(is_file);
+}
+
 static PyObject *fs_root_file_length(FileSystemRootObject *self, PyObject *args)
 {
 	svn_filesize_t filesize;
@@ -550,6 +569,7 @@ static PyObject *fs_root_file_contents(FileSystemRootObject *self, PyObject *arg
 static PyMethodDef fs_root_methods[] = {
 	{ "paths_changed", (PyCFunction)fs_root_paths_changed, METH_NOARGS, NULL },
 	{ "is_dir", (PyCFunction)fs_root_is_dir, METH_VARARGS, NULL },
+	{ "is_file", (PyCFunction)fs_root_is_file, METH_VARARGS, NULL },
 	{ "file_length", (PyCFunction)fs_root_file_length, METH_VARARGS, NULL },
 	{ "file_content", (PyCFunction)fs_root_file_contents, METH_VARARGS, NULL },
 	{ NULL, }
