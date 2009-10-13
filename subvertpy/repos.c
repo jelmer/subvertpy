@@ -649,6 +649,18 @@ static PyObject *stream_close(StreamObject *self)
 	Py_RETURN_NONE;
 }
 
+static PyObject *stream_write(StreamObject *self, PyObject *args)
+{
+	char *buffer;
+	size_t len;
+	if (!PyArg_ParseTuple(args, "s#", &buffer, &len))
+		return NULL;
+
+	RUN_SVN(svn_stream_write(self->stream, buffer, &len));
+
+	return PyInt_FromLong(len);
+}
+
 static PyObject *stream_read(StreamObject *self, PyObject *args)
 {
 	PyObject *ret;
@@ -687,6 +699,7 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 
 static PyMethodDef stream_methods[] = {
 	{ "read", (PyCFunction)stream_read, METH_VARARGS, NULL },
+	{ "write", (PyCFunction)stream_write, METH_VARARGS, NULL },
 	{ "close", (PyCFunction)stream_close, METH_NOARGS, NULL },
 	{ NULL, }
 };
