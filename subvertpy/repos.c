@@ -822,9 +822,14 @@ void initrepos(void)
 	if (mod == NULL)
 		return;
 
-	PyModule_AddObject(mod, "LOAD_UUID_DEFAULT", PyLong_FromLong(0));
-	PyModule_AddObject(mod, "LOAD_UUID_IGNORE", PyLong_FromLong(1));
-	PyModule_AddObject(mod, "LOAD_UUID_FORCE", PyLong_FromLong(2));
+	PyModule_AddObject(mod, "LOAD_UUID_DEFAULT", PyLong_FromLong(svn_repos_load_uuid_default));
+	PyModule_AddObject(mod, "LOAD_UUID_IGNORE", PyLong_FromLong(svn_repos_load_uuid_ignore));
+	PyModule_AddObject(mod, "LOAD_UUID_FORCE", PyLong_FromLong(svn_repos_load_uuid_force));
+
+	PyModule_AddObject(mod, "PATH_CHANGE_MODIFY", PyInt_FromLong(svn_fs_path_change_modify));
+	PyModule_AddObject(mod, "PATH_CHANGE_ADD", PyInt_FromLong(svn_fs_path_change_add));
+	PyModule_AddObject(mod, "PATH_CHANGE_DELETE", PyInt_FromLong(svn_fs_path_change_delete));
+	PyModule_AddObject(mod, "PATH_CHANGE_REPLACE", PyInt_FromLong(svn_fs_path_change_replace));
 
 	PyModule_AddObject(mod, "Repository", (PyObject *)&Repository_Type);
 	Py_INCREF(&Repository_Type);
