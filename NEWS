@@ -4,25 +4,10 @@
 
   * Add definition for ERR_EAI_NONAME. (John Szakmeister)
 
-  * Add svn.repos.FileSystem.youngest_revision(). (Jelmer Vernooij)
+  * Add subvertpy.repos.FileSystem methods: youngest_revision, revision_root, revision_proplist.
+    (Jelmer Vernooij)
 
-  * Add svn.repos.FileSystem.revision_root(). (Jelmer Vernooij)
-
-  * Add svn.repos.FileSystemRoot.paths_changed(). (Jelmer Vernooij)
-
-  * Add svn.repos.FileSystemRoot.is_dir(). (Jelmer Vernooij)
-
-  * Add svn.repos.FileSystemRoot.file_length(). (Jelmer Vernooij)
-
-  * Add svn.repos.FileSystemRoot.file_contents(). (Jelmer Vernooij)
-
-  * Add svn.repos.FileSystem.revision_proplist(). (Jelmer Vernooij)
-
-  * Add svn.repos.delete(). (Jelmer Vernooij)
-
-  * Add svn.repos.Repository.has_capability(). (Jelmer Vernooij)
-
-  * Add svn.repos.hotcopy(). (Jelmer Vernooij)
+  * Add subvertpy.repos.{delete,Repository.has_capability,hotcopy}. (Jelmer Vernooij)
 
 0.6.9	2009-09-10
 
