@@ -44,6 +44,10 @@ class TestClient(TestCaseInTempDir):
         repos.create(os.path.join(self.test_dir, "foo"))
         self.assertTrue(repos.Repository("foo").fs().revision_root(0) is not None)
 
+    def test_rev_props(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        self.assertEquals(["svn:date"], repos.Repository("foo").fs().revision_proplist(0).keys())
+
     def test_rev_root_invalid(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         self.assertRaises(SubversionException, repos.Repository("foo").fs().revision_root, 1)

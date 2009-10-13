@@ -14,6 +14,8 @@
 
   * Add svn.fs.FileSystemRoot.file_length(). (Jelmer Vernooij)
 
+  * Add svn.fs.FileSystem.revision_proplist(). (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES

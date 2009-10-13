@@ -203,10 +203,34 @@ static PyObject *fs_get_revision_root(FileSystemObject *self, PyObject *args)
 	return (PyObject *)ret;
 }
 
+static PyObject *fs_get_revision_proplist(FileSystemObject *self, PyObject *args)
+{
+	svn_revnum_t rev;
+	PyObject *ret;
+	apr_pool_t *temp_pool;
+	apr_hash_t *props;
+
+	if (!PyArg_ParseTuple(args, "l", &rev))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_revision_proplist(&props, self->fs, rev, temp_pool));
+
+	ret = prop_hash_to_dict(props);
+
+	apr_pool_destroy(temp_pool);
+
+	return (PyObject *)ret;
+}
+
 static PyMethodDef fs_methods[] = {
 	{ "get_uuid", (PyCFunction)fs_get_uuid, METH_NOARGS, NULL },
 	{ "youngest_revision", (PyCFunction)fs_get_youngest_revision, METH_NOARGS, NULL },
 	{ "revision_root", (PyCFunction)fs_get_revision_root, METH_VARARGS, NULL },
+	{ "revision_proplist", (PyCFunction)fs_get_revision_proplist, METH_VARARGS, NULL },
 	{ NULL, }
 };
 
