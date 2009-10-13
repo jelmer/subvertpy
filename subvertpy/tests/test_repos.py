@@ -28,6 +28,10 @@ class TestClient(TestCaseInTempDir):
     def test_create(self):
         repos.create(os.path.join(self.test_dir, "foo"))
 
+    def test_capability(self):
+        r = repos.create(os.path.join(self.test_dir, "foo"))
+        self.assertIsInstance(r.has_capability("mergeinfo"), bool)
+
     def test_open(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         repos.Repository("foo")

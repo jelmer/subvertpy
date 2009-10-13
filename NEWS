@@ -20,6 +20,8 @@
 
   * Add svn.repos.delete(). (Jelmer Vernooij)
 
+  * Add svn.repos.Repository.has_capability(). (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES
