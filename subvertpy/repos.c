@@ -497,8 +497,8 @@ static void fs_root_dealloc(PyObject *self)
 static PyObject *py_string_from_svn_node_id(const svn_fs_id_t *id)
 {
 	apr_pool_t *temp_pool;
-	temp_pool = Pool(NULL);
 	svn_string_t *str;
+	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
 	str = svn_fs_unparse_id(id, temp_pool);
