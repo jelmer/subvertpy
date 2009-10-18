@@ -602,6 +602,36 @@ static PyObject *fs_root_file_length(FileSystemRootObject *self, PyObject *args)
 	return PyInt_FromLong(filesize);
 }
 
+static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *args)
+{
+	apr_pool_t *temp_pool;
+	svn_checksum_kind_t kind;
+	svn_boolean_t force = FALSE;
+	char *path;
+	svn_checksum_t *checksum;
+	PyObject *ret;
+	const char *cstr;
+
+	if (!PyArg_ParseTuple(args, "s|ib", &path, &kind, &force))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_checksum(&checksum, kind, 
+													  self->root, 
+											   path, force, temp_pool));
+	cstr = svn_checksum_to_cstring(checksum, temp_pool);
+	if (cstr == NULL) {
+		ret = Py_None;
+		Py_INCREF(ret);
+	} else {
+		ret = PyString_FromString(cstr);
+	}
+	apr_pool_destroy(temp_pool);
+	return ret;
+}
+
 static PyObject *fs_root_file_contents(FileSystemRootObject *self, PyObject *args)
 {
 	svn_stream_t *stream;
@@ -635,6 +665,7 @@ static PyMethodDef fs_root_methods[] = {
 	{ "is_file", (PyCFunction)fs_root_is_file, METH_VARARGS, NULL },
 	{ "file_length", (PyCFunction)fs_root_file_length, METH_VARARGS, NULL },
 	{ "file_content", (PyCFunction)fs_root_file_contents, METH_VARARGS, NULL },
+	{ "file_checksum", (PyCFunction)fs_root_file_checksum, METH_VARARGS, NULL },
 	{ NULL, }
 };
 
@@ -913,6 +944,9 @@ void initrepos(void)
 	PyModule_AddObject(mod, "PATH_CHANGE_ADD", PyInt_FromLong(svn_fs_path_change_add));
 	PyModule_AddObject(mod, "PATH_CHANGE_DELETE", PyInt_FromLong(svn_fs_path_change_delete));
 	PyModule_AddObject(mod, "PATH_CHANGE_REPLACE", PyInt_FromLong(svn_fs_path_change_replace));
+
+	PyModule_AddObject(mod, "CHECKSUM_SHA1", PyInt_FromLong(svn_checksum_sha1));
+	PyModule_AddObject(mod, "CHECKSUM_MD5", PyInt_FromLong(svn_checksum_md5));
 
 	PyModule_AddObject(mod, "Repository", (PyObject *)&Repository_Type);
 	Py_INCREF(&Repository_Type);
