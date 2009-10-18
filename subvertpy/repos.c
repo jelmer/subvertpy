@@ -602,6 +602,27 @@ static PyObject *fs_root_file_length(FileSystemRootObject *self, PyObject *args)
 	return PyInt_FromLong(filesize);
 }
 
+static PyObject *fs_node_file_proplist(FileSystemRootObject *self, PyObject *args)
+{
+	svn_filesize_t filesize;
+	apr_pool_t *temp_pool;
+	PyObject *ret;
+	char *path;
+	apr_hash_t *proplist;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_node_proplist(&proplist, self->root, 
+											   path, temp_pool));
+	ret = prop_hash_to_dict(proplist);
+	apr_pool_destroy(temp_pool);
+	return ret;
+}
+
 static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *args)
 {
 	apr_pool_t *temp_pool;
@@ -666,6 +687,7 @@ static PyMethodDef fs_root_methods[] = {
 	{ "file_length", (PyCFunction)fs_root_file_length, METH_VARARGS, NULL },
 	{ "file_content", (PyCFunction)fs_root_file_contents, METH_VARARGS, NULL },
 	{ "file_checksum", (PyCFunction)fs_root_file_checksum, METH_VARARGS, NULL },
+	{ "proplist", (PyCFunction)fs_node_file_proplist, METH_VARARGS, NULL },
 	{ NULL, }
 };
 
