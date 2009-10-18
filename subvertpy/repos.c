@@ -782,6 +782,7 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 		apr_pool_destroy(temp_pool);
 		return ret;
 	} else {
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
 		svn_string_t *result;
 		RUN_SVN_WITH_POOL(temp_pool, svn_string_from_stream(&result, 
 							   self->stream,
@@ -791,6 +792,11 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 		ret = PyString_FromStringAndSize(result->data, result->len);
 		apr_pool_destroy(temp_pool);
 		return ret;
+#else
+		PyErr_SetString(PyExc_NotImplementedError, 
+			"Subversion 1.5 does not provide svn_string_from_stream().");
+		return NULL;
+#endif
 	}
 }
 
