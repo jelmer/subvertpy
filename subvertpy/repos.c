@@ -604,7 +604,6 @@ static PyObject *fs_root_file_length(FileSystemRootObject *self, PyObject *args)
 
 static PyObject *fs_node_file_proplist(FileSystemRootObject *self, PyObject *args)
 {
-	svn_filesize_t filesize;
 	apr_pool_t *temp_pool;
 	PyObject *ret;
 	char *path;
@@ -629,7 +628,11 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	svn_checksum_kind_t kind;
 	svn_boolean_t force = FALSE;
 	char *path;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
 	svn_checksum_t *checksum;
+#else
+	unsigned char checksum[APR_MD5_DIGESTSIZE];
+#endif
 	PyObject *ret;
 	const char *cstr;
 
@@ -639,6 +642,7 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
 	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_checksum(&checksum, kind, 
 													  self->root, 
 											   path, force, temp_pool));
@@ -649,6 +653,17 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	} else {
 		ret = PyString_FromString(cstr);
 	}
+#else
+	if (kind > 0)  {
+		PyErr_SetString(PyExc_ValueError, "Only MD5 checksums allowed with subversion < 1.6");
+		return NULL;
+	}
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_md5_checksum(checksum, 
+													  self->root, 
+											   path, temp_pool));
+	ret = PyString_FromStringAndSize(checksum, APR_MD5_DIGESTSIZE);
+#endif
 	apr_pool_destroy(temp_pool);
 	return ret;
 }
@@ -967,8 +982,12 @@ void initrepos(void)
 	PyModule_AddObject(mod, "PATH_CHANGE_DELETE", PyInt_FromLong(svn_fs_path_change_delete));
 	PyModule_AddObject(mod, "PATH_CHANGE_REPLACE", PyInt_FromLong(svn_fs_path_change_replace));
 
-	PyModule_AddObject(mod, "CHECKSUM_SHA1", PyInt_FromLong(svn_checksum_sha1));
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
 	PyModule_AddObject(mod, "CHECKSUM_MD5", PyInt_FromLong(svn_checksum_md5));
+	PyModule_AddObject(mod, "CHECKSUM_SHA1", PyInt_FromLong(svn_checksum_sha1));
+#else
+	PyModule_AddObject(mod, "CHECKSUM_MD5", PyInt_FromLong(0));
+#endif
 
 	PyModule_AddObject(mod, "Repository", (PyObject *)&Repository_Type);
 	Py_INCREF(&Repository_Type);
