@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# subvertpy-fast-export.py
+# svn-fast-export.py
 # ----------
 #  Walk through each revision of a local Subversion repository and export it
 #  in a stream that git-fast-import can consume.
@@ -13,22 +13,22 @@
 trunk_path = '/trunk/'
 branches_path = '/branches/'
 tags_path = '/tags/'
+address = 'localhost'
 
+from cStringIO import StringIO
 import sys, os.path
 from optparse import OptionParser
+import stat
 from time import mktime, strptime
 
 from subvertpy.repos import PATH_CHANGE_DELETE, Repository
 
 ct_short = ['M', 'A', 'D', 'R', 'X']
 
-def dump_file_blob(root, full_path):
-    stream_length = root.file_length(full_path)
-    stream = root.file_content(full_path)
+def dump_file_blob(root, stream, stream_length):
     sys.stdout.write("data %s\n" % stream_length)
     sys.stdout.flush()
     sys.stdout.write(stream.read())
-    stream.close()
     sys.stdout.write("\n")
 
 
@@ -107,10 +107,27 @@ def export_revision(rev, fs):
             if change_type == PATH_CHANGE_DELETE:
                 file_changes.append("D %s" % MATCHER.replace(path))
             else:
+                props = root.proplist(path)
                 marks[i] = MATCHER.replace(path)
-                file_changes.append("M 644 :%s %s" % (i, marks[i]))
+                if props.get("svn:special", ""):
+                    contents = root.file_content(path).read()
+                    if not contents.startswith("link "):
+                        sys.stderr.write("special file '%s' is not a symlink, ignoring...\n" % path)
+                        continue
+                    mode = stat.S_IFLNK
+                    stream = StringIO(contents[len("link "):])
+                    stream_length = len(stream.getvalue())
+                else:
+                    if props.get("svn:executable", ""):
+                        mode = 0755
+                    else:
+                        mode = 0644
+                    stream_length = root.file_length(path)
+                    stream = root.file_content(path)
+                file_changes.append("M %o :%s %s" % (mode, i, marks[i]))
                 sys.stdout.write("blob\nmark :%s\n" % i)
-                dump_file_blob(root, path)
+                dump_file_blob(root, stream, stream_length)
+                stream.close()
                 i += 1
 
     # Get the commit author and message
@@ -118,7 +135,7 @@ def export_revision(rev, fs):
 
     # Do the recursive crawl.
     if props.has_key('svn:author'):
-        author = "%s <%s@localhost>" % (props['svn:author'], props['svn:author'])
+        author = "%s <%s@%s>" % (props['svn:author'], props['svn:author'], address)
     else:
         author = 'nobody <nobody@localhost>'
 
@@ -138,7 +155,7 @@ def export_revision(rev, fs):
     sys.stderr.write("done!\n")
 
 
-def crawl_revisions(repos_path, first_rev=1, final_rev=None):
+def crawl_revisions(repos_path, first_rev=None, final_rev=None):
     """Open the repository at REPOS_PATH, and recursively crawl all its
     revisions."""
 
@@ -147,6 +164,8 @@ def crawl_revisions(repos_path, first_rev=1, final_rev=None):
     fs_obj = Repository(repos_path).fs()
 
     # Query the current youngest revision.
+    if first_rev is None:
+        first_rev = 1
     if final_rev is None:
         final_rev = fs_obj.youngest_revision()
     for rev in xrange(first_rev, final_rev + 1):
@@ -159,12 +178,16 @@ if __name__ == '__main__':
     parser.set_usage(usage)
     parser.add_option('-f', '--final-rev', help='Final revision to import', 
                       dest='final_rev', metavar='FINAL_REV', type='int')
+    parser.add_option('-r', '--first-rev', help='First revision to import', 
+                      dest='first_rev', metavar='FIRST_REV', type='int')
     parser.add_option('-t', '--trunk-path', help="Path in repo to /trunk, may be `regex:/cvs/(trunk)/proj1/(.*)`\nFirst group is used as branchname, second to match files",
                       dest='trunk_path', metavar='TRUNK_PATH')
     parser.add_option('-b', '--branches-path', help='Path in repo to /branches',
                       dest='branches_path', metavar='BRANCHES_PATH')
     parser.add_option('-T', '--tags-path', help='Path in repo to /tags',
                       dest='tags_path', metavar='TAGS_PATH')
+    parser.add_option('-a', '--address', help='Domain to put on users for their mail address', 
+                      dest='address', metavar='hostname', type='string')
     (options, args) = parser.parse_args()
 
     if options.trunk_path != None:
@@ -173,6 +196,8 @@ if __name__ == '__main__':
         branches_path = options.branches_path
     if options.tags_path != None:
         tags_path = options.tags_path
+    if options.address != None:
+        address = options.address
 
     MATCHER = Matcher.getMatcher(trunk_path)
     sys.stderr.write("%s\n" % MATCHER)
@@ -191,4 +216,5 @@ if __name__ == '__main__':
     except ImportError:
         pass
 
-    crawl_revisions(repos_path, final_rev=options.final_rev)
+    crawl_revisions(repos_path, first_rev=options.first_rev,
+                    final_rev=options.final_rev)
