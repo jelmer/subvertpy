@@ -21,6 +21,7 @@
 #include <apr_general.h>
 #include <svn_fs.h>
 #include <svn_repos.h>
+#include <apr_md5.h>
 
 #include "util.h"
 
@@ -625,16 +626,17 @@ static PyObject *fs_node_file_proplist(FileSystemRootObject *self, PyObject *arg
 static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *args)
 {
 	apr_pool_t *temp_pool;
-	svn_checksum_kind_t kind;
 	svn_boolean_t force = FALSE;
 	char *path;
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	svn_checksum_kind_t kind;
+	const char *cstr;
 	svn_checksum_t *checksum;
 #else
+	int kind;
 	unsigned char checksum[APR_MD5_DIGESTSIZE];
 #endif
 	PyObject *ret;
-	const char *cstr;
 
 	if (!PyArg_ParseTuple(args, "s|ib", &path, &kind, &force))
 		return NULL;
@@ -662,7 +664,7 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_md5_checksum(checksum, 
 													  self->root, 
 											   path, temp_pool));
-	ret = PyString_FromStringAndSize(checksum, APR_MD5_DIGESTSIZE);
+	ret = PyString_FromStringAndSize((char *)checksum, APR_MD5_DIGESTSIZE);
 #endif
 	apr_pool_destroy(temp_pool);
 	return ret;
