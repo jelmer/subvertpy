@@ -50,7 +50,7 @@ static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, voi
 
 	state = PyGILState_Ensure();
 
-	ret = PyObject_CallFunction(fn, "izz", 
+	ret = PyObject_CallFunction(fn, "lzz", 
 					commit_info->revision, commit_info->date, 
 					commit_info->author);
 	CB_CHECK_PYRETVAL(ret);
