@@ -286,7 +286,7 @@ static PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-			pyval = Py_BuildValue("(czi)", val->action, val->copyfrom_path, 
+			pyval = Py_BuildValue("(czl)", val->action, val->copyfrom_path, 
 										 val->copyfrom_rev);
 			if (pyval == NULL)
 				return NULL;

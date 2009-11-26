@@ -90,7 +90,7 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
 		PyObject *item, *copyfrom;
 
 		if (commit_item->copyfrom_url != NULL) {
-			copyfrom = Py_BuildValue("(si)", commit_item->copyfrom_url, 
+			copyfrom = Py_BuildValue("(sl)", commit_item->copyfrom_url, 
 									 commit_item->copyfrom_rev);
 			if (copyfrom == NULL) {
 				Py_DECREF(ret);
@@ -157,7 +157,7 @@ static PyObject *py_commit_info_tuple(svn_commit_info_t *ci)
 		Py_RETURN_NONE;
 	if (ci->revision == SVN_INVALID_REVNUM)
 		Py_RETURN_NONE;
-	return Py_BuildValue("(izz)", ci->revision, ci->date, ci->author);
+	return Py_BuildValue("(lzz)", ci->revision, ci->date, ci->author);
 }
 
 typedef struct {

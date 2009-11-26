@@ -312,7 +312,7 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 {
 	char *path;
 	char *copyfrom_path=NULL; 
-	int copyfrom_rev=-1;
+	svn_revnum_t copyfrom_rev=-1;
    	void *child_baton;
 	EditorObject *editor = (EditorObject *)self;
 
@@ -337,7 +337,7 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 {
 	char *path;
 	EditorObject *editor = (EditorObject *)self;
-	int base_revision=-1;
+	svn_revnum_t base_revision=-1;
 	void *child_baton;
 
 	if (!DirectoryEditor_Check(self)) {
@@ -440,7 +440,7 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 {
 	char *path;
-	int base_revision=-1;
+	svn_revnum_t base_revision=-1;
 	void *file_baton;
 	EditorObject *editor = (EditorObject *)self;
 
@@ -556,7 +556,7 @@ PyTypeObject DirectoryEditor_Type = {
 
 static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
 {
-	int target_revision;
+	svn_revnum_t target_revision;
 	EditorObject *editor = (EditorObject *)self;
 
 	if (!Editor_Check(self)) {
@@ -564,7 +564,7 @@ static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (!PyArg_ParseTuple(args, "i", &target_revision))
+	if (!PyArg_ParseTuple(args, "l", &target_revision))
 		return NULL;
 
 	RUN_SVN(editor->editor->set_target_revision(editor->baton,

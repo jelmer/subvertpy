@@ -1,3 +1,10 @@
+0.7.2	UNRELEASED
+
+ BUG FIXES
+
+  * Fix inconsistencies between PyArg_ParseTuple arguments and variables, 
+    which caused crashes on some 64-bit platforms. (Václav Slavík, #488780)
+
 0.7.1	2009-10-20
 
  BUG FIXES
