@@ -1,3 +1,10 @@
+subvertpy (0.7.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * Rebuild with correct version of python-support. Closes: #560988.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sun, 13 Dec 2009 15:34:05 +0100
+
 subvertpy (0.7.0-1) unstable; urgency=low
 
   * New upstream release.

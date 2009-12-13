@@ -1,3 +1,9 @@
+0.7.1	2009-10-20
+
+ BUG FIXES
+
+  * Fix APR include path on Windows. (Ronald Blaschke, #456321)
+
 0.7.0	2009-10-20
 
  FEATURES

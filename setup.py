@@ -187,7 +187,7 @@ if os.name == "nt":
         includes = [
             # apr dirs.
             os.path.join(svn_dev_dir, r"include\apr"),
-            os.path.join(svn_dev_dir, r"include\apr-utils"),
+            os.path.join(svn_dev_dir, r"include\apr-util"),
             os.path.join(svn_dev_dir, r"include\apr-iconv"),
             # svn dirs.
             os.path.join(svn_dev_dir, "include"), 
@@ -297,7 +297,7 @@ def subvertpy_modules(basemodule):
         ]
 
 
-subvertpy_version = (0, 7, 0)
+subvertpy_version = (0, 7, 1)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
