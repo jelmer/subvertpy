@@ -198,8 +198,6 @@ bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **
 	return true;
 }
 
-
-
 PyObject *prop_hash_to_dict(apr_hash_t *props)
 {
 	const char *key;

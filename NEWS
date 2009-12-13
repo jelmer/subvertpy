@@ -1,3 +1,18 @@
+0.7.0	2009-10-20
+
+ FEATURES
+
+  * Add definition for ERR_EAI_NONAME. (John Szakmeister)
+
+  * Add subvertpy.repos.FileSystem methods: youngest_revision, revision_root, 
+    revision_proplist.  (Jelmer Vernooij)
+
+  * Add subvertpy.repos.{delete,Repository.has_capability,hotcopy}.
+    (Jelmer Vernooij)
+
+  * Add subvertpy-fast-export script, based on svn-fast-export.py by Chris Lee 
+    included with bzr-fast-import. (Jelmer Vernooij)
+
 0.6.9	2009-09-10
 
  BUG FIXES

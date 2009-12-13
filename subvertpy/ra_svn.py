@@ -17,20 +17,45 @@
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 
+import SocketServer
 import base64
-import copy
 import os
 import socket
 import subprocess
-import time
 import urllib
-import SocketServer
 
-from subvertpy import SubversionException, ERR_RA_SVN_UNKNOWN_CMD, NODE_DIR, NODE_FILE, NODE_UNKNOWN, NODE_NONE, ERR_UNSUPPORTED_FEATURE, properties
-from subvertpy.delta import pack_svndiff0_window, SVNDIFF0_HEADER, unpack_svndiff0
-from subvertpy.marshall import marshall, unmarshall, literal, MarshallError, NeedMoreData
-from subvertpy.ra import DIRENT_KIND, DIRENT_TIME, DIRENT_HAS_PROPS, DIRENT_SIZE, DIRENT_CREATED_REV, DIRENT_LAST_AUTHOR
-from subvertpy.server import generate_random_id
+from subvertpy import (
+    ERR_RA_SVN_UNKNOWN_CMD,
+    ERR_UNSUPPORTED_FEATURE,
+    NODE_DIR,
+    NODE_FILE,
+    NODE_UNKNOWN,
+    NODE_NONE,
+    SubversionException,
+    properties,
+    )
+from subvertpy.delta import (
+    pack_svndiff0_window,
+    unpack_svndiff0,
+    SVNDIFF0_HEADER,
+    )
+from subvertpy.marshall import (
+    NeedMoreData,
+    literal,
+    marshall,
+    unmarshall,
+    )
+from subvertpy.ra import (
+    DIRENT_CREATED_REV,
+    DIRENT_HAS_PROPS,
+    DIRENT_KIND,
+    DIRENT_LAST_AUTHOR,
+    DIRENT_SIZE,
+    DIRENT_TIME,
+    )
+from subvertpy.server import (
+    generate_random_id,
+    )
 
 
 class SSHSubprocess(object):

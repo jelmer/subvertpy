@@ -17,8 +17,8 @@
 
 import os
 
-from subvertpy import repos
-from subvertpy.tests import TestCaseInTempDir
+from subvertpy import repos, SubversionException
+from subvertpy.tests import TestCase, TestCaseInTempDir
 
 class TestClient(TestCaseInTempDir):
 
@@ -28,6 +28,10 @@ class TestClient(TestCaseInTempDir):
     def test_create(self):
         repos.create(os.path.join(self.test_dir, "foo"))
 
+    def test_capability(self):
+        r = repos.create(os.path.join(self.test_dir, "foo"))
+        self.assertIsInstance(r.has_capability("mergeinfo"), bool)
+
     def test_open(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         repos.Repository("foo")
@@ -35,3 +39,51 @@ class TestClient(TestCaseInTempDir):
     def test_uuid(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         self.assertIsInstance(repos.Repository("foo").fs().get_uuid(), str)
+
+    def test_youngest_rev(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        self.assertEquals(0, repos.Repository("foo").fs().youngest_revision())
+
+    def test_rev_root(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        self.assertTrue(repos.Repository("foo").fs().revision_root(0) is not None)
+
+    def test_rev_props(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        self.assertEquals(["svn:date"], repos.Repository("foo").fs().revision_proplist(0).keys())
+
+    def test_rev_root_invalid(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        self.assertRaises(SubversionException, repos.Repository("foo").fs().revision_root, 1)
+
+    def test_paths_changed(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        root = repos.Repository("foo").fs().revision_root(0)
+        self.assertEquals({}, root.paths_changed())
+
+    def test_is_dir(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        root = repos.Repository("foo").fs().revision_root(0)
+        self.assertEquals(True, root.is_dir(""))
+        self.assertEquals(False, root.is_dir("nonexistant"))
+
+    def test_is_file(self):
+        repos.create(os.path.join(self.test_dir, "foo"))
+        root = repos.Repository("foo").fs().revision_root(0)
+        self.assertEquals(False, root.is_file(""))
+        self.assertEquals(False, root.is_file("nonexistant"))
+
+
+class StreamTests(TestCase):
+
+    def test_read(self):
+        s = repos.Stream()
+        self.assertEquals("", s.read())
+        self.assertEquals("", s.read(15))
+        s.close()
+
+    def test_write(self):
+        s = repos.Stream()
+        self.assertEquals(0, s.write(""))
+        self.assertEquals(2, s.write("ab"))
+        s.close()

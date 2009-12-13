@@ -297,7 +297,7 @@ def subvertpy_modules(basemodule):
         ]
 
 
-subvertpy_version = (0, 6, 9)
+subvertpy_version = (0, 7, 0)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
@@ -316,5 +316,6 @@ if __name__ == "__main__":
           """,
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules("subvertpy"),
+          scripts=['bin/subvertpy-fast-export'],
           cmdclass = { 'install_lib': install_lib_with_dlls },
           )
