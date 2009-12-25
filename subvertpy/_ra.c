@@ -673,18 +673,8 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 		}
 		Py_DECREF(ret);
 	} else if (PyFile_Check(ret)) {
-		FILE *file;
-		apr_os_file_t osfile;
-
-		file = PyFile_AsFile(ret);
-#ifdef WIN32
-		osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
-#else
-		osfile = (apr_os_file_t)fileno(file);
-#endif
-		status = apr_os_file_put(fp, &osfile, O_CREAT | O_WRONLY, pool);
-		if (status) {
-			PyErr_SetAprStatus(status);
+		*fp = apr_file_from_object(ret, pool);
+		if (!*fp) {
 			Py_DECREF(ret);
 			PyGILState_Release(state);
 			return py_svn_error();

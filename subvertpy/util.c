@@ -19,6 +19,8 @@
 #include <stdbool.h>
 #include <Python.h>
 #include <apr_general.h>
+#include <apr_file_io.h>
+#include <apr_portable.h>
 #include <svn_error.h>
 #include <svn_io.h>
 #include <apr_errno.h>
@@ -554,3 +556,26 @@ PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
 	return ret;
 }
 	
+apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool)
+{
+    apr_status_t status;
+    FILE *file;
+    apr_file_t *fp;
+    apr_os_file_t osfile;
+  
+    file = PyFile_AsFile(object);
+#ifdef WIN32
+    osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
+#else
+    osfile = (apr_os_file_t)fileno(file);
+#endif
+
+    status = apr_os_file_put(&fp, &osfile,
+                             APR_FOPEN_WRITE | APR_FOPEN_CREATE, pool);
+    if (status) {
+        PyErr_SetAprStatus(status);
+        return NULL;
+    }
+
+    return fp;
+}
