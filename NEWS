@@ -7,6 +7,8 @@
 
   * Add constant for ERR_NODE_UNKNOWN_KIND. (Dan Villiom Podlaski Christiansen)
 
+  * Add svn.client.proplist() binding. (Dan Villiom Podlaski Christiansen)
+
 0.7.1	2009-10-20
 
  BUG FIXES

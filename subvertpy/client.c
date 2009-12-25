@@ -118,6 +118,20 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
 	return ret;
 }
 
+static svn_error_t *proplist_receiver(void *prop_list, const char *path,
+                                      apr_hash_t *prop_hash, apr_pool_t *pool)
+{
+    PyGILState_STATE state = PyGILState_Ensure();
+    PyObject *prop_dict = prop_hash_to_dict(prop_hash);
+
+    PyList_Append(prop_list, Py_BuildValue("(sO)", path, prop_dict));
+
+    PyGILState_Release(state);
+
+    return NULL;
+}
+
+
 static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const apr_array_header_t *commit_items, void *baton, apr_pool_t *pool)
 {
 	PyObject *py_commit_items, *ret, *py_log_msg, *py_tmp_file;
@@ -493,7 +507,7 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
-	
+
 static PyObject *client_propget(PyObject *self, PyObject *args)
 {
 	svn_opt_revision_t c_peg_rev;
@@ -524,6 +538,41 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
 	ret = prop_hash_to_dict(hash_props);
 	apr_pool_destroy(temp_pool);
 	return ret;
+}
+
+static PyObject *client_proplist(PyObject *self, PyObject *args,
+                                 PyObject *kwargs)
+{
+    char *kwnames[] = { "target", "peg_revision", "depth", "revision", NULL };
+    svn_opt_revision_t c_peg_rev;
+    svn_opt_revision_t c_rev;
+    svn_depth_t depth;
+    apr_pool_t *temp_pool;
+    char *target;
+    PyObject *peg_revision = Py_None, *revision = Py_None;
+    ClientObject *client = (ClientObject *)self;
+    PyObject *prop_list;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOi|O", kwnames,
+                                     &target, &peg_revision, &depth, &revision))
+        return NULL;
+    if (!to_opt_revision(peg_revision, &c_peg_rev))
+        return NULL;
+    if (!to_opt_revision(revision, &c_rev))
+        return NULL;
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+    prop_list = PyList_New(0);
+    if (prop_list == NULL)
+        return NULL;
+
+    RUN_SVN_WITH_POOL(temp_pool,
+                      svn_client_proplist3(target, &c_peg_rev, &c_rev,
+                                           depth, NULL,
+                                           proplist_receiver, prop_list,
+                                           client->client, temp_pool));
+    return prop_list;
 }
 
 static PyObject *client_resolve(PyObject *self, PyObject *args)
@@ -604,6 +653,7 @@ static PyMethodDef client_methods[] = {
 	{ "copy", client_copy, METH_VARARGS, "S.copy(src_path, dest_path, srv_rev=None)" },
 	{ "propset", client_propset, METH_VARARGS, "S.propset(name, value, target, recurse=True, skip_checks=False)" },
 	{ "propget", client_propget, METH_VARARGS, "S.propget(name, target, peg_revision, revision=None, recurse=False) -> value" },
+	{ "proplist", (PyCFunction)client_proplist, METH_VARARGS|METH_KEYWORDS, "S.proplist(path, peg_revision, depth, revision=None)" },
 	{ "resolve", client_resolve, METH_VARARGS, "S.resolve(path, depth, choice)" },
 	{ "update", client_update, METH_VARARGS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
 	{ NULL, }
@@ -888,4 +938,13 @@ void initclient(void)
 
 	Py_INCREF(&Client_Type);
 	PyModule_AddObject(mod, "Client", (PyObject *)&Client_Type);
+
+	PyModule_AddObject(mod, "depth_empty",
+	                   (PyObject *)PyLong_FromLong(svn_depth_empty));
+	PyModule_AddObject(mod, "depth_files",
+	                   (PyObject *)PyLong_FromLong(svn_depth_files));
+	PyModule_AddObject(mod, "depth_immediates",
+	                   (PyObject *)PyLong_FromLong(svn_depth_immediates));
+	PyModule_AddObject(mod, "depth_infinity",
+	                   (PyObject *)PyLong_FromLong(svn_depth_infinity));
 }
