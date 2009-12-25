@@ -122,9 +122,23 @@ static svn_error_t *proplist_receiver(void *prop_list, const char *path,
                                       apr_hash_t *prop_hash, apr_pool_t *pool)
 {
     PyGILState_STATE state = PyGILState_Ensure();
-    PyObject *prop_dict = prop_hash_to_dict(prop_hash);
+    PyObject *prop_dict;
+	PyObject *value;
 
-    PyList_Append(prop_list, Py_BuildValue("(sO)", path, prop_dict));
+	prop_dict = prop_hash_to_dict(prop_hash);
+
+	if (prop_dict == NULL) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
+
+	value = Py_BuildValue("(sO)", path, prop_dict);
+	if (value == NULL) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
+
+    PyList_Append(prop_list, value);
 
     PyGILState_Release(state);
 
@@ -564,14 +578,17 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
     if (temp_pool == NULL)
         return NULL;
     prop_list = PyList_New(0);
-    if (prop_list == NULL)
+    if (prop_list == NULL) {
+		apr_pool_destroy(temp_pool);
         return NULL;
+	}
 
     RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_proplist3(target, &c_peg_rev, &c_rev,
                                            depth, NULL,
                                            proplist_receiver, prop_list,
                                            client->client, temp_pool));
+
     return prop_list;
 }
 
