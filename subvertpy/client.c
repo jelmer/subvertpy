@@ -682,7 +682,6 @@ static PyObject *client_update(PyObject *self, PyObject *args)
 
 static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
     char *kwnames[] =
         { "path", "peg_revision", "depth", "dirents", "revision", NULL };
     svn_opt_revision_t c_peg_rev;
@@ -713,18 +712,29 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
 	}
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
     RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_list2(path, &c_peg_rev, &c_rev,
                                        depth, dirents, false,
                                        list_receiver, entry_dict,
                                        client->client, temp_pool));
+#else
+	if (depth != svn_depth_infinity && depth != svn_depth_empty) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"depth can only be infinity or empty when built against svn < 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+    RUN_SVN_WITH_POOL(temp_pool,
+                      svn_client_list(path, &c_peg_rev, &c_rev,
+                                       (depth == svn_depth_infinity)?TRUE:FALSE,
+									   dirents, false,
+                                       list_receiver, entry_dict,
+                                       client->client, temp_pool));
+#endif
 
     return entry_dict;
-#else
-    PyErr_SetString(PyExc_NotImplementedError,
-                    "svn_client_list2 not available with Subversion < 1.5");
-    return NULL;
-#endif
 }
 
 static PyMethodDef client_methods[] = {
