@@ -151,8 +151,15 @@ static svn_error_t *list_receiver(void *dict, const char *path,
                                   apr_pool_t *pool)
 {
     PyGILState_STATE state = PyGILState_Ensure();
+	PyObject *value;
 
-    PyDict_SetItemString(dict, path, py_dirent(dirent, SVN_DIRENT_ALL));
+	value = py_dirent(dirent, SVN_DIRENT_ALL);
+	if (value == NULL) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
+
+    PyDict_SetItemString(dict, path, value);
 
     PyGILState_Release(state);
 
@@ -701,8 +708,10 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
     if (temp_pool == NULL)
         return NULL;
     entry_dict = PyDict_New();
-    if (entry_dict == NULL)
+    if (entry_dict == NULL) {
+		apr_pool_destroy(temp_pool);
         return NULL;
+	}
 
     RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_list2(path, &c_peg_rev, &c_rev,
