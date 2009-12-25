@@ -70,6 +70,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error);
 svn_error_t *py_cancel_func(void *cancel_baton);
 apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool);
 void PyErr_SetAprStatus(apr_status_t status);
+PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields);
 
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool);

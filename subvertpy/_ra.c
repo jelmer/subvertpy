@@ -1402,48 +1402,7 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-static PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
-{
-	PyObject *ret, *obj;
-	ret = PyDict_New();
-	if (dirent_fields & SVN_DIRENT_KIND) {
-		obj = PyInt_FromLong(dirent->kind);
-		PyDict_SetItemString(ret, "kind", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_SIZE) {
-		obj = PyLong_FromLong(dirent->size);
-		PyDict_SetItemString(ret, "size", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_HAS_PROPS) {
-		obj = PyBool_FromLong(dirent->has_props);
-		PyDict_SetItemString(ret, "has_props", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_CREATED_REV) {
-		obj = PyLong_FromLong(dirent->created_rev);
-		PyDict_SetItemString(ret, "created_rev", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_TIME) {
-		obj = PyLong_FromLong(dirent->time);
-		PyDict_SetItemString(ret, "time", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_LAST_AUTHOR) {
-		if (dirent->last_author != NULL) {
-			obj = PyString_FromString(dirent->last_author);
-		} else {
-			obj = Py_None;
-			Py_INCREF(obj);
-		}
-		PyDict_SetItemString(ret, "last_author", obj);
-		Py_DECREF(obj);
-	}
-	return ret;
-}
-	
+
 static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 {
    	apr_pool_t *temp_pool;
