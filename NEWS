@@ -9,6 +9,8 @@
 
   * Add svn.client.proplist() binding. (Dan Villiom Podlaski Christiansen)
 
+  * Add svn.client.list() binding. (Dan Villiom Podlaski Christiansen)
+
 0.7.1	2009-10-20
 
  BUG FIXES

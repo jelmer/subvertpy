@@ -145,6 +145,19 @@ static svn_error_t *proplist_receiver(void *prop_list, const char *path,
     return NULL;
 }
 
+static svn_error_t *list_receiver(void *dict, const char *path,
+                                  const svn_dirent_t *dirent,
+                                  const svn_lock_t *lock, const char *abs_path,
+                                  apr_pool_t *pool)
+{
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    PyDict_SetItemString(dict, path, py_dirent(dirent, SVN_DIRENT_ALL));
+
+    PyGILState_Release(state);
+
+    return NULL;
+}
 
 static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const apr_array_header_t *commit_items, void *baton, apr_pool_t *pool)
 {
@@ -660,6 +673,51 @@ static PyObject *client_update(PyObject *self, PyObject *args)
 	return ret;
 }
 
+static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+    char *kwnames[] =
+        { "path", "peg_revision", "depth", "dirents", "revision", NULL };
+    svn_opt_revision_t c_peg_rev;
+    svn_opt_revision_t c_rev;
+    svn_depth_t depth;
+    int dirents = SVN_DIRENT_ALL;
+    apr_pool_t *temp_pool;
+    char *path;
+    PyObject *peg_revision = Py_None, *revision = Py_None;
+    ClientObject *client = (ClientObject *)self;
+    PyObject *entry_dict;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOi|iO", kwnames,
+                                     &path, &peg_revision, &depth, &dirents,
+                                     &revision))
+        return NULL;
+
+    if (!to_opt_revision(peg_revision, &c_peg_rev))
+        return NULL;
+    if (!to_opt_revision(revision, &c_rev))
+        return NULL;
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+    entry_dict = PyDict_New();
+    if (entry_dict == NULL)
+        return NULL;
+
+    RUN_SVN_WITH_POOL(temp_pool,
+                      svn_client_list2(path, &c_peg_rev, &c_rev,
+                                       depth, dirents, false,
+                                       list_receiver, entry_dict,
+                                       client->client, temp_pool));
+
+    return entry_dict;
+#else
+    PyErr_SetString(PyExc_NotImplementedError,
+                    "svn_client_list2 not available with Subversion < 1.5");
+    return NULL;
+#endif
+}
+
 static PyMethodDef client_methods[] = {
 	{ "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS, 
 		"S.add(path, recursive=True, force=False, no_ignore=False)" },
@@ -673,6 +731,7 @@ static PyMethodDef client_methods[] = {
 	{ "proplist", (PyCFunction)client_proplist, METH_VARARGS|METH_KEYWORDS, "S.proplist(path, peg_revision, depth, revision=None)" },
 	{ "resolve", client_resolve, METH_VARARGS, "S.resolve(path, depth, choice)" },
 	{ "update", client_update, METH_VARARGS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
+	{ "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.update(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
 	{ NULL, }
 };
 
