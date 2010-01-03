@@ -1,3 +1,18 @@
+0.7.2	2010-01-03
+
+ BUG FIXES
+
+  * Fix inconsistencies between PyArg_ParseTuple arguments and variables, 
+    which caused crashes on some 64-bit platforms. (Václav Slavík, #488780)
+
+  * Add constant for ERR_NODE_UNKNOWN_KIND. (Dan Villiom Podlaski Christiansen)
+
+  * Add svn.client.proplist() binding. (Dan Villiom Podlaski Christiansen,
+										Jelmer Vernooij)
+
+  * Add svn.client.list() binding. (Dan Villiom Podlaski Christiansen, 
+									Jelmer Vernooij)
+
 0.7.1	2009-10-20
 
  BUG FIXES

@@ -19,6 +19,8 @@
 #include <stdbool.h>
 #include <Python.h>
 #include <apr_general.h>
+#include <apr_file_io.h>
+#include <apr_portable.h>
 #include <svn_error.h>
 #include <svn_io.h>
 #include <apr_errno.h>
@@ -286,7 +288,7 @@ static PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-			pyval = Py_BuildValue("(czi)", val->action, val->copyfrom_path, 
+			pyval = Py_BuildValue("(czl)", val->action, val->copyfrom_path, 
 										 val->copyfrom_rev);
 			if (pyval == NULL)
 				return NULL;
@@ -512,4 +514,68 @@ apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool)
 	return config_hash;
 }
 
+PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
+{
+	PyObject *ret, *obj;
+	ret = PyDict_New();
+	if (dirent_fields & SVN_DIRENT_KIND) {
+		obj = PyInt_FromLong(dirent->kind);
+		PyDict_SetItemString(ret, "kind", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & SVN_DIRENT_SIZE) {
+		obj = PyLong_FromLong(dirent->size);
+		PyDict_SetItemString(ret, "size", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & SVN_DIRENT_HAS_PROPS) {
+		obj = PyBool_FromLong(dirent->has_props);
+		PyDict_SetItemString(ret, "has_props", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & SVN_DIRENT_CREATED_REV) {
+		obj = PyLong_FromLong(dirent->created_rev);
+		PyDict_SetItemString(ret, "created_rev", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & SVN_DIRENT_TIME) {
+		obj = PyLong_FromLong(dirent->time);
+		PyDict_SetItemString(ret, "time", obj);
+		Py_DECREF(obj);
+	}
+	if (dirent_fields & SVN_DIRENT_LAST_AUTHOR) {
+		if (dirent->last_author != NULL) {
+			obj = PyString_FromString(dirent->last_author);
+		} else {
+			obj = Py_None;
+			Py_INCREF(obj);
+		}
+		PyDict_SetItemString(ret, "last_author", obj);
+		Py_DECREF(obj);
+	}
+	return ret;
+}
+	
+apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool)
+{
+    apr_status_t status;
+    FILE *file;
+    apr_file_t *fp;
+    apr_os_file_t osfile;
+  
+    file = PyFile_AsFile(object);
+#ifdef WIN32
+    osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
+#else
+    osfile = (apr_os_file_t)fileno(file);
+#endif
 
+    status = apr_os_file_put(&fp, &osfile,
+                             APR_FOPEN_WRITE | APR_FOPEN_CREATE, pool);
+    if (status) {
+        PyErr_SetAprStatus(status);
+        return NULL;
+    }
+
+    return fp;
+}

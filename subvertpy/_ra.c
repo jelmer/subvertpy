@@ -50,7 +50,7 @@ static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, voi
 
 	state = PyGILState_Ensure();
 
-	ret = PyObject_CallFunction(fn, "izz", 
+	ret = PyObject_CallFunction(fn, "lzz", 
 					commit_info->revision, commit_info->date, 
 					commit_info->author);
 	CB_CHECK_PYRETVAL(ret);
@@ -673,18 +673,8 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 		}
 		Py_DECREF(ret);
 	} else if (PyFile_Check(ret)) {
-		FILE *file;
-		apr_os_file_t osfile;
-
-		file = PyFile_AsFile(ret);
-#ifdef WIN32
-		osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
-#else
-		osfile = (apr_os_file_t)fileno(file);
-#endif
-		status = apr_os_file_put(fp, &osfile, O_CREAT | O_WRONLY, pool);
-		if (status) {
-			PyErr_SetAprStatus(status);
+		*fp = apr_file_from_object(ret, pool);
+		if (!*fp) {
 			Py_DECREF(ret);
 			PyGILState_Release(state);
 			return py_svn_error();
@@ -1402,48 +1392,7 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-static PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
-{
-	PyObject *ret, *obj;
-	ret = PyDict_New();
-	if (dirent_fields & SVN_DIRENT_KIND) {
-		obj = PyInt_FromLong(dirent->kind);
-		PyDict_SetItemString(ret, "kind", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_SIZE) {
-		obj = PyLong_FromLong(dirent->size);
-		PyDict_SetItemString(ret, "size", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_HAS_PROPS) {
-		obj = PyBool_FromLong(dirent->has_props);
-		PyDict_SetItemString(ret, "has_props", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_CREATED_REV) {
-		obj = PyLong_FromLong(dirent->created_rev);
-		PyDict_SetItemString(ret, "created_rev", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_TIME) {
-		obj = PyLong_FromLong(dirent->time);
-		PyDict_SetItemString(ret, "time", obj);
-		Py_DECREF(obj);
-	}
-	if (dirent_fields & SVN_DIRENT_LAST_AUTHOR) {
-		if (dirent->last_author != NULL) {
-			obj = PyString_FromString(dirent->last_author);
-		} else {
-			obj = Py_None;
-			Py_INCREF(obj);
-		}
-		PyDict_SetItemString(ret, "last_author", obj);
-		Py_DECREF(obj);
-	}
-	return ret;
-}
-	
+
 static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 {
    	apr_pool_t *temp_pool;

@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+export HOME=$(CURDIR)/nonexistent
+
 DEB_PYTHON_SYSTEM=pycentral
 DEB_INSTALL_EXAMPLES_python-subvertpy = $(wildcard examples/*.py)
 
