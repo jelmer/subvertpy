@@ -1003,7 +1003,7 @@ static PyObject *check_wc(PyObject *self, PyObject *args)
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(path, &wc_format, pool));
+	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(svn_path_canonicalize(path, pool), &wc_format, pool));
 	apr_pool_destroy(pool);
 	return PyLong_FromLong(wc_format);
 }
