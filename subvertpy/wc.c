@@ -1003,7 +1003,7 @@ static PyObject *check_wc(PyObject *self, PyObject *args)
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(path, &wc_format, pool));
+	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(svn_path_canonicalize(path, pool), &wc_format, pool));
 	apr_pool_destroy(pool);
 	return PyLong_FromLong(wc_format);
 }
@@ -1032,8 +1032,9 @@ static PyObject *cleanup_wc(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyMethodDef wc_methods[] = {
-	{ "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> bool\n"
-		"Check whether path contains a Subversion working copy" },
+	{ "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> version\n"
+		"Check whether path contains a Subversion working copy\n"
+		"return the workdir version"},
 	{ "cleanup", (PyCFunction)cleanup_wc, METH_VARARGS|METH_KEYWORDS, "cleanup(path, diff3_cmd=None, cancel_func=None)\n" },
 	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS, 
 		"ensure_adm(path, uuid, url, repos=None, rev=None)" },
