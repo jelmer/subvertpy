@@ -26,6 +26,7 @@ class VersionTest(TestCase):
     def test_version_length(self):
         self.assertEquals(4, len(wc.version()))
 
+
 class WorkingCopyTests(TestCase):
 
     def test_get_adm_dir(self):
