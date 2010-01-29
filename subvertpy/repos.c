@@ -809,7 +809,8 @@ static PyObject *stream_close(StreamObject *self)
 static PyObject *stream_write(StreamObject *self, PyObject *args)
 {
 	char *buffer;
-	size_t len;
+	int len;
+	size_t length;
 	if (!PyArg_ParseTuple(args, "s#", &buffer, &len))
 		return NULL;
 
@@ -818,9 +819,11 @@ static PyObject *stream_write(StreamObject *self, PyObject *args)
 		return NULL;
 	}
 
-	RUN_SVN(svn_stream_write(self->stream, buffer, &len));
+	length = len;
 
-	return PyInt_FromLong(len);
+	RUN_SVN(svn_stream_write(self->stream, buffer, &length));
+
+	return PyInt_FromLong(length);
 }
 
 static PyObject *stream_read(StreamObject *self, PyObject *args)
