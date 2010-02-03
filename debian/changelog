@@ -1,3 +1,9 @@
+subvertpy (0.7.2-2) unstable; urgency=low
+
+  * Cope with type size changes on different platforms. Closes: #567490
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Mon, 01 Feb 2010 17:08:21 +0100
+
 subvertpy (0.7.2-1) unstable; urgency=low
 
   * New upstream release.
@@ -76,3 +82,4 @@ subvertpy (0.6.0+bzr1986-1) unstable; urgency=low
   * Initial release. (Closes: #511813)
 
  -- Jelmer Vernooij <jelmer@debian.org>  Tue, 13 Jan 2009 17:42:24 +0100
+
