@@ -1,8 +1,10 @@
 subvertpy (0.7.2-2) unstable; urgency=low
 
   * Cope with type size changes on different platforms. Closes: #567490
+  * Bump standards version to 3.8.4.
+  * Switch to dpkg-source 3.0 (quilt) format
 
- -- Jelmer Vernooij <jelmer@debian.org>  Mon, 01 Feb 2010 17:08:21 +0100
+ -- Jelmer Vernooij <jelmer@debian.org>  Wed, 03 Feb 2010 15:13:51 +0100
 
 subvertpy (0.7.2-1) unstable; urgency=low
 
