@@ -514,7 +514,7 @@ apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool)
 	return config_hash;
 }
 
-PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
+PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 {
 	PyObject *ret, *obj;
 	ret = PyDict_New();
