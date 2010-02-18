@@ -118,6 +118,7 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
 	return ret;
 }
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 static svn_error_t *proplist_receiver(void *prop_list, const char *path,
                                       apr_hash_t *prop_hash, apr_pool_t *pool)
 {
@@ -144,6 +145,7 @@ static svn_error_t *proplist_receiver(void *prop_list, const char *path,
 
     return NULL;
 }
+#endif
 
 static svn_error_t *list_receiver(void *dict, const char *path,
                                   const svn_dirent_t *dirent,
@@ -580,7 +582,7 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
     char *kwnames[] = { "target", "peg_revision", "depth", "revision", NULL };
     svn_opt_revision_t c_peg_rev;
     svn_opt_revision_t c_rev;
-    svn_depth_t depth;
+    int depth;
     apr_pool_t *temp_pool;
     char *target;
     PyObject *peg_revision = Py_None, *revision = Py_None;
@@ -597,17 +599,67 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
+
     prop_list = PyList_New(0);
     if (prop_list == NULL) {
 		apr_pool_destroy(temp_pool);
         return NULL;
 	}
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
     RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_proplist3(target, &c_peg_rev, &c_rev,
                                            depth, NULL,
                                            proplist_receiver, prop_list,
                                            client->client, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+#else
+	{
+		apr_array_header_t *props;
+		int i;
+		
+	
+	if (depth != svn_depth_infinity && depth != svn_depth_empty) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"depth can only be infinity or empty when built against svn < 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+    }
+
+
+    RUN_SVN_WITH_POOL(temp_pool,
+                      svn_client_proplist2(&props, target, &c_peg_rev, &c_rev,
+                                           (depth == svn_depth_infinity), 
+                                           client->client, temp_pool));
+
+	for (i = 0; i < props->nelts; i++) {
+		svn_client_proplist_item_t *item;
+		PyObject *prop_dict, *value;
+
+		item = APR_ARRAY_IDX(props, i, svn_client_proplist_item_t *);
+
+		prop_dict = prop_hash_to_dict(item->prop_hash);
+		if (prop_dict == NULL) {
+			apr_pool_destroy(temp_pool);
+			Py_DECREF(prop_list);
+			return NULL;
+		}
+
+		value = Py_BuildValue("(sO)", item->node_name, prop_dict);
+		if (value == NULL) {
+			apr_pool_destroy(temp_pool);
+			Py_DECREF(prop_list);
+			Py_DECREF(prop_dict);
+			return NULL;
+		}
+		PyList_Append(prop_list, value);
+	}
+
+	apr_pool_destroy(temp_pool);
+
+	}
+#endif
 
     return prop_list;
 }
@@ -686,7 +738,7 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
         { "path", "peg_revision", "depth", "dirents", "revision", NULL };
     svn_opt_revision_t c_peg_rev;
     svn_opt_revision_t c_rev;
-    svn_depth_t depth;
+    int depth;
     int dirents = SVN_DIRENT_ALL;
     apr_pool_t *temp_pool;
     char *path;

@@ -85,4 +85,15 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 		return py_svn_error(); \
 	}
 
+#if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 5
+enum svn_depth_t {
+	svn_depth_unknown = -2,
+	svn_depth_exclude = -1,
+	svn_depth_empty = 0,
+	svn_depth_files = 1,
+	svn_depth_immediates = 2,
+	svn_depth_infinity = 3
+};
+#endif
+
 #endif /* _BZR_SVN_UTIL_H_ */
