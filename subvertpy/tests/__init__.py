@@ -25,7 +25,6 @@ import shutil
 import sys
 import tempfile
 from unittest import TestCase
-import urllib
 import urllib2
 import urlparse
 
