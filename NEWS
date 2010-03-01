@@ -4,6 +4,8 @@
 
   * Canonicalize paths to svn.wc.check_wc. (Ronny Pfannschmidt)
 
+  * Cope with leading slashes in paths. (David Wolever, #527239)
+
 0.7.2	2010-01-03
 
  BUG FIXES
