@@ -789,6 +789,109 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
     return entry_dict;
 }
 
+static PyObject *client_diff(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	char *kwnames[] = {
+		"rev1", "rev2", "path1", "path2",
+		"relative_to_dir", "diffopts", "encoding",
+		"ignore_ancestry", "no_diff_deleted", "ignore_content_type",
+		NULL,
+	};
+	apr_pool_t *temp_pool;
+	ClientObject *client = (ClientObject *)self;
+
+	svn_opt_revision_t c_rev1, c_rev2;
+	svn_depth_t depth = svn_depth_infinity;
+	char *path1 = NULL, *path2 = NULL, *relative_to_dir = NULL;
+	char *encoding = "utf-8";
+	PyObject *rev1 = Py_None, *rev2 = Py_None;
+	int ignore_ancestry = true, no_diff_deleted = true,
+		ignore_content_type = false;
+	PyObject *diffopts = Py_None;
+	apr_array_header_t *c_diffopts;
+	PyObject *outfile, *errfile;
+	apr_file_t *c_outfile, *c_errfile;
+	apr_off_t offset;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|zzzOsbbb:diff", kwnames,
+									 &rev1, &rev2, &path1, &path2,
+									 &relative_to_dir, &diffopts, &encoding,
+									 &ignore_ancestry, &no_diff_deleted,
+									 &ignore_content_type))
+		return NULL;
+
+	if (!to_opt_revision(rev1, &c_rev1) || !to_opt_revision(rev2, &c_rev2))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	if (diffopts == Py_None)
+		diffopts = PyList_New(0);
+	else
+		Py_INCREF(diffopts);
+
+	if (diffopts == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+	if (!string_list_to_apr_array(temp_pool, diffopts, &c_diffopts)) {
+		apr_pool_destroy(temp_pool);
+		Py_DECREF(diffopts);
+		return NULL;
+	}
+	Py_DECREF(diffopts);
+
+	outfile = PyOS_tmpfile();
+	if (outfile == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	errfile = PyOS_tmpfile();
+	if (errfile == NULL) {
+		apr_pool_destroy(temp_pool);
+		Py_DECREF(outfile);
+		return NULL;
+	}
+
+	c_outfile = apr_file_from_object(outfile, temp_pool);
+	if (c_outfile == NULL) {
+		apr_pool_destroy(temp_pool);
+		Py_DECREF(outfile);
+		Py_DECREF(errfile);
+		return NULL;
+	}
+
+	c_errfile = apr_file_from_object(errfile, temp_pool);
+	if (c_errfile == NULL) {
+		apr_pool_destroy(temp_pool);
+		Py_DECREF(outfile);
+		Py_DECREF(errfile);
+		return NULL;
+	}
+
+	RUN_SVN_WITH_POOL(temp_pool,
+					  svn_client_diff4(c_diffopts,
+									   path1, &c_rev1, path2, &c_rev2,
+									   relative_to_dir, depth,
+									   ignore_ancestry, no_diff_deleted,
+									   ignore_content_type, encoding,
+									   c_outfile, c_errfile, NULL,
+									   client->client, temp_pool));
+	
+	apr_pool_destroy(temp_pool);
+	
+	return Py_BuildValue("(NN)", outfile, errfile);
+#else
+	PyErr_SetString(PyExc_NotImplementedError,
+					"svn_client_diff4 not available with Subversion < 1.5");
+	return NULL;
+#endif
+}
+
 static PyMethodDef client_methods[] = {
 	{ "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS, 
 		"S.add(path, recursive=True, force=False, no_ignore=False)" },
@@ -803,6 +906,7 @@ static PyMethodDef client_methods[] = {
 	{ "resolve", client_resolve, METH_VARARGS, "S.resolve(path, depth, choice)" },
 	{ "update", client_update, METH_VARARGS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
 	{ "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.update(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
+	{ "diff", (PyCFunction)client_diff, METH_VARARGS|METH_KEYWORDS, "S.diff(rev1, rev2, path1=None, path2=None, relative_to_dir=None, diffopts=[], encoding=\"utf-8\", ignore_ancestry=True, no_diff_deleted=True, ignore_content_type=False) -> unified diff as a string" },
 	{ NULL, }
 };
 
