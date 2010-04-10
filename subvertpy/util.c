@@ -125,6 +125,22 @@ void PyErr_SetSubversionException(svn_error_t *error)
 	PyErr_SetObject(excobj, excval);
 }
 
+PyObject *PyOS_tmpfile(void)
+{
+    PyObject *osmodule, *tmpfile_fn;
+
+    osmodule = PyImport_ImportModule("os");
+    if (osmodule == NULL)
+        return NULL;
+
+    tmpfile_fn = PyObject_GetAttrString(osmodule, "tmpfile");
+    if (tmpfile_fn == NULL)
+        return NULL;
+
+    return PyObject_CallObject(tmpfile_fn, NULL);
+}
+
+
 bool check_error(svn_error_t *error)
 {
 	if (error == NULL)
