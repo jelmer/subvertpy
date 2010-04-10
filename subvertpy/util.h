@@ -39,6 +39,7 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths,
 								apr_pool_t *pool);
 svn_error_t *py_svn_error(void);
 void PyErr_SetSubversionException(svn_error_t *error);
+PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void);
 
 #define RUN_SVN(cmd) { \
 	svn_error_t *err; \
