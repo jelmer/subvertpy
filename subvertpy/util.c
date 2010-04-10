@@ -67,6 +67,7 @@ PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void)
 	}
 		
 	excobj = PyObject_GetAttrString(coremod, "SubversionException");
+	Py_DECREF(coremod);
 	
 	if (excobj == NULL) {
 		PyErr_BadInternalCall();
@@ -127,17 +128,19 @@ void PyErr_SetSubversionException(svn_error_t *error)
 
 PyObject *PyOS_tmpfile(void)
 {
-    PyObject *osmodule, *tmpfile_fn;
+	PyObject *osmodule, *tmpfile_fn;
 
-    osmodule = PyImport_ImportModule("os");
-    if (osmodule == NULL)
-        return NULL;
+	osmodule = PyImport_ImportModule("os");
+	if (osmodule == NULL)
+		return NULL;
 
-    tmpfile_fn = PyObject_GetAttrString(osmodule, "tmpfile");
-    if (tmpfile_fn == NULL)
-        return NULL;
+	tmpfile_fn = PyObject_GetAttrString(osmodule, "tmpfile");
+	Py_DECREF(osmodule);
 
-    return PyObject_CallObject(tmpfile_fn, NULL);
+	if (tmpfile_fn == NULL)
+		return NULL;
+
+	return PyObject_CallObject(tmpfile_fn, NULL);
 }
 
 
