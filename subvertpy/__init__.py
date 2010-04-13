@@ -113,6 +113,6 @@ try:
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
 except ImportError, e:
-    raise ImportError("Unable to load subvertpy extensions: %s", e.message)
+    raise ImportError("Unable to load subvertpy extensions: %s" % e)
 
 
