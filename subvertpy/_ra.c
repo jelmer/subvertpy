@@ -918,14 +918,14 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		PyErr_SetString(PyExc_NotImplementedError, "fetching all revision properties not supported");	
 		apr_pool_destroy(temp_pool);
 		return NULL;
-	} else if (!PyList_Check(revprops)) {
-		PyErr_SetString(PyExc_TypeError, "revprops should be a list");
+	} else if (!PySequence_Check(revprops)) {
+		PyErr_SetString(PyExc_TypeError, "revprops should be a sequence");
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	} else {
 		int i;
-		for (i = 0; i < PyList_Size(revprops); i++) {
-			const char *n = PyString_AsString(PyList_GetItem(revprops, i));
+		for (i = 0; i < PySequence_Size(revprops); i++) {
+			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
 			if (strcmp(SVN_PROP_REVISION_LOG, n) && 
 				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
 				strcmp(SVN_PROP_REVISION_DATE, n)) {
@@ -2181,8 +2181,8 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (ret == NULL)
 		return NULL;
 
-	if (!PyList_Check(providers)) {
-		PyErr_SetString(PyExc_TypeError, "Auth providers should be list");
+	if (!PySequence_Check(providers)) {
+		PyErr_SetString(PyExc_TypeError, "Auth providers should be a sequence");
 		PyObject_Del(ret);
 		return NULL;
 	}
@@ -2198,18 +2198,18 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	ret->providers = providers;
 	Py_INCREF(providers);
 
-	c_providers = apr_array_make(ret->pool, PyList_Size(providers), sizeof(svn_auth_provider_object_t *));
+	c_providers = apr_array_make(ret->pool, PySequence_Size(providers), sizeof(svn_auth_provider_object_t *));
 	if (c_providers == NULL) {
 		PyErr_NoMemory();
 		apr_pool_destroy(ret->pool);
 		PyObject_Del(ret);
 		return NULL;
 	}
-	for (i = 0; i < PyList_Size(providers); i++) {
+	for (i = 0; i < PySequence_Size(providers); i++) {
 		AuthProviderObject *provider;
 		el = (svn_auth_provider_object_t **)apr_array_push(c_providers);
 		/* FIXME: Check that provider is indeed a AuthProviderObject object */
-		provider = (AuthProviderObject *)PyList_GetItem(providers, i);
+		provider = (AuthProviderObject *)PySequence_GetItem(providers, i);
 		if (!PyObject_TypeCheck(provider, &AuthProvider_Type)) {
 			PyErr_SetString(PyExc_TypeError, "Invalid auth provider");
 			apr_pool_destroy(ret->pool);
