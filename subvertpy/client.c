@@ -882,6 +882,11 @@ static PyObject *client_diff(PyObject *self, PyObject *args, PyObject *kwargs)
 									   c_outfile, c_errfile, NULL,
 									   client->client, temp_pool));
 	
+	offset = 0;
+	apr_file_seek(c_outfile, APR_SET, &offset);
+	offset = 0;
+	apr_file_seek(c_errfile, APR_SET, &offset);
+
 	apr_pool_destroy(temp_pool);
 	
 	return Py_BuildValue("(NN)", outfile, errfile);
