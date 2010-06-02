@@ -450,7 +450,7 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 	svn_commit_info_t *commit_info = NULL;
 	PyObject *ret;
 	apr_array_header_t *apr_targets;
-	PyObject *revprops = NULL;
+	PyObject *revprops = Py_None;
 	char *kwnames[] = { "targets", "recurse", "keep_locks", "revprops", NULL };
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
 	apr_hash_t *hash_revprops;
@@ -465,7 +465,7 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	if (!PyDict_Check(revprops)) {
+	if (revprops != Py_None && !PyDict_Check(revprops)) {
 		apr_pool_destroy(temp_pool);
 		PyErr_SetString(PyExc_TypeError, "Expected dictionary with revision properties");
 		return NULL;
@@ -473,10 +473,14 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 
 
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
-	hash_revprops = prop_dict_to_hash(temp_pool, revprops);
-	if (hash_revprops == NULL) {
-		apr_pool_destroy(temp_pool);
-		return NULL;
+	if (revprops != Py_None) {
+		hash_revprops = prop_dict_to_hash(temp_pool, revprops);
+		if (hash_revprops == NULL) {
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+	} else {
+		hash_revprops = NULL;
 	}
 
 	/* FIXME: Support keep_changelist and changelists */
@@ -485,7 +489,7 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 			   keep_locks, false, NULL, hash_revprops,
 			   client->client, temp_pool));
 #else
-	if (PyDict_Size(revprops) > 0) {
+	if (revprops != Py_None && PyDict_Size(revprops) > 0) {
 		PyErr_SetString(PyExc_NotImplementedError, 
 				"Setting revision properties only supported on svn > 1.5");
 		apr_pool_destroy(temp_pool);
