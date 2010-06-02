@@ -450,8 +450,12 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 	svn_commit_info_t *commit_info = NULL;
 	PyObject *ret;
 	apr_array_header_t *apr_targets;
-	char *kwnames[] = { "targets", "recurse", "keep_locks", NULL };
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bb", kwnames, &targets, &recurse, &keep_locks))
+	PyObject *revprops = NULL;
+	char *kwnames[] = { "targets", "recurse", "keep_locks", "revprops", NULL };
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+	apr_hash_t *hash_revprops;
+#endif
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bbO", kwnames, &targets, &recurse, &keep_locks, &revprops))
 		return NULL;
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -460,9 +464,37 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
+
+	if (!PyDict_Check(revprops)) {
+		apr_pool_destroy(temp_pool);
+		PyErr_SetString(PyExc_TypeError, "Expected dictionary with revision properties");
+		return NULL;
+	}
+
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	hash_revprops = prop_dict_to_hash(temp_pool, revprops);
+	if (hash_revprops == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+	/* FIXME: Support keep_changelist and changelists */
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_commit4(&commit_info, 
+				apr_targets, recurse?svn_depth_infinity:svn_depth_files,
+			   keep_locks, false, NULL, hash_revprops,
+			   client->client, temp_pool));
+#else
+	if (PyDict_Size(revprops) > 0) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+				"Setting revision properties only supported on svn > 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_commit3(&commit_info, 
 				apr_targets,
 			   recurse, keep_locks, client->client, temp_pool));
+#endif
 	ret = py_commit_info_tuple(commit_info);
 	apr_pool_destroy(temp_pool);
 
@@ -915,7 +947,7 @@ static PyMethodDef client_methods[] = {
 		"S.add(path, recursive=True, force=False, no_ignore=False)" },
 	{ "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS, 
 		"S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False, allow_unver_obstructions=False)" },
-	{ "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True) -> (revnum, date, author)" },
+	{ "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True, revprops=None) -> (revnum, date, author)" },
 	{ "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
 	{ "copy", client_copy, METH_VARARGS, "S.copy(src_path, dest_path, srv_rev=None)" },
 	{ "propset", client_propset, METH_VARARGS, "S.propset(name, value, target, recurse=True, skip_checks=False)" },
