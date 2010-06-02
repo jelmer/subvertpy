@@ -402,15 +402,15 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	ClientObject *client = (ClientObject *)self;
-	char *kwnames[] = { "url", "path", "rev", "peg_rev", "recurse", "ignore_externals", NULL };
+	char *kwnames[] = { "url", "path", "rev", "peg_rev", "recurse", "ignore_externals", "allow_unver_obstructions", NULL };
 	svn_revnum_t result_rev;
 	svn_opt_revision_t c_peg_rev, c_rev;
 	char *url, *path; 
 	apr_pool_t *temp_pool;
 	PyObject *peg_rev=Py_None, *rev=Py_None;
-	bool recurse=true, ignore_externals=false;
+	bool recurse=true, ignore_externals=false, allow_unver_obstructions=false;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObb", kwnames, &url, &path, &rev, &peg_rev, &recurse, &ignore_externals))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObbb", kwnames, &url, &path, &rev, &peg_rev, &recurse, &ignore_externals, &allow_unver_obstructions))
 		return NULL;
 
 	if (!to_opt_revision(peg_rev, &c_peg_rev))
@@ -421,9 +421,22 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, url, path, 
+		&c_peg_rev, &c_rev, recurse?svn_depth_infinity:svn_depth_files, 
+		ignore_externals, allow_unver_obstructions, client->client, temp_pool));
+#else
+	if (allow_unver_obstructions) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+			"allow_unver_obstructions not supported when built against svn<1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout2(&result_rev, url, path, 
 		&c_peg_rev, &c_rev, recurse, 
 		ignore_externals, client->client, temp_pool));
+#endif
 	apr_pool_destroy(temp_pool);
 	return PyLong_FromLong(result_rev);
 }
@@ -901,7 +914,7 @@ static PyMethodDef client_methods[] = {
 	{ "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS, 
 		"S.add(path, recursive=True, force=False, no_ignore=False)" },
 	{ "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS, 
-		"S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False)" },
+		"S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False, allow_unver_obstructions=False)" },
 	{ "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True) -> (revnum, date, author)" },
 	{ "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
 	{ "copy", client_copy, METH_VARARGS, "S.copy(src_path, dest_path, srv_rev=None)" },
