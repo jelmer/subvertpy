@@ -2,12 +2,24 @@
 
  BUG FIXES
 
-  * Canonicalize paths to svn.wc.check_wc. (Ronny Pfannschmidt)
+  * Canonicalize paths to subvertpy.wc.check_wc. (Ronny Pfannschmidt)
+
+  * Canonicalize paths to subvertpy.repos.Repos. (Dan Villiom Podlaski
+												  Christiansen)
 
   * Cope with leading slashes in paths. (David Wolever, #527239)
 
-  * Implement svn.client.Client.diff. (Dan Villiom Podlaski Christiansen,
+  * Various methods are now a bit more liberal in accepting any 
+    sort of sequence rather than explicitly requiring lists.
+	(Jelmer Vernooij)
+
+ FEATURES
+
+  * Implement subvertpy.client.Client.diff. (Dan Villiom Podlaski Christiansen,
 									   Jelmer Vernooij)
+
+  * Support ``revprops`` argument to subvertpy.client.Client.commit. 
+    (Jelmer Vernooij)
 
 0.7.2	2010-01-03
 
