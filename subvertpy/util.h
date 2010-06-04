@@ -98,4 +98,13 @@ enum svn_depth_t {
 };
 #endif
 
+typedef struct {
+	PyObject_HEAD
+	svn_stream_t *stream;
+	apr_pool_t *pool;
+	svn_boolean_t closed;
+} StreamObject;
+
+PyTypeObject Stream_Type;
+
 #endif /* _BZR_SVN_UTIL_H_ */

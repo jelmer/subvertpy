@@ -29,6 +29,7 @@
 
 extern PyTypeObject Entry_Type;
 extern PyTypeObject Adm_Type;
+extern PyTypeObject Stream_Type;
 
 static PyObject *py_entry(const svn_wc_entry_t *entry);
 
@@ -1075,6 +1076,9 @@ void initwc(void)
 		return;
 
 	if (PyType_Ready(&TxDeltaWindowHandler_Type) < 0)
+		return;
+
+	if (PyType_Ready(&Stream_Type) < 0)
 		return;
 
 	initeditor();
