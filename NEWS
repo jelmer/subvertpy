@@ -21,6 +21,8 @@
   * Support ``revprops`` argument to subvertpy.client.Client.commit. 
     (Jelmer Vernooij)
 
+  * Implement subvertpy.wc.get_pristine_contents(). (Jelmer Vernooij)
+
 0.7.2	2010-01-03
 
  BUG FIXES
