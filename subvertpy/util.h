@@ -105,6 +105,6 @@ typedef struct {
 	svn_boolean_t closed;
 } StreamObject;
 
-PyTypeObject Stream_Type;
+extern PyTypeObject Stream_Type;
 
 #endif /* _BZR_SVN_UTIL_H_ */
