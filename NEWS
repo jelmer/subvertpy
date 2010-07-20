@@ -1,22 +1,22 @@
-0.7.3	UNRELEASED
+0.7.3    UNRELEASED
 
  BUG FIXES
 
   * Canonicalize paths to subvertpy.wc.check_wc. (Ronny Pfannschmidt)
 
   * Canonicalize paths to subvertpy.repos.Repos. (Dan Villiom Podlaski
-												  Christiansen)
+                                                  Christiansen)
 
   * Cope with leading slashes in paths. (David Wolever, #527239)
 
-  * Various methods are now a bit more liberal in accepting any 
+  * Various methods are now a bit more liberal in accepting any
     sort of sequence rather than explicitly requiring lists.
-	(Jelmer Vernooij)
+    (Jelmer Vernooij)
 
  FEATURES
 
   * Implement subvertpy.client.Client.diff. (Dan Villiom Podlaski Christiansen,
-									   Jelmer Vernooij)
+                                       Jelmer Vernooij)
 
   * Support ``revprops`` argument to subvertpy.client.Client.commit. 
     (Jelmer Vernooij)
@@ -26,7 +26,7 @@
   * Use better error messages when possible. 
     (Dan Villiom Podlaski Christiansen)
 
-0.7.2	2010-01-03
+0.7.2    2010-01-03
 
  BUG FIXES
 
@@ -36,18 +36,18 @@
   * Add constant for ERR_NODE_UNKNOWN_KIND. (Dan Villiom Podlaski Christiansen)
 
   * Add svn.client.proplist() binding. (Dan Villiom Podlaski Christiansen,
-										Jelmer Vernooij)
+                                        Jelmer Vernooij)
 
   * Add svn.client.list() binding. (Dan Villiom Podlaski Christiansen, 
-									Jelmer Vernooij)
+                                    Jelmer Vernooij)
 
-0.7.1	2009-10-20
+0.7.1    2009-10-20
 
  BUG FIXES
 
   * Fix APR include path on Windows. (Ronald Blaschke, #456321)
 
-0.7.0	2009-10-20
+0.7.0    2009-10-20
 
  FEATURES
 
@@ -62,7 +62,7 @@
   * Add subvertpy-fast-export script, based on svn-fast-export.py by Chris Lee 
     included with bzr-fast-import. (Jelmer Vernooij)
 
-0.6.9	2009-09-10
+0.6.9    2009-09-10
 
  BUG FIXES
 
@@ -73,7 +73,7 @@
   * Don't send too large svndiff windows as newer versions of libsvn 
     will barf. (CVE2009-2411, #413113)
 
-0.6.8	2009-06-18
+0.6.8    2009-06-18
 
  FEATURES
 
@@ -83,7 +83,7 @@
 
   * Define ERR_RA_DAV_FORBIDDEN.
 
-0.6.7	2009-06-01
+0.6.7    2009-06-01
 
  BUG FIXES
  
@@ -99,7 +99,7 @@
 
   * Support uuid argument to svn.ra.RemoteAccess().
 
-0.6.6	2009-05-04
+0.6.6    2009-05-04
 
  FEATURES
 
@@ -119,7 +119,7 @@
 
   * Fixed uninitialized memory bug when reading configuration.
 
-0.6.5	2009-03-07
+0.6.5    2009-03-07
 
   FEATURES
 
@@ -129,7 +129,7 @@
 
   Relicensed to LGPLv2.1 or later.
 
-0.6.4	2009-02-17
+0.6.4    2009-02-17
 
  BUG FIXES
 
@@ -137,13 +137,13 @@
 
   * Fix several (major) object leaks. 
 
-0.6.3	2009-02-12
+0.6.3    2009-02-12
 
   FEATURES
 
    * Add svn:original-date constant.
 
-0.6.2	2009-02-10
+0.6.2    2009-02-10
 
  BUG FIXES
 
@@ -155,7 +155,7 @@
 
   * Add WorkingCopy.remove_lock(path)
 
-0.6.1	2009-01-25
+0.6.1    2009-01-25
 
  API BREAKS
 
@@ -172,6 +172,6 @@
 
  * Convert APR-based OSError properly. (#323548)
 
-0.6		2009-01-13
+0.6        2009-01-13
 
  Initial release.
