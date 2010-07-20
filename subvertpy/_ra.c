@@ -828,7 +828,11 @@ static PyObject *ra_get_uuid(PyObject *self)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid2(ra->ra, &uuid, temp_pool));
+#else
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid(ra->ra, &uuid, temp_pool));
+#endif
 	ret = PyString_FromString(uuid);
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -984,8 +988,13 @@ static PyObject *ra_get_repos_root(PyObject *self)
 		temp_pool = Pool(NULL);
 		if (temp_pool == NULL)
 			return NULL;
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+		RUN_RA_WITH_POOL(temp_pool, ra,
+						  svn_ra_get_repos_root2(ra->ra, &root, temp_pool));
+#else
 		RUN_RA_WITH_POOL(temp_pool, ra,
 						  svn_ra_get_repos_root(ra->ra, &root, temp_pool));
+#endif
 		ra->root = apr_pstrdup(ra->pool, root);
 		apr_pool_destroy(temp_pool);
 	}
