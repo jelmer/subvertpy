@@ -23,6 +23,9 @@
 
   * Implement subvertpy.wc.get_pristine_contents(). (Jelmer Vernooij)
 
+  * Use better error messages when possible. 
+    (Dan Villiom Podlaski Christiansen)
+
 0.7.2	2010-01-03
 
  BUG FIXES

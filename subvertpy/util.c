@@ -80,7 +80,7 @@ PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void)
 PyObject *PyErr_NewSubversionException(svn_error_t *error)
 {
 	PyObject *loc, *child;
-	char *message;
+	const char *message;
 	char buf[1024];
 
 	if (error->file != NULL) {
