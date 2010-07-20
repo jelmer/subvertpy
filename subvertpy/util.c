@@ -80,6 +80,8 @@ PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void)
 PyObject *PyErr_NewSubversionException(svn_error_t *error)
 {
 	PyObject *loc, *child;
+	char *message;
+	char buf[1024];
 
 	if (error->file != NULL) {
 		loc = Py_BuildValue("(si)", error->file, error->line);
@@ -100,7 +102,13 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 		Py_INCREF(child);
 	}
 
-	return Py_BuildValue("(siNN)", error->message, error->apr_err, child, loc);
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 4
+	message = svn_err_best_message(error, buf, sizeof(buf));
+#else
+	message = error->message;
+#endif
+
+	return Py_BuildValue("(siNN)", message, error->apr_err, child, loc);
 }
 
 void PyErr_SetSubversionException(svn_error_t *error)
