@@ -1,4 +1,4 @@
-subvertpy (0.7.3-1) UNRELEASED; urgency=low
+subvertpy (0.7.3-1) unstable; urgency=low
 
   * New upstream release.
   * Bump standards version to 3.9.0.
