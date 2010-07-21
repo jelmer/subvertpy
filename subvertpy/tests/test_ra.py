@@ -352,3 +352,6 @@ class AuthTests(TestCase):
         a = ra.Auth([])
         a.set_parameter("svn:auth:password", "bar")
         self.assertEquals("bar", a.get_parameter("svn:auth:password"))
+
+    def test_platform_auth_providers(self):
+        ra.Auth(ra.get_platform_specific_client_providers())
