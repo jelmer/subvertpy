@@ -26,6 +26,7 @@ class VersionTest(TestCase):
     def test_version_length(self):
         self.assertEquals(4, len(wc.version()))
 
+
 class WorkingCopyTests(TestCase):
 
     def test_get_adm_dir(self):
@@ -39,6 +40,3 @@ class WorkingCopyTests(TestCase):
 
     def test_is_wc_prop(self):
         self.assertTrue(wc.is_wc_prop("svn:wc:foo"))
-
-    def notest_get_default_ignores(self):
-        self.assertIsInstance(client.get_config().get_default_ignores(), list)

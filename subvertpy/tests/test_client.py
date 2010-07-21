@@ -17,6 +17,7 @@
 
 from subvertpy import (
     client,
+    ra,
     )
 from subvertpy.tests import (
     SubversionTestCase,
@@ -25,9 +26,10 @@ from subvertpy.tests import (
 class TestClient(SubversionTestCase):
 
     def setUp(self):
+
         super(TestClient, self).setUp()
         self.repos_url = self.make_client("d", "dc")
-        self.client = client.Client()
+        self.client = client.Client(auth=ra.Auth([ra.get_username_provider()]))
 
     def test_add(self):
         self.build_tree({"dc/foo": None})
@@ -35,4 +37,32 @@ class TestClient(SubversionTestCase):
 
     def test_get_config(self):
         self.assertIsInstance(client.get_config().__dict__, dict)
+
+    def test_diff(self):
+        r = ra.RemoteAccess(self.repos_url,
+                auth=ra.Auth([ra.get_username_provider()]))
+        dc = self.get_commit_editor(self.repos_url) 
+        f = dc.add_file("foo")
+        f.modify("foo1")
+        dc.close()
+
+        dc = self.get_commit_editor(self.repos_url) 
+        f = dc.open_file("foo")
+        f.modify("foo2")
+        dc.close()
+
+        (outf, errf) = self.client.diff(1, 2, self.repos_url, self.repos_url)
+        outf.seek(0)
+        errf.seek(0)
+        self.assertEquals("""Index: foo
+===================================================================
+--- foo\t(revision 1)
++++ foo\t(revision 2)
+@@ -1 +1 @@
+-foo1
+\\ No newline at end of file
++foo2
+\\ No newline at end of file
+""", outf.read())
+        self.assertEquals("", errf.read())
 

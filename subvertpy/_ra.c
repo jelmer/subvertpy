@@ -39,6 +39,18 @@ extern PyTypeObject AuthProvider_Type;
 extern PyTypeObject CredentialsIter_Type;
 extern PyTypeObject TxDeltaWindowHandler_Type;
 
+static bool ra_check_svn_path(char *path)
+{
+    /* svn_ra_check_path will raise an assertion error if the path has a
+     * leading '/'. Raise a Python exception if there ar eleading '/'s so that 
+	 * the Python interpreter won't crash and die. */
+    if (*path == '/') {
+        PyErr_SetString(PyExc_ValueError, "invalid path has a leading '/'");
+        return true;
+    }
+    return false;
+}
+
 static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, void *baton, apr_pool_t *pool)
 {
 	PyObject *fn = (PyObject *)baton, *ret;
@@ -706,7 +718,7 @@ static void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, a
 static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	char *kwnames[] = { "url", "progress_cb", "auth", "config",
-		                "client_string_func", "open_tmp_file_func", "uuid", 
+				"client_string_func", "open_tmp_file_func", "uuid", 
 						NULL };
 	char *url = NULL, *uuid = NULL;
 	PyObject *progress_cb = Py_None;
@@ -816,7 +828,11 @@ static PyObject *ra_get_uuid(PyObject *self)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid2(ra->ra, &uuid, temp_pool));
+#else
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid(ra->ra, &uuid, temp_pool));
+#endif
 	ret = PyString_FromString(uuid);
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -906,14 +922,14 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		PyErr_SetString(PyExc_NotImplementedError, "fetching all revision properties not supported");	
 		apr_pool_destroy(temp_pool);
 		return NULL;
-	} else if (!PyList_Check(revprops)) {
-		PyErr_SetString(PyExc_TypeError, "revprops should be a list");
+	} else if (!PySequence_Check(revprops)) {
+		PyErr_SetString(PyExc_TypeError, "revprops should be a sequence");
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	} else {
 		int i;
-		for (i = 0; i < PyList_Size(revprops); i++) {
-			const char *n = PyString_AsString(PyList_GetItem(revprops, i));
+		for (i = 0; i < PySequence_Size(revprops); i++) {
+			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
 			if (strcmp(SVN_PROP_REVISION_LOG, n) && 
 				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
 				strcmp(SVN_PROP_REVISION_DATE, n)) {
@@ -972,8 +988,13 @@ static PyObject *ra_get_repos_root(PyObject *self)
 		temp_pool = Pool(NULL);
 		if (temp_pool == NULL)
 			return NULL;
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+		RUN_RA_WITH_POOL(temp_pool, ra,
+						  svn_ra_get_repos_root2(ra->ra, &root, temp_pool));
+#else
 		RUN_RA_WITH_POOL(temp_pool, ra,
 						  svn_ra_get_repos_root(ra->ra, &root, temp_pool));
+#endif
 		ra->root = apr_pstrdup(ra->pool, root);
 		apr_pool_destroy(temp_pool);
 	}
@@ -1374,7 +1395,7 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	char *value;
 	int vallen;
 	apr_pool_t *temp_pool;
- 	svn_string_t *val_string;
+	svn_string_t *val_string;
 
 	if (!PyArg_ParseTuple(args, "lss#", &rev, &name, &value, &vallen))
 		return NULL;
@@ -1395,7 +1416,7 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 
 static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 {
-   	apr_pool_t *temp_pool;
+	apr_pool_t *temp_pool;
 	apr_hash_t *dirents;
 	apr_hash_index_t *idx;
 	apr_hash_t *props;
@@ -1530,12 +1551,15 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "sl", &path, &revision))
 		return NULL;
+	if (ra_check_svn_path(path))
+		return NULL;
 	if (ra_check_busy(ra))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+
 	RUN_RA_WITH_POOL(temp_pool, ra,
 					  svn_ra_check_path(ra->ra, svn_path_canonicalize(path, temp_pool), revision, &kind, 
 					 temp_pool));
@@ -1554,12 +1578,15 @@ static PyObject *ra_stat(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "sl", &path, &revision))
 		return NULL;
+	if (ra_check_svn_path(path))
+		return NULL;
 	if (ra_check_busy(ra))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+
 	RUN_RA_WITH_POOL(temp_pool, ra,
 					  svn_ra_stat(ra->ra, svn_path_canonicalize(path, temp_pool), revision, &dirent,
 					 temp_pool));
@@ -1631,7 +1658,7 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 	char *comment;
 	int steal_lock;
 	PyObject *lock_func, *k, *v;
- 	apr_pool_t *temp_pool;
+	apr_pool_t *temp_pool;
 	apr_hash_t *hash_path_revs;
 	svn_revnum_t *rev;
 	Py_ssize_t idx = 0;
@@ -1679,12 +1706,16 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
+	if (ra_check_svn_path(path))
+		return NULL;
+
 	if (ra_check_busy(ra))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locks(ra->ra, &hash_locks, path, temp_pool));
 
 	ret = PyDict_New();
@@ -1722,12 +1753,16 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "slO", &path, &peg_revision, &location_revisions))
 		return NULL;
 
+	if (ra_check_svn_path(path))
+		return NULL;
+
 	if (ra_check_busy(ra))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locations(ra->ra, &hash_locations,
 					path, peg_revision, 
 					revnum_list_to_apr_array(temp_pool, location_revisions),
@@ -1875,6 +1910,9 @@ static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 						  &end_revision, &py_rcvr))
 		return NULL;
 
+	if (ra_check_svn_path(path))
+		return NULL;
+
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
@@ -1902,6 +1940,9 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 
 	if (!PyArg_ParseTuple(args, "sllO", &path, &start, &end, &file_rev_handler))
+		return NULL;
+
+	if (ra_check_svn_path(path))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -2149,8 +2190,8 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (ret == NULL)
 		return NULL;
 
-	if (!PyList_Check(providers)) {
-		PyErr_SetString(PyExc_TypeError, "Auth providers should be list");
+	if (!PySequence_Check(providers)) {
+		PyErr_SetString(PyExc_TypeError, "Auth providers should be a sequence");
 		PyObject_Del(ret);
 		return NULL;
 	}
@@ -2166,18 +2207,18 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	ret->providers = providers;
 	Py_INCREF(providers);
 
-	c_providers = apr_array_make(ret->pool, PyList_Size(providers), sizeof(svn_auth_provider_object_t *));
+	c_providers = apr_array_make(ret->pool, PySequence_Size(providers), sizeof(svn_auth_provider_object_t *));
 	if (c_providers == NULL) {
 		PyErr_NoMemory();
 		apr_pool_destroy(ret->pool);
 		PyObject_Del(ret);
 		return NULL;
 	}
-	for (i = 0; i < PyList_Size(providers); i++) {
+	for (i = 0; i < PySequence_Size(providers); i++) {
 		AuthProviderObject *provider;
 		el = (svn_auth_provider_object_t **)apr_array_push(c_providers);
 		/* FIXME: Check that provider is indeed a AuthProviderObject object */
-		provider = (AuthProviderObject *)PyList_GetItem(providers, i);
+		provider = (AuthProviderObject *)PySequence_GetItem(providers, i);
 		if (!PyObject_TypeCheck(provider, &AuthProvider_Type)) {
 			PyErr_SetString(PyExc_TypeError, "Invalid auth provider");
 			apr_pool_destroy(ret->pool);
@@ -2849,6 +2890,78 @@ static PyObject *get_ssl_client_cert_pw_file_provider(PyObject *self)
 	return (PyObject *)auth;
 }
 
+static PyObject *get_platform_specific_client_providers(PyObject *self)
+{
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	/* svn_auth_get_platform_specific_client_providers() allocates all the
+	 * providers in a single pool, so we can't use it :/ */
+	const char *provider_names[] = {
+		"gnome_keyring", "keychain", "kwallet", "windows", NULL,
+	};
+	const char *provider_types[] = {
+		"simple", "ssl_client_cert_pw", "ssl_server_trust", NULL,
+	};
+	PyObject *pylist = PyList_New(0);
+	int i, j;
+
+	for (i = 0; provider_names[i] != NULL; i++) {
+		for (j = 0; provider_types[j] != NULL; j++) {
+			svn_auth_provider_object_t *c_provider = NULL;
+			apr_pool_t *pool = Pool(NULL);
+
+			if (pool == NULL)
+				continue;
+
+			RUN_SVN(svn_auth_get_platform_specific_provider(&c_provider,
+															provider_names[i],
+															provider_types[j],
+															pool));
+
+			AuthProviderObject *auth = PyObject_New(AuthProviderObject,
+													&AuthProvider_Type);
+
+			if (c_provider == NULL || auth == NULL) {
+				apr_pool_destroy(pool);
+				continue;
+			}
+
+			auth->pool = pool;
+			auth->provider = c_provider;
+
+			PyList_Append(pylist, (PyObject *)auth);
+		}
+	}
+
+	return pylist;
+#else
+	PyObject *pylist = PyList_New(0);
+	PyObject *provider = NULL;
+
+#if defined(WIN32)
+	provider = get_windows_simple_provider(self);
+	if (provider == NULL)
+		return NULL;
+	PyList_Append(pylist, provider);
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	provider = get_windows_ssl_server_trust_provider(self);
+	if (provider == NULL)
+		return NULL;
+	PyList_Append(pylist, provider);
+#endif /* 1.5 */
+#endif /* WIN32 */
+
+#if defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
+	provider = get_keychain_simple_provider(self);
+	if (provider == NULL)
+		return NULL;
+	PyList_Append(pylist, provider);
+#endif
+
+	return pylist;
+#endif
+}
+
 static PyObject *print_modules(PyObject *self)
 {
 	svn_stringbuf_t *stringbuf;
@@ -2932,6 +3045,11 @@ static PyMethodDef ra_module_methods[] = {
 	{ "get_ssl_client_cert_prompt_provider", (PyCFunction)get_ssl_client_cert_prompt_provider, METH_VARARGS, NULL },
 	{ "get_ssl_client_cert_pw_prompt_provider", (PyCFunction)get_ssl_client_cert_pw_prompt_provider, METH_VARARGS, NULL },
 	{ "get_username_provider", (PyCFunction)get_username_provider, METH_NOARGS, NULL },
+	{ "get_platform_specific_client_providers",
+		(PyCFunction)get_platform_specific_client_providers,
+		METH_NOARGS,
+		"Get a list of all available platform client providers.",
+	},
 	{ "print_modules", (PyCFunction)print_modules, METH_NOARGS, NULL },
 	{ NULL, }
 };

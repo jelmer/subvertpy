@@ -246,6 +246,13 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertEquals(NODE_DIR, self.ra.check_path("bar/", 1))
         self.assertEquals(NODE_NONE, self.ra.check_path("blaaaa", 1))
 
+    def test_check_path_with_unsafe_path(self):
+        # The SVN code asserts that paths do not have a leading '/'... And if
+        # that assertion fires, it calls exit(1). That sucks. Make sure it
+        # doesn't happen.
+        self.assertRaises(ValueError, self.ra.check_path, "/bar", 1)
+        self.assertRaises(ValueError, self.ra.check_path, "///bar", 1)
+
     def test_stat(self):
         cb = self.commit_editor()
         cb.add_dir("bar")
@@ -278,6 +285,11 @@ class TestRemoteAccess(SubversionTestCase):
 
         self.assertEquals({1: "/bar", 2: "/bla", 3: "/bla"}, 
                           self.ra.get_locations("bla", 3, [1,2,3]))
+
+    def test_get_locations_dir_with_unsafe_path(self):
+        # Make sure that an invalid path won't trip an assertion error
+        self.assertRaises(ValueError, self.ra.get_locations, "//bla", 2, [1,2])
+
 
 class AuthTests(TestCase):
 
@@ -340,3 +352,6 @@ class AuthTests(TestCase):
         a = ra.Auth([])
         a.set_parameter("svn:auth:password", "bar")
         self.assertEquals("bar", a.get_parameter("svn:auth:password"))
+
+    def test_platform_auth_providers(self):
+        ra.Auth(ra.get_platform_specific_client_providers())

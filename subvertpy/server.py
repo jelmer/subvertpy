@@ -14,18 +14,22 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-class ServerBackend:
+"""Server backend base classes."""
+
+class ServerBackend(object):
+    """A server backend."""
 
     def open_repository(self, location):
         raise NotImplementedError(self.open_repository)
 
 
 def generate_random_id():
+    """Create a UUID for a repository."""
     import uuid
     return str(uuid.uuid4())
 
 
-class ServerRepositoryBackend:
+class ServerRepositoryBackend(object):
     
     def get_uuid(self):
         raise NotImplementedError(self.get_uuid)
@@ -33,8 +37,8 @@ class ServerRepositoryBackend:
     def get_latest_revnum(self):
         raise NotImplementedError(self.get_latest_revnum)
 
-    def log(self, send_revision, target_path, start_rev, end_rev, changed_paths,
-            strict_node, limit):
+    def log(self, send_revision, target_path, start_rev, end_rev,
+            changed_paths, strict_node, limit):
         raise NotImplementedError(self.log)
 
     def update(self, editor, revnum, target_path, recurse=True):
@@ -46,8 +50,8 @@ class ServerRepositoryBackend:
     def stat(self, path, revnum):
         """Stat a path.
 
-        Should return a dictionary with the following keys: name, kind, size, has-props, 
-        created-rev, created-date, last-author.
+        Should return a dictionary with the following keys: name, kind, size,
+            has-props, created-rev, created-date, last-author.
         """
         raise NotImplementedError(self.stat)
 

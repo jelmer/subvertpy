@@ -39,6 +39,7 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths,
 								apr_pool_t *pool);
 svn_error_t *py_svn_error(void);
 void PyErr_SetSubversionException(svn_error_t *error);
+PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void);
 
 #define RUN_SVN(cmd) { \
 	svn_error_t *err; \
@@ -70,7 +71,8 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error);
 svn_error_t *py_cancel_func(void *cancel_baton);
 apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool);
 void PyErr_SetAprStatus(apr_status_t status);
-PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields);
+PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
+PyObject *PyOS_tmpfile(void);
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool);
 
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
@@ -84,5 +86,25 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 		PyGILState_Release(state); \
 		return py_svn_error(); \
 	}
+
+#if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 5
+enum svn_depth_t {
+	svn_depth_unknown = -2,
+	svn_depth_exclude = -1,
+	svn_depth_empty = 0,
+	svn_depth_files = 1,
+	svn_depth_immediates = 2,
+	svn_depth_infinity = 3
+};
+#endif
+
+typedef struct {
+	PyObject_HEAD
+	svn_stream_t *stream;
+	apr_pool_t *pool;
+	svn_boolean_t closed;
+} StreamObject;
+
+extern PyTypeObject Stream_Type;
 
 #endif /* _BZR_SVN_UTIL_H_ */

@@ -24,8 +24,7 @@ import os
 import shutil
 import sys
 import tempfile
-from unittest import TestCase
-import urllib
+import unittest
 import urllib2
 import urlparse
 
@@ -42,16 +41,16 @@ from subvertpy.ra import (
     )
 
 
-class TestCaseInTempDir(TestCase):
+class TestCaseInTempDir(unittest.TestCase):
 
     def setUp(self):
-        TestCase.setUp(self)
+        unittest.TestCase.setUp(self)
         self._oldcwd = os.getcwd()
         self.test_dir = tempfile.mkdtemp()
         os.chdir(self.test_dir)
 
     def tearDown(self):
-        TestCase.tearDown(self)
+        unittest.TestCase.tearDown(self)
         os.chdir(self._oldcwd)
         shutil.rmtree(self.test_dir)
 
@@ -355,3 +354,23 @@ class SubversionTestCase(TestCaseInTempDir):
         revnum = ra_ctx.get_latest_revnum()
         return TestCommitEditor(ra_ctx.get_commit_editor({"svn:log": message}),
             ra_ctx.url, revnum)
+
+
+def test_suite():
+    names = [
+        'client',
+        'core',
+        'delta',
+        'marshall',
+        'properties',
+        'ra',
+        'repos',
+        'server',
+        'wc',
+        ]
+    module_names = ['subvertpy.tests.test_' + name for name in names]
+    result = unittest.TestSuite()
+    loader = unittest.TestLoader()
+    suite = loader.loadTestsFromNames(module_names)
+    result.addTests(suite)
+    return result

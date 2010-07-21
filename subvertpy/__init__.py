@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 7, 2)
+__version__ = (0, 7, 3)
 
 NODE_DIR = 2
 NODE_FILE = 1
@@ -71,6 +71,7 @@ ERR_SVNDIFF_CORRUPT_WINDOW = 185001
 ERR_EAI_NONAME = 670008
 ERR_FS_CONFLICT = 160024
 ERR_NODE_UNKNOWN_KIND = 145000
+ERR_RA_SERF_SSL_CERT_UNTRUSTED = 230001
 
 AUTH_PARAM_DEFAULT_USERNAME = 'svn:auth:username'
 AUTH_PARAM_DEFAULT_PASSWORD = 'svn:auth:password'
@@ -113,6 +114,6 @@ try:
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
 except ImportError, e:
-    raise ImportError("Unable to load subvertpy extensions: %s", e.message)
+    raise ImportError("Unable to load subvertpy extensions: %s" % e)
 
 
