@@ -67,6 +67,7 @@ PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void)
 	}
 		
 	excobj = PyObject_GetAttrString(coremod, "SubversionException");
+	Py_DECREF(coremod);
 	
 	if (excobj == NULL) {
 		PyErr_BadInternalCall();
@@ -79,6 +80,8 @@ PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void)
 PyObject *PyErr_NewSubversionException(svn_error_t *error)
 {
 	PyObject *loc, *child;
+	const char *message;
+	char buf[1024];
 
 	if (error->file != NULL) {
 		loc = Py_BuildValue("(si)", error->file, error->line);
@@ -99,7 +102,13 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 		Py_INCREF(child);
 	}
 
-	return Py_BuildValue("(siNN)", error->message, error->apr_err, child, loc);
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 4
+	message = svn_err_best_message(error, buf, sizeof(buf));
+#else
+	message = error->message;
+#endif
+
+	return Py_BuildValue("(siNN)", message, error->apr_err, child, loc);
 }
 
 void PyErr_SetSubversionException(svn_error_t *error)
@@ -124,6 +133,24 @@ void PyErr_SetSubversionException(svn_error_t *error)
 	excval = PyErr_NewSubversionException(error);
 	PyErr_SetObject(excobj, excval);
 }
+
+PyObject *PyOS_tmpfile(void)
+{
+	PyObject *osmodule, *tmpfile_fn;
+
+	osmodule = PyImport_ImportModule("os");
+	if (osmodule == NULL)
+		return NULL;
+
+	tmpfile_fn = PyObject_GetAttrString(osmodule, "tmpfile");
+	Py_DECREF(osmodule);
+
+	if (tmpfile_fn == NULL)
+		return NULL;
+
+	return PyObject_CallObject(tmpfile_fn, NULL);
+}
+
 
 bool check_error(svn_error_t *error)
 {
@@ -514,7 +541,7 @@ apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool)
 	return config_hash;
 }
 
-PyObject *py_dirent(svn_dirent_t *dirent, int dirent_fields)
+PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 {
 	PyObject *ret, *obj;
 	ret = PyDict_New();
@@ -579,3 +606,184 @@ apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool)
 
     return fp;
 }
+
+static void stream_dealloc(PyObject *self)
+{
+	StreamObject *streamself = (StreamObject *)self;
+
+	apr_pool_destroy(streamself->pool);
+}
+
+static PyObject *stream_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+	char *kwnames[] = { NULL };
+	StreamObject *ret;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwnames))
+		return NULL;
+
+	ret = PyObject_New(StreamObject, &Stream_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->pool = Pool(NULL);
+	if (ret->pool == NULL)
+		return NULL;
+	ret->stream = svn_stream_empty(ret->pool);
+	ret->closed = FALSE;
+
+	return (PyObject *)ret;
+}
+
+static PyObject *stream_close(StreamObject *self)
+{
+	if (!self->closed) {
+		svn_stream_close(self->stream);
+		self->closed = TRUE;
+	}
+	Py_RETURN_NONE;
+}
+
+static PyObject *stream_write(StreamObject *self, PyObject *args)
+{
+	char *buffer;
+	int len;
+	size_t length;
+	if (!PyArg_ParseTuple(args, "s#", &buffer, &len))
+		return NULL;
+
+	if (self->closed) {
+		PyErr_SetString(PyExc_RuntimeError, "unable to write: stream already closed");
+		return NULL;
+	}
+
+	length = len;
+
+	RUN_SVN(svn_stream_write(self->stream, buffer, &length));
+
+	return PyInt_FromLong(length);
+}
+
+static PyObject *stream_read(StreamObject *self, PyObject *args)
+{
+	PyObject *ret;
+	apr_pool_t *temp_pool;
+	long len = -1;
+	if (!PyArg_ParseTuple(args, "|l", &len))
+		return NULL;
+
+	if (self->closed) {
+		return PyString_FromString("");
+	}
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL) 
+		return NULL;
+	if (len != -1) {
+		char *buffer;
+		apr_size_t size = len;
+		buffer = apr_palloc(temp_pool, len);
+		if (buffer == NULL) {
+			PyErr_NoMemory();
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+		RUN_SVN_WITH_POOL(temp_pool, svn_stream_read(self->stream, buffer, &size));
+		ret = PyString_FromStringAndSize(buffer, size);
+		apr_pool_destroy(temp_pool);
+		return ret;
+	} else {
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+		svn_string_t *result;
+		RUN_SVN_WITH_POOL(temp_pool, svn_string_from_stream(&result, 
+							   self->stream,
+							   temp_pool,
+							   temp_pool));
+		self->closed = TRUE;
+		ret = PyString_FromStringAndSize(result->data, result->len);
+		apr_pool_destroy(temp_pool);
+		return ret;
+#else
+		PyErr_SetString(PyExc_NotImplementedError, 
+			"Subversion 1.5 does not provide svn_string_from_stream().");
+		return NULL;
+#endif
+	}
+}
+
+static PyMethodDef stream_methods[] = {
+	{ "read", (PyCFunction)stream_read, METH_VARARGS, NULL },
+	{ "write", (PyCFunction)stream_write, METH_VARARGS, NULL },
+	{ "close", (PyCFunction)stream_close, METH_NOARGS, NULL },
+	{ NULL, }
+};
+
+PyTypeObject Stream_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	"repos.Stream", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(StreamObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	stream_dealloc, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+	
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+	
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+	
+	NULL, /*	const char *tp_doc;  Documentation string */
+	
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+	
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+	
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+	
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+	
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+	
+	/* Attribute descriptor and subclassing stuff */
+	stream_methods, /*	struct PyMethodDef *tp_methods;	*/
+	NULL, /*	struct PyMemberDef *tp_members;	*/
+	NULL, /*	struct PyGetSetDef *tp_getset;	*/
+	NULL, /*	struct _typeobject *tp_base;	*/
+	NULL, /*	PyObject *tp_dict;	*/
+	NULL, /*	descrgetfunc tp_descr_get;	*/
+	NULL, /*	descrsetfunc tp_descr_set;	*/
+	0, /*	Py_ssize_t tp_dictoffset;	*/
+	NULL, /*	initproc tp_init;	*/
+	NULL, /*	allocfunc tp_alloc;	*/
+	stream_init, /* tp_new tp_new */
+};

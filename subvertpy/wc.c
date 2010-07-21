@@ -29,6 +29,7 @@
 
 extern PyTypeObject Entry_Type;
 extern PyTypeObject Adm_Type;
+extern PyTypeObject Stream_Type;
 
 static PyObject *py_entry(const svn_wc_entry_t *entry);
 
@@ -970,6 +971,60 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	return ret;
 }
 
+static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
+{
+	char *path;
+	apr_pool_t *temp_pool;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	apr_pool_t *stream_pool;
+	StreamObject *ret;
+	svn_stream_t *stream;
+#else
+	char *pristine_path;
+#endif
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	stream_pool = Pool(NULL);
+	if (stream_pool == NULL)
+		return NULL;
+
+	temp_pool = Pool(stream_pool);
+	if (temp_pool == NULL) {
+		apr_pool_destroy(stream_pool);
+		return NULL;
+	}
+
+	RUN_SVN_WITH_POOL(stream_pool, svn_wc_get_pristine_contents(&stream, svn_path_canonicalize(path, temp_pool), stream_pool, temp_pool));
+	apr_pool_destroy(temp_pool);
+
+	if (stream == NULL) {
+		apr_pool_destroy(stream_pool);
+		Py_RETURN_NONE;
+	}
+
+	ret = PyObject_New(StreamObject, &Stream_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->pool = stream_pool;
+	ret->closed = FALSE;
+	ret->stream = stream;
+
+	return (PyObject *)ret;
+#else
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, temp_pool), &pristine_path, temp_pool));
+	ret = PyFile_FromString(pristine_path, "rb");
+	apr_pool_destroy(temp_pool);
+	return ret;
+#endif
+}
+
 static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	char *path, *uuid, *url;
@@ -1003,7 +1058,7 @@ static PyObject *check_wc(PyObject *self, PyObject *args)
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(path, &wc_format, pool));
+	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(svn_path_canonicalize(path, pool), &wc_format, pool));
 	apr_pool_destroy(pool);
 	return PyLong_FromLong(wc_format);
 }
@@ -1032,8 +1087,9 @@ static PyObject *cleanup_wc(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyMethodDef wc_methods[] = {
-	{ "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> bool\n"
-		"Check whether path contains a Subversion working copy" },
+	{ "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> version\n"
+		"Check whether path contains a Subversion working copy\n"
+		"return the workdir version"},
 	{ "cleanup", (PyCFunction)cleanup_wc, METH_VARARGS|METH_KEYWORDS, "cleanup(path, diff3_cmd=None, cancel_func=None)\n" },
 	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS, 
 		"ensure_adm(path, uuid, url, repos=None, rev=None)" },
@@ -1041,6 +1097,8 @@ static PyMethodDef wc_methods[] = {
 		"get_adm_dir() -> name" },
 	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS, 
 		"get_pristine_copy_path(path) -> path" },
+	{ "get_pristine_contents", get_pristine_contents, METH_VARARGS,
+		"get_pristine_contents(path) -> stream" },
 	{ "is_adm_dir", is_adm_dir, METH_VARARGS, 
 		"is_adm_dir(name) -> bool" },
 	{ "is_normal_prop", is_normal_prop, METH_VARARGS, 
@@ -1074,6 +1132,9 @@ void initwc(void)
 		return;
 
 	if (PyType_Ready(&TxDeltaWindowHandler_Type) < 0)
+		return;
+
+	if (PyType_Ready(&Stream_Type) < 0)
 		return;
 
 	initeditor();

@@ -133,7 +133,7 @@ class VersionQuery(object):
     def grep(self, what):
         m = re.search(r"^#define\s+%s\s+(\d+)\s*$" % (what,), self.text, re.MULTILINE)
         if not m:
-            raise Exception, "Definition for %s was not found in file %s." % (what, self.filename)
+            raise Exception("Definition for %s was not found in file %s." % (what, self.filename))
         return int(m.group(1))
 
 # Windows versions - we use environment variables to locate the directories
@@ -290,14 +290,14 @@ def source_path(filename):
 
 def subvertpy_modules(basemodule):
     return [
-        SvnExtension("%s.client" % basemodule, [source_path(n) for n in "client.c", "editor.c", "util.c", "_ra.c", "wc.c"], libraries=["svn_client-1", "svn_subr-1"]), 
-        SvnExtension("%s._ra" % basemodule, [source_path(n) for n in "_ra.c", "util.c", "editor.c"], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
-        SvnExtension("%s.repos" % basemodule, [source_path(n) for n in "repos.c", "util.c"], libraries=["svn_repos-1", "svn_subr-1"]),
-        SvnExtension("%s.wc" % basemodule, [source_path(n) for n in "wc.c", "util.c", "editor.c"], libraries=["svn_wc-1", "svn_subr-1"])
+        SvnExtension("%s.client" % basemodule, [source_path(n) for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")], libraries=["svn_client-1", "svn_subr-1"]), 
+        SvnExtension("%s._ra" % basemodule, [source_path(n) for n in ("_ra.c", "util.c", "editor.c")], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
+        SvnExtension("%s.repos" % basemodule, [source_path(n) for n in ("repos.c", "util.c")], libraries=["svn_repos-1", "svn_subr-1"]),
+        SvnExtension("%s.wc" % basemodule, [source_path(n) for n in ("wc.c", "util.c", "editor.c")], libraries=["svn_wc-1", "svn_subr-1"])
         ]
 
 
-subvertpy_version = (0, 7, 2)
+subvertpy_version = (0, 7, 3)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 

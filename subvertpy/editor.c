@@ -34,7 +34,9 @@ typedef struct {
 	void *done_baton;
 } EditorObject;
 
-PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, void (*done_cb) (void *), void *done_baton)
+PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton,
+							apr_pool_t *pool, PyTypeObject *type,
+							void (*done_cb) (void *), void *done_baton)
 {
 	EditorObject *obj = PyObject_New(EditorObject, type);
 	if (obj == NULL)
@@ -51,6 +53,7 @@ static void py_editor_dealloc(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 	PyObject_Del(self);
 }
 
@@ -87,8 +90,9 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 		Py_RETURN_NONE;
 	}
 
-	if (!PyArg_ParseTuple(py_window, SVN_FILESIZE_T_PYFMT "kkiOO", &window.sview_offset, &window.sview_len, 
-											&window.tview_len, &window.src_ops, &py_ops, &py_new_data))
+	if (!PyArg_ParseTuple(py_window, SVN_FILESIZE_T_PYFMT "kkiOO",
+		&window.sview_offset, &window.sview_len, &window.tview_len,
+		&window.src_ops, &py_ops, &py_new_data))
 		return NULL;
 
 	if (py_new_data == Py_None) {
@@ -315,6 +319,7 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 	svn_revnum_t copyfrom_rev=-1;
    	void *child_baton;
 	EditorObject *editor = (EditorObject *)self;
+	apr_pool_t *subpool;
 
 	if (!DirectoryEditor_Check(self)) {
 		PyErr_BadArgument();
@@ -329,7 +334,11 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 		copyfrom_path == NULL?NULL:svn_path_canonicalize(copyfrom_path, editor->pool), 
 		copyfrom_rev, editor->pool, &child_baton));
 
-	return new_editor_object(editor->editor, child_baton, editor->pool, 
+	subpool = Pool(NULL);
+	if (subpool == NULL)
+		return NULL;
+
+	return new_editor_object(editor->editor, child_baton, subpool, 
 							 &DirectoryEditor_Type, NULL, NULL);
 }
 
@@ -339,6 +348,7 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	svn_revnum_t base_revision=-1;
 	void *child_baton;
+	apr_pool_t *subpool;
 
 	if (!DirectoryEditor_Check(self)) {
 		PyErr_BadArgument();
@@ -352,7 +362,11 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 		svn_path_canonicalize(path, editor->pool), editor->baton,
 					base_revision, editor->pool, &child_baton));
 
-	return new_editor_object(editor->editor, child_baton, editor->pool, 
+	subpool = Pool(NULL);
+	if (subpool == NULL)
+		return NULL;
+
+	return new_editor_object(editor->editor, child_baton, subpool, 
 							 &DirectoryEditor_Type, NULL, NULL);
 }
 
@@ -419,6 +433,7 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 	svn_revnum_t copy_rev=-1;
 	void *file_baton = NULL;
 	EditorObject *editor = (EditorObject *)self;
+	apr_pool_t *subpool;
 
 	if (!DirectoryEditor_Check(self)) {
 		PyErr_BadArgument();
@@ -433,7 +448,11 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 		copy_path == NULL?NULL:svn_path_canonicalize(copy_path, editor->pool),
 		copy_rev, editor->pool, &file_baton));
 
-	return new_editor_object(editor->editor, file_baton, editor->pool,
+	subpool = Pool(NULL);
+	if (subpool == NULL)
+		return NULL;
+
+	return new_editor_object(editor->editor, file_baton, subpool,
 							 &FileEditor_Type, NULL, NULL);
 }
 
@@ -443,6 +462,7 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 	svn_revnum_t base_revision=-1;
 	void *file_baton;
 	EditorObject *editor = (EditorObject *)self;
+	apr_pool_t *subpool;
 
 	if (!DirectoryEditor_Check(self)) {
 		PyErr_BadArgument();
@@ -456,7 +476,11 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 									  editor->baton, base_revision, 
 									  editor->pool, &file_baton));
 
-	return new_editor_object(editor->editor, file_baton, editor->pool,
+	subpool = Pool(NULL);
+	if (subpool == NULL)
+		return NULL;
+
+	return new_editor_object(editor->editor, file_baton, subpool,
 							 &FileEditor_Type, NULL, NULL);
 }
 
@@ -578,6 +602,7 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 	svn_revnum_t base_revision=-1;
 	void *root_baton;
 	EditorObject *editor = (EditorObject *)self;
+	apr_pool_t *subpool;
 
 	if (!Editor_Check(self)) {
 		PyErr_BadArgument();
@@ -590,7 +615,11 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 	RUN_SVN(editor->editor->open_root(editor->baton, base_revision,
 					editor->pool, &root_baton));
 
-	return new_editor_object(editor->editor, root_baton, editor->pool,
+	subpool = Pool(NULL);
+	if (subpool == NULL)
+		return NULL;
+
+	return new_editor_object(editor->editor, root_baton, subpool,
 							 &DirectoryEditor_Type, NULL, NULL);
 }
 

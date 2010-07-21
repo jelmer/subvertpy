@@ -16,9 +16,10 @@
 """Subversion rpeository library tests."""
 
 import os
+import unittest
 
 from subvertpy import repos, SubversionException
-from subvertpy.tests import TestCase, TestCaseInTempDir
+from subvertpy.tests import TestCaseInTempDir
 
 class TestClient(TestCaseInTempDir):
 
@@ -74,7 +75,7 @@ class TestClient(TestCaseInTempDir):
         self.assertEquals(False, root.is_file("nonexistant"))
 
 
-class StreamTests(TestCase):
+class StreamTests(unittest.TestCase):
 
     def test_read(self):
         s = repos.Stream()
