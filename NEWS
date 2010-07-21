@@ -1,4 +1,4 @@
-0.7.3    UNRELEASED
+0.7.3    2010-07-21
 
  BUG FIXES
 
@@ -24,6 +24,9 @@
   * Implement subvertpy.wc.get_pristine_contents(). (Jelmer Vernooij)
 
   * Use better error messages when possible. 
+    (Dan Villiom Podlaski Christiansen)
+
+  * Implement subvertpy.ra.get_platform_specific_client_providers().
     (Dan Villiom Podlaski Christiansen)
 
 0.7.2    2010-01-03
