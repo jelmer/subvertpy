@@ -2890,6 +2890,78 @@ static PyObject *get_ssl_client_cert_pw_file_provider(PyObject *self)
 	return (PyObject *)auth;
 }
 
+static PyObject *get_platform_specific_client_providers(PyObject *self)
+{
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	/* svn_auth_get_platform_specific_client_providers() allocates all the
+	 * providers in a single pool, so we can't use it :/ */
+	const char *provider_names[] = {
+		"gnome_keyring", "keychain", "kwallet", "windows", NULL,
+	};
+	const char *provider_types[] = {
+		"simple", "ssl_client_cert_pw", "ssl_server_trust", NULL,
+	};
+	PyObject *pylist = PyList_New(0);
+	int i, j;
+
+	for (i = 0; provider_names[i] != NULL; i++) {
+		for (j = 0; provider_types[j] != NULL; j++) {
+			svn_auth_provider_object_t *c_provider = NULL;
+			apr_pool_t *pool = Pool(NULL);
+
+			if (pool == NULL)
+				continue;
+
+			RUN_SVN(svn_auth_get_platform_specific_provider(&c_provider,
+															provider_names[i],
+															provider_types[j],
+															pool));
+
+			AuthProviderObject *auth = PyObject_New(AuthProviderObject,
+													&AuthProvider_Type);
+
+			if (c_provider == NULL || auth == NULL) {
+				apr_pool_destroy(pool);
+				continue;
+			}
+
+			auth->pool = pool;
+			auth->provider = c_provider;
+
+			PyList_Append(pylist, (PyObject *)auth);
+		}
+	}
+
+	return pylist;
+#else
+	PyObject *pylist = PyList_New(0);
+	PyObject *provider = NULL;
+
+#if defined(WIN32)
+	provider = get_windows_simple_provider(self);
+	if (provider == NULL)
+		return NULL;
+	PyList_Append(pylist, provider);
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	provider = get_windows_ssl_server_trust_provider(self);
+	if (provider == NULL)
+		return NULL;
+	PyList_Append(pylist, provider);
+#endif /* 1.5 */
+#endif /* WIN32 */
+
+#if defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
+	provider = get_keychain_simple_provider(self);
+	if (provider == NULL)
+		return NULL;
+	PyList_Append(pylist, provider);
+#endif
+
+	return pylist;
+#endif
+}
+
 static PyObject *print_modules(PyObject *self)
 {
 	svn_stringbuf_t *stringbuf;
@@ -2973,6 +3045,11 @@ static PyMethodDef ra_module_methods[] = {
 	{ "get_ssl_client_cert_prompt_provider", (PyCFunction)get_ssl_client_cert_prompt_provider, METH_VARARGS, NULL },
 	{ "get_ssl_client_cert_pw_prompt_provider", (PyCFunction)get_ssl_client_cert_pw_prompt_provider, METH_VARARGS, NULL },
 	{ "get_username_provider", (PyCFunction)get_username_provider, METH_NOARGS, NULL },
+	{ "get_platform_specific_client_providers",
+		(PyCFunction)get_platform_specific_client_providers,
+		METH_NOARGS,
+		"Get a list of all available platform client providers.",
+	},
 	{ "print_modules", (PyCFunction)print_modules, METH_NOARGS, NULL },
 	{ NULL, }
 };
