@@ -1,5 +1,10 @@
 0.7.4.   UNRELEASED
 
+ FEATURES
+
+  * Add constants ERR_APR_OS_START_EAIERR and ERR_APR_OS_ERRSPACE_SIZE.
+    (Jelmer Vernooij)
+
  DEPRECATION
 
   * Avoid deprecation warnings for svn.client.Client.copy,
