@@ -658,16 +658,51 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
 	ClientObject *client = (ClientObject *)self;
 	apr_pool_t *temp_pool;
 	char *target;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	svn_commit_info_t *commit_info = NULL;
+#endif
+	PyObject *ret, *py_revprops;
+	svn_revnum_t base_revision_for_url = SVN_INVALID_REVNUM;
+	apr_hash_t *revprops;
 
-	if (!PyArg_ParseTuple(args, "sz#s|bb", &propname, &c_propval.data, &c_propval.len, &target, &recurse, &skip_checks))
+	if (!PyArg_ParseTuple(args, "sz#s|bblO", &propname, &c_propval.data, &c_propval.len, &target, &recurse, &skip_checks,
+						  &base_revision_for_url, &py_revprops))
 		return NULL;
+
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+
+	if (py_revprops != Py_None) {
+		revprops = prop_dict_to_hash(temp_pool, py_revprops);
+		if (revprops == NULL) {
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+	} else {
+		revprops = NULL;
+	}
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	/* FIXME: Support changelists */
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_propset3(&commit_info, propname, &c_propval,
+				target, recurse, skip_checks, base_revision_for_url, 
+				NULL, revprops, client->client, temp_pool));
+	ret = py_commit_info_tuple(commit_info);
+#else
+	if (revprops) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"revprops not supported with svn < 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_propset2(propname, &c_propval,
 				target, recurse, skip_checks, client->client, temp_pool));
+	ret = Py_None;
+	Py_INCREF(ret);
+#endif
 	apr_pool_destroy(temp_pool);
-	Py_RETURN_NONE;
+	return ret;
 }
 
 static PyObject *client_propget(PyObject *self, PyObject *args)
