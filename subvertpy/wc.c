@@ -551,18 +551,33 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 	char *path, *copyfrom_url=NULL;
 	svn_revnum_t copyfrom_rev=-1; 
 	char *kwnames[] = { "path", "copyfrom_url", "copyfrom_rev", "cancel_func", 
-		                "notify_func", NULL };
+		                "notify_func", "depth", NULL };
 	PyObject *cancel_func=Py_None, *notify_func=Py_None;
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
+	svn_depth_t depth = svn_depth_infinity;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zlOO", kwnames, &path, &copyfrom_url, &copyfrom_rev, &cancel_func, &notify_func))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zlOOi", kwnames, &path, &copyfrom_url, &copyfrom_rev, &cancel_func, &notify_func, &depth))
 		return NULL;
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add3(
+						   svn_path_canonicalize(path, temp_pool), admobj->adm, depth, copyfrom_url, 
+							copyfrom_rev, py_cancel_func, 
+							(void *)cancel_func,
+							py_wc_notify_func, 
+							(void *)notify_func, 
+							temp_pool));
+#else
+	if (depth != svn_depth_infinity) {
+		PyErr_SetString(PyExc_NotImplementedError, "depth != infinity not supported on svn < 1.6");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add2(
 						   svn_path_canonicalize(path, temp_pool), admobj->adm, copyfrom_url, 
 							copyfrom_rev, py_cancel_func, 
@@ -570,6 +585,7 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 							py_wc_notify_func, 
 							(void *)notify_func, 
 							temp_pool));
+#endif
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
