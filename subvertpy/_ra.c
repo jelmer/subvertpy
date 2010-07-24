@@ -3002,6 +3002,66 @@ static PyObject *get_ssl_client_cert_pw_file_provider(PyObject *self)
 	return (PyObject *)auth;
 }
 
+static PyObject *print_modules(PyObject *self)
+{
+	svn_stringbuf_t *stringbuf;
+	svn_string_t *string;
+	PyObject *ret;
+	apr_pool_t *pool = Pool(NULL);
+	if (pool == NULL)
+		return NULL;
+	stringbuf = svn_stringbuf_create("", pool);
+	if (stringbuf == NULL) {
+		apr_pool_destroy(pool);
+		return NULL;
+	}
+	RUN_SVN_WITH_POOL(pool, svn_ra_print_modules(stringbuf, pool));
+	string = svn_string_create_from_buf(stringbuf, pool);
+	if (string == NULL) {
+		apr_pool_destroy(pool);
+		return NULL;
+	}
+	ret = PyString_FromStringAndSize(string->data, string->len);
+	apr_pool_destroy(pool);
+	return ret;
+}
+
+#if defined(WIN32)
+static PyObject *get_windows_simple_provider(PyObject* self)
+{
+	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	auth->pool = Pool(NULL);
+	if (auth->pool == NULL)
+		return NULL;
+	svn_auth_get_windows_simple_provider(&auth->provider, auth->pool);
+	return (PyObject *)auth;
+}
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+static PyObject *get_windows_ssl_server_trust_provider(PyObject *self)
+{
+	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	auth->pool = Pool(NULL);
+	if (auth->pool == NULL)
+		return NULL;
+	svn_auth_get_windows_ssl_server_trust_provider(&auth->provider, auth->pool);
+	return (PyObject *)auth;
+}
+#endif
+#endif
+
+#if defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
+static PyObject *get_keychain_simple_provider(PyObject* self)
+{
+	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	auth->pool = Pool(NULL);
+	if (auth->pool == NULL)
+		return NULL;
+	svn_auth_get_keychain_simple_provider(&auth->provider, auth->pool);
+	return (PyObject *)auth;
+}
+#endif
+
 static PyObject *get_platform_specific_client_providers(PyObject *self)
 {
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
@@ -3073,66 +3133,6 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 	return pylist;
 #endif
 }
-
-static PyObject *print_modules(PyObject *self)
-{
-	svn_stringbuf_t *stringbuf;
-	svn_string_t *string;
-	PyObject *ret;
-	apr_pool_t *pool = Pool(NULL);
-	if (pool == NULL)
-		return NULL;
-	stringbuf = svn_stringbuf_create("", pool);
-	if (stringbuf == NULL) {
-		apr_pool_destroy(pool);
-		return NULL;
-	}
-	RUN_SVN_WITH_POOL(pool, svn_ra_print_modules(stringbuf, pool));
-	string = svn_string_create_from_buf(stringbuf, pool);
-	if (string == NULL) {
-		apr_pool_destroy(pool);
-		return NULL;
-	}
-	ret = PyString_FromStringAndSize(string->data, string->len);
-	apr_pool_destroy(pool);
-	return ret;
-}
-
-#if defined(WIN32)
-static PyObject *get_windows_simple_provider(PyObject* self)
-{
-	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
-	auth->pool = Pool(NULL);
-	if (auth->pool == NULL)
-		return NULL;
-	svn_auth_get_windows_simple_provider(&auth->provider, auth->pool);
-	return (PyObject *)auth;
-}
-
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
-static PyObject *get_windows_ssl_server_trust_provider(PyObject *self)
-{
-	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
-	auth->pool = Pool(NULL);
-	if (auth->pool == NULL)
-		return NULL;
-	svn_auth_get_windows_ssl_server_trust_provider(&auth->provider, auth->pool);
-	return (PyObject *)auth;
-}
-#endif
-#endif
-
-#if defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
-static PyObject *get_keychain_simple_provider(PyObject* self)
-{
-	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
-	auth->pool = Pool(NULL);
-	if (auth->pool == NULL)
-		return NULL;
-	svn_auth_get_keychain_simple_provider(&auth->provider, auth->pool);
-	return (PyObject *)auth;
-}
-#endif
 
 static PyMethodDef ra_module_methods[] = {
 	{ "version", (PyCFunction)version, METH_NOARGS, 
