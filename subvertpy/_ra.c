@@ -31,6 +31,12 @@
 #include "util.h"
 #include "ra.h"
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#define REPORTER_T svn_ra_reporter3_t
+#else
+#define REPORTER_T svn_ra_reporter2_t
+#endif
+
 static PyObject *busy_exc;
 
 extern PyTypeObject Reporter_Type;
@@ -119,7 +125,7 @@ typedef struct {
 
 typedef struct {
 	PyObject_HEAD
-	const svn_ra_reporter2_t *reporter;
+	const REPORTER_T *reporter;
 	void *report_baton;
 	apr_pool_t *pool;
 	RemoteAccessObject *ra;
@@ -131,16 +137,28 @@ static PyObject *reporter_set_path(PyObject *self, PyObject *args)
 	svn_revnum_t revision; 
 	bool start_empty; 
 	char *lock_token = NULL;
+	svn_depth_t depth = svn_depth_infinity;
 	ReporterObject *reporter = (ReporterObject *)self;
 
-	if (!PyArg_ParseTuple(args, "slb|z", &path, &revision, &start_empty, 
-						  &lock_token))
+	if (!PyArg_ParseTuple(args, "slb|zi", &path, &revision, &start_empty, 
+						  &lock_token, &depth))
 		return NULL;
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+
+	RUN_SVN(reporter->reporter->set_path(reporter->report_baton, 
+												  path, revision, depth, start_empty, 
+					 lock_token, reporter->pool));
+#else
+	if (depth != svn_depth_infinity) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"depth != infinity only supported for svn >= 1.5");
+		return NULL;
+	}
 	RUN_SVN(reporter->reporter->set_path(reporter->report_baton, 
 												  path, revision, start_empty, 
 					 lock_token, reporter->pool));
-
+#endif
 	Py_RETURN_NONE;
 }
 
@@ -164,12 +182,23 @@ static PyObject *reporter_link_path(PyObject *self, PyObject *args)
 	bool start_empty;
 	char *lock_token = NULL;
 	ReporterObject *reporter = (ReporterObject *)self;
+	svn_depth_t depth = svn_depth_infinity;
 
-	if (!PyArg_ParseTuple(args, "sslb|z", &path, &url, &revision, &start_empty, &lock_token))
+	if (!PyArg_ParseTuple(args, "sslb|zi", &path, &url, &revision, &start_empty, &lock_token, &depth))
 		return NULL;
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	RUN_SVN(reporter->reporter->link_path(reporter->report_baton, path, url, 
+				revision, depth, start_empty, lock_token, reporter->pool));
+#else
+	if (depth != svn_depth_infinity) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"depth != infinity only supported for svn >= 1.5");
+		return NULL;
+	}
 	RUN_SVN(reporter->reporter->link_path(reporter->report_baton, path, url, 
 				revision, start_empty, lock_token, reporter->pool));
+#endif
 
 	Py_RETURN_NONE;
 }
@@ -1012,14 +1041,16 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	char *update_target; 
 	bool recurse;
 	PyObject *update_editor;
-	const svn_ra_reporter2_t *reporter;
+	const REPORTER_T *reporter;
 	void *report_baton;
 	svn_error_t *err;
 	apr_pool_t *temp_pool;
 	ReporterObject *ret;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+	svn_boolean_t send_copyfrom_args = FALSE;
 
-	if (!PyArg_ParseTuple(args, "lsbO:do_update", &revision_to_update_to, &update_target, &recurse, &update_editor))
+	if (!PyArg_ParseTuple(args, "lsbO|b:do_update", &revision_to_update_to, &update_target, &recurse, &update_editor, 
+						  &send_copyfrom_args))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1030,6 +1061,21 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 		return NULL;
 
 	Py_INCREF(update_editor);
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	Py_BEGIN_ALLOW_THREADS
+	err = svn_ra_do_update2(ra->ra, &reporter, 
+												  &report_baton, 
+												  revision_to_update_to, 
+												  update_target, recurse?svn_depth_infinity:svn_depth_files, 
+												  send_copyfrom_args,
+												  &py_editor, update_editor, 
+												  temp_pool);
+#else
+	if (send_copyfrom_args) {
+		PyErr_SetString(PyExc_NotImplementedError, "send_copyfrom_args only supported for svn >= 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_ra_do_update(ra->ra, &reporter, 
 												  &report_baton, 
@@ -1037,6 +1083,8 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 												  update_target, recurse, 
 												  &py_editor, update_editor, 
 												  temp_pool);
+
+#endif
 	Py_END_ALLOW_THREADS
 	if (!check_error(err)) {
 		apr_pool_destroy(temp_pool);
@@ -1064,7 +1112,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	bool recurse;
 	char *switch_url; 
 	PyObject *update_editor;
-	const svn_ra_reporter2_t *reporter;
+	const REPORTER_T *reporter;
 	void *report_baton;
 	apr_pool_t *temp_pool;
 	ReporterObject *ret;
@@ -1081,11 +1129,21 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 		return NULL;
 	Py_INCREF(update_editor);
 	Py_BEGIN_ALLOW_THREADS
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	err = svn_ra_do_switch2(
+						ra->ra, &reporter, &report_baton, 
+						revision_to_update_to, update_target, 
+						recurse?svn_depth_infinity:svn_depth_files, switch_url, &py_editor, 
+						update_editor, temp_pool);
+#else
 	err = svn_ra_do_switch(
 						ra->ra, &reporter, &report_baton, 
 						revision_to_update_to, update_target, 
 						recurse, switch_url, &py_editor, 
 						update_editor, temp_pool);
+#endif
+
 	Py_END_ALLOW_THREADS
 	
 	if (!check_error(err)) {
@@ -1109,7 +1167,7 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 	svn_revnum_t revision_to_update_to;
 	char *diff_target, *versus_url; 
 	PyObject *diff_editor;
-	const svn_ra_reporter2_t *reporter;
+	const REPORTER_T *reporter;
 	void *report_baton;
 	svn_error_t *err;
 	apr_pool_t *temp_pool;
@@ -1129,6 +1187,16 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 
 	Py_INCREF(diff_editor);
 	Py_BEGIN_ALLOW_THREADS
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	err = svn_ra_do_diff3(ra->ra, &reporter, &report_baton, 
+												  revision_to_update_to, 
+												  diff_target, recurse?svn_depth_infinity:svn_depth_files,
+												  ignore_ancestry, 
+												  text_deltas,
+												  versus_url,
+												  &py_editor, diff_editor, 
+												  temp_pool);
+#else
 	err = svn_ra_do_diff2(ra->ra, &reporter, &report_baton, 
 												  revision_to_update_to, 
 												  diff_target, recurse,
@@ -1137,6 +1205,7 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 												  versus_url,
 												  &py_editor, diff_editor, 
 												  temp_pool);
+#endif
 	Py_END_ALLOW_THREADS
 	if (!check_error(err)) {
 		apr_pool_destroy(temp_pool);
