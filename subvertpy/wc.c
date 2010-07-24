@@ -1061,7 +1061,7 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	svn_stream_t *stream;
 #else
 	PyObject *ret;
-	char *pristine_path;
+	const char *pristine_path;
 #endif
 
 	if (!PyArg_ParseTuple(args, "s", &path))
@@ -1100,7 +1100,7 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, temp_pool), &pristine_path, temp_pool));
-	ret = PyFile_FromString(pristine_path, "rb");
+	ret = PyFile_FromString((char *)pristine_path, "rb");
 	apr_pool_destroy(temp_pool);
 	return ret;
 #endif
