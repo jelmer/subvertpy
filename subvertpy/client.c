@@ -685,8 +685,10 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
 
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	/* FIXME: Support changelists */
+	/* FIXME: Support depth */
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_propset3(&commit_info, propname, &c_propval,
-				target, recurse, skip_checks, base_revision_for_url, 
+				target, recurse?svn_depth_infinity:svn_depth_files,
+				skip_checks, base_revision_for_url, 
 				NULL, revprops, client->client, temp_pool));
 	ret = py_commit_info_tuple(commit_info);
 #else
