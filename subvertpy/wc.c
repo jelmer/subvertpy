@@ -788,8 +788,15 @@ static PyObject *adm_close(PyObject *self)
 {
 	AdmObject *admobj = (AdmObject *)self;
 	if (admobj->adm != NULL) {
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+		apr_pool_t *temp_pool = Pool(NULL);
+		Py_BEGIN_ALLOW_THREADS
+		svn_wc_adm_close2(admobj->adm, temp_pool);
+		apr_pool_destroy(temp_pool);
+#else
 		Py_BEGIN_ALLOW_THREADS
 		svn_wc_adm_close(admobj->adm);
+#endif
 		Py_END_ALLOW_THREADS
 		admobj->adm = NULL;
 	}
