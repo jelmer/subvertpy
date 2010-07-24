@@ -731,9 +731,19 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	/* FIXME: Support changelists */
+	/* FIXME: Support actual_revnum */
+	/* FIXME: Support depth properly */
+	RUN_SVN_WITH_POOL(temp_pool, 
+					  svn_client_propget3(&hash_props, propname, target,
+				&c_peg_rev, &c_rev, NULL, recurse?svn_depth_infinity:svn_depth_files,
+				NULL, client->client, temp_pool));
+#else
 	RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_client_propget2(&hash_props, propname, target,
 				&c_peg_rev, &c_rev, recurse, client->client, temp_pool));
+#endif
 	ret = prop_hash_to_dict(hash_props);
 	apr_pool_destroy(temp_pool);
 	return ret;
