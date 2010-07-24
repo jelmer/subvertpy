@@ -16,7 +16,8 @@
         svn.ra.RemoteAccess.do_switch, svn.ra.RemoteAccess.do_diff.
     (Jelmer Vernooij)
 
-  * Avoid deprecation warnings for svn.wc.WorkingCopy.propset.
+  * Avoid deprecation warnings for svn.wc.WorkingCopy.propset,
+        svn.wc.WorkingCopy.walk_entries.
     (Jelmer Vernooij)
 
 0.7.3    2010-07-21

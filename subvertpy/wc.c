@@ -119,17 +119,51 @@ static PyObject *version(PyObject *self)
 
 static svn_error_t *py_wc_found_entry(const char *path, const svn_wc_entry_t *entry, void *walk_baton, apr_pool_t *pool)
 {
-	PyObject *fn = (PyObject *)walk_baton, *ret;
+	PyObject *fn, *ret;
 	PyGILState_STATE state = PyGILState_Ensure();
+	if (PyTuple_Check(walk_baton)) {
+		fn = (PyObject *)PyTuple_GET_ITEM(walk_baton, 0);
+	} else {
+		fn = walk_baton;
+	}
 	ret = PyObject_CallFunction(fn, "sO", path, py_entry(entry));
 	CB_CHECK_PYRETVAL(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+
+svn_error_t *py_wc_handle_error(const char *path, svn_error_t *err, void *walk_baton, apr_pool_t *pool)
+{
+	PyObject *fn, *ret;
+	PyObject *py_err;
+	PyGILState_STATE state;
+	if (PyTuple_Check(walk_baton)) {
+		fn = (PyObject *)PyTuple_GET_ITEM(walk_baton, 1);
+	} else {
+		return err;
+	}
+	state = PyGILState_Ensure();
+	py_err = PyErr_NewSubversionException(err);
+	ret = PyObject_CallFunction(fn, "sO", path, py_err);
+	CB_CHECK_PYRETVAL(ret);
+	PyGILState_Release(state);
+	Py_DECREF(py_err);
+	return NULL;
+}
+
+static svn_wc_entry_callbacks2_t py_wc_entry_callbacks2 = {
+	py_wc_found_entry,
+	py_wc_handle_error,
+};
+#else
 static svn_wc_entry_callbacks_t py_wc_entry_callbacks = {
 	py_wc_found_entry
 };
+
+#endif
+
 
 void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool)
 {
@@ -422,17 +456,32 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 	PyObject *cancel_func=Py_None;
 	apr_pool_t *temp_pool;
 	AdmObject *admobj = (AdmObject *)self;
+	svn_depth_t depth = svn_depth_infinity;
 
-	if (!PyArg_ParseTuple(args, "sO|bO", &path, &callbacks, &show_hidden, &cancel_func))
+	if (!PyArg_ParseTuple(args, "sO|bOi", &path, &callbacks, &show_hidden, &cancel_func,
+						  &depth))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries3(path, admobj->adm, 
+				&py_wc_entry_callbacks2, (void *)callbacks,
+				depth, show_hidden, py_cancel_func, (void *)cancel_func,
+				temp_pool));
+#else
+	if (depth != svn_depth_infinity) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"depth != infinity not supported for svn < 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries2(path, admobj->adm, 
 				&py_wc_entry_callbacks, (void *)callbacks,
 				show_hidden, py_cancel_func, (void *)cancel_func,
 				temp_pool));
+#endif
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
