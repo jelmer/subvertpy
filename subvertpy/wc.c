@@ -1060,6 +1060,7 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	StreamObject *ret;
 	svn_stream_t *stream;
 #else
+	PyObject *ret;
 	char *pristine_path;
 #endif
 
