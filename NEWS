@@ -9,7 +9,14 @@
 
   * Avoid deprecation warnings for svn.client.Client.copy,
         svn.client.Client.propset, svn.client.Client.propget,
-        svn.client.Client.update.
+        svn.client.Client.do_update.
+    (Jelmer Vernooij)
+
+  * Avoid deprecation warnings for svn.ra.RemoteAccess.do_update,
+        svn.ra.RemoteAccess.do_switch, svn.ra.RemoteAccess.do_diff.
+    (Jelmer Vernooij)
+
+  * Avoid deprecation warnings for svn.wc.WorkingCopy.propset.
     (Jelmer Vernooij)
 
 0.7.3    2010-07-21

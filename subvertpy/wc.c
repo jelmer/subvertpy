@@ -358,16 +358,24 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	int vallen;
 	svn_string_t *cvalue;
+	PyObject *notify_func = Py_None;
 
-	if (!PyArg_ParseTuple(args, "ss#s|b", &name, &value, &vallen, &path, &skip_checks))
+	if (!PyArg_ParseTuple(args, "ss#s|bO", &name, &value, &vallen, &path, &skip_checks,
+						  &notify_func))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
 	cvalue = svn_string_ncreate(value, vallen, temp_pool);
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_set3(name, cvalue, path, admobj->adm, 
+				skip_checks, py_wc_notify_func, (void *)notify_func, 
+				temp_pool));
+#else
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_set2(name, cvalue, path, admobj->adm, 
 				skip_checks, temp_pool));
+#endif
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
