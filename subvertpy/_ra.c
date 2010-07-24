@@ -662,7 +662,11 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 
 		SVN_ERR (svn_io_temp_dir (&path, pool));
 		path = svn_path_join (path, "subvertpy", pool);
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+		SVN_ERR (svn_io_open_unique_file3(fp, NULL, path, svn_io_file_del_on_pool_cleanup, pool, pool));
+#else
 		SVN_ERR (svn_io_open_unique_file (fp, NULL, path, ".tmp", TRUE, pool));
+#endif
 
 		return NULL;
 	}
