@@ -556,17 +556,94 @@ static PyObject *client_copy(PyObject *self, PyObject *args)
 	svn_commit_info_t *commit_info = NULL;
 	apr_pool_t *temp_pool;
 	svn_opt_revision_t c_src_rev;
+	bool copy_as_child = false, make_parents = false;
 	PyObject *ret;
+	apr_hash_t *revprops;
+	bool ignore_externals = false;
 	ClientObject *client = (ClientObject *)self;
-	if (!PyArg_ParseTuple(args, "ss|O", &src_path, &dst_path, &src_rev))
+
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 4
+	PyObject *py_revprops = Py_None;
+#endif
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+	apr_array_header_t *src_paths;
+	svn_client_copy_source_t src;
+#endif
+
+	if (!PyArg_ParseTuple(args, "ss|ObbbO", &src_path, &dst_path, &src_rev, 
+						  &copy_as_child, &make_parents, &ignore_externals, 
+						  &py_revprops))
 		return NULL;
 	if (!to_opt_revision(src_rev, &c_src_rev))
 		return NULL;
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+
+	if (py_revprops != Py_None) {
+		revprops = prop_dict_to_hash(temp_pool, py_revprops);
+		if (revprops == NULL) {
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+	} else {
+		revprops = NULL;
+	}
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR < 4
+	if (copy_as_child) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"copy_as_child not supported in svn <= 1.4");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	if (make_parents) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"make_parents not supported in svn <= 1.4");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	if (revprops) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"revprops not supported in svn <= 1.4");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+#endif
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR < 5
+	if (ignore_externals) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"ignore_externals not supported in svn <= 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+#endif
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+	src.path = src_path;
+	src.revision = src.peg_revision = &c_src_rev;
+	src_paths = apr_array_make(temp_pool, 1, sizeof(svn_client_copy_source_t *));
+	if (src_paths == NULL) {
+		PyErr_NoMemory();
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	APR_ARRAY_IDX(src_paths, 0, svn_client_copy_source_t *) = &src;
+#endif
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR > 5
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_copy5(&commit_info, src_paths, 
+				dst_path, copy_as_child, make_parents, 
+				ignore_externals, revprops, client->client, temp_pool));
+#elif SVN_VER_MAJOR >= 1 && SVN_VER_MINOR == 5
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_copy4(&commit_info, src_paths, 
+				dst_path, copy_as_child, make_parents, 
+				revprops, client->client, temp_pool));
+#elif SVN_VER_MAJOR >= 1 && SVN_VER_MINOR == 4
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_copy3(&commit_info, src_path, 
+				&c_src_rev, dst_path, client->client, temp_pool));
+#else
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_copy2(&commit_info, src_path, 
 				&c_src_rev, dst_path, client->client, temp_pool));
+#endif
 	ret = py_commit_info_tuple(commit_info);
 	apr_pool_destroy(temp_pool);
 	return ret;
