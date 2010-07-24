@@ -3,7 +3,8 @@
  DEPRECATION
 
   * Avoid deprecation warnings for svn.client.Client.copy,
-        svn.client.Client.propset, svn.client.Client.propget.
+        svn.client.Client.propset, svn.client.Client.propget,
+        svn.client.Client.update.
     (Jelmer Vernooij)
 
 0.7.3    2010-07-21

@@ -877,8 +877,11 @@ static PyObject *client_update(PyObject *self, PyObject *args)
 	PyObject *ret;
 	int i = 0;
 	ClientObject *client = (ClientObject *)self;
+	svn_boolean_t allow_unver_obstructions = FALSE,
+				  depth_is_sticky = FALSE;
 
-	if (!PyArg_ParseTuple(args, "O|Obb", &paths, &rev, &recurse, &ignore_externals))
+	if (!PyArg_ParseTuple(args, "O|Obbbb", &paths, &rev, &recurse, &ignore_externals,
+						  &depth_is_sticky, &allow_unver_obstructions))
 		return NULL;
 
 	if (!to_opt_revision(rev, &c_rev))
@@ -890,9 +893,16 @@ static PyObject *client_update(PyObject *self, PyObject *args)
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_update3(&result_revs, 
+			apr_paths, &c_rev, 
+			recurse?svn_depth_infinity:svn_depth_files, depth_is_sticky, 
+			ignore_externals, allow_unver_obstructions, client->client, temp_pool));
+#else
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_update2(&result_revs, 
 			apr_paths, &c_rev, 
 			recurse, ignore_externals, client->client, temp_pool));
+#endif
 	ret = PyList_New(result_revs->nelts);
 	if (ret == NULL)
 		return NULL;
