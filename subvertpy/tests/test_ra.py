@@ -208,7 +208,7 @@ class TestRemoteAccess(SubversionTestCase):
         
         rets = []
 
-        def handle(path, rev, props):
+        def handle(path, rev, props, from_merge=None):
             rets.append((path, rev, props))
 
         self.ra.get_file_revs("bar", 1, 2, handle)

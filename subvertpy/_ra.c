@@ -597,7 +597,28 @@ static const svn_delta_editor_t py_editor = {
 	py_cb_editor_abort_edit
 };
 
-static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_boolean_t result_of_merge, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
+{
+	PyObject *fn = (PyObject *)baton, *ret, *py_rev_props;
+	PyGILState_STATE state = PyGILState_Ensure();
+
+	py_rev_props = prop_hash_to_dict(rev_props);
+	CB_CHECK_PYRETVAL(py_rev_props);
+
+	ret = PyObject_CallFunction(fn, "slOb", path, rev, py_rev_props, result_of_merge);
+	Py_DECREF(py_rev_props);
+	CB_CHECK_PYRETVAL(ret);
+
+	if (delta_baton != NULL && delta_handler != NULL) {
+		*delta_baton = (void *)ret;
+		*delta_handler = py_txdelta_window_handler;
+	}
+	PyGILState_Release(state);
+	return NULL;
+}
+#else
+static svn_error_t *py_ra_file_rev_handler(void *baton, const char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
 {
 	PyObject *fn = (PyObject *)baton, *ret, *py_rev_props;
 	PyGILState_STATE state = PyGILState_Ensure();
@@ -616,6 +637,10 @@ static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnu
 	PyGILState_Release(state);
 	return NULL;
 }
+
+
+#endif
+
 
 
 static void ra_done_handler(void *_ra)
@@ -2011,8 +2036,10 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 	PyObject *file_rev_handler;
 	apr_pool_t *temp_pool;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+	svn_boolean_t include_merged_revisions = FALSE;
 
-	if (!PyArg_ParseTuple(args, "sllO", &path, &start, &end, &file_rev_handler))
+	if (!PyArg_ParseTuple(args, "sllO|b", &path, &start, &end, &file_rev_handler, 
+						  &include_merged_revisions))
 		return NULL;
 
 	if (ra_check_svn_path(path))
@@ -2025,9 +2052,21 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs(ra->ra, path, start, end, 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs2(ra->ra, path, start, end, 
+				include_merged_revisions, 
 				py_file_rev_handler, (void *)file_rev_handler, 
 					temp_pool));
+#else
+	if (include_merged_revisions) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"include_merged_revisions only supported with svn >= 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs(ra->ra, path, start, end, 
+				py_ra_file_rev_handler, (void *)file_rev_handler, temp_pool));
+#endif
 
 	apr_pool_destroy(temp_pool);
 
