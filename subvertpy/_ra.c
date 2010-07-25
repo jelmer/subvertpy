@@ -2103,6 +2103,8 @@ static PyGetSetDef ra_getsetters[] = {
 	{ NULL }
 };
 
+#include "_ra_iter_log.c"
+
 static PyMethodDef ra_methods[] = {
 	{ "get_file_revs", ra_get_file_revs, METH_VARARGS, 
 		"S.get_file_revs(path, start_rev, end_revs, handler)" },
@@ -2167,6 +2169,10 @@ static PyMethodDef ra_methods[] = {
 		"S.get_repos_root() -> url\n"
 		"Return the URL to the root of the repository." },
 	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, 
+		"S.get_log(callback, paths, start, end, limit, discover_changed_paths, "
+		"strict_node_history, include_merged_revisions, revprops)\n"
+	},
+	{ "iter_log", (PyCFunction)ra_iter_log, METH_VARARGS|METH_KEYWORDS, 
 		"S.get_log(paths, start, end, limit, discover_changed_paths, "
 		"strict_node_history, include_merged_revisions, revprops)\n"
 	},
@@ -3243,6 +3249,9 @@ void init_ra(void)
 	if (PyType_Ready(&AuthProvider_Type) < 0)
 		return;
 
+	if (PyType_Ready(&LogIterator_Type) < 0)
+		return;
+
 	initeditor();
 
 	apr_initialize();
@@ -3250,6 +3259,7 @@ void init_ra(void)
 	if (pool == NULL)
 		return;
 	svn_ra_initialize(pool);
+	PyThread_init_thread();
 
 	mod = Py_InitModule3("_ra", ra_module_methods, "Remote Access");
 	if (mod == NULL)
