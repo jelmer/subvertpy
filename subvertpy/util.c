@@ -299,7 +299,7 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	return hash_props;
 }
 
-static PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool)
+PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool)
 {
 	PyObject *py_changed_paths, *pyval;
 	apr_hash_index_t *idx;

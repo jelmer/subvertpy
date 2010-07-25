@@ -116,6 +116,32 @@ class TestRemoteAccess(SubversionTestCase):
         reporter.set_path("", 0, True)
         reporter.finish()
 
+    def test_iter_log(self):
+        def check_results(returned):
+            self.assertEquals(2, len(returned))
+            self.assert_(len(returned[0]) in (3,4))
+            if len(returned[0]) == 3:
+                (paths, revnum, props) = returned[0]
+            else:
+                (paths, revnum, props, has_children) = returned[0]
+            self.assertEquals(None, paths)
+            self.assertEquals(revnum, 0)
+            self.assertEquals(["svn:date"], props.keys())
+            if len(returned[1]) == 3:
+                (paths, revnum, props) = returned[1]
+            else:
+                (paths, revnum, props, has_children) = returned[1]
+            self.assertEquals({'/foo': ('A', None, -1)}, paths)
+            self.assertEquals(revnum, 1)
+            self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
+                              set(props.keys()))
+        returned = list(self.ra.iter_log([""], 0, 0, revprops=["svn:date", "svn:author", "svn:log"]))
+        self.assertEquals(1, len(returned))
+        self.do_commit()
+        returned = list(self.ra.iter_log(None, 0, 1, discover_changed_paths=True, 
+                        strict_node_history=False, revprops=["svn:date", "svn:author", "svn:log"]))
+        check_results(returned)
+
     def test_get_log(self):
         returned = []
         def cb(*args):
@@ -145,6 +171,8 @@ class TestRemoteAccess(SubversionTestCase):
         self.ra.get_log(cb, None, 0, 1, discover_changed_paths=True, 
                         strict_node_history=False, revprops=["svn:date", "svn:author", "svn:log"])
         check_results(returned)
+
+
 
     def test_get_commit_editor_busy(self):
         def mycb(rev):

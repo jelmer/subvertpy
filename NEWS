@@ -7,6 +7,8 @@
 
   * Implement subvertpy.wc.match_ignore_list. (Jelmer Vernooij)
 
+  * Add subvertpy.ra.RemoteAccess.iter_log(). (Jelmer Vernooij)
+
  DEPRECATION
 
   * Avoid deprecation warnings for svn.client.Client.copy,
