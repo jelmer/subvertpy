@@ -36,8 +36,6 @@ typedef struct {
 	RemoteAccessObject *ra;
 	svn_boolean_t done;
 	PyObject *exception;
-	PyThread_type_lock lock;
-	PyThread_type_lock suspend_thread;
 	int queue_size;
 	struct log_entry *head;
 	struct log_entry *tail;
@@ -46,13 +44,14 @@ typedef struct {
 static void log_iter_dealloc(PyObject *self)
 {
 	LogIteratorObject *iter = (LogIteratorObject *)self;
-	PyThread_free_lock(iter->lock);
+
 	while (iter->head) {
 		struct log_entry *e = iter->head;
 		Py_DECREF(e->tuple);
 		iter->head = e->next;
 		free(e);
 	}
+	Py_DECREF(iter->ra);
 	apr_pool_destroy(iter->pool);
 }
 
@@ -60,26 +59,19 @@ static PyObject *log_iter_next(LogIteratorObject *iter)
 {
 	struct log_entry *first;
 	PyObject *ret;
-	Py_BEGIN_ALLOW_THREADS
-	PyThread_acquire_lock(iter->lock, WAIT_LOCK);
-	Py_END_ALLOW_THREADS
 
 	while (iter->head == NULL) {
 		/* Done, raise stopexception */
 		if (iter->done) {
 			if (iter->exception) {
-				PyThread_release_lock(iter->lock);
 				PyErr_SetNone(iter->exception);
 			} else {
-				PyThread_release_lock(iter->lock);
 				PyErr_SetNone(PyExc_StopIteration);
 			}
 			return NULL;
 		} else {
-			PyThread_release_lock(iter->lock);
 			Py_BEGIN_ALLOW_THREADS
 			/* FIXME: Don't waste cycles */
-			PyThread_acquire_lock(iter->lock, WAIT_LOCK);
 			Py_END_ALLOW_THREADS
 		}
 	}
@@ -90,8 +82,32 @@ static PyObject *log_iter_next(LogIteratorObject *iter)
 		iter->tail = NULL;
 	free(first);
 	iter->queue_size--;
-	PyThread_release_lock(iter->lock);
 	return ret;
+}
+
+static PyObject *py_iter_append(LogIteratorObject *iter, PyObject *tuple)
+{
+	struct log_entry *entry;
+
+	entry = calloc(sizeof(struct log_entry), 1);
+	if (entry == NULL) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+
+	entry->tuple = tuple;
+	if (iter->tail == NULL) {
+		iter->tail = entry;
+	} else {
+		iter->tail->next = entry;
+		iter->tail = entry;
+	}
+	if (iter->head == NULL)
+		iter->head = entry;
+
+	iter->queue_size++;
+
+	Py_RETURN_NONE;
 }
 
 PyTypeObject LogIterator_Type = {
@@ -151,48 +167,26 @@ PyTypeObject LogIterator_Type = {
 	(iternextfunc)log_iter_next, /*	iternextfunc tp_iternext;	*/
 };
 
-static PyObject *py_iter_append(LogIteratorObject *iter, PyObject *tuple)
-{
-	struct log_entry *entry;
-
-	entry = calloc(sizeof(struct log_entry), 1);
-	if (entry == NULL) {
-		PyErr_NoMemory();
-		return NULL;
-	}
-
-	PyThread_acquire_lock(iter->lock, WAIT_LOCK);
-
-	entry->tuple = tuple;
-	if (iter->tail == NULL) {
-		iter->tail = entry;
-	} else {
-		iter->tail->next = entry;
-		iter->tail = entry;
-	}
-	if (iter->head == NULL)
-		iter->head = entry;
-
-	iter->queue_size++;
-
-	PyThread_release_lock(iter->lock);
-
-	Py_RETURN_NONE;
-}
-
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
 static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
 	PyObject *revprops, *py_changed_paths, *ret, *tuple;
 	LogIteratorObject *iter = (LogIteratorObject *)baton;
 
+	PyGILState_STATE state;
+
+	state = PyGILState_Ensure();
+
 	py_changed_paths = pyify_changed_paths(log_entry->changed_paths, pool);
 	if (py_changed_paths == NULL) {
+		PyGILState_Release(state);
 		return py_svn_error();
 	}
 
 	revprops = prop_hash_to_dict(log_entry->revprops);
 	if (revprops == NULL) {
+		Py_DECREF(py_changed_paths);
+		PyGILState_Release(state);
 		return py_svn_error();
 	}
 
@@ -201,16 +195,20 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 	if (tuple == NULL) {
 		Py_DECREF(revprops);
 		Py_DECREF(py_changed_paths);
+		PyGILState_Release(state);
 		return py_svn_error();
 	}
 
 	ret = py_iter_append(iter, tuple);
 	if (ret == NULL) {
 		Py_DECREF(tuple);
+		PyGILState_Release(state);
 		return py_svn_error();
 	}
 
 	Py_DECREF(ret);
+
+	PyGILState_Release(state);
 
 	return NULL;
 }
@@ -220,14 +218,22 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 	PyObject *revprops, *py_changed_paths, *ret, *obj;
 	LogIteratorObject *iter = (LogIteratorObject *)baton;
 
+	PyGILState_STATE state;
+
+	state = PyGILState_Ensure();
+
 	py_changed_paths = pyify_changed_paths(changed_paths, pool);
 	if (py_changed_paths == NULL) {
+		PyGILState_Release(state);
 		return py_svn_error();
 	}
 
 	revprops = PyDict_New();
-	if (revprops == NULL) 
+	if (revprops == NULL) {
+		Py_DECREF(py_changed_paths);
+		PyGILState_Release(state);
 		return py_svn_error();
+	}
 
 	if (message != NULL) {
 		obj = PyString_FromString(message);
@@ -249,10 +255,13 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 	if (ret == NULL) {
 		Py_DECREF(py_changed_paths);
 		Py_DECREF(revprops);
+		PyGILState_Release(state);
 		return py_svn_error();
 	}
 
 	py_iter_append(iter, ret);
+
+	PyGILState_Release(state);
 
 	return NULL;
 }
@@ -268,10 +277,8 @@ static void py_iter_log(void *baton)
 	error = svn_ra_get_log2(iter->ra->ra, 
 			iter->apr_paths, iter->start, iter->end, iter->limit,
 			iter->discover_changed_paths, iter->strict_node_history, 
-			iter->include_merged_revisions,
-			iter->apr_revprops,
-			py_iter_log_entry_cb, 
-			iter, iter->pool);
+			iter->include_merged_revisions, iter->apr_revprops,
+			py_iter_log_entry_cb, iter, iter->pool);
 #else
 	error = svn_ra_get_log(iter->ra->ra, 
 			iter->apr_paths, iter->start, iter->end, iter->limit,
@@ -362,6 +369,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 
 	ret = PyObject_New(LogIteratorObject, &LogIterator_Type);
 	ret->ra = ra;
+	Py_INCREF(ret->ra);
 	ret->start = start;
 	ret->exception = NULL;
 	ret->discover_changed_paths = discover_changed_paths;
@@ -372,7 +380,6 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	ret->include_merged_revisions = include_merged_revisions;
 	ret->apr_revprops = apr_revprops;
 	ret->done = FALSE;
-	ret->lock = PyThread_allocate_lock();
 	ret->queue_size = 0;
 	ret->head = NULL;
 	ret->tail = NULL;
