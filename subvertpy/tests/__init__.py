@@ -162,13 +162,13 @@ class TestCommitEditor(TestDirEditor):
 
 
 class SubversionTestCase(TestCaseInTempDir):
-    """A test case that provides the ability to build Subversion 
+    """A test case that provides the ability to build Subversion
     repositories."""
 
     def setUp(self):
         super(SubversionTestCase, self).setUp()
         self.client_ctx = client.Client()
-        self.client_ctx.auth = Auth([ra.get_simple_provider(), 
+        self.client_ctx.auth = Auth([ra.get_simple_provider(),
                                      ra.get_username_provider(),
                                      ra.get_ssl_client_cert_file_provider(),
                                      ra.get_ssl_client_cert_pw_file_provider(),
@@ -204,7 +204,7 @@ class SubversionTestCase(TestCaseInTempDir):
 
 
     def make_checkout(self, repos_url, relpath):
-        self.client_ctx.checkout(repos_url, relpath, "HEAD") 
+        self.client_ctx.checkout(repos_url, relpath, "HEAD")
 
     def client_set_prop(self, path, name, value):
         if value is None:
@@ -239,10 +239,10 @@ class SubversionTestCase(TestCaseInTempDir):
 
     def client_resolve(self, path, choice, depth=0):
         self.client_ctx.resolve(path, depth, choice)
-        
+
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.
-        
+
         :param dir: List of paths to commit.
         """
         olddir = os.path.abspath('.')
@@ -255,7 +255,7 @@ class SubversionTestCase(TestCaseInTempDir):
 
     def client_add(self, relpath, recursive=True):
         """Add specified files to working copy.
-        
+
         :param relpath: Path to the files to add.
         """
         self.client_ctx.add(relpath, recursive, False, False)
@@ -273,7 +273,7 @@ class SubversionTestCase(TestCaseInTempDir):
         ret = {}
         def rcvr(orig_paths, rev, revprops, has_children=None):
             ret[rev] = (orig_paths, revprops.get(properties.PROP_REVISION_AUTHOR), revprops.get(properties.PROP_REVISION_DATE), revprops.get(properties.PROP_REVISION_LOG))
-        r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True, 
+        r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True,
                   revprops=[properties.PROP_REVISION_AUTHOR, properties.PROP_REVISION_DATE, properties.PROP_REVISION_LOG])
         return ret
 
@@ -305,8 +305,8 @@ class SubversionTestCase(TestCaseInTempDir):
 
     def build_tree(self, files):
         """Create a directory tree.
-        
-        :param files: Dictionary with filenames as keys, contents as 
+
+        :param files: Dictionary with filenames as keys, contents as
             values. None as value indicates a directory.
         """
         for f in files:
@@ -325,12 +325,12 @@ class SubversionTestCase(TestCaseInTempDir):
     def make_client(self, repospath, clientpath, allow_revprop_changes=True):
         """Create a repository and a checkout. Return the checkout.
 
-        :param repospath: Optional relpath to check out if not the full 
+        :param repospath: Optional relpath to check out if not the full
             repository.
         :param clientpath: Path to checkout
         :return: Repository URL.
         """
-        repos_url = self.make_repository(repospath, 
+        repos_url = self.make_repository(repospath,
             allow_revprop_changes=allow_revprop_changes)
         self.make_checkout(repos_url, clientpath)
         return repos_url
@@ -349,7 +349,7 @@ class SubversionTestCase(TestCaseInTempDir):
         :param message: Commit message
         :return: Commit editor object
         """
-        ra_ctx = RemoteAccess(url.encode("utf-8"), 
+        ra_ctx = RemoteAccess(url.encode("utf-8"),
             auth=Auth([ra.get_username_provider()]))
         revnum = ra_ctx.get_latest_revnum()
         return TestCommitEditor(ra_ctx.get_commit_editor({"svn:log": message}),
