@@ -852,13 +852,14 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	apr_array_header_t *wcprop_changes;
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
+	svn_boolean_t remove_changelist = FALSE;
 	char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author", 
-						"wcprop_changes", "remove_lock", "digest", NULL };
+						"wcprop_changes", "remove_lock", "digest", "remove_changelist", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblzz|Obz", kwnames, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblzz|Obzb", kwnames, 
 									 &path, &recurse, &new_revnum, &rev_date,
 									 &rev_author, &py_wcprop_changes, 
-									 &remove_lock, &digest))
+									 &remove_lock, &digest, &remove_changelist))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -870,9 +871,20 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 		return NULL;
 	}
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed4(svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
+														   rev_date, rev_author, wcprop_changes, 
+														   remove_lock, remove_changelist, digest, temp_pool));
+#else
+	if (remove_changelist) {
+		PyErr_SetString(PyExc_NotImplementedError, "remove_changelist only supported in svn < 1.6");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
 														   rev_date, rev_author, wcprop_changes, 
 														   remove_lock, digest, temp_pool));
+#endif
 
 	apr_pool_destroy(temp_pool);
 
@@ -1140,6 +1152,7 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
+	PyErr_WarnEx(PyExc_DeprecationWarning, "get_pristine_copy_path is deprecated. Use get_pristine_contents instead.", 2);
 	RUN_SVN_WITH_POOL(pool, svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool), &pristine_path, pool));
 	ret = PyString_FromString(pristine_path);
 	apr_pool_destroy(pool);
@@ -1207,17 +1220,29 @@ static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 	char *repos=NULL; 
 	svn_revnum_t rev=-1;
 	apr_pool_t *pool;
-	char *kwnames[] = { "path", "uuid", "url", "repos", "rev", NULL };
+	char *kwnames[] = { "path", "uuid", "url", "repos", "rev", "depth", NULL };
+	svn_depth_t depth = svn_depth_infinity;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|sl", kwnames, 
-									 &path, &uuid, &url, &repos, &rev))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|sli", kwnames, 
+									 &path, &uuid, &url, &repos, &rev, &depth))
 		return NULL;
 
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	RUN_SVN_WITH_POOL(pool, 
+					  svn_wc_ensure_adm3(path, uuid, url, repos, rev, depth, pool));
+#else
+	if (depth != svn_depth_infinity) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"depth != infinity not supported with svn < 1.5");
+		apr_pool_destroy(pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(pool, 
 					  svn_wc_ensure_adm2(path, uuid, url, repos, rev, pool));
+#endif
 	apr_pool_destroy(pool);
 	Py_RETURN_NONE;
 }

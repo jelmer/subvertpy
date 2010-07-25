@@ -20,7 +20,8 @@
         svn.wc.WorkingCopy.walk_entries,
         svn.wc.WorkingCopy.add, svn.wc.WorkingCopy.close,
         svn.wc.WorkingCopy.crawl_revisions,
-        svn.wc.WorkingCopy.update_editor.
+        svn.wc.WorkingCopy.update_editor,
+        svn.wc.ensure_adm.
     (Jelmer Vernooij)
 
 0.7.3    2010-07-21
