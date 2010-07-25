@@ -5,6 +5,8 @@
   * Add constants ERR_APR_OS_START_EAIERR and ERR_APR_OS_ERRSPACE_SIZE.
     (Jelmer Vernooij)
 
+  * Implement subvertpy.wc.match_ignore_list. (Jelmer Vernooij)
+
  DEPRECATION
 
   * Avoid deprecation warnings for svn.client.Client.copy,

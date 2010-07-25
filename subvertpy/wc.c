@@ -1287,6 +1287,31 @@ static PyObject *cleanup_wc(PyObject *self, PyObject *args, PyObject *kwargs)
 	Py_RETURN_NONE;
 }
 
+static PyObject *match_ignore_list(PyObject *self, PyObject *args)
+{
+	char *str;
+	PyObject *py_list;
+	apr_array_header_t *list;
+	apr_pool_t *temp_pool;
+	svn_boolean_t ret;
+
+	if (!PyArg_ParseTuple(args, "sO", &str, &py_list))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+
+	if (!string_list_to_apr_array(temp_pool, py_list, &list)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+	ret = svn_wc_match_ignore_list(str, list, temp_pool);
+
+	apr_pool_destroy(temp_pool);
+
+	return PyBool_FromLong(ret);
+}
+
 static PyMethodDef wc_methods[] = {
 	{ "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> version\n"
 		"Check whether path contains a Subversion working copy\n"
@@ -1310,6 +1335,8 @@ static PyMethodDef wc_methods[] = {
 		"is_wc_prop(name) -> bool" },
 	{ "revision_status", (PyCFunction)revision_status, METH_KEYWORDS|METH_VARARGS, "revision_status(wc_path, trail_url=None, committed=False, cancel_func=None) -> (min_rev, max_rev, switched, modified)" },
 	{ "version", (PyCFunction)version, METH_NOARGS, "version() -> (major, minor, patch, tag)" },
+	{ "match_ignore_list", (PyCFunction)match_ignore_list, METH_VARARGS,
+		"match_ignore_list(str, patterns) -> bool" },
 	{ NULL, }
 };
 

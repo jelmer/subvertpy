@@ -40,3 +40,9 @@ class WorkingCopyTests(TestCase):
 
     def test_is_wc_prop(self):
         self.assertTrue(wc.is_wc_prop("svn:wc:foo"))
+
+    def test_match_ignore_list(self):
+        self.assertTrue(wc.match_ignore_list("foo", [ "f*"]))
+        self.assertTrue(wc.match_ignore_list("foo", ["foo"]))
+        self.assertFalse(wc.match_ignore_list("foo", []))
+        self.assertFalse(wc.match_ignore_list("foo", ["bar"]))
