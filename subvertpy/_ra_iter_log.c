@@ -37,6 +37,8 @@ typedef struct {
 	svn_boolean_t done;
 	PyObject *exception;
 	PyThread_type_lock lock;
+	PyThread_type_lock suspend_thread;
+	int queue_size;
 	struct log_entry *head;
 	struct log_entry *tail;
 } LogIteratorObject;
@@ -50,32 +52,40 @@ static void log_iter_dealloc(PyObject *self)
 
 static PyObject *log_iter_next(LogIteratorObject *iter)
 {
+	struct log_entry *first;
+	PyObject *ret;
+	Py_BEGIN_ALLOW_THREADS
 	PyThread_acquire_lock(iter->lock, WAIT_LOCK);
-	if (iter->head == NULL) {
+	Py_END_ALLOW_THREADS
+
+	while (iter->head == NULL) {
 		/* Done, raise stopexception */
-		if (iter->done) { 
+		if (iter->done) {
 			if (iter->exception) {
 				PyThread_release_lock(iter->lock);
 				PyErr_SetNone(iter->exception);
-				return NULL;
 			} else {
 				PyThread_release_lock(iter->lock);
 				PyErr_SetNone(PyExc_StopIteration);
-				return NULL;
 			}
+			return NULL;
 		} else {
-			/* FIXME: Wait for next item to come in */
 			PyThread_release_lock(iter->lock);
-			Py_RETURN_NONE;
+			Py_BEGIN_ALLOW_THREADS
+			/* FIXME: Don't waste cycles */
+			PyThread_acquire_lock(iter->lock, WAIT_LOCK);
+			Py_END_ALLOW_THREADS
 		}
-	} else {
-		struct log_entry *first = iter->head;
-		PyObject *ret = iter->head->tuple;
-		iter->head = first->next;
-		free(first);
-		PyThread_release_lock(iter->lock);
-		return ret;
 	}
+	first = iter->head;
+	ret = iter->head->tuple;
+	iter->head = first->next;
+	if (first == iter->tail)
+		iter->tail = NULL;
+	free(first);
+	iter->queue_size--;
+	PyThread_release_lock(iter->lock);
+	return ret;
 }
 
 PyTypeObject LogIterator_Type = {
@@ -156,6 +166,8 @@ static PyObject *py_iter_append(LogIteratorObject *iter, PyObject *tuple)
 	}
 	if (iter->head == NULL)
 		iter->head = entry;
+
+	iter->queue_size++;
 
 	PyThread_release_lock(iter->lock);
 
@@ -355,6 +367,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	ret->apr_revprops = apr_revprops;
 	ret->done = FALSE;
 	ret->lock = PyThread_allocate_lock();
+	ret->queue_size = 0;
 	ret->head = NULL;
 	ret->tail = NULL;
 
