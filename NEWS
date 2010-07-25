@@ -19,7 +19,8 @@
   * Avoid deprecation warnings for svn.wc.WorkingCopy.propset,
         svn.wc.WorkingCopy.walk_entries,
         svn.wc.WorkingCopy.add, svn.wc.WorkingCopy.close,
-        svn.wc.WorkingCopy.crawl_revisions.
+        svn.wc.WorkingCopy.crawl_revisions,
+        svn.wc.WorkingCopy.update_editor.
     (Jelmer Vernooij)
 
 0.7.3    2010-07-21

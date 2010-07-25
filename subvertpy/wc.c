@@ -758,8 +758,12 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 	void *edit_baton;
 	apr_pool_t *pool;
 	svn_revnum_t *latest_revnum;
+	svn_error_t *err;
+	svn_boolean_t allow_unver_obstructions = FALSE;
+	svn_boolean_t depth_is_sticky = FALSE;
 
-	if (!PyArg_ParseTuple(args, "s|bbOOz", &target, &use_commit_times, &recurse, &notify_func, &cancel_func, &diff3_cmd))
+	if (!PyArg_ParseTuple(args, "s|bbOOzbb", &target, &use_commit_times, &recurse, &notify_func, &cancel_func, &diff3_cmd,
+						  &depth_is_sticky, &allow_unver_obstructions))
 		return NULL;
 
 	pool = Pool(NULL);
@@ -767,10 +771,38 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 		return NULL;
 	latest_revnum = (svn_revnum_t *)apr_palloc(pool, sizeof(svn_revnum_t));
 	Py_BEGIN_ALLOW_THREADS
-	if (!check_error(svn_wc_get_update_editor2(latest_revnum, admobj->adm, target, 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	/* FIXME: Support all values of depth */
+	/* FIXME: Support fetch_func */
+	/* FIXME: Support conflict func */
+	err = svn_wc_get_update_editor3(latest_revnum, admobj->adm, target, 
+				use_commit_times, recurse?svn_depth_infinity:svn_depth_files, depth_is_sticky, allow_unver_obstructions, 
+				py_wc_notify_func, (void *)notify_func, 
+				py_cancel_func, (void *)cancel_func, 
+				NULL, NULL, NULL, NULL,
+				diff3_cmd, NULL, &editor, &edit_baton, 
+				NULL, pool);
+#else
+	if (allow_unver_obstructions) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"allow_unver_obstructions is not supported in svn < 1.5");
+		apr_pool_destroy(pool);
+		PyEval_RestoreThread(_save);
+		return NULL;
+	}
+	if (depth_is_sticky) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+						"depth_is_sticky is not supported in svn < 1.5");
+		apr_pool_destroy(pool);
+		PyEval_RestoreThread(_save);
+		return NULL;
+	}
+	err = svn_wc_get_update_editor2(latest_revnum, admobj->adm, target, 
 				use_commit_times, recurse, py_wc_notify_func, (void *)notify_func, 
 				py_cancel_func, (void *)cancel_func, diff3_cmd, &editor, &edit_baton, 
-				NULL, pool))) {
+				NULL, pool);
+#endif
+	if (!check_error(err)) {
 		apr_pool_destroy(pool);
 		PyEval_RestoreThread(_save);
 		return NULL;
