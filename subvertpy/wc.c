@@ -164,11 +164,12 @@ static PyObject *version(PyObject *self)
 static svn_error_t *py_wc_found_entry(const char *path, const svn_wc_entry_t *entry, void *walk_baton, apr_pool_t *pool)
 {
 	PyObject *fn, *ret;
+	PyObject *callbacks = (PyObject *)walk_baton;
 	PyGILState_STATE state = PyGILState_Ensure();
-	if (PyTuple_Check(walk_baton)) {
-		fn = (PyObject *)PyTuple_GET_ITEM(walk_baton, 0);
+	if (PyTuple_Check(callbacks)) {
+		fn = PyTuple_GET_ITEM(callbacks, 0);
 	} else {
-		fn = walk_baton;
+		fn = (PyObject *)walk_baton;
 	}
 	ret = PyObject_CallFunction(fn, "sO", path, py_entry(entry));
 	CB_CHECK_PYRETVAL(ret);
@@ -183,8 +184,9 @@ svn_error_t *py_wc_handle_error(const char *path, svn_error_t *err, void *walk_b
 	PyObject *fn, *ret;
 	PyObject *py_err;
 	PyGILState_STATE state;
-	if (PyTuple_Check(walk_baton)) {
-		fn = (PyObject *)PyTuple_GET_ITEM(walk_baton, 1);
+	PyObject *callbacks = (PyObject *)walk_baton;
+	if (PyTuple_Check(callbacks)) {
+		fn = PyTuple_GET_ITEM(callbacks, 1);
 	} else {
 		return err;
 	}
