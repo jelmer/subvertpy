@@ -3186,7 +3186,7 @@ static PyMethodDef ra_module_methods[] = {
 	{ "get_ssl_client_cert_pw_file_provider", (PyCFunction)get_ssl_client_cert_pw_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_client_cert_file_provider", (PyCFunction)get_ssl_client_cert_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_server_trust_file_provider", (PyCFunction)get_ssl_server_trust_file_provider, METH_NOARGS, NULL },
-	{ "get_simple_provider", (PyCFunction)get_simple_provider, METH_NOARGS, NULL },
+	{ "get_simple_provider", (PyCFunction)get_simple_provider, METH_VARARGS, NULL },
 #if defined(WIN32)
 	{ "get_windows_simple_provider", (PyCFunction)get_windows_simple_provider, METH_NOARGS, NULL },
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
