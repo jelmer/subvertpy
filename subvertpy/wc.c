@@ -851,7 +851,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	unsigned char *digest = NULL;
 	svn_revnum_t new_revnum;
 	PyObject *py_wcprop_changes = Py_None;
-	apr_array_header_t *wcprop_changes;
+	apr_array_header_t *wcprop_changes = NULL;
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
 	svn_boolean_t remove_changelist = FALSE;
@@ -1315,6 +1315,7 @@ static PyObject *match_ignore_list(PyObject *self, PyObject *args)
 	return PyBool_FromLong(ret);
 #else
 	PyErr_SetNone(PyExc_NotImplementedError);
+	return NULL;
 #endif
 }
 
