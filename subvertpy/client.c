@@ -661,7 +661,7 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	svn_commit_info_t *commit_info = NULL;
 #endif
-	PyObject *ret, *py_revprops;
+	PyObject *ret, *py_revprops = Py_None;
 	svn_revnum_t base_revision_for_url = SVN_INVALID_REVNUM;
 	apr_hash_t *revprops;
 
