@@ -2961,6 +2961,19 @@ static PyObject *get_username_provider(PyObject *self)
 	return (PyObject *)auth;
 }
 
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+static svn_error_t *py_cb_get_simple_provider_prompt(svn_boolean_t *may_save_plaintext,
+                                                     const char *realmstring,
+                                                     void *baton,
+                                                     apr_pool_t *pool)
+{
+    /* just disallow saving plaintext passwords on 1.6 and later */
+    *may_save_plaintext = FALSE;
+
+    return NULL;
+}
+#endif
+
 static PyObject *get_simple_provider(PyObject *self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, 
@@ -2968,7 +2981,11 @@ static PyObject *get_simple_provider(PyObject *self)
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+	svn_auth_get_simple_provider2(&auth->provider, py_cb_get_simple_provider_prompt, NULL, auth->pool);
+#else
 	svn_auth_get_simple_provider(&auth->provider, auth->pool);
+#endif
 	return (PyObject *)auth;
 }
 
@@ -2998,7 +3015,12 @@ static PyObject *get_ssl_client_cert_pw_file_provider(PyObject *self)
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
+
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+	svn_auth_get_ssl_client_cert_pw_file_provider2(&auth->provider, NULL, NULL, auth->pool);
+#else
 	svn_auth_get_ssl_client_cert_pw_file_provider(&auth->provider, auth->pool);
+#endif
 	return (PyObject *)auth;
 }
 
