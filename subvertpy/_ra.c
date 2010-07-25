@@ -2267,7 +2267,7 @@ PyTypeObject RemoteAccess_Type = {
 
 };
 
-typedef struct { 
+typedef struct {
 	PyObject_HEAD
 	apr_pool_t *pool;
 	svn_auth_provider_object_t *provider;
@@ -2280,14 +2280,14 @@ static void auth_provider_dealloc(PyObject *self)
 	PyObject_Del(self);
 }
 
-PyTypeObject AuthProvider_Type = { 
+PyTypeObject AuthProvider_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.AuthProvider", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(AuthProviderObject), 
+	sizeof(AuthProviderObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	auth_provider_dealloc, /*	destructor tp_dealloc;	*/
 
 };
@@ -2361,7 +2361,7 @@ static PyObject *auth_set_parameter(PyObject *self, PyObject *args)
 	if (!strcmp(name, SVN_AUTH_PARAM_SSL_SERVER_FAILURES)) {
 		vvalue = apr_pcalloc(auth->pool, sizeof(apr_uint32_t));
 		*((apr_uint32_t *)vvalue) = PyInt_AsLong(value);
-	} else if (!strcmp(name, SVN_AUTH_PARAM_DEFAULT_USERNAME) || 
+	} else if (!strcmp(name, SVN_AUTH_PARAM_DEFAULT_USERNAME) ||
 			   !strcmp(name, SVN_AUTH_PARAM_DEFAULT_PASSWORD)) {
 		vvalue = apr_pstrdup(auth->pool, PyString_AsString(value));
 	} else {
@@ -2396,7 +2396,7 @@ static PyObject *auth_get_parameter(PyObject *self, PyObject *args)
 	}
 }
 
-typedef struct { 
+typedef struct {
 	PyObject_HEAD
 	apr_pool_t *pool;
 	char *cred_kind;
@@ -2421,7 +2421,7 @@ static PyObject *auth_first_credentials(PyObject *self, PyObject *args)
 	if (pool == NULL)
 		return NULL;
 
-	RUN_SVN_WITH_POOL(pool, 
+	RUN_SVN_WITH_POOL(pool,
 					  svn_auth_first_credentials(&creds, &state, cred_kind, realmstring, auth->auth_baton, pool));
 
 	ret = PyObject_New(CredentialsIterObject, &CredentialsIter_Type);
@@ -2472,7 +2472,7 @@ static PyObject *credentials_iter_next(CredentialsIterObject *iterator)
 		return NULL;
 	}
 
-	RUN_SVN_WITH_POOL(iterator->pool, 
+	RUN_SVN_WITH_POOL(iterator->pool,
 					  svn_auth_next_credentials(&iterator->credentials, iterator->state, iterator->pool));
 
 	return ret;
@@ -2481,7 +2481,7 @@ static PyObject *credentials_iter_next(CredentialsIterObject *iterator)
 PyTypeObject CredentialsIter_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.CredentialsIter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(CredentialsIterObject), 
+	sizeof(CredentialsIterObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
 	/* Methods to implement standard operations */
@@ -2537,13 +2537,13 @@ PyTypeObject CredentialsIter_Type = {
 };
 
 static PyMethodDef auth_methods[] = {
-	{ "set_parameter", auth_set_parameter, METH_VARARGS, 
+	{ "set_parameter", auth_set_parameter, METH_VARARGS,
 		"S.set_parameter(key, value)\n"
 		"Set a parameter" },
-	{ "get_parameter", auth_get_parameter, METH_VARARGS, 
+	{ "get_parameter", auth_get_parameter, METH_VARARGS,
 		"S.get_parameter(key) -> value\n"
 		"Get a parameter" },
-	{ "credentials", auth_first_credentials, METH_VARARGS, 
+	{ "credentials", auth_first_credentials, METH_VARARGS,
 		"Credentials" },
 	{ NULL, }
 };
@@ -2558,7 +2558,7 @@ static void auth_dealloc(PyObject *self)
 PyTypeObject Auth_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.Auth", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(AuthObject), 
+	sizeof(AuthObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
 	/* Methods to implement standard operations */
@@ -2771,8 +2771,8 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 		py_cert = Py_None;
 		Py_INCREF(py_cert);
 	} else {
-		py_cert = Py_BuildValue("(sssss)", cert_info->hostname, cert_info->fingerprint, 
-						  cert_info->valid_from, cert_info->valid_until, 
+		py_cert = Py_BuildValue("(sssss)", cert_info->hostname, cert_info->fingerprint,
+						  cert_info->valid_from, cert_info->valid_until,
 						  cert_info->issuer_dname, cert_info->ascii_cert);
 	}
 
@@ -3186,7 +3186,7 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 }
 
 static PyMethodDef ra_module_methods[] = {
-	{ "version", (PyCFunction)version, METH_NOARGS, 
+	{ "version", (PyCFunction)version, METH_NOARGS,
 		"version() -> (major, minor, micro, tag)\n"
 		"Return version string of ra library."},
 	{ "get_ssl_client_cert_pw_file_provider", (PyCFunction)get_ssl_client_cert_pw_file_provider, METH_NOARGS, NULL },
@@ -3259,7 +3259,7 @@ void init_ra(void)
 	if (pool == NULL)
 		return;
 	svn_ra_initialize(pool);
-	PyThread_init_thread();
+	PyEval_InitThreads();
 
 	mod = Py_InitModule3("_ra", ra_module_methods, "Remote Access");
 	if (mod == NULL)
