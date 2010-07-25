@@ -1289,6 +1289,7 @@ static PyObject *cleanup_wc(PyObject *self, PyObject *args, PyObject *kwargs)
 
 static PyObject *match_ignore_list(PyObject *self, PyObject *args)
 {
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	char *str;
 	PyObject *py_list;
 	apr_array_header_t *list;
@@ -1310,6 +1311,9 @@ static PyObject *match_ignore_list(PyObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 
 	return PyBool_FromLong(ret);
+#else
+	PyErr_SetNone(PyExc_NotImplementedError);
+#endif
 }
 
 static PyMethodDef wc_methods[] = {
