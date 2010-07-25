@@ -27,12 +27,53 @@
 #include "util.h"
 #include "editor.h"
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#define REPORTER_T svn_ra_reporter3_t
+#else
+#define REPORTER_T svn_ra_reporter2_t
+#endif
+
 extern PyTypeObject Entry_Type;
 extern PyTypeObject Adm_Type;
 extern PyTypeObject Stream_Type;
 
 static PyObject *py_entry(const svn_wc_entry_t *entry);
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_revnum_t revision, svn_depth_t depth, int start_empty, const char *lock_token, apr_pool_t *pool)
+{
+	PyObject *self = (PyObject *)baton, *py_lock_token, *ret;
+	PyGILState_STATE state = PyGILState_Ensure();
+	if (lock_token == NULL) {
+		py_lock_token = Py_None;
+		Py_INCREF(py_lock_token);
+	} else {
+		py_lock_token = PyString_FromString(lock_token);
+	}
+	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, depth);
+	CB_CHECK_PYRETVAL(ret);
+	PyGILState_Release(state);
+	return NULL;
+}
+
+static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path, const char *url, svn_revnum_t revision, svn_depth_t depth, int start_empty, const char *lock_token, apr_pool_t *pool)
+{
+	PyObject *self = (PyObject *)report_baton, *ret, *py_lock_token;
+	PyGILState_STATE state = PyGILState_Ensure();
+	if (lock_token == NULL) {
+		py_lock_token = Py_None;
+		Py_INCREF(py_lock_token);
+	} else { 
+		py_lock_token = PyString_FromString(lock_token);
+	}
+	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, depth);
+	CB_CHECK_PYRETVAL(ret);
+	PyGILState_Release(state);
+	return NULL;
+}
+
+
+#else
 static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_revnum_t revision, int start_empty, const char *lock_token, apr_pool_t *pool)
 {
 	PyObject *self = (PyObject *)baton, *py_lock_token, *ret;
@@ -43,17 +84,7 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 	} else {
 		py_lock_token = PyString_FromString(lock_token);
 	}
-	ret = PyObject_CallMethod(self, "set_path", "slbO", path, revision, start_empty, py_lock_token);
-	CB_CHECK_PYRETVAL(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_ra_report_delete_path(void *baton, const char *path, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallMethod(self, "delete_path", "s", path);
+	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, svn_depth_infinity);
 	CB_CHECK_PYRETVAL(ret);
 	PyGILState_Release(state);
 	return NULL;
@@ -69,7 +100,20 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 	} else { 
 		py_lock_token = PyString_FromString(lock_token);
 	}
-	ret = PyObject_CallMethod(self, "link_path", "sslbO", path, url, revision, start_empty, py_lock_token);
+	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, svn_depth_infinity);
+	CB_CHECK_PYRETVAL(ret);
+	PyGILState_Release(state);
+	return NULL;
+}
+
+
+#endif
+
+static svn_error_t *py_ra_report_delete_path(void *baton, const char *path, apr_pool_t *pool)
+{
+	PyObject *self = (PyObject *)baton, *ret;
+	PyGILState_STATE state = PyGILState_Ensure();
+	ret = PyObject_CallMethod(self, "delete_path", "s", path);
 	CB_CHECK_PYRETVAL(ret);
 	PyGILState_Release(state);
 	return NULL;
@@ -95,7 +139,7 @@ static svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool)
 	return NULL;
 }
 
-static const svn_ra_reporter2_t py_ra_reporter = {
+static const REPORTER_T py_ra_reporter = {
 	py_ra_report_set_path,
 	py_ra_report_delete_path,
 	py_ra_report_link_path,
@@ -664,21 +708,40 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 	apr_pool_t *temp_pool;
 	AdmObject *admobj = (AdmObject *)self;
 	svn_wc_traversal_info_t *traversal_info;
-	char *kwnames[] = { "path", "reporter", "restore_files", "recurse", "use_commit_times", "notify_func", NULL };
+	svn_boolean_t depth_compatibility_trick = FALSE;
+	svn_boolean_t honor_depth_exclude = FALSE;
+	char *kwnames[] = { "path", "reporter", "restore_files", "recurse", "use_commit_times", "notify_func", "depth_compatibility_trick", "honor_depth_exclude,", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO|bbbO", kwnames, &path, &reporter, &restore_files, &recurse, &use_commit_times,
-						  &notify_func))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO|bbbObb", kwnames, &path, &reporter, &restore_files, &recurse, &use_commit_times,
+						  &notify_func, &depth_compatibility_trick, &honor_depth_exclude))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
 	traversal_info = svn_wc_init_traversal_info(temp_pool);
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(path, admobj->adm, 
+				&py_ra_reporter, (void *)reporter, 
+				restore_files, recurse?svn_depth_infinity:svn_depth_files,
+				honor_depth_exclude,
+				depth_compatibility_trick, use_commit_times, 
+				py_wc_notify_func, (void *)notify_func,
+				traversal_info, temp_pool));
+#elif SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(path, admobj->adm, 
+				&py_ra_reporter, (void *)reporter, 
+				restore_files, recurse?svn_depth_infinity:svn_depth_files, 
+				depth_compatibility_trick, recurse, use_commit_times, 
+				py_wc_notify_func, (void *)notify_func,
+				traversal_info, temp_pool));
+#else
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(path, admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse, use_commit_times, 
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
+#endif
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
