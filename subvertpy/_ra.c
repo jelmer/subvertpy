@@ -2967,23 +2967,46 @@ static svn_error_t *py_cb_get_simple_provider_prompt(svn_boolean_t *may_save_pla
                                                      void *baton,
                                                      apr_pool_t *pool)
 {
-    /* just disallow saving plaintext passwords on 1.6 and later */
-    *may_save_plaintext = FALSE;
+	if (baton == Py_None) {
+		/* just disallow saving plaintext passwords on 1.6 and later */
+		*may_save_plaintext = FALSE;
+	} else {
+		PyObject *ret;
+		PyGILState_STATE state = PyGILState_Ensure();
+		ret = PyObject_CallFunction(baton, "s", realmstring);
+		CB_CHECK_PYRETVAL(ret);
+		if (ret == NULL) {
+			PyGILState_Release(state);
+			return py_svn_error();
+		}
+		*may_save_plaintext = PyObject_IsTrue(ret);
+		PyGILState_Release(state);
+	}
 
     return NULL;
 }
 #endif
 
-static PyObject *get_simple_provider(PyObject *self)
+static PyObject *get_simple_provider(PyObject *self, PyObject *args)
 {
-	AuthProviderObject *auth = PyObject_New(AuthProviderObject, 
-											&AuthProvider_Type);
+	AuthProviderObject *auth;
+	PyObject *callback = Py_None;
+
+	if (!PyArg_ParseTuple(args, "|O", &callback))
+		return NULL;
+
+	auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
-	svn_auth_get_simple_provider2(&auth->provider, py_cb_get_simple_provider_prompt, NULL, auth->pool);
+	Py_INCREF(callback); /* FIXME: decref somewhere! */
+	svn_auth_get_simple_provider2(&auth->provider, py_cb_get_simple_provider_prompt, callback, auth->pool);
 #else
+	if (callback != Py_None) {
+		PyErr_SetString(PyExc_NotImplementedError, "callback not supported with svn < 1.6");
+		return NULL;
+	}
 	svn_auth_get_simple_provider(&auth->provider, auth->pool);
 #endif
 	return (PyObject *)auth;
