@@ -65,6 +65,8 @@ static PyObject *log_iter_next(LogIteratorObject *iter)
 			}
 		} else {
 			/* FIXME: Wait for next item to come in */
+			PyThread_release_lock(iter->lock);
+			Py_RETURN_NONE;
 		}
 	} else {
 		struct log_entry *first = iter->head;
@@ -142,6 +144,9 @@ static PyObject *py_iter_append(LogIteratorObject *iter, PyObject *tuple)
 		PyErr_NoMemory();
 		return NULL;
 	}
+
+	PyThread_acquire_lock(iter->lock, WAIT_LOCK);
+
 	entry->tuple = tuple;
 	if (iter->tail == NULL) {
 		iter->tail = entry;
@@ -151,6 +156,9 @@ static PyObject *py_iter_append(LogIteratorObject *iter, PyObject *tuple)
 	}
 	if (iter->head == NULL)
 		iter->head = entry;
+
+	PyThread_release_lock(iter->lock);
+
 	Py_RETURN_NONE;
 }
 
@@ -192,6 +200,7 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
 	PyObject *revprops, *py_changed_paths, *ret, *obj;
+	LogIteratorObject *iter = (LogIteratorObject *)baton;
 
 	py_changed_paths = pyify_changed_paths(changed_paths, pool);
 	if (py_changed_paths == NULL) {
@@ -218,14 +227,15 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 							 obj);
 		Py_DECREF(obj);
 	}
-	ret = PyObject_CallFunction((PyObject *)baton, "OlO", py_changed_paths, 
-								 revision, revprops);
-	Py_DECREF(py_changed_paths);
-	Py_DECREF(revprops);
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
+	ret = Py_BuildValue("NlN", py_changed_paths, revision, revprops);
+	if (ret == NULL) {
+		Py_DECREF(py_changed_paths);
+		Py_DECREF(revprops);
+		return py_svn_error();
+	}
 
-	PyGILState_Release(state);
+	py_iter_append(iter, ret);
+
 	return NULL;
 }
 #endif
@@ -250,6 +260,7 @@ static void py_iter_log(void *baton)
 			iter->discover_changed_paths, iter->strict_node_history, py_iter_log_cb, 
 			iter, iter->pool);
 #endif
+	iter->done = TRUE;
 	iter->ra->busy = false;
 	if (error != NULL) {
 		iter->exception = PyErr_NewSubversionException(error);
