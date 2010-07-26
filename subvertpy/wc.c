@@ -1402,6 +1402,21 @@ void initwc(void)
 							svn_wc_conflict_choose_merged);
 #endif
 
+	PyModule_AddIntConstant(mod, "STATUS_NONE", svn_wc_status_none);
+	PyModule_AddIntConstant(mod, "STATUS_UNVERSIONED", svn_wc_status_unversioned);
+	PyModule_AddIntConstant(mod, "STATUS_NORMAL", svn_wc_status_normal);
+	PyModule_AddIntConstant(mod, "STATUS_ADDED", svn_wc_status_added);
+	PyModule_AddIntConstant(mod, "STATUS_MISSING", svn_wc_status_missing);
+	PyModule_AddIntConstant(mod, "STATUS_DELETED", svn_wc_status_deleted);
+	PyModule_AddIntConstant(mod, "STATUS_REPLACED", svn_wc_status_replaced);
+	PyModule_AddIntConstant(mod, "STATUS_MODIFIED", svn_wc_status_modified);
+	PyModule_AddIntConstant(mod, "STATUS_MERGED", svn_wc_status_merged);
+	PyModule_AddIntConstant(mod, "STATUS_CONFLICTED", svn_wc_status_conflicted);
+	PyModule_AddIntConstant(mod, "STATUS_IGNORED", svn_wc_status_ignored);
+	PyModule_AddIntConstant(mod, "STATUS_OBSTRUCTED", svn_wc_status_obstructed);
+	PyModule_AddIntConstant(mod, "STATUS_EXTERNAL", svn_wc_status_external);
+	PyModule_AddIntConstant(mod, "STATUS_INCOMPLETE", svn_wc_status_incomplete);
+
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
 }

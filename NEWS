@@ -9,6 +9,8 @@
 
   * Add subvertpy.ra.RemoteAccess.iter_log(). (Jelmer Vernooij)
 
+  * Add subvertpy.wc.STATUS_* constants. (Jelmer Vernooij)
+
  DEPRECATION
 
   * Avoid deprecation warnings for svn.client.Client.copy,
