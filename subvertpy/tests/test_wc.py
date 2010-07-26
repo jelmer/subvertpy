@@ -15,10 +15,11 @@
 
 """Subversion ra library tests."""
 
-from unittest import TestCase
-
 from subvertpy import (
     wc,
+    )
+from subvertpy.tests import (
+    TestCase,
     )
 
 class VersionTest(TestCase):

@@ -15,8 +15,8 @@
 
 """Subversion core library tests."""
 
-from unittest import TestCase
 from subvertpy import properties
+from subvertpy.tests import TestCase
 
 class TestProperties(TestCase):
 

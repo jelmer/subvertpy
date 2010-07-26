@@ -16,14 +16,16 @@
 """Subversion ra library tests."""
 
 from cStringIO import StringIO
-from unittest import TestCase
 
 from subvertpy import (
     NODE_DIR, NODE_NONE,
     SubversionException,
     ra,
     )
-from subvertpy.tests import SubversionTestCase
+from subvertpy.tests import (
+    SubversionTestCase,
+    TestCase,
+    )
 
 class VersionTest(TestCase):
 

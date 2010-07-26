@@ -41,18 +41,7 @@ from subvertpy.ra import (
     )
 
 
-class TestCaseInTempDir(unittest.TestCase):
-
-    def setUp(self):
-        unittest.TestCase.setUp(self)
-        self._oldcwd = os.getcwd()
-        self.test_dir = tempfile.mkdtemp()
-        os.chdir(self.test_dir)
-
-    def tearDown(self):
-        unittest.TestCase.tearDown(self)
-        os.chdir(self._oldcwd)
-        shutil.rmtree(self.test_dir)
+class TestCase(unittest.TestCase):
 
     def assertIsInstance(self, obj, kls):
         """Fail if obj is not an instance of kls"""
@@ -67,6 +56,19 @@ class TestCaseInTempDir(unittest.TestCase):
             else:
                 raise AssertionError("%r is not %r." % (left, right))
 
+
+class TestCaseInTempDir(TestCase):
+
+    def setUp(self):
+        TestCase.setUp(self)
+        self._oldcwd = os.getcwd()
+        self.test_dir = tempfile.mkdtemp()
+        os.chdir(self.test_dir)
+
+    def tearDown(self):
+        TestCase.tearDown(self)
+        os.chdir(self._oldcwd)
+        shutil.rmtree(self.test_dir)
 
 
 class TestFileEditor(object):
