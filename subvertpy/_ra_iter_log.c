@@ -64,7 +64,7 @@ static PyObject *log_iter_next(LogIteratorObject *iter)
 		/* Done, raise stopexception */
 		if (iter->done) {
 			if (iter->exception != NULL) {
-				PyObject *exccls = PyErr_GetSubversionExceptionTypeObject();
+				PyObject *exccls = (PyObject *)PyErr_GetSubversionExceptionTypeObject();
 				if (exccls == NULL)
 					return NULL;
 				PyErr_SetObject(exccls, iter->exception);
