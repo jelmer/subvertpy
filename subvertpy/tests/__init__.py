@@ -167,8 +167,7 @@ class SubversionTestCase(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion
     repositories."""
 
-    def setUp(self):
-        super(SubversionTestCase, self).setUp()
+    def _init_client(self):
         self.client_ctx = client.Client()
         self.client_ctx.auth = Auth([ra.get_simple_provider(),
                                      ra.get_username_provider(),
@@ -177,6 +176,10 @@ class SubversionTestCase(TestCaseInTempDir):
                                      ra.get_ssl_server_trust_file_provider()])
         self.client_ctx.log_msg_func = self.log_message_func
         #self.client_ctx.notify_func = lambda err: mutter("Error: %s" % err)
+
+    def setUp(self):
+        super(SubversionTestCase, self).setUp()
+        self._init_client()
 
     def log_message_func(self, items):
         return self.next_message
