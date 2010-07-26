@@ -549,7 +549,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 	return ret;
 }
 
-static PyObject *client_copy(PyObject *self, PyObject *args)
+static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	char *src_path, *dst_path;
 	PyObject *src_rev = Py_None;
@@ -561,6 +561,8 @@ static PyObject *client_copy(PyObject *self, PyObject *args)
 	apr_hash_t *revprops;
 	bool ignore_externals = false;
 	ClientObject *client = (ClientObject *)self;
+    char *kwnames[] = { "src_path", "dst_path", "src_rev", "copy_as_child", "make_parents", 
+		"ignore_externals", "revprpos", NULL };
 
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 4
 	PyObject *py_revprops = Py_None;
@@ -570,7 +572,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args)
 	svn_client_copy_source_t src;
 #endif
 
-	if (!PyArg_ParseTuple(args, "ss|ObbbO", &src_path, &dst_path, &src_rev, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|ObbbO", kwnames, &src_path, &dst_path, &src_rev, 
 						  &copy_as_child, &make_parents, &ignore_externals, 
 						  &py_revprops))
 		return NULL;
@@ -1087,7 +1089,7 @@ static PyMethodDef client_methods[] = {
 		"S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False, allow_unver_obstructions=False)" },
 	{ "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True, revprops=None) -> (revnum, date, author)" },
 	{ "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
-	{ "copy", client_copy, METH_VARARGS, "S.copy(src_path, dest_path, srv_rev=None)" },
+	{ "copy", (PyCFunction)client_copy, METH_VARARGS|METH_KEYWORDS, "S.copy(src_path, dest_path, srv_rev=None)" },
 	{ "propset", client_propset, METH_VARARGS, "S.propset(name, value, target, recurse=True, skip_checks=False)" },
 	{ "propget", client_propget, METH_VARARGS, "S.propget(name, target, peg_revision, revision=None, recurse=False) -> value" },
 	{ "proplist", (PyCFunction)client_proplist, METH_VARARGS|METH_KEYWORDS, "S.proplist(path, peg_revision, depth, revision=None)" },
