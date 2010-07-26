@@ -556,7 +556,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 	svn_commit_info_t *commit_info = NULL;
 	apr_pool_t *temp_pool;
 	svn_opt_revision_t c_src_rev;
-	bool copy_as_child = false, make_parents = false;
+	bool copy_as_child = true, make_parents = false;
 	PyObject *ret;
 	apr_hash_t *revprops;
 	bool ignore_externals = false;
@@ -639,9 +639,6 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_copy4(&commit_info, src_paths, 
 				dst_path, copy_as_child, make_parents, 
 				revprops, client->client, temp_pool));
-#elif SVN_VER_MAJOR >= 1 && SVN_VER_MINOR == 4
-	RUN_SVN_WITH_POOL(temp_pool, svn_client_copy3(&commit_info, src_path, 
-				&c_src_rev, dst_path, client->client, temp_pool));
 #else
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_copy2(&commit_info, src_path, 
 				&c_src_rev, dst_path, client->client, temp_pool));
