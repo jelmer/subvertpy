@@ -63,8 +63,11 @@ static PyObject *log_iter_next(LogIteratorObject *iter)
 	while (iter->head == NULL) {
 		/* Done, raise stopexception */
 		if (iter->done) {
-			if (iter->exception) {
-				PyErr_SetNone(iter->exception);
+			if (iter->exception != NULL) {
+				PyObject *exccls = PyErr_GetSubversionExceptionTypeObject();
+				if (exccls == NULL)
+					return NULL;
+				PyErr_SetObject(exccls, iter->exception);
 			} else {
 				PyErr_SetNone(PyExc_StopIteration);
 			}
@@ -215,7 +218,7 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 #else
 static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
-	PyObject *revprops, *py_changed_paths, *ret, *obj;
+	PyObject *revprops, *py_changed_paths, *ret, *obj, *tuple;
 	LogIteratorObject *iter = (LogIteratorObject *)baton;
 
 	PyGILState_STATE state;
@@ -251,15 +254,23 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 							 obj);
 		Py_DECREF(obj);
 	}
-	ret = Py_BuildValue("NlN", py_changed_paths, revision, revprops);
-	if (ret == NULL) {
+	tuple = Py_BuildValue("NlN", py_changed_paths, revision, revprops);
+	if (tuple == NULL) {
 		Py_DECREF(py_changed_paths);
 		Py_DECREF(revprops);
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
 
-	py_iter_append(iter, ret);
+	ret = py_iter_append(iter, tuple);
+
+	if (ret == NULL) {
+		Py_DECREF(tuple);
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
+
+	Py_DECREF(ret);
 
 	PyGILState_Release(state);
 
@@ -272,6 +283,7 @@ static void py_iter_log(void *baton)
 {
 	LogIteratorObject *iter = (LogIteratorObject *)baton;
 	svn_error_t *error;
+	PyGILState_STATE state;
 
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
 	error = svn_ra_get_log2(iter->ra->ra, 
@@ -285,12 +297,14 @@ static void py_iter_log(void *baton)
 			iter->discover_changed_paths, iter->strict_node_history, py_iter_log_cb, 
 			iter, iter->pool);
 #endif
+	state = PyGILState_Ensure();
 	iter->done = TRUE;
 	iter->ra->busy = false;
 	if (error != NULL) {
 		iter->exception = PyErr_NewSubversionException(error);
 	}
 	Py_DECREF(iter);
+	PyGILState_Release(state);
 }
 
 PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
