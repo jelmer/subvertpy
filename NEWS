@@ -30,6 +30,12 @@
         svn.wc.ensure_adm.
     (Jelmer Vernooij)
 
+0.7.3.1    2010-07-27
+
+ BUG FIXES
+
+  * Fix compilation against Subversion 1.5. (Jelmer Vernooij)
+
 0.7.3    2010-07-21
 
  BUG FIXES
