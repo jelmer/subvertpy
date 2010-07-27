@@ -180,7 +180,11 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 
 	state = PyGILState_Ensure();
 
-	py_changed_paths = pyify_changed_paths(log_entry->changed_paths, pool);
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+	py_changed_paths = pyify_changed_paths2(log_entry->changed_paths2, pool);
+#else
+	py_changed_paths = pyify_changed_paths(log_entry->changed_paths, true, pool);
+#endif
 	if (py_changed_paths == NULL) {
 		PyGILState_Release(state);
 		return py_svn_error();
@@ -225,7 +229,7 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 
 	state = PyGILState_Ensure();
 
-	py_changed_paths = pyify_changed_paths(changed_paths, pool);
+	py_changed_paths = pyify_changed_paths(changed_paths, true, pool);
 	if (py_changed_paths == NULL) {
 		PyGILState_Release(state);
 		return py_svn_error();

@@ -299,7 +299,7 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	return hash_props;
 }
 
-PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool)
+PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)
 {
 	PyObject *py_changed_paths, *pyval;
 	apr_hash_index_t *idx;
@@ -315,8 +315,14 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool)
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-			pyval = Py_BuildValue("(czl)", val->action, val->copyfrom_path, 
-										 val->copyfrom_rev);
+			if (node_kind) {
+				pyval = Py_BuildValue("(czli)", val->action, val->copyfrom_path, 
+											 val->copyfrom_rev,
+											 svn_node_unknown);
+			} else {
+				pyval = Py_BuildValue("(czl)", val->action, val->copyfrom_path, 
+											 val->copyfrom_rev);
+			}
 			if (pyval == NULL)
 				return NULL;
 			PyDict_SetItemString(py_changed_paths, key, pyval);
@@ -327,13 +333,44 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, apr_pool_t *pool)
 	return py_changed_paths;
 }
 
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
+{
+	PyObject *py_changed_paths, *pyval;
+	apr_hash_index_t *idx;
+	const char *key;
+	apr_ssize_t klen;
+	svn_log_changed_path2_t *val;
+
+	if (changed_paths == NULL) {
+		py_changed_paths = Py_None;
+		Py_INCREF(py_changed_paths);
+	} else {
+		py_changed_paths = PyDict_New();
+		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
+			 idx = apr_hash_next(idx)) {
+			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
+			pyval = Py_BuildValue("(czli)", val->action, val->copyfrom_path, 
+										 val->copyfrom_rev, val->node_kind);
+			if (pyval == NULL)
+				return NULL;
+			PyDict_SetItemString(py_changed_paths, key, pyval);
+			Py_DECREF(pyval);
+		}
+	}
+
+	return py_changed_paths;
+}
+#endif
+
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
 	PyObject *revprops, *py_changed_paths, *ret;
 	PyGILState_STATE state = PyGILState_Ensure();
 
-	py_changed_paths = pyify_changed_paths(log_entry->changed_paths, pool);
+	/* FIXME: Support include node_kind */
+	py_changed_paths = pyify_changed_paths(log_entry->changed_paths, false, pool);
 	CB_CHECK_PYRETVAL(py_changed_paths);
 
 	revprops = prop_hash_to_dict(log_entry->revprops);
@@ -356,7 +393,8 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revn
 	PyObject *revprops, *py_changed_paths, *ret, *obj;
 	PyGILState_STATE state = PyGILState_Ensure();
 
-	py_changed_paths = pyify_changed_paths(changed_paths, pool);
+	/*  FIXME: Support including node kind */
+	py_changed_paths = pyify_changed_paths(changed_paths, false, pool);
 	CB_CHECK_PYRETVAL(py_changed_paths);
 
 	revprops = PyDict_New();
