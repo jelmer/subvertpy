@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 7, 3)
+__version__ = (0, 7, 3, 1)
 
 NODE_DIR = 2
 NODE_FILE = 1
