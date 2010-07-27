@@ -980,7 +980,8 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	StreamObject *ret;
 	svn_stream_t *stream;
 #else
-	char *pristine_path;
+	const char *pristine_path;
+	PyObject *ret;
 #endif
 
 	if (!PyArg_ParseTuple(args, "s", &path))
