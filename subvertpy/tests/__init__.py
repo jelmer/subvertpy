@@ -72,6 +72,7 @@ class TestCaseInTempDir(TestCase):
 
 
 class TestFileEditor(object):
+
     def __init__(self, file):
         self.file = file
         self.is_closed = False
@@ -134,7 +135,8 @@ class TestDirEditor(object):
             copyfrom_rev = self.revnum
         assert (copyfrom_path is None and copyfrom_rev == -1) or \
                (copyfrom_path is not None and copyfrom_rev > -1)
-        child = TestDirEditor(self.dir.add_directory(path, copyfrom_path, copyfrom_rev), self.baseurl, self.revnum)
+        child = TestDirEditor(self.dir.add_directory(path, copyfrom_path,
+            copyfrom_rev), self.baseurl, self.revnum)
         self.children.append(child)
         return child
 
@@ -144,7 +146,8 @@ class TestDirEditor(object):
             copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
-        child = TestFileEditor(self.dir.add_file(path, copyfrom_path, copyfrom_rev))
+        child = TestFileEditor(self.dir.add_file(path, copyfrom_path,
+            copyfrom_rev))
         self.children.append(child)
         return child
 
@@ -195,10 +198,12 @@ class SubversionTestCase(TestCaseInTempDir):
 
         if allow_revprop_changes:
             if sys.platform == 'win32':
-                revprop_hook = os.path.join(abspath, "hooks", "pre-revprop-change.bat")
+                revprop_hook = os.path.join(abspath, "hooks",
+                        "pre-revprop-change.bat")
                 open(revprop_hook, 'w').write("exit 0\n")
             else:
-                revprop_hook = os.path.join(abspath, "hooks", "pre-revprop-change")
+                revprop_hook = os.path.join(abspath, "hooks",
+                        "pre-revprop-change")
                 open(revprop_hook, 'w').write("#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
@@ -277,9 +282,14 @@ class SubversionTestCase(TestCaseInTempDir):
         assert isinstance(url, str)
         ret = {}
         def rcvr(orig_paths, rev, revprops, has_children=None):
-            ret[rev] = (orig_paths, revprops.get(properties.PROP_REVISION_AUTHOR), revprops.get(properties.PROP_REVISION_DATE), revprops.get(properties.PROP_REVISION_LOG))
+            ret[rev] = (orig_paths,
+                    revprops.get(properties.PROP_REVISION_AUTHOR),
+                    revprops.get(properties.PROP_REVISION_DATE),
+                    revprops.get(properties.PROP_REVISION_LOG))
         r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True,
-                  revprops=[properties.PROP_REVISION_AUTHOR, properties.PROP_REVISION_DATE, properties.PROP_REVISION_LOG])
+                  revprops=[properties.PROP_REVISION_AUTHOR,
+                      properties.PROP_REVISION_DATE,
+                      properties.PROP_REVISION_LOG])
         return ret
 
     def client_delete(self, relpath):
