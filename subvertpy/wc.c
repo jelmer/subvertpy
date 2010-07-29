@@ -1062,8 +1062,8 @@ static PyObject *revision_status(PyObject *self, PyObject *args, PyObject *kwarg
 	 svn_wc_revision_status_t *revstatus;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zbO", kwnames, &wc_path, &trail_url, &committed, 
-						  &cancel_func))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zbO", kwnames, &wc_path,
+									 &trail_url, &committed, &cancel_func))
 		return NULL;
 
 	temp_pool = Pool(NULL);

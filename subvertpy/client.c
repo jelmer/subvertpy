@@ -362,7 +362,7 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
 	char *path; 
 	ClientObject *client = (ClientObject *)self;
 	bool recursive=true, force=false, no_ignore=false;
-	bool add_parents = true;
+	bool add_parents = false;
 	apr_pool_t *temp_pool;
 	char *kwnames[] = { "path", "recursive", "force", "no_ignore", 
 						"add_parents", NULL };
@@ -383,16 +383,16 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (temp_pool == NULL)
 		return NULL;
 
-#if SVN_VER_MAJOR < 2 && SVN_VER_MINOR == 4
-	RUN_SVN_WITH_POOL(temp_pool, 
-		svn_client_add3(path, recursive, force, no_ignore, client->client, 
-						temp_pool)
-		);
-#else
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 4
 	RUN_SVN_WITH_POOL(temp_pool, 
 		svn_client_add4(path, recursive?svn_depth_infinity:svn_depth_empty, 
 						force, no_ignore, add_parents, 
 						client->client, temp_pool)
+		);
+#else
+	RUN_SVN_WITH_POOL(temp_pool, 
+		svn_client_add3(path, recursive, force, no_ignore, client->client, 
+						temp_pool)
 		);
 #endif
 	apr_pool_destroy(temp_pool);
@@ -561,8 +561,8 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 	apr_hash_t *revprops;
 	bool ignore_externals = false;
 	ClientObject *client = (ClientObject *)self;
-    char *kwnames[] = { "src_path", "dst_path", "src_rev", "copy_as_child", "make_parents", 
-		"ignore_externals", "revprpos", NULL };
+	char *kwnames[] = { "src_path", "dst_path", "src_rev", "copy_as_child",
+		"make_parents", "ignore_externals", "revprpos", NULL };
 
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 4
 	PyObject *py_revprops = Py_None;
@@ -572,9 +572,9 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 	svn_client_copy_source_t src;
 #endif
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|ObbbO", kwnames, &src_path, &dst_path, &src_rev, 
-						  &copy_as_child, &make_parents, &ignore_externals, 
-						  &py_revprops))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|ObbbO", kwnames,
+			 &src_path, &dst_path, &src_rev, &copy_as_child, &make_parents,
+			 &ignore_externals, &py_revprops))
 		return NULL;
 	if (!to_opt_revision(src_rev, &c_src_rev))
 		return NULL;
