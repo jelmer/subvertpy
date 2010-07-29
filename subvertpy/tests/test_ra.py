@@ -133,7 +133,7 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props) = returned[1]
             else:
                 (paths, revnum, props, has_children) = returned[1]
-            self.assertEquals({'/foo': ('A', None, -1)}, paths)
+            self.assertEquals({'/foo': ('A', None, -1, NODE_DIR)}, paths)
             self.assertEquals(revnum, 1)
             self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
                               set(props.keys()))
