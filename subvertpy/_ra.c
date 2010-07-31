@@ -62,7 +62,7 @@ static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, voi
 	PyObject *fn = (PyObject *)baton, *ret;
 	PyGILState_STATE state;
 	svn_error_t *err = NULL;
-	
+
 	if (fn == Py_None)
 		return NULL;
 
@@ -220,7 +220,7 @@ static PyObject *reporter_finish(PyObject *self)
 static PyObject *reporter_abort(PyObject *self)
 {
 	ReporterObject *reporter = (ReporterObject *)self;
-	
+
 	reporter->ra->busy = false;
 
 	RUN_SVN(reporter->reporter->abort_report(reporter->report_baton, 
@@ -260,57 +260,57 @@ PyTypeObject Reporter_Type = {
 	"_ra.Reporter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(ReporterObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	reporter_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	NULL, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	NULL, /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	reporter_methods, /*	struct PyMethodDef *tp_methods;	*/
 
@@ -730,7 +730,7 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 	ret = PyObject_CallFunction(self->open_tmp_file_func, "");
 
 	CB_CHECK_PYRETVAL(ret);
-	
+
 	if (PyString_Check(ret)) {
 		char* fname = PyString_AsString(ret);
 		status = apr_file_open(fp, fname, APR_CREATE | APR_READ | APR_WRITE, APR_OS_DEFAULT, 
@@ -754,7 +754,7 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 		Py_DECREF(ret);
 		PyGILState_Release(state);
 		return py_svn_error();
-	}	
+	}
 
 	PyGILState_Release(state);
 	return NULL;
@@ -977,7 +977,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 5
 	if (revprops == Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError, "fetching all revision properties not supported");	
+		PyErr_SetString(PyExc_NotImplementedError, "fetching all revision properties not supported");
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	} else if (!PySequence_Check(revprops)) {
@@ -992,7 +992,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
 				strcmp(SVN_PROP_REVISION_DATE, n)) {
 				PyErr_SetString(PyExc_NotImplementedError, 
-								"fetching custom revision properties not supported");	
+								"fetching custom revision properties not supported");
 				apr_pool_destroy(temp_pool);
 				return NULL;
 			}
@@ -1114,7 +1114,7 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	if (!check_error(err)) {
 		apr_pool_destroy(temp_pool);
 		ra->busy = false;
-		
+
 		return NULL;
 	}
 
@@ -1170,7 +1170,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 #endif
 
 	Py_END_ALLOW_THREADS
-	
+
 	if (!check_error(err)) {
 		apr_pool_destroy(temp_pool);
 		ra->busy = false;
@@ -1235,7 +1235,7 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 	if (!check_error(err)) {
 		apr_pool_destroy(temp_pool);
 		ra->busy = false;
-		
+
 		return NULL;
 	}
 
@@ -1473,7 +1473,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		commit_callback, hash_lock_tokens, keep_locks, pool);
 #endif
 	Py_END_ALLOW_THREADS
-	
+
 	if (!check_error(err)) {
 		apr_pool_destroy(pool);
 		ra->busy = false;
@@ -1703,7 +1703,7 @@ static PyObject *ra_has_capability(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "s", &capability))
 		return NULL;
-	
+
 	if (ra_check_busy(ra))
 		return NULL;
 
@@ -2028,7 +2028,7 @@ static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 #endif
 }
 
-	
+
 static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 {
 	char *path;
@@ -2201,57 +2201,57 @@ PyTypeObject RemoteAccess_Type = {
 	"_ra.RemoteAccess", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(RemoteAccessObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	ra_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	ra_repr, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	Py_TPFLAGS_BASETYPE, /*	long tp_flags;	*/
-	
+
 	NULL, /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	ra_methods, /*	struct PyMethodDef *tp_methods;	*/
 	ra_members, /*	struct PyMemberDef *tp_members;	*/
@@ -2413,7 +2413,7 @@ static PyObject *auth_first_credentials(PyObject *self, PyObject *args)
 	apr_pool_t *pool;
 	CredentialsIterObject *ret;
 	svn_auth_iterstate_t *state;
-	
+
 	if (!PyArg_ParseTuple(args, "ss", &cred_kind, &realmstring))
 		return NULL;
 
@@ -2483,52 +2483,52 @@ PyTypeObject CredentialsIter_Type = {
 	"_ra.CredentialsIter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(CredentialsIterObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	(destructor)credentials_iter_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	NULL, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	NULL, /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
@@ -2552,7 +2552,7 @@ static void auth_dealloc(PyObject *self)
 {
 	AuthObject *auth = (AuthObject *)self;
 	apr_pool_destroy(auth->pool);
-	Py_XDECREF(auth->providers);	
+	Py_XDECREF(auth->providers);
 }
 
 PyTypeObject Auth_Type = {
@@ -2560,57 +2560,57 @@ PyTypeObject Auth_Type = {
 	"_ra.Auth", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	auth_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	NULL, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	NULL, /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	auth_methods, /*	struct PyMethodDef *tp_methods;	*/
 	NULL, /*	struct PyMemberDef *tp_members;	*/
@@ -2716,7 +2716,7 @@ static svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton,
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
-	
+
 	py_username = PyTuple_GetItem(ret, 0);
 	CB_CHECK_PYRETVAL(py_username);
 	if (!PyString_Check(py_username)) {
@@ -2806,7 +2806,7 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
-	
+
 	*cred = apr_pcalloc(pool, sizeof(**cred));
 	(*cred)->accepted_failures = PyInt_AsLong(py_accepted_failures);
 	(*cred)->may_save = (py_may_save == Py_True);
@@ -3131,6 +3131,7 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 		for (j = 0; provider_types[j] != NULL; j++) {
 			svn_auth_provider_object_t *c_provider = NULL;
 			apr_pool_t *pool = Pool(NULL);
+			AuthProviderObject *auth;
 
 			if (pool == NULL)
 				continue;
@@ -3140,8 +3141,8 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 															provider_types[j],
 															pool));
 
-			AuthProviderObject *auth = PyObject_New(AuthProviderObject,
-													&AuthProvider_Type);
+			auth = PyObject_New(AuthProviderObject,
+								&AuthProvider_Type);
 
 			if (c_provider == NULL || auth == NULL) {
 				apr_pool_destroy(pool);
