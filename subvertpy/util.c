@@ -236,7 +236,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 	apr_pool_t *pool;
 	PyObject *py_props;
 	if (props == NULL) {
-		Py_RETURN_NONE;
+		return PyDict_New();
 	}
 	pool = Pool(NULL);
 	if (pool == NULL)

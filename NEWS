@@ -35,6 +35,10 @@
   * Fix compilation using Visual C++. 
     (Ronald Blaschke, #612056)
 
+  * Return an empty dictionary rather than None 
+    when there are no revision properties.
+	(Jelmer Vernooij)
+
 0.7.3.1    2010-07-27
 
  BUG FIXES
