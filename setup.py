@@ -288,12 +288,12 @@ def source_path(filename):
     return os.path.join("subvertpy", filename)
 
 
-def subvertpy_modules(basemodule):
+def subvertpy_modules():
     return [
-        SvnExtension("%s.client" % basemodule, [source_path(n) for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")], libraries=["svn_client-1", "svn_subr-1"]), 
-        SvnExtension("%s._ra" % basemodule, [source_path(n) for n in ("_ra.c", "util.c", "editor.c")], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
-        SvnExtension("%s.repos" % basemodule, [source_path(n) for n in ("repos.c", "util.c")], libraries=["svn_repos-1", "svn_subr-1"]),
-        SvnExtension("%s.wc" % basemodule, [source_path(n) for n in ("wc.c", "util.c", "editor.c")], libraries=["svn_wc-1", "svn_subr-1"])
+        SvnExtension("subvertpy.client", [source_path(n) for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")], libraries=["svn_client-1", "svn_subr-1"]), 
+        SvnExtension("subvertpy._ra", [source_path(n) for n in ("_ra.c", "util.c", "editor.c")], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
+        SvnExtension("subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")], libraries=["svn_repos-1", "svn_subr-1"]),
+        SvnExtension("subvertpy.wc", [source_path(n) for n in ("wc.c", "util.c", "editor.c")], libraries=["svn_wc-1", "svn_subr-1"])
         ]
 
 
@@ -315,7 +315,7 @@ if __name__ == "__main__":
           Alternative Python bindings for Subversion, split out from bzr-svn. The goal is to have complete, portable and "Pythonic" Python bindings. 
           """,
           packages=['subvertpy', 'subvertpy.tests'],
-          ext_modules=subvertpy_modules("subvertpy"),
+          ext_modules=subvertpy_modules(),
           scripts=['bin/subvertpy-fast-export'],
           cmdclass = { 'install_lib': install_lib_with_dlls },
           )
