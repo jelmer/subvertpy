@@ -93,6 +93,14 @@ def apr_build_data():
     return (includedir,)
 
 
+def apu_build_data():
+    """Determine the APR util header file location."""
+    includedir = apu_config("--includedir")
+    if not os.path.isdir(includedir):
+        raise Exception("APR util development headers not found")
+    return (includedir,)
+
+
 def svn_build_data():
     """Determine the Subversion header file location."""
     if "SVN_HEADER_PATH" in os.environ and "SVN_LIBRARY_PATH" in os.environ:
@@ -116,8 +124,9 @@ def is_keychain_provider_available():
     Checks for the availability of the Keychain simple authentication provider in Subversion by compiling a simple test program.
     """
     abd = apr_build_data()
+    abud = apu_build_data()
     sbd = svn_build_data()
-    gcc_command_args = ['gcc'] + ['-I' + inc for inc in sbd[0]] + ['-L' + lib for lib in sbd[1]] + ['-I' + abd[0], '-lsvn_subr-1', '-x', 'c', '-']
+    gcc_command_args = ['gcc'] + ['-I' + inc for inc in sbd[0]] + ['-L' + lib for lib in sbd[1]] + ['-I' + abd[0], '-I' + abud[0], '-lsvn_subr-1', '-x', 'c', '-']
     (gcc_in, gcc_out, gcc_err) = os.popen3(gcc_command_args)
     gcc_in.write("""
 #include <svn_auth.h>
@@ -168,7 +177,10 @@ if os.name == "nt":
     # just clobber the functions above we can't use
     # for simplicitly, everything is done in the 'svn' one
     def apr_build_data():
-        return '.', 
+        return '.',
+
+    def apu_build_data():
+        return '.',
 
     def svn_build_data():
         # environment vars for the directories we need.
@@ -231,10 +243,11 @@ if os.name == "nt":
         return includes, lib_dirs, aprlibs+libs,
 
 (apr_includedir, ) = apr_build_data()
+(apu_includedir, ) = apu_build_data()
 (svn_includedirs, svn_libdirs, extra_libs) = svn_build_data()
 
 def SvnExtension(name, *args, **kwargs):
-    kwargs["include_dirs"] = [apr_includedir] + svn_includedirs + ["subvertpy"]
+    kwargs["include_dirs"] = [apr_includedir, apu_includedir] + svn_includedirs + ["subvertpy"]
     kwargs["library_dirs"] = svn_libdirs
     if os.name == 'nt':
         # on windows, just ignore and overwrite the libraries!
