@@ -35,9 +35,13 @@
   * Fix compilation using Visual C++. 
     (Ronald Blaschke, #612056)
 
-  * Return an empty dictionary rather than None 
-    when there are no revision properties.
-	(Jelmer Vernooij)
+  * Return an empty dictionary rather than None when there are no revision
+    properties.  (Jelmer Vernooij)
+
+  * Link against all libraries that are somehow called.
+    (Daniel Johnson, Jelmer Vernooij, #615015)
+
+  * Include check for apr util headers. (Jelmer Vernooij, #615017)
 
 0.7.3.1    2010-07-27
 

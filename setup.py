@@ -103,7 +103,7 @@ def apu_build_data():
     includedir = apu_config("--includedir")
     if not os.path.isdir(includedir):
         raise Exception("APR util development headers not found")
-    extra_link_flags = apr_config("--link-ld --libs")
+    extra_link_flags = apu_config("--link-ld --libs")
     return (includedir, split_shell_results(extra_link_flags))
 
 
@@ -322,9 +322,9 @@ def source_path(filename):
 
 def subvertpy_modules():
     return [
-        SvnExtension("subvertpy.client", [source_path(n) for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")], libraries=["svn_client-1", "svn_subr-1"]), 
+        SvnExtension("subvertpy.client", [source_path(n) for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")], libraries=["svn_client-1", "svn_subr-1", "svn_ra-1", "svn_wc-1"]), 
         SvnExtension("subvertpy._ra", [source_path(n) for n in ("_ra.c", "util.c", "editor.c")], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
-        SvnExtension("subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")], libraries=["svn_repos-1", "svn_subr-1"]),
+        SvnExtension("subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")], libraries=["svn_repos-1", "svn_subr-1", "svn_fs-1"]),
         SvnExtension("subvertpy.wc", [source_path(n) for n in ("wc.c", "util.c", "editor.c")], libraries=["svn_wc-1", "svn_subr-1"])
         ]
 
