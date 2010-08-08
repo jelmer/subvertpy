@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Setup file for subvertpy
-# Copyright (C) 2005-2009 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@samba.org>
 
 from distutils.core import setup
 from distutils.extension import Extension
@@ -24,7 +24,7 @@ import re
 # * Set SVN_BDB and SVN_LIBINTL to point at these dirs.
 
 class CommandException(Exception):
-    """Encapsulate exit status of apr-config execution"""
+    """Encapsulate exit status of command execution"""
     def __init__(self, msg, cmd, arg, status, val):
         self.message = msg % (cmd, val)
         Exception.__init__(self, self.message)
@@ -33,6 +33,10 @@ class CommandException(Exception):
         self.status = status
     def not_found(self):
         return os.WIFEXITED(self.status) and os.WEXITSTATUS(self.status) == 127
+
+
+def split_shell_results(line):
+    return [s for s in line.split(" ") if s != ""]
 
 
 def run_cmd(cmd, arg):
@@ -80,7 +84,7 @@ def apr_config(arg):
 def apu_config(arg):
     config_cmd = os.getenv("APU_CONFIG")
     if config_cmd is None:
-        return config_value("apu-config", arg)
+        return config_value("apu-1-config", arg)
     else:
         return run_cmd(config_cmd, arg)
 
@@ -90,7 +94,8 @@ def apr_build_data():
     includedir = apr_config("--includedir")
     if not os.path.isdir(includedir):
         raise Exception("APR development headers not found")
-    return (includedir,)
+    extra_link_flags = apr_config("--link-ld --libs")
+    return (includedir, split_shell_results(extra_link_flags))
 
 
 def apu_build_data():
@@ -98,13 +103,14 @@ def apu_build_data():
     includedir = apu_config("--includedir")
     if not os.path.isdir(includedir):
         raise Exception("APR util development headers not found")
-    return (includedir,)
+    extra_link_flags = apr_config("--link-ld --libs")
+    return (includedir, split_shell_results(extra_link_flags))
 
 
 def svn_build_data():
     """Determine the Subversion header file location."""
     if "SVN_HEADER_PATH" in os.environ and "SVN_LIBRARY_PATH" in os.environ:
-        return ([os.getenv("SVN_HEADER_PATH")], [os.getenv("SVN_LIBRARY_PATH")], [])
+        return ([os.getenv("SVN_HEADER_PATH")], [os.getenv("SVN_LIBRARY_PATH")], [], [])
     svn_prefix = os.getenv("SVN_PREFIX")
     if svn_prefix is None:
         basedirs = ["/usr/local", "/usr"]
@@ -115,7 +121,7 @@ def svn_build_data():
                 break
     if svn_prefix is not None:
         return ([os.path.join(svn_prefix, "include/subversion-1")], 
-                [os.path.join(svn_prefix, "lib")], [])
+                [os.path.join(svn_prefix, "lib")], [], [])
     raise Exception("Subversion development files not found. "
                     "Please set SVN_PREFIX or (SVN_LIBRARY_PATH and SVN_HEADER_PATH) environment variable. ")
 
@@ -124,9 +130,8 @@ def is_keychain_provider_available():
     Checks for the availability of the Keychain simple authentication provider in Subversion by compiling a simple test program.
     """
     abd = apr_build_data()
-    abud = apu_build_data()
     sbd = svn_build_data()
-    gcc_command_args = ['gcc'] + ['-I' + inc for inc in sbd[0]] + ['-L' + lib for lib in sbd[1]] + ['-I' + abd[0], '-I' + abud[0], '-lsvn_subr-1', '-x', 'c', '-']
+    gcc_command_args = ['gcc'] + ['-I' + inc for inc in sbd[0]] + ['-L' + lib for lib in sbd[1]] + ['-I' + abd[0], '-lsvn_subr-1', '-x', 'c', '-']
     (gcc_in, gcc_out, gcc_err) = os.popen3(gcc_command_args)
     gcc_in.write("""
 #include <svn_auth.h>
@@ -138,7 +143,9 @@ int main(int argc, const char* arv[]) {
     gcc_out.read()
     return (gcc_out.close() is None)
 
+
 class VersionQuery(object):
+
     def __init__(self, filename):
         self.filename = filename
         f = file(filename, "rU")
@@ -177,10 +184,10 @@ if os.name == "nt":
     # just clobber the functions above we can't use
     # for simplicitly, everything is done in the 'svn' one
     def apr_build_data():
-        return '.',
+        return '.', []
 
     def apu_build_data():
-        return '.',
+        return '.', []
 
     def svn_build_data():
         # environment vars for the directories we need.
@@ -240,15 +247,19 @@ if os.name == "nt":
             # Since 1.5.0 libsvn_ra_dav-1 was removed
             libs.remove("libsvn_ra_dav-1")
 
-        return includes, lib_dirs, aprlibs+libs,
+        return includes, lib_dirs, [], aprlibs+libs,
 
-(apr_includedir, ) = apr_build_data()
-(apu_includedir, ) = apu_build_data()
-(svn_includedirs, svn_libdirs, extra_libs) = svn_build_data()
+(apr_includedir, apr_link_flags) = apr_build_data()
+(apu_includedir, apu_link_flags) = apu_build_data()
+(svn_includedirs, svn_libdirs, svn_link_flags, extra_libs) = svn_build_data()
 
 def SvnExtension(name, *args, **kwargs):
     kwargs["include_dirs"] = [apr_includedir, apu_includedir] + svn_includedirs + ["subvertpy"]
     kwargs["library_dirs"] = svn_libdirs
+    # Note that the apr-util link flags are not included here, as
+    # subvertpy only uses some apr util constants but does not use
+    # the library directly.
+    kwargs["extra_link_args"] = apr_link_flags + svn_link_flags
     if os.name == 'nt':
         # on windows, just ignore and overwrite the libraries!
         kwargs["libraries"] = extra_libs
