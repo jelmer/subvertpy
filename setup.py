@@ -56,15 +56,14 @@ def run_cmd(cmd, arg):
                            cmd, arg, status, status)
 
 
-def apr_config(arg):
-    apr_config_cmd = os.getenv("APR_CONFIG")
-    if apr_config_cmd is None:
-        cmds = ["apr-1-config", "/usr/local/apr/bin/apr-1-config", 
-                "/opt/local/bin/apr-1-config", ]
+def config_value(command, arg):
+    config_cmd = os.getenv("APR_CONFIG")
+    if config_cmd is None:
+        cmds = [command] + [os.path.join(p, command) for p in ["/usr/local/apr/bin/", "/opt/local/bin/"]]
         for cmd in cmds:
             try:
                 res = run_cmd(cmd, arg)
-                apr_config_cmd = cmd
+                config_cmd = cmd
                 break
             except CommandException, e:
                 if not e.not_found():
@@ -73,13 +72,13 @@ def apr_config(arg):
             raise Exception("apr-config not found."
                             " Please set APR_CONFIG environment variable")
     else:
-        res = run_cmd(apr_config_cmd, arg)
+        res = run_cmd(config_cmd, arg)
     return res
 
 
 def apr_build_data():
     """Determine the APR header file location."""
-    includedir = apr_config("--includedir")
+    includedir = config_value("apr-1-config", "--includedir")
     if not os.path.isdir(includedir):
         raise Exception("APR development headers not found")
     return (includedir,)
