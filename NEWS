@@ -30,6 +30,8 @@
         svn.wc.ensure_adm.
     (Jelmer Vernooij)
 
+ * Add ERR_ENTRY_NOT_FOUND constant. (Jelmer Vernooij)
+
  BUG FIXES
 
   * Fix compilation using Visual C++. 
