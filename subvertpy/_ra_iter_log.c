@@ -35,7 +35,8 @@ typedef struct {
 	apr_array_header_t *apr_revprops;
 	RemoteAccessObject *ra;
 	svn_boolean_t done;
-	PyObject *exception;
+	PyObject *exc_type;
+	PyObject *exc_val;
 	int queue_size;
 	struct log_entry *head;
 	struct log_entry *tail;
@@ -51,6 +52,8 @@ static void log_iter_dealloc(PyObject *self)
 		iter->head = e->next;
 		free(e);
 	}
+	Py_XDECREF(iter->exc_type);
+	Py_XDECREF(iter->exc_val);
 	Py_DECREF(iter->ra);
 	apr_pool_destroy(iter->pool);
 }
@@ -61,19 +64,9 @@ static PyObject *log_iter_next(LogIteratorObject *iter)
 	PyObject *ret;
 
 	while (iter->head == NULL) {
-		/* Done, raise stopexception */
-		if (iter->done) {
-			if (iter->exception != NULL) {
-				PyObject *exccls = (PyObject *)PyErr_GetSubversionExceptionTypeObject();
-				if (exccls == NULL)
-					return NULL;
-				PyErr_SetObject(exccls, iter->exception);
-				Py_DECREF(iter->exception);
-				iter->exception = NULL;
-				Py_DECREF(exccls);
-			} else {
-				PyErr_SetNone(PyExc_StopIteration);
-			}
+		/* Done, raise exception */
+		if (iter->exc_type != NULL) {
+			PyErr_SetObject(iter->exc_type, iter->exc_val);
 			return NULL;
 		} else {
 			Py_BEGIN_ALLOW_THREADS
@@ -308,8 +301,15 @@ static void py_iter_log(void *baton)
 	iter->done = TRUE;
 	iter->ra->busy = false;
 	if (error != NULL) {
-		iter->exception = PyErr_NewSubversionException(error);
+		iter->exc_type = (PyObject *)PyErr_GetSubversionExceptionTypeObject();
+		iter->exc_val  = PyErr_NewSubversionException(error);
+	} else {
+		iter->exc_type = PyExc_StopIteration;
+		Py_INCREF(iter->exc_type);
+		iter->exc_val = Py_None;
+		Py_INCREF(iter->exc_val);
 	}
+
 	Py_DECREF(iter);
 	PyGILState_Release(state);
 }
@@ -392,7 +392,8 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	ret->ra = ra;
 	Py_INCREF(ret->ra);
 	ret->start = start;
-	ret->exception = NULL;
+	ret->exc_type = NULL;
+	ret->exc_val = NULL;
 	ret->discover_changed_paths = discover_changed_paths;
 	ret->end = end;
 	ret->limit = limit;
