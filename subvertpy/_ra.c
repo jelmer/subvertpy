@@ -91,11 +91,12 @@ static svn_error_t *py_lock_func (void *baton, const char *path, int do_lock,
 						   const svn_lock_t *lock, svn_error_t *ra_err, 
 						   apr_pool_t *pool)
 {
-	PyObject *py_ra_err = Py_None, *ret, *py_lock;
+	PyObject *py_ra_err, *ret, *py_lock;
 	PyGILState_STATE state = PyGILState_Ensure();
 	if (ra_err != NULL) {
 		py_ra_err = PyErr_NewSubversionException(ra_err);
 	} else {
+		py_ra_err = Py_None;
 		Py_INCREF(py_ra_err);
 	}
 	py_lock = pyify_lock(lock);
@@ -977,7 +978,8 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 5
 	if (revprops == Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError, "fetching all revision properties not supported");
+		PyErr_SetString(PyExc_NotImplementedError,
+			"fetching all revision properties not supported");
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	} else if (!PySequence_Check(revprops)) {
@@ -2271,11 +2273,13 @@ typedef struct {
 	PyObject_HEAD
 	apr_pool_t *pool;
 	svn_auth_provider_object_t *provider;
+	PyObject *callback;
 } AuthProviderObject;
 
 static void auth_provider_dealloc(PyObject *self)
 {
 	AuthProviderObject *auth_provider = (AuthProviderObject *)self;
+	Py_XDECREF(auth_provider->callback);
 	apr_pool_destroy(auth_provider->pool);
 	PyObject_Del(self);
 }
@@ -2661,7 +2665,7 @@ static svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *ba
 	py_username = PyTuple_GetItem(ret, 0);
 	CB_CHECK_PYRETVAL(py_username);
 	if (!PyString_Check(py_username)) {
-		PyErr_SetString(PyExc_TypeError, "username hsould be string");
+		PyErr_SetString(PyExc_TypeError, "username should be string");
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
@@ -2682,10 +2686,13 @@ static PyObject *get_username_prompt_provider(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "Oi", &prompt_func, &retry_limit))
 		return NULL;
 	auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	if (auth == NULL)
+		return NULL;
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
 	Py_INCREF(prompt_func);
+	auth->callback = prompt_func;
 	svn_auth_get_username_prompt_provider(&auth->provider, py_username_prompt, (void *)prompt_func, retry_limit, auth->pool);
 	return (PyObject *)auth;
 }
@@ -2756,6 +2763,7 @@ static PyObject *get_simple_prompt_provider(PyObject *self, PyObject *args)
 	if (auth->pool == NULL)
 		return NULL;
 	Py_INCREF(prompt_func);
+	auth->callback = prompt_func;
 	svn_auth_get_simple_prompt_provider (&auth->provider, py_simple_prompt, (void *)prompt_func, retry_limit, auth->pool);
 	return (PyObject *)auth;
 }
@@ -2831,6 +2839,7 @@ static PyObject *get_ssl_server_trust_prompt_provider(PyObject *self, PyObject *
 	if (auth->pool == NULL)
 		return NULL;
 	Py_INCREF(prompt_func);
+	auth->callback = prompt_func;
 	svn_auth_get_ssl_server_trust_prompt_provider (&auth->provider, py_ssl_server_trust_prompt, (void *)prompt_func, auth->pool);
 	return (PyObject *)auth;
 }
@@ -2930,6 +2939,7 @@ static PyObject *get_ssl_client_cert_pw_prompt_provider(PyObject *self, PyObject
 	if (auth->pool == NULL)
 		return NULL;
 	Py_INCREF(prompt_func);
+	auth->callback = prompt_func;
 	svn_auth_get_ssl_client_cert_pw_prompt_provider (&auth->provider, py_ssl_client_cert_pw_prompt, (void *)prompt_func, retry_limit, auth->pool);
 	return (PyObject *)auth;
 }
@@ -2950,6 +2960,7 @@ static PyObject *get_ssl_client_cert_prompt_provider(PyObject *self, PyObject *a
 	if (auth->pool == NULL)
 		return NULL;
 	Py_INCREF(prompt_func);
+	auth->callback = prompt_func;
 	svn_auth_get_ssl_client_cert_prompt_provider (&auth->provider, py_ssl_client_cert_prompt, (void *)prompt_func, retry_limit, auth->pool);
 	return (PyObject *)auth;
 }
@@ -3002,17 +3013,21 @@ static PyObject *get_simple_provider(PyObject *self, PyObject *args)
 		return NULL;
 
 	auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	if (auth == NULL)
+		return NULL;
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
-	Py_INCREF(callback); /* FIXME: decref somewhere! */
+	Py_INCREF(callback);
+	auth->callback = callback;
 	svn_auth_get_simple_provider2(&auth->provider, py_cb_get_simple_provider_prompt, callback, auth->pool);
 #else
 	if (callback != Py_None) {
 		PyErr_SetString(PyExc_NotImplementedError, "callback not supported with svn < 1.6");
 		return NULL;
 	}
+	auth->callback = NULL;
 	svn_auth_get_simple_provider(&auth->provider, auth->pool);
 #endif
 	return (PyObject *)auth;
@@ -3021,6 +3036,9 @@ static PyObject *get_simple_provider(PyObject *self, PyObject *args)
 static PyObject *get_ssl_server_trust_file_provider(PyObject *self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	if (auth == NULL)
+		return NULL;
+	auth->callback = NULL;
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
@@ -3031,6 +3049,9 @@ static PyObject *get_ssl_server_trust_file_provider(PyObject *self)
 static PyObject *get_ssl_client_cert_file_provider(PyObject *self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	if (auth == NULL)
+		return NULL;
+	auth->callback = NULL;
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
@@ -3041,6 +3062,9 @@ static PyObject *get_ssl_client_cert_file_provider(PyObject *self)
 static PyObject *get_ssl_client_cert_pw_file_provider(PyObject *self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	if (auth == NULL)
+		return NULL;
+	auth->callback = NULL;
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
@@ -3081,6 +3105,9 @@ static PyObject *print_modules(PyObject *self)
 static PyObject *get_windows_simple_provider(PyObject* self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	if (auth == NULL)
+		return NULL;
+	auth->callback = NULL;
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
@@ -3092,6 +3119,9 @@ static PyObject *get_windows_simple_provider(PyObject* self)
 static PyObject *get_windows_ssl_server_trust_provider(PyObject *self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	if (auth == NULL)
+		return NULL;
+	auth->callback = NULL;
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
@@ -3105,6 +3135,9 @@ static PyObject *get_windows_ssl_server_trust_provider(PyObject *self)
 static PyObject *get_keychain_simple_provider(PyObject* self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
+	if (auth == NULL)
+		return NULL;
+	auth->callback = NULL;
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
@@ -3150,9 +3183,12 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 			}
 
 			auth->pool = pool;
+			auth->callback = NULL;
 			auth->provider = c_provider;
 
 			PyList_Append(pylist, (PyObject *)auth);
+
+			Py_DECREF(auth);
 		}
 	}
 
@@ -3166,12 +3202,14 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 	if (provider == NULL)
 		return NULL;
 	PyList_Append(pylist, provider);
+	Py_DECREF(provider);
 
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	provider = get_windows_ssl_server_trust_provider(self);
 	if (provider == NULL)
 		return NULL;
 	PyList_Append(pylist, provider);
+	Py_DECREF(provider);
 #endif /* 1.5 */
 #endif /* WIN32 */
 
@@ -3180,6 +3218,7 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 	if (provider == NULL)
 		return NULL;
 	PyList_Append(pylist, provider);
+	Py_DECREF(provider);
 #endif
 
 	return pylist;

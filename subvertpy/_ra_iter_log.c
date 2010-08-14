@@ -68,6 +68,9 @@ static PyObject *log_iter_next(LogIteratorObject *iter)
 				if (exccls == NULL)
 					return NULL;
 				PyErr_SetObject(exccls, iter->exception);
+				Py_DECREF(iter->exception);
+				iter->exception = NULL;
+				Py_DECREF(exccls);
 			} else {
 				PyErr_SetNone(PyExc_StopIteration);
 			}

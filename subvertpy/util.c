@@ -65,10 +65,10 @@ PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void)
 	if (coremod == NULL) {
 		return NULL;
 	}
-		
+
 	excobj = PyObject_GetAttrString(coremod, "SubversionException");
 	Py_DECREF(coremod);
-	
+
 	if (excobj == NULL) {
 		PyErr_BadInternalCall();
 		return NULL;
@@ -96,6 +96,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 		child = cls->tp_new(cls, args, NULL);
 		if (cls->tp_init != NULL)
 			cls->tp_init(child, args, NULL);
+		Py_DECREF(cls);
 		Py_DECREF(args);
 	} else {
 		child = Py_None;
@@ -116,13 +117,17 @@ void PyErr_SetSubversionException(svn_error_t *error)
 	PyObject *excval, *excobj;
 
 	if (error->apr_err < 1000) {
-		PyErr_SetObject(PyExc_OSError, Py_BuildValue("(iz)", error->apr_err, error->message));
+		PyObject *excval = Py_BuildValue("(iz)", error->apr_err, error->message);
+		PyErr_SetObject(PyExc_OSError, excval);
+		Py_DECREF(excval);
 		return;
 	}
-	
+
 	if (error->apr_err >= APR_OS_START_SYSERR && 
 		error->apr_err < APR_OS_START_SYSERR + 1000) {
-		PyErr_SetObject(PyExc_OSError, Py_BuildValue("(iz)", error->apr_err - APR_OS_START_SYSERR, error->message));
+		PyObject *excval = Py_BuildValue("(iz)", error->apr_err - APR_OS_START_SYSERR, error->message);
+		PyErr_SetObject(PyExc_OSError, excval);
+		Py_DECREF(excval);
 		return;
 	}
 
@@ -132,6 +137,8 @@ void PyErr_SetSubversionException(svn_error_t *error)
 
 	excval = PyErr_NewSubversionException(error);
 	PyErr_SetObject(excobj, excval);
+	Py_DECREF(excval);
+	Py_DECREF(excobj);
 }
 
 PyObject *PyOS_tmpfile(void)

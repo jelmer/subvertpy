@@ -218,7 +218,9 @@ void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_pool_t *p
 		return;
 
 	if (notify->err != NULL) {
-		ret = PyObject_CallFunction(func, "O", PyErr_NewSubversionException(notify->err));
+		PyObject *excval = PyErr_NewSubversionException(notify->err);
+		ret = PyObject_CallFunction(func, "O", excval);
+		Py_DECREF(excval);
 		Py_XDECREF(ret);
 		/* FIXME: Use return value */
 	}

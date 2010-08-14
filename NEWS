@@ -45,6 +45,9 @@
 
   * Include check for apr util headers. (Jelmer Vernooij, #615017)
 
+  * Fix reference leaks in Auth and SubversionException handling.
+    (Jelmer Vernooij, #436406)
+
 0.7.3.1    2010-07-27
 
  BUG FIXES
