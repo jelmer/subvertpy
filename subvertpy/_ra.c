@@ -1864,10 +1864,15 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locations(ra->ra, &hash_locations,
-					path, peg_revision, 
+					svn_path_canonicalize(path, temp_pool), peg_revision, 
 					revnum_list_to_apr_array(temp_pool, location_revisions),
 					temp_pool));
 	ret = PyDict_New();
+	if (ret == NULL) {
+		PyErr_NoMemory();
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 
 	for (idx = apr_hash_first(temp_pool, hash_locations); idx != NULL; 
 		idx = apr_hash_next(idx)) {
