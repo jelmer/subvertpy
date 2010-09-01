@@ -321,7 +321,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	PyObject *paths;
 	svn_revnum_t start = 0, end = 0;
 	int limit=0; 
-	bool discover_changed_paths=false, strict_node_history=true,include_merged_revisions=false;
+	bool discover_changed_paths=false, strict_node_history=true, include_merged_revisions=false;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	PyObject *revprops = Py_None;
 	LogIteratorObject *ret;
@@ -364,11 +364,11 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		int i;
 		for (i = 0; i < PySequence_Size(revprops); i++) {
 			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
-			if (strcmp(SVN_PROP_REVISION_LOG, n) && 
+			if (strcmp(SVN_PROP_REVISION_LOG, n) &&
 				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
 				strcmp(SVN_PROP_REVISION_DATE, n)) {
-				PyErr_SetString(PyExc_NotImplementedError, 
-								"fetching custom revision properties not supported");	
+				PyErr_SetString(PyExc_NotImplementedError,
+								"fetching custom revision properties not supported");
 				apr_pool_destroy(temp_pool);
 				return NULL;
 			}
@@ -400,6 +400,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	ret->apr_paths = apr_paths;
 	ret->pool = temp_pool;
 	ret->include_merged_revisions = include_merged_revisions;
+	ret->strict_node_history = strict_node_history;
 	ret->apr_revprops = apr_revprops;
 	ret->done = FALSE;
 	ret->queue_size = 0;
