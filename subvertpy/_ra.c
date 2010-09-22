@@ -1062,6 +1062,31 @@ static PyObject *ra_get_repos_root(PyObject *self)
 	return PyString_FromString(ra->root);
 }
 
+/**
+ * Obtain the URL of this repository.
+ */
+static PyObject *ra_get_url(PyObject *self, void *closure)
+{
+	const char *url;
+	apr_pool_t *temp_pool;
+	PyObject *r;
+	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+
+	if (ra_check_busy(ra))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+
+	RUN_RA_WITH_POOL(temp_pool, ra,
+						svn_ra_get_session_url(ra->ra, &url, temp_pool));
+
+	r = PyString_FromString(url);
+
+	apr_pool_destroy(temp_pool);
+
+	return r;
+}
+
 static PyObject *ra_do_update(PyObject *self, PyObject *args)
 {
 	svn_revnum_t revision_to_update_to;
@@ -2175,6 +2200,9 @@ static PyMethodDef ra_methods[] = {
 	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_VARARGS|METH_NOARGS, 
 		"S.get_repos_root() -> url\n"
 		"Return the URL to the root of the repository." },
+	{ "get_url", (PyCFunction)ra_get_url, METH_VARARGS|METH_NOARGS,
+		"S.get_url() -> url\n"
+		"Return the URL of the repository." },
 	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, 
 		"S.get_log(callback, paths, start, end, limit, discover_changed_paths, "
 		"strict_node_history, include_merged_revisions, revprops)\n"
