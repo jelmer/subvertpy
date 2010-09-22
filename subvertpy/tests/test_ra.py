@@ -72,6 +72,9 @@ class TestRemoteAccess(SubversionTestCase):
     def test_get_repos_root(self):
         self.assertEqual(self.repos_url, self.ra.get_repos_root())
 
+    def test_get_url(self):
+        self.assertEqual(self.repos_url, self.ra.get_url())
+
     def test_reparent(self):
         self.ra.reparent(self.repos_url)
 
@@ -174,8 +177,6 @@ class TestRemoteAccess(SubversionTestCase):
                         strict_node_history=False, revprops=["svn:date", "svn:author", "svn:log"])
         check_results(returned)
 
-
-
     def test_get_commit_editor_busy(self):
         def mycb(rev):
             pass
@@ -217,14 +218,14 @@ class TestRemoteAccess(SubversionTestCase):
         f = cb.open_file("bar")
         f.change_prop("bla:bar", None)
         cb.close()
-        
+
         stream = StringIO()
         props = self.ra.get_file("bar", stream, 1)[1]
         self.assertEquals("blie", props.get("bla:bar"))
         stream = StringIO()
         props = self.ra.get_file("bar", stream, 2)[1]
         self.assertIs(None, props.get("bla:bar"))
-    
+
     def test_get_file_revs(self):
         cb = self.commit_editor()
         cb.add_file("bar").modify("a")
@@ -235,7 +236,7 @@ class TestRemoteAccess(SubversionTestCase):
         f.modify("b")
         f.change_prop("bla", "bloe")
         cb.close()
-        
+
         rets = []
 
         def handle(path, rev, props, from_merge=None):

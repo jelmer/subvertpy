@@ -32,6 +32,8 @@
 
  * Add ERR_ENTRY_NOT_FOUND constant. (Jelmer Vernooij)
 
+ * Add subvertpy.ra.RemoteAccess.get_url(). (Dan Villiom Podlaski Christiansen)
+
  BUG FIXES
 
   * Fix compilation using Visual C++. 
