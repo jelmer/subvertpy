@@ -32,6 +32,12 @@ class VersionTest(TestCase):
     def test_version_length(self):
         self.assertEquals(4, len(ra.version()))
 
+    def test_api_version_length(self):
+        self.assertEquals(4, len(ra.api_version()))
+
+    def test_api_version_later_same(self):
+        self.assertTrue(ra.api_version() <= ra.version())
+
 
 class TestRemoteAccessUnknown(TestCase):
 

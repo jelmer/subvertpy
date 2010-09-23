@@ -27,6 +27,11 @@ class VersionTest(TestCase):
     def test_version_length(self):
         self.assertEquals(4, len(wc.version()))
 
+    def test_api_version_length(self):
+        self.assertEquals(4, len(wc.api_version()))
+
+    def test_api_version_later_same(self):
+        self.assertTrue(wc.api_version() <= wc.version())
 
 class WorkingCopyTests(TestCase):
 

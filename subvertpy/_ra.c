@@ -41,7 +41,7 @@ static PyObject *busy_exc;
 
 extern PyTypeObject Reporter_Type;
 extern PyTypeObject RemoteAccess_Type;
-extern PyTypeObject AuthProvider_Type;
+staticforward PyTypeObject AuthProvider_Type;
 extern PyTypeObject CredentialsIter_Type;
 extern PyTypeObject TxDeltaWindowHandler_Type;
 
@@ -325,6 +325,20 @@ PyTypeObject Reporter_Type = {
 static PyObject *version(PyObject *self)
 {
 	const svn_version_t *ver = svn_ra_version();
+	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+						 ver->patch, ver->tag);
+}
+
+SVN_VERSION_DEFINE(svn_api_version);
+
+/**
+ * Get compile-time libsvn_ra version information.
+ *
+ * :return: tuple with major, minor, patch version number and tag.
+ */
+static PyObject *api_version(PyObject *self)
+{
+	const svn_version_t *ver = &svn_api_version;
 	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
 						 ver->patch, ver->tag);
 }
@@ -2317,7 +2331,7 @@ static void auth_provider_dealloc(PyObject *self)
 	PyObject_Del(self);
 }
 
-PyTypeObject AuthProvider_Type = {
+static PyTypeObject AuthProvider_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.AuthProvider", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthProviderObject),
@@ -3261,7 +3275,11 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 static PyMethodDef ra_module_methods[] = {
 	{ "version", (PyCFunction)version, METH_NOARGS,
 		"version() -> (major, minor, micro, tag)\n"
-		"Return version string of ra library."},
+		"Version of libsvn_ra currently used." },
+	{ "api_version", (PyCFunction)api_version, METH_NOARGS,
+		"api_version() -> (major, minor, patch, tag)\n\n"
+		"Version of libsvn_ra Subvertpy was compiled against."
+	},
 	{ "get_ssl_client_cert_pw_file_provider", (PyCFunction)get_ssl_client_cert_pw_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_client_cert_file_provider", (PyCFunction)get_ssl_client_cert_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_server_trust_file_provider", (PyCFunction)get_ssl_server_trust_file_provider, METH_NOARGS, NULL },

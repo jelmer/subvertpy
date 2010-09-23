@@ -11,6 +11,9 @@
 
   * Add subvertpy.wc.STATUS_* constants. (Jelmer Vernooij)
 
+  * Add subvertpy.wc.api_version(), subvertpy.ra.api_version().
+    (Dan Villiom Podlaski Christiansen, Jelmer Vernooij)
+
  DEPRECATION
 
   * Avoid deprecation warnings for svn.client.Client.copy,
