@@ -150,13 +150,27 @@ static const REPORTER_T py_ra_reporter = {
 
 
 /**
- * Get libsvn_wc version information.
+ * Get runtime libsvn_wc version information.
  *
  * :return: tuple with major, minor, patch version number and tag.
  */
 static PyObject *version(PyObject *self)
 {
 	const svn_version_t *ver = svn_wc_version();
+	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+						 ver->patch, ver->tag);
+}
+
+SVN_VERSION_DEFINE(svn_api_version);
+
+/**
+ * Get compile-time libsvn_wc version information.
+ *
+ * :return: tuple with major, minor, patch version number and tag.
+ */
+static PyObject *api_version(PyObject *self)
+{
+	const svn_version_t *ver = &svn_api_version;
 	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
 						 ver->patch, ver->tag);
 }
@@ -1343,7 +1357,14 @@ static PyMethodDef wc_methods[] = {
 	{ "is_wc_prop", is_wc_prop, METH_VARARGS, 
 		"is_wc_prop(name) -> bool" },
 	{ "revision_status", (PyCFunction)revision_status, METH_KEYWORDS|METH_VARARGS, "revision_status(wc_path, trail_url=None, committed=False, cancel_func=None) -> (min_rev, max_rev, switched, modified)" },
-	{ "version", (PyCFunction)version, METH_NOARGS, "version() -> (major, minor, patch, tag)" },
+	{ "version", (PyCFunction)version, METH_NOARGS,
+		"version() -> (major, minor, patch, tag)\n\n"
+		"Version of libsvn_wc currently used."
+	},
+	{ "api_version", (PyCFunction)api_version, METH_NOARGS,
+		"api_version() -> (major, minor, patch, tag)\n\n"
+		"Version of libsvn_wc Subvertpy was compiled against."
+	},
 	{ "match_ignore_list", (PyCFunction)match_ignore_list, METH_VARARGS,
 		"match_ignore_list(str, patterns) -> bool" },
 	{ NULL, }
