@@ -15,9 +15,13 @@
 
 """Subversion client library tests."""
 
+import os
+
 from subvertpy import (
+    NODE_DIR, NODE_FILE,
     client,
     ra,
+    wc,
     )
 from subvertpy.tests import (
     SubversionTestCase,
@@ -34,6 +38,16 @@ class TestClient(SubversionTestCase):
     def test_add(self):
         self.build_tree({"dc/foo": None})
         self.client.add("dc/foo")
+
+    def test_add_recursive(self):
+        self.build_tree({"dc/trunk/foo": 'bla', "dc/trunk": None})
+        self.client.add("dc/trunk")
+        adm = wc.WorkingCopy(None, os.path.join(os.getcwd(), "dc"))
+        e = adm.entry(os.path.join(os.getcwd(), "dc", "trunk"))
+        self.assertEquals(e.kind, NODE_DIR)
+        adm2 = wc.WorkingCopy(None, os.path.join(os.getcwd(), "dc", "trunk"))
+        e = adm2.entry(os.path.join(os.getcwd(), "dc", "trunk", "foo"))
+        self.assertEquals(e.kind, NODE_FILE)
 
     def test_get_config(self):
         self.assertIsInstance(client.get_config().__dict__, dict)

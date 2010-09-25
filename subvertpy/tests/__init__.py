@@ -41,18 +41,7 @@ from subvertpy.ra import (
     )
 
 
-class TestCaseInTempDir(unittest.TestCase):
-
-    def setUp(self):
-        unittest.TestCase.setUp(self)
-        self._oldcwd = os.getcwd()
-        self.test_dir = tempfile.mkdtemp()
-        os.chdir(self.test_dir)
-
-    def tearDown(self):
-        unittest.TestCase.tearDown(self)
-        os.chdir(self._oldcwd)
-        shutil.rmtree(self.test_dir)
+class TestCase(unittest.TestCase):
 
     def assertIsInstance(self, obj, kls):
         """Fail if obj is not an instance of kls"""
@@ -68,8 +57,22 @@ class TestCaseInTempDir(unittest.TestCase):
                 raise AssertionError("%r is not %r." % (left, right))
 
 
+class TestCaseInTempDir(TestCase):
+
+    def setUp(self):
+        TestCase.setUp(self)
+        self._oldcwd = os.getcwd()
+        self.test_dir = tempfile.mkdtemp()
+        os.chdir(self.test_dir)
+
+    def tearDown(self):
+        TestCase.tearDown(self)
+        os.chdir(self._oldcwd)
+        shutil.rmtree(self.test_dir)
+
 
 class TestFileEditor(object):
+
     def __init__(self, file):
         self.file = file
         self.is_closed = False
@@ -132,7 +135,8 @@ class TestDirEditor(object):
             copyfrom_rev = self.revnum
         assert (copyfrom_path is None and copyfrom_rev == -1) or \
                (copyfrom_path is not None and copyfrom_rev > -1)
-        child = TestDirEditor(self.dir.add_directory(path, copyfrom_path, copyfrom_rev), self.baseurl, self.revnum)
+        child = TestDirEditor(self.dir.add_directory(path, copyfrom_path,
+            copyfrom_rev), self.baseurl, self.revnum)
         self.children.append(child)
         return child
 
@@ -142,7 +146,8 @@ class TestDirEditor(object):
             copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
-        child = TestFileEditor(self.dir.add_file(path, copyfrom_path, copyfrom_rev))
+        child = TestFileEditor(self.dir.add_file(path, copyfrom_path,
+            copyfrom_rev))
         self.children.append(child)
         return child
 
@@ -162,19 +167,22 @@ class TestCommitEditor(TestDirEditor):
 
 
 class SubversionTestCase(TestCaseInTempDir):
-    """A test case that provides the ability to build Subversion 
+    """A test case that provides the ability to build Subversion
     repositories."""
 
-    def setUp(self):
-        super(SubversionTestCase, self).setUp()
+    def _init_client(self):
         self.client_ctx = client.Client()
-        self.client_ctx.auth = Auth([ra.get_simple_provider(), 
+        self.client_ctx.auth = Auth([ra.get_simple_provider(),
                                      ra.get_username_provider(),
                                      ra.get_ssl_client_cert_file_provider(),
                                      ra.get_ssl_client_cert_pw_file_provider(),
                                      ra.get_ssl_server_trust_file_provider()])
         self.client_ctx.log_msg_func = self.log_message_func
         #self.client_ctx.notify_func = lambda err: mutter("Error: %s" % err)
+
+    def setUp(self):
+        super(SubversionTestCase, self).setUp()
+        self._init_client()
 
     def log_message_func(self, items):
         return self.next_message
@@ -190,10 +198,12 @@ class SubversionTestCase(TestCaseInTempDir):
 
         if allow_revprop_changes:
             if sys.platform == 'win32':
-                revprop_hook = os.path.join(abspath, "hooks", "pre-revprop-change.bat")
+                revprop_hook = os.path.join(abspath, "hooks",
+                        "pre-revprop-change.bat")
                 open(revprop_hook, 'w').write("exit 0\n")
             else:
-                revprop_hook = os.path.join(abspath, "hooks", "pre-revprop-change")
+                revprop_hook = os.path.join(abspath, "hooks",
+                        "pre-revprop-change")
                 open(revprop_hook, 'w').write("#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
@@ -204,7 +214,7 @@ class SubversionTestCase(TestCaseInTempDir):
 
 
     def make_checkout(self, repos_url, relpath):
-        self.client_ctx.checkout(repos_url, relpath, "HEAD") 
+        self.client_ctx.checkout(repos_url, relpath, "HEAD")
 
     def client_set_prop(self, path, name, value):
         if value is None:
@@ -239,10 +249,10 @@ class SubversionTestCase(TestCaseInTempDir):
 
     def client_resolve(self, path, choice, depth=0):
         self.client_ctx.resolve(path, depth, choice)
-        
+
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.
-        
+
         :param dir: List of paths to commit.
         """
         olddir = os.path.abspath('.')
@@ -255,7 +265,7 @@ class SubversionTestCase(TestCaseInTempDir):
 
     def client_add(self, relpath, recursive=True):
         """Add specified files to working copy.
-        
+
         :param relpath: Path to the files to add.
         """
         self.client_ctx.add(relpath, recursive, False, False)
@@ -272,9 +282,14 @@ class SubversionTestCase(TestCaseInTempDir):
         assert isinstance(url, str)
         ret = {}
         def rcvr(orig_paths, rev, revprops, has_children=None):
-            ret[rev] = (orig_paths, revprops.get(properties.PROP_REVISION_AUTHOR), revprops.get(properties.PROP_REVISION_DATE), revprops.get(properties.PROP_REVISION_LOG))
-        r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True, 
-                  revprops=[properties.PROP_REVISION_AUTHOR, properties.PROP_REVISION_DATE, properties.PROP_REVISION_LOG])
+            ret[rev] = (orig_paths,
+                    revprops.get(properties.PROP_REVISION_AUTHOR),
+                    revprops.get(properties.PROP_REVISION_DATE),
+                    revprops.get(properties.PROP_REVISION_LOG))
+        r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True,
+                  revprops=[properties.PROP_REVISION_AUTHOR,
+                      properties.PROP_REVISION_DATE,
+                      properties.PROP_REVISION_LOG])
         return ret
 
     def client_delete(self, relpath):
@@ -305,8 +320,8 @@ class SubversionTestCase(TestCaseInTempDir):
 
     def build_tree(self, files):
         """Create a directory tree.
-        
-        :param files: Dictionary with filenames as keys, contents as 
+
+        :param files: Dictionary with filenames as keys, contents as
             values. None as value indicates a directory.
         """
         for f in files:
@@ -325,12 +340,12 @@ class SubversionTestCase(TestCaseInTempDir):
     def make_client(self, repospath, clientpath, allow_revprop_changes=True):
         """Create a repository and a checkout. Return the checkout.
 
-        :param repospath: Optional relpath to check out if not the full 
+        :param repospath: Optional relpath to check out if not the full
             repository.
         :param clientpath: Path to checkout
         :return: Repository URL.
         """
-        repos_url = self.make_repository(repospath, 
+        repos_url = self.make_repository(repospath,
             allow_revprop_changes=allow_revprop_changes)
         self.make_checkout(repos_url, clientpath)
         return repos_url
@@ -349,7 +364,7 @@ class SubversionTestCase(TestCaseInTempDir):
         :param message: Commit message
         :return: Commit editor object
         """
-        ra_ctx = RemoteAccess(url.encode("utf-8"), 
+        ra_ctx = RemoteAccess(url.encode("utf-8"),
             auth=Auth([ra.get_username_provider()]))
         revnum = ra_ctx.get_latest_revnum()
         return TestCommitEditor(ra_ctx.get_commit_editor({"svn:log": message}),

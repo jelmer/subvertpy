@@ -16,19 +16,27 @@
 """Subversion ra library tests."""
 
 from cStringIO import StringIO
-from unittest import TestCase
 
 from subvertpy import (
     NODE_DIR, NODE_NONE,
     SubversionException,
     ra,
     )
-from subvertpy.tests import SubversionTestCase
+from subvertpy.tests import (
+    SubversionTestCase,
+    TestCase,
+    )
 
 class VersionTest(TestCase):
 
     def test_version_length(self):
         self.assertEquals(4, len(ra.version()))
+
+    def test_api_version_length(self):
+        self.assertEquals(4, len(ra.api_version()))
+
+    def test_api_version_later_same(self):
+        self.assertTrue(ra.api_version() <= ra.version())
 
 
 class TestRemoteAccessUnknown(TestCase):
@@ -69,6 +77,9 @@ class TestRemoteAccess(SubversionTestCase):
 
     def test_get_repos_root(self):
         self.assertEqual(self.repos_url, self.ra.get_repos_root())
+
+    def test_get_url(self):
+        self.assertEqual(self.repos_url, self.ra.get_url())
 
     def test_reparent(self):
         self.ra.reparent(self.repos_url)
@@ -115,6 +126,32 @@ class TestRemoteAccess(SubversionTestCase):
         reporter = self.ra.do_diff(1, "", self.ra.get_repos_root(), MyEditor())
         reporter.set_path("", 0, True)
         reporter.finish()
+
+    def test_iter_log(self):
+        def check_results(returned):
+            self.assertEquals(2, len(returned))
+            self.assert_(len(returned[0]) in (3,4))
+            if len(returned[0]) == 3:
+                (paths, revnum, props) = returned[0]
+            else:
+                (paths, revnum, props, has_children) = returned[0]
+            self.assertEquals(None, paths)
+            self.assertEquals(revnum, 0)
+            self.assertEquals(["svn:date"], props.keys())
+            if len(returned[1]) == 3:
+                (paths, revnum, props) = returned[1]
+            else:
+                (paths, revnum, props, has_children) = returned[1]
+            self.assertEquals({'/foo': ('A', None, -1, NODE_DIR)}, paths)
+            self.assertEquals(revnum, 1)
+            self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
+                              set(props.keys()))
+        returned = list(self.ra.iter_log([""], 0, 0, revprops=["svn:date", "svn:author", "svn:log"]))
+        self.assertEquals(1, len(returned))
+        self.do_commit()
+        returned = list(self.ra.iter_log(None, 0, 1, discover_changed_paths=True, 
+                        strict_node_history=False, revprops=["svn:date", "svn:author", "svn:log"]))
+        check_results(returned)
 
     def test_get_log(self):
         returned = []
@@ -187,14 +224,14 @@ class TestRemoteAccess(SubversionTestCase):
         f = cb.open_file("bar")
         f.change_prop("bla:bar", None)
         cb.close()
-        
+
         stream = StringIO()
         props = self.ra.get_file("bar", stream, 1)[1]
         self.assertEquals("blie", props.get("bla:bar"))
         stream = StringIO()
         props = self.ra.get_file("bar", stream, 2)[1]
         self.assertIs(None, props.get("bla:bar"))
-    
+
     def test_get_file_revs(self):
         cb = self.commit_editor()
         cb.add_file("bar").modify("a")
@@ -205,10 +242,10 @@ class TestRemoteAccess(SubversionTestCase):
         f.modify("b")
         f.change_prop("bla", "bloe")
         cb.close()
-        
+
         rets = []
 
-        def handle(path, rev, props):
+        def handle(path, rev, props, from_merge=None):
             rets.append((path, rev, props))
 
         self.ra.get_file_revs("bar", 1, 2, handle)

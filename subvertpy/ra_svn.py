@@ -61,6 +61,8 @@ from subvertpy.server import (
 class SSHSubprocess(object):
     """A socket-like object that talks to an ssh subprocess via pipes."""
 
+    __slots__ = ('proc')
+
     def __init__(self, proc):
         self.proc = proc
 
@@ -205,6 +207,8 @@ def feed_editor(conn, editor):
 
 class Reporter(object):
 
+    __slots__ = ('conn', 'editor')
+
     def __init__(self, conn, editor):
         self.conn = conn
         self.editor = editor
@@ -249,6 +253,8 @@ class Reporter(object):
 
 class Editor(object):
 
+    __slots__ = ('conn')
+
     def __init__(self, conn):
         self.conn = conn
 
@@ -271,7 +277,10 @@ class Editor(object):
     def abort(self):
         self.conn.send_msg([literal("abort-edit"), []])
 
-class DirectoryEditor:
+
+class DirectoryEditor(object):
+
+    __slots__ = ('conn', 'id')
 
     def __init__(self, conn, id):
         self.conn = conn
@@ -331,7 +340,9 @@ class DirectoryEditor:
         self.conn.send_msg([literal("close-dir"), [self.id]])
 
 
-class FileEditor:
+class FileEditor(object):
+
+    __slots__ = ('conn', 'id')
 
     def __init__(self, conn, id):
         self.conn = conn

@@ -15,10 +15,11 @@
 
 """Subversion ra library tests."""
 
-from unittest import TestCase
-
 from subvertpy import (
     wc,
+    )
+from subvertpy.tests import (
+    TestCase,
     )
 
 class VersionTest(TestCase):
@@ -26,6 +27,11 @@ class VersionTest(TestCase):
     def test_version_length(self):
         self.assertEquals(4, len(wc.version()))
 
+    def test_api_version_length(self):
+        self.assertEquals(4, len(wc.api_version()))
+
+    def test_api_version_later_same(self):
+        self.assertTrue(wc.api_version() <= wc.version())
 
 class WorkingCopyTests(TestCase):
 
@@ -40,3 +46,9 @@ class WorkingCopyTests(TestCase):
 
     def test_is_wc_prop(self):
         self.assertTrue(wc.is_wc_prop("svn:wc:foo"))
+
+    def test_match_ignore_list(self):
+        self.assertTrue(wc.match_ignore_list("foo", [ "f*"]))
+        self.assertTrue(wc.match_ignore_list("foo", ["foo"]))
+        self.assertFalse(wc.match_ignore_list("foo", []))
+        self.assertFalse(wc.match_ignore_list("foo", ["bar"]))

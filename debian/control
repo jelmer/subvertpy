@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Homepage: http://samba.org/~jelmer/subvertpy
 Build-Depends: python-central (>= 0.5), cdbs (>= 0.4.43), python, debhelper (>= 5.0.37.2), libsvn-dev, python-all-dev, python-nose
-Standards-Version: 3.9.0
+Standards-Version: 3.9.1
 XS-Python-Version: >= 2.4
 Vcs-Bzr: http://bzr.debian.org/users/jelmer/subvertpy/unstable
 
