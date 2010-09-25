@@ -1170,7 +1170,11 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
+#if PY_VERSION_HEX < 0x02050000
+	PyErr_Warn(PyExc_DeprecationWarning, "get_pristine_copy_path is deprecated. Use get_pristine_contents instead.");
+#else
 	PyErr_WarnEx(PyExc_DeprecationWarning, "get_pristine_copy_path is deprecated. Use get_pristine_contents instead.", 2);
+#endif
 	RUN_SVN_WITH_POOL(pool, svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool), &pristine_path, pool));
 	ret = PyString_FromString(pristine_path);
 	apr_pool_destroy(pool);
