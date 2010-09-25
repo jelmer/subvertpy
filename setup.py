@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Setup file for subvertpy
-# Copyright (C) 2005-2009 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@samba.org>
 
 from distutils.core import setup
 from distutils.extension import Extension
@@ -24,7 +24,7 @@ import re
 # * Set SVN_BDB and SVN_LIBINTL to point at these dirs.
 
 class CommandException(Exception):
-    """Encapsulate exit status of apr-config execution"""
+    """Encapsulate exit status of command execution"""
     def __init__(self, msg, cmd, arg, status, val):
         self.message = msg % (cmd, val)
         Exception.__init__(self, self.message)
@@ -33,6 +33,10 @@ class CommandException(Exception):
         self.status = status
     def not_found(self):
         return os.WIFEXITED(self.status) and os.WEXITSTATUS(self.status) == 127
+
+
+def split_shell_results(line):
+    return [s for s in line.split(" ") if s != ""]
 
 
 def run_cmd(cmd, arg):
@@ -56,25 +60,33 @@ def run_cmd(cmd, arg):
                            cmd, arg, status, status)
 
 
-def apr_config(arg):
-    apr_config_cmd = os.getenv("APR_CONFIG")
-    if apr_config_cmd is None:
-        cmds = ["apr-1-config", "/usr/local/apr/bin/apr-1-config", 
-                "/opt/local/bin/apr-1-config", ]
-        for cmd in cmds:
-            try:
-                res = run_cmd(cmd, arg)
-                apr_config_cmd = cmd
-                break
-            except CommandException, e:
-                if not e.not_found():
-                    raise
-        else:
-            raise Exception("apr-config not found."
-                            " Please set APR_CONFIG environment variable")
+def config_value(command, arg):
+    cmds = [command] + [os.path.join(p, command) for p in ["/usr/local/apr/bin/", "/opt/local/bin/"]]
+    for cmd in cmds:
+        try:
+            return run_cmd(cmd, arg)
+        except CommandException, e:
+            if not e.not_found():
+                raise
     else:
-        res = run_cmd(apr_config_cmd, arg)
-    return res
+        raise Exception("apr-config not found."
+                        " Please set APR_CONFIG environment variable")
+
+
+def apr_config(arg):
+    config_cmd = os.getenv("APR_CONFIG")
+    if config_cmd is None:
+        return config_value("apr-1-config", arg)
+    else:
+        return run_cmd(config_cmd, arg)
+
+
+def apu_config(arg):
+    config_cmd = os.getenv("APU_CONFIG")
+    if config_cmd is None:
+        return config_value("apu-1-config", arg)
+    else:
+        return run_cmd(config_cmd, arg)
 
 
 def apr_build_data():
@@ -82,13 +94,23 @@ def apr_build_data():
     includedir = apr_config("--includedir")
     if not os.path.isdir(includedir):
         raise Exception("APR development headers not found")
-    return (includedir,)
+    extra_link_flags = apr_config("--link-ld --libs")
+    return (includedir, split_shell_results(extra_link_flags))
+
+
+def apu_build_data():
+    """Determine the APR util header file location."""
+    includedir = apu_config("--includedir")
+    if not os.path.isdir(includedir):
+        raise Exception("APR util development headers not found")
+    extra_link_flags = apu_config("--link-ld --libs")
+    return (includedir, split_shell_results(extra_link_flags))
 
 
 def svn_build_data():
     """Determine the Subversion header file location."""
     if "SVN_HEADER_PATH" in os.environ and "SVN_LIBRARY_PATH" in os.environ:
-        return ([os.getenv("SVN_HEADER_PATH")], [os.getenv("SVN_LIBRARY_PATH")], [])
+        return ([os.getenv("SVN_HEADER_PATH")], [os.getenv("SVN_LIBRARY_PATH")], [], [])
     svn_prefix = os.getenv("SVN_PREFIX")
     if svn_prefix is None:
         basedirs = ["/usr/local", "/usr"]
@@ -99,7 +121,7 @@ def svn_build_data():
                 break
     if svn_prefix is not None:
         return ([os.path.join(svn_prefix, "include/subversion-1")], 
-                [os.path.join(svn_prefix, "lib")], [])
+                [os.path.join(svn_prefix, "lib")], [], [])
     raise Exception("Subversion development files not found. "
                     "Please set SVN_PREFIX or (SVN_LIBRARY_PATH and SVN_HEADER_PATH) environment variable. ")
 
@@ -121,7 +143,9 @@ int main(int argc, const char* arv[]) {
     gcc_out.read()
     return (gcc_out.close() is None)
 
+
 class VersionQuery(object):
+
     def __init__(self, filename):
         self.filename = filename
         f = file(filename, "rU")
@@ -160,7 +184,10 @@ if os.name == "nt":
     # just clobber the functions above we can't use
     # for simplicitly, everything is done in the 'svn' one
     def apr_build_data():
-        return '.', 
+        return '.', []
+
+    def apu_build_data():
+        return '.', []
 
     def svn_build_data():
         # environment vars for the directories we need.
@@ -220,14 +247,19 @@ if os.name == "nt":
             # Since 1.5.0 libsvn_ra_dav-1 was removed
             libs.remove("libsvn_ra_dav-1")
 
-        return includes, lib_dirs, aprlibs+libs,
+        return includes, lib_dirs, [], aprlibs+libs,
 
-(apr_includedir, ) = apr_build_data()
-(svn_includedirs, svn_libdirs, extra_libs) = svn_build_data()
+(apr_includedir, apr_link_flags) = apr_build_data()
+(apu_includedir, apu_link_flags) = apu_build_data()
+(svn_includedirs, svn_libdirs, svn_link_flags, extra_libs) = svn_build_data()
 
 def SvnExtension(name, *args, **kwargs):
-    kwargs["include_dirs"] = [apr_includedir] + svn_includedirs + ["subvertpy"]
+    kwargs["include_dirs"] = [apr_includedir, apu_includedir] + svn_includedirs + ["subvertpy"]
     kwargs["library_dirs"] = svn_libdirs
+    # Note that the apr-util link flags are not included here, as
+    # subvertpy only uses some apr util constants but does not use
+    # the library directly.
+    kwargs["extra_link_args"] = apr_link_flags + svn_link_flags
     if os.name == 'nt':
         # on windows, just ignore and overwrite the libraries!
         kwargs["libraries"] = extra_libs
@@ -288,16 +320,16 @@ def source_path(filename):
     return os.path.join("subvertpy", filename)
 
 
-def subvertpy_modules(basemodule):
+def subvertpy_modules():
     return [
-        SvnExtension("%s.client" % basemodule, [source_path(n) for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")], libraries=["svn_client-1", "svn_subr-1"]), 
-        SvnExtension("%s._ra" % basemodule, [source_path(n) for n in ("_ra.c", "util.c", "editor.c")], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
-        SvnExtension("%s.repos" % basemodule, [source_path(n) for n in ("repos.c", "util.c")], libraries=["svn_repos-1", "svn_subr-1"]),
-        SvnExtension("%s.wc" % basemodule, [source_path(n) for n in ("wc.c", "util.c", "editor.c")], libraries=["svn_wc-1", "svn_subr-1"])
+        SvnExtension("subvertpy.client", [source_path(n) for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")], libraries=["svn_client-1", "svn_subr-1", "svn_ra-1", "svn_wc-1"]), 
+        SvnExtension("subvertpy._ra", [source_path(n) for n in ("_ra.c", "util.c", "editor.c")], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
+        SvnExtension("subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")], libraries=["svn_repos-1", "svn_subr-1", "svn_fs-1"]),
+        SvnExtension("subvertpy.wc", [source_path(n) for n in ("wc.c", "util.c", "editor.c")], libraries=["svn_wc-1", "svn_subr-1"])
         ]
 
 
-subvertpy_version = (0, 7, 3)
+subvertpy_version = (0, 7, 4)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
@@ -315,7 +347,7 @@ if __name__ == "__main__":
           Alternative Python bindings for Subversion, split out from bzr-svn. The goal is to have complete, portable and "Pythonic" Python bindings. 
           """,
           packages=['subvertpy', 'subvertpy.tests'],
-          ext_modules=subvertpy_modules("subvertpy"),
+          ext_modules=subvertpy_modules(),
           scripts=['bin/subvertpy-fast-export'],
           cmdclass = { 'install_lib': install_lib_with_dlls },
           )

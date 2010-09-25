@@ -14,7 +14,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from cStringIO import StringIO
-from unittest import TestCase
 
 from subvertpy.delta import (
     decode_length,
@@ -23,6 +22,7 @@ from subvertpy.delta import (
     send_stream,
     unpack_svndiff0,
     )
+from subvertpy.tests import TestCase
 
 class DeltaTests(TestCase):
 

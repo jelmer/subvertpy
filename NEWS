@@ -1,3 +1,67 @@
+0.7.4   2010-09-25
+
+ FEATURES
+
+  * Add constants ERR_APR_OS_START_EAIERR and ERR_APR_OS_ERRSPACE_SIZE.
+    (Jelmer Vernooij)
+
+  * Implement subvertpy.wc.match_ignore_list. (Jelmer Vernooij)
+
+  * Add subvertpy.ra.RemoteAccess.iter_log(). (Jelmer Vernooij)
+
+  * Add subvertpy.wc.STATUS_* constants. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.api_version(), subvertpy.ra.api_version().
+    (Dan Villiom Podlaski Christiansen, Jelmer Vernooij)
+
+ DEPRECATION
+
+  * Avoid deprecation warnings for svn.client.Client.copy,
+        svn.client.Client.propset, svn.client.Client.propget,
+        svn.client.Client.do_update.
+    (Jelmer Vernooij)
+
+  * Avoid deprecation warnings for svn.ra.RemoteAccess.do_update,
+        svn.ra.RemoteAccess.do_switch, svn.ra.RemoteAccess.do_diff.
+    (Jelmer Vernooij)
+
+  * Avoid deprecation warnings for svn.wc.WorkingCopy.propset,
+        svn.wc.WorkingCopy.walk_entries,
+        svn.wc.WorkingCopy.add, svn.wc.WorkingCopy.close,
+        svn.wc.WorkingCopy.crawl_revisions,
+        svn.wc.WorkingCopy.update_editor,
+        svn.wc.ensure_adm.
+    (Jelmer Vernooij)
+
+ * Add ERR_ENTRY_NOT_FOUND constant. (Jelmer Vernooij)
+
+ * Add subvertpy.ra.RemoteAccess.get_url(). (Dan Villiom Podlaski Christiansen)
+
+ BUG FIXES
+
+  * Fix compilation using Visual C++. 
+    (Ronald Blaschke, #612056)
+
+  * Return an empty dictionary rather than None when there are no revision
+    properties.  (Jelmer Vernooij)
+
+  * Link against all libraries that are somehow called.
+    (Daniel Johnson, Jelmer Vernooij, #615015)
+
+  * Include check for apr util headers. (Jelmer Vernooij, #615017)
+
+  * Fix reference leaks in Auth and SubversionException handling.
+    (Jelmer Vernooij, #436406)
+
+  * Canonicalize paths in subvertpy.ra.RemoteAccess.get_locations(). 
+    (Jelmer Vernooij)
+
+0.7.3.1    2010-07-27
+
+ BUG FIXES
+
+  * Fix compilation against Subversion 1.5. (Jelmer Vernooij)
+
 0.7.3    2010-07-21
 
  BUG FIXES

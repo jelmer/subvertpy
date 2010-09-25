@@ -73,6 +73,10 @@ apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool);
 void PyErr_SetAprStatus(apr_status_t status);
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
 PyObject *PyOS_tmpfile(void);
+PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool);
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+PyObject *pyify_changed_paths2(apr_hash_t *changed_paths2, apr_pool_t *pool);
+#endif
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool);
 
 #if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
@@ -88,14 +92,14 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 	}
 
 #if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 5
-enum svn_depth_t {
+typedef enum svn_depth_t {
 	svn_depth_unknown = -2,
 	svn_depth_exclude = -1,
 	svn_depth_empty = 0,
 	svn_depth_files = 1,
 	svn_depth_immediates = 2,
 	svn_depth_infinity = 3
-};
+} svn_depth_t;
 #endif
 
 typedef struct {
