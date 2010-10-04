@@ -1,3 +1,10 @@
+subvertpy (0.7.4-2) unstable; urgency=low
+
+  * Switch to python-support.
+  * Build python2.5 packages for all architectures. Closes: #593750
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Mon, 04 Oct 2010 19:39:10 +0200
+
 subvertpy (0.7.4-1) unstable; urgency=low
 
   * New upstream release.
