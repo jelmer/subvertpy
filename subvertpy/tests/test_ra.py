@@ -18,7 +18,7 @@
 from cStringIO import StringIO
 
 from subvertpy import (
-    NODE_DIR, NODE_NONE,
+    NODE_DIR, NODE_NONE, NODE_UNKNOWN,
     SubversionException,
     ra,
     )
@@ -142,7 +142,10 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props) = returned[1]
             else:
                 (paths, revnum, props, has_children) = returned[1]
-            self.assertEquals({'/foo': ('A', None, -1, NODE_DIR)}, paths)
+            if ra.api_version() < (1, 6):
+                self.assertEquals({'/foo': ('A', None, -1, NODE_UNKNOWN)}, paths)
+            else:
+                self.assertEquals({'/foo': ('A', None, -1, NODE_DIR)}, paths)
             self.assertEquals(revnum, 1)
             self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
                               set(props.keys()))
