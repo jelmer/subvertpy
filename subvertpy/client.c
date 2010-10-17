@@ -383,7 +383,7 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
     if (temp_pool == NULL)
         return NULL;
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 4
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
     RUN_SVN_WITH_POOL(temp_pool, 
         svn_client_add4(path, recursive?svn_depth_infinity:svn_depth_empty, 
                         force, no_ignore, add_parents, 
