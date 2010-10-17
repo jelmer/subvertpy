@@ -65,6 +65,9 @@ class TestClient(SubversionTestCase):
         f.modify("foo2")
         dc.close()
 
+        if wc.api_version() < (1, 5):
+            return # Skip test
+
         (outf, errf) = self.client.diff(1, 2, self.repos_url, self.repos_url)
         outf.seek(0)
         errf.seek(0)

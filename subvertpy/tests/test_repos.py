@@ -17,7 +17,7 @@
 
 import os
 
-from subvertpy import repos, SubversionException
+from subvertpy import repos, SubversionException, wc
 from subvertpy.tests import TestCaseInTempDir, TestCase
 
 class TestClient(TestCaseInTempDir):
@@ -29,6 +29,8 @@ class TestClient(TestCaseInTempDir):
         repos.create(os.path.join(self.test_dir, "foo"))
 
     def test_capability(self):
+        if wc.api_version() < (1, 5):
+            return # Skip test
         r = repos.create(os.path.join(self.test_dir, "foo"))
         self.assertIsInstance(r.has_capability("mergeinfo"), bool)
 
@@ -77,6 +79,8 @@ class TestClient(TestCaseInTempDir):
 class StreamTests(TestCase):
 
     def test_read(self):
+        if wc.api_version() < (1, 6):
+            return # Skip test
         s = repos.Stream()
         self.assertEquals("", s.read())
         self.assertEquals("", s.read(15))
