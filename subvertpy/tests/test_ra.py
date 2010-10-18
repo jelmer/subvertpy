@@ -18,7 +18,7 @@
 from cStringIO import StringIO
 
 from subvertpy import (
-    NODE_DIR, NODE_NONE,
+    NODE_DIR, NODE_NONE, NODE_UNKNOWN,
     SubversionException,
     ra,
     )
@@ -79,17 +79,19 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertEqual(self.repos_url, self.ra.get_repos_root())
 
     def test_get_url(self):
-        self.assertEqual(self.repos_url, self.ra.get_url())
+        if ra.api_version() < (1, 5):
+            self.assertRaises(NotImplementedError, self.ra.get_url)
+        else:
+            self.assertEqual(self.repos_url, self.ra.get_url())
 
     def test_reparent(self):
         self.ra.reparent(self.repos_url)
 
     def test_has_capability(self):
-        try:
+        if ra.api_version() < (1, 5):
+            self.assertRaises(NotImplementedError, self.ra.has_capability, "FOO")
+        else:
             self.assertRaises(SubversionException, self.ra.has_capability, "FOO")
-        except NotImplementedError:
-            # svn < 1.5
-            return
 
     def test_get_dir(self):
         ret = self.ra.get_dir("", 0)
@@ -142,7 +144,10 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props) = returned[1]
             else:
                 (paths, revnum, props, has_children) = returned[1]
-            self.assertEquals({'/foo': ('A', None, -1, NODE_DIR)}, paths)
+            if ra.api_version() < (1, 6):
+                self.assertEquals({'/foo': ('A', None, -1, NODE_UNKNOWN)}, paths)
+            else:
+                self.assertEquals({'/foo': ('A', None, -1, NODE_DIR)}, paths)
             self.assertEquals(revnum, 1)
             self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
                               set(props.keys()))

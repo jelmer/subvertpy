@@ -1089,6 +1089,7 @@ static PyObject *ra_get_url(PyObject *self, void *closure)
 	if (ra_check_busy(ra))
 		return NULL;
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	temp_pool = Pool(NULL);
 
 	RUN_RA_WITH_POOL(temp_pool, ra,
@@ -1099,6 +1100,11 @@ static PyObject *ra_get_url(PyObject *self, void *closure)
 	apr_pool_destroy(temp_pool);
 
 	return r;
+#else
+	PyErr_SetString(PyExc_NotImplementedError, 
+					"svn_ra_get_session_url only supported for svn >= 1.5");
+	return NULL;
+#endif
 }
 
 static PyObject *ra_do_update(PyObject *self, PyObject *args)
