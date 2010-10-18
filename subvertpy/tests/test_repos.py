@@ -17,8 +17,21 @@
 
 import os
 
-from subvertpy import repos, SubversionException, wc
+from subvertpy import repos, SubversionException
 from subvertpy.tests import TestCaseInTempDir, TestCase
+
+
+class VersionTest(TestCase):
+
+    def test_version_length(self):
+        self.assertEquals(4, len(repos.version()))
+
+    def test_api_version_length(self):
+        self.assertEquals(4, len(repos.api_version()))
+
+    def test_api_version_later_same(self):
+        self.assertTrue(repos.api_version() <= repos.version())
+
 
 class TestClient(TestCaseInTempDir):
 
@@ -30,7 +43,7 @@ class TestClient(TestCaseInTempDir):
 
     def test_capability(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
-        if wc.api_version() < (1, 5):
+        if repos.api_version() < (1, 5):
             self.assertRaises(NotImplementedError, r.has_capability, "mergeinfo")
         else:
             self.assertIsInstance(r.has_capability("mergeinfo"), bool)
@@ -80,7 +93,7 @@ class TestClient(TestCaseInTempDir):
 class StreamTests(TestCase):
 
     def test_read(self):
-        if wc.api_version() < (1, 6):
+        if repos.api_version() < (1, 6):
             self.assertRaises(NotImplementedError, repos.Stream)
         else:
             s = repos.Stream()
