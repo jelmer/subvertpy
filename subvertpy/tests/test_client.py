@@ -66,6 +66,8 @@ class TestClient(SubversionTestCase):
         dc.close()
 
         if wc.api_version() < (1, 5):
+            self.assertRaises(NotImplementedError, self.client.diff, 1, 2,
+                self.repos_url, self.repos_url)
             return # Skip test
 
         (outf, errf) = self.client.diff(1, 2, self.repos_url, self.repos_url)

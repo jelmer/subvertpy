@@ -29,10 +29,11 @@ class TestClient(TestCaseInTempDir):
         repos.create(os.path.join(self.test_dir, "foo"))
 
     def test_capability(self):
-        if wc.api_version() < (1, 5):
-            return # Skip test
         r = repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertIsInstance(r.has_capability("mergeinfo"), bool)
+        if wc.api_version() < (1, 5):
+            self.assertRaises(NotImplementedError, r.has_capability, "mergeinfo")
+        else:
+            self.assertIsInstance(r.has_capability("mergeinfo"), bool)
 
     def test_open(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -80,11 +81,12 @@ class StreamTests(TestCase):
 
     def test_read(self):
         if wc.api_version() < (1, 6):
-            return # Skip test
-        s = repos.Stream()
-        self.assertEquals("", s.read())
-        self.assertEquals("", s.read(15))
-        s.close()
+            self.assertRaises(NotImplementedError, repos.Stream)
+        else:
+            s = repos.Stream()
+            self.assertEquals("", s.read())
+            self.assertEquals("", s.read(15))
+            s.close()
 
     def test_write(self):
         s = repos.Stream()

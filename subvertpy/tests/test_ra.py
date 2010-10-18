@@ -80,16 +80,18 @@ class TestRemoteAccess(SubversionTestCase):
 
     def test_get_url(self):
         if ra.api_version() < (1, 5):
-            return # Skip test
-        self.assertEqual(self.repos_url, self.ra.get_url())
+            self.assertRaises(NotImplementedError, self.ra.get_url)
+        else:
+            self.assertEqual(self.repos_url, self.ra.get_url())
 
     def test_reparent(self):
         self.ra.reparent(self.repos_url)
 
     def test_has_capability(self):
         if ra.api_version() < (1, 5):
-            return # Skip test
-        self.assertRaises(SubversionException, self.ra.has_capability, "FOO")
+            self.assertRaises(NotImplementedError, self.ra.has_capability, "FOO")
+        else:
+            self.assertRaises(SubversionException, self.ra.has_capability, "FOO")
 
     def test_get_dir(self):
         ret = self.ra.get_dir("", 0)
