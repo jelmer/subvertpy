@@ -2217,10 +2217,10 @@ static PyMethodDef ra_methods[] = {
 	{ "do_diff", ra_do_diff, METH_VARARGS, 
 		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse, ignore_ancestry, text_deltas)\n"
 	},
-	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_VARARGS|METH_NOARGS, 
+	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_NOARGS, 
 		"S.get_repos_root() -> url\n"
 		"Return the URL to the root of the repository." },
-	{ "get_url", (PyCFunction)ra_get_url, METH_VARARGS|METH_NOARGS,
+	{ "get_url", (PyCFunction)ra_get_url, METH_NOARGS,
 		"S.get_url() -> url\n"
 		"Return the URL of the repository." },
 	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, 
