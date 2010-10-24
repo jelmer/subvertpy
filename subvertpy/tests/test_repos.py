@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Subversion rpeository library tests."""
+"""Subversion repository library tests."""
 
 import os
 
@@ -93,10 +93,10 @@ class TestClient(TestCaseInTempDir):
 class StreamTests(TestCase):
 
     def test_read(self):
+        s = repos.Stream()
         if repos.api_version() < (1, 6):
-            self.assertRaises(NotImplementedError, repos.Stream)
+            self.assertRaises(NotImplementedError, s.read)
         else:
-            s = repos.Stream()
             self.assertEquals("", s.read())
             self.assertEquals("", s.read(15))
             s.close()
