@@ -4,6 +4,8 @@
 
   * Add --version option to subvertpy-fast-export. (Jelmer Vernooij)
 
+  * Add basic manual page for subvertpy-fast-export. (Jelmer Vernooij)
+
 0.7.5   2010-10-26
 
  BUG FIXES
