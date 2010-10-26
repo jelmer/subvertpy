@@ -33,6 +33,7 @@ class VersionTest(TestCase):
     def test_api_version_later_same(self):
         self.assertTrue(wc.api_version() <= wc.version())
 
+
 class WorkingCopyTests(TestCase):
 
     def test_get_adm_dir(self):
@@ -48,6 +49,9 @@ class WorkingCopyTests(TestCase):
         self.assertTrue(wc.is_wc_prop("svn:wc:foo"))
 
     def test_match_ignore_list(self):
+        if wc.api_version() < (1, 5):
+            self.assertRaises(NotImplementedError, wc.match_ignore_list, "foo", [])
+            return # Skip test
         self.assertTrue(wc.match_ignore_list("foo", [ "f*"]))
         self.assertTrue(wc.match_ignore_list("foo", ["foo"]))
         self.assertFalse(wc.match_ignore_list("foo", []))

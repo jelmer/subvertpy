@@ -750,7 +750,7 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(path, admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse?svn_depth_infinity:svn_depth_files, 
-				depth_compatibility_trick, recurse, use_commit_times, 
+				depth_compatibility_trick, use_commit_times, 
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #else

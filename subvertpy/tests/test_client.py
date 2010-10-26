@@ -25,7 +25,21 @@ from subvertpy import (
     )
 from subvertpy.tests import (
     SubversionTestCase,
+    TestCase,
     )
+
+
+class VersionTest(TestCase):
+
+    def test_version_length(self):
+        self.assertEquals(4, len(client.version()))
+
+    def test_api_version_length(self):
+        self.assertEquals(4, len(client.api_version()))
+
+    def test_api_version_later_same(self):
+        self.assertTrue(client.api_version() <= client.version())
+
 
 class TestClient(SubversionTestCase):
 
@@ -64,6 +78,11 @@ class TestClient(SubversionTestCase):
         f = dc.open_file("foo")
         f.modify("foo2")
         dc.close()
+
+        if client.api_version() < (1, 5):
+            self.assertRaises(NotImplementedError, self.client.diff, 1, 2,
+                self.repos_url, self.repos_url)
+            return # Skip test
 
         (outf, errf) = self.client.diff(1, 2, self.repos_url, self.repos_url)
         outf.seek(0)

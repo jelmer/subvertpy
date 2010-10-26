@@ -378,10 +378,48 @@ static PyObject *repos_hotcopy(RepositoryObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+/**
+ * Get runtime libsvn_wc version information.
+ *
+ * :return: tuple with major, minor, patch version number and tag.
+ */
+static PyObject *version(PyObject *self)
+{
+	const svn_version_t *ver = svn_repos_version();
+	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+						 ver->patch, ver->tag);
+}
+
+SVN_VERSION_DEFINE(svn_api_version);
+
+/**
+ * Get compile-time libsvn_wc version information.
+ *
+ * :return: tuple with major, minor, patch version number and tag.
+ */
+static PyObject *api_version(PyObject *self)
+{
+	const svn_version_t *ver = &svn_api_version;
+	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+						 ver->patch, ver->tag);
+}
+
+
+
+
 static PyMethodDef repos_module_methods[] = {
 	{ "create", (PyCFunction)repos_create, METH_VARARGS, NULL },
 	{ "delete", (PyCFunction)repos_delete, METH_VARARGS, NULL },
 	{ "hotcopy", (PyCFunction)repos_hotcopy, METH_VARARGS, NULL },
+	{ "api_version", (PyCFunction)api_version, METH_NOARGS,
+		"api_version() -> (major, minor, patch, tag)\n\n"
+		"Version of libsvn_client Subvertpy was compiled against."
+	},
+	{ "version", (PyCFunction)version, METH_NOARGS,
+		"version() -> (major, minor, patch, tag)\n\n"
+		"Version of libsvn_wc currently used."
+	},
+
 	{ NULL, }
 };
 
