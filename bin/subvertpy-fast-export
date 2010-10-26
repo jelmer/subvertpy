@@ -186,10 +186,15 @@ if __name__ == '__main__':
                       dest='branches_path', metavar='BRANCHES_PATH')
     parser.add_option('-T', '--tags-path', help='Path in repo to /tags',
                       dest='tags_path', metavar='TAGS_PATH')
-    parser.add_option('-a', '--address', help='Domain to put on users for their mail address', 
+    parser.add_option('-a', '--address', help='Domain to put on users for their mail address',
                       dest='address', metavar='hostname', type='string')
+    parser.add_option("--version", help="Print version and exit", action="store_true")
     (options, args) = parser.parse_args()
 
+    if options.version:
+        import subvertpy
+        print ".".join([str(x) for x in subvertpy.__version__])
+        sys.exit(0)
     if options.trunk_path != None:
         trunk_path = options.trunk_path
     if options.branches_path != None:
