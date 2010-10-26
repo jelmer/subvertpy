@@ -13,12 +13,25 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Subversion rpeository library tests."""
+"""Subversion repository library tests."""
 
 import os
 
 from subvertpy import repos, SubversionException
 from subvertpy.tests import TestCaseInTempDir, TestCase
+
+
+class VersionTest(TestCase):
+
+    def test_version_length(self):
+        self.assertEquals(4, len(repos.version()))
+
+    def test_api_version_length(self):
+        self.assertEquals(4, len(repos.api_version()))
+
+    def test_api_version_later_same(self):
+        self.assertTrue(repos.api_version() <= repos.version())
+
 
 class TestClient(TestCaseInTempDir):
 
@@ -30,7 +43,10 @@ class TestClient(TestCaseInTempDir):
 
     def test_capability(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertIsInstance(r.has_capability("mergeinfo"), bool)
+        if repos.api_version() < (1, 5):
+            self.assertRaises(NotImplementedError, r.has_capability, "mergeinfo")
+        else:
+            self.assertIsInstance(r.has_capability("mergeinfo"), bool)
 
     def test_open(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -78,9 +94,12 @@ class StreamTests(TestCase):
 
     def test_read(self):
         s = repos.Stream()
-        self.assertEquals("", s.read())
-        self.assertEquals("", s.read(15))
-        s.close()
+        if repos.api_version() < (1, 6):
+            self.assertRaises(NotImplementedError, s.read)
+        else:
+            self.assertEquals("", s.read())
+            self.assertEquals("", s.read(15))
+            s.close()
 
     def test_write(self):
         s = repos.Stream()

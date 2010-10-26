@@ -383,7 +383,7 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
     if (temp_pool == NULL)
         return NULL;
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 4
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
     RUN_SVN_WITH_POOL(temp_pool, 
         svn_client_add4(path, recursive?svn_depth_infinity:svn_depth_empty, 
                         force, no_ignore, add_parents, 
@@ -1350,9 +1350,45 @@ static PyObject *get_config(PyObject *self, PyObject *args)
     return (PyObject *)data;
 }
 
+/**
+ * Get runtime libsvn_wc version information.
+ *
+ * :return: tuple with major, minor, patch version number and tag.
+ */
+static PyObject *version(PyObject *self)
+{
+	const svn_version_t *ver = svn_client_version();
+	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+						 ver->patch, ver->tag);
+}
+
+SVN_VERSION_DEFINE(svn_api_version);
+
+/**
+ * Get compile-time libsvn_wc version information.
+ *
+ * :return: tuple with major, minor, patch version number and tag.
+ */
+static PyObject *api_version(PyObject *self)
+{
+	const svn_version_t *ver = &svn_api_version;
+	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+						 ver->patch, ver->tag);
+}
+
+
+
 static PyMethodDef client_mod_methods[] = {
-    { "get_config", get_config, METH_VARARGS, "get_config(config_dir=None) -> config" },
-    { NULL }
+	{ "get_config", get_config, METH_VARARGS, "get_config(config_dir=None) -> config" },
+	{ "api_version", (PyCFunction)api_version, METH_NOARGS,
+		"api_version() -> (major, minor, patch, tag)\n\n"
+		"Version of libsvn_client Subvertpy was compiled against."
+	},
+	{ "version", (PyCFunction)version, METH_NOARGS,
+		"version() -> (major, minor, patch, tag)\n\n"
+		"Version of libsvn_wc currently used."
+	},
+	{ NULL }
 };
 
 void initclient(void)
