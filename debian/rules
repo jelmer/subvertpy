@@ -8,11 +8,18 @@ DEB_INSTALL_EXAMPLES_python-subvertpy = $(wildcard examples/*.py)
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/python-distutils.mk
 
+build/python-subvertpy::
+	$(MAKE) pydoctor
+
+install/python-subvertpy::
+	mkdir -p $(cdbs_python_destdir)/usr/share/doc/python-subvertpy
+	mv apidocs $(cdbs_python_destdir)/usr/share/doc/python-subvertpy/api
+
 DEB_PYTHON_BUILD_ARGS += --executable=/usr/bin/python
 
 ifeq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
 common-build-arch common-build-indep:: debian/stamp-check
-debian/stamp-check: 
+debian/stamp-check:
 	$(MAKE) check
 	touch $@
 

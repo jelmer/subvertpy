@@ -26,6 +26,13 @@ subvertpy (0.7.3-1) unstable; urgency=low
 
  -- Jelmer Vernooij <jelmer@debian.org>  Wed, 21 Jul 2010 13:23:20 +0200
 
+subvertpy (0.7.2-3) UNRELEASED; urgency=low
+
+  * Include API documentation. Closes: #525029
+  * Bump standards version to 3.9.1 (no changes)
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Mon, 06 Dec 2010 19:01:12 +0100
+
 subvertpy (0.7.2-2) unstable; urgency=low
 
   * Cope with type size changes on different platforms. Closes: #567490
