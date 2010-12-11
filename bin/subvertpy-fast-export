@@ -105,7 +105,7 @@ def export_revision(rev, fs):
             pass
         else:
             if change_type == PATH_CHANGE_DELETE:
-                file_changes.append("D %s" % MATCHER.replace(path))
+                file_changes.append("D %s" % MATCHER.replace(path).lstrip("/"))
             else:
                 props = root.proplist(path)
                 marks[i] = MATCHER.replace(path)
@@ -124,7 +124,8 @@ def export_revision(rev, fs):
                         mode = 0644
                     stream_length = root.file_length(path)
                     stream = root.file_content(path)
-                file_changes.append("M %o :%s %s" % (mode, i, marks[i]))
+                file_changes.append("M %o :%s %s" % (
+                    mode, i, marks[i].lstrip("/")))
                 sys.stdout.write("blob\nmark :%s\n" % i)
                 dump_file_blob(root, stream, stream_length)
                 stream.close()
