@@ -25,4 +25,4 @@ clean::
 	rm -f subvertpy/*.so subvertpy/*.o subvertpy/*.pyc
 
 pydoctor:
-	$(PYDOCTOR) -c subvertpy.cfg --make-html
+	$(PYDOCTOR) --introspect-c-modules -c subvertpy.cfg --make-html
