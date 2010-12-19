@@ -1027,7 +1027,7 @@ PyTypeObject Adm_Type = {
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
 	
-	NULL, /*	const char *tp_doc;  Documentation string */
+	"Local working copy", /*	const char *tp_doc;  Documentation string */
 	
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
