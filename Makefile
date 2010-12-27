@@ -1,7 +1,12 @@
 PYTHON = python
 PYDOCTOR = pydoctor
 SETUP = $(PYTHON) setup.py
-TESTRUNNER = $(shell which nosetests)
+ifeq ($(shell $(PYTHON) -c "import sys; print sys.version_info >= (2, 7)"),True)
+TESTRUNNER = unittest
+else
+TESTRUNNER = testtools.run
+endif
+RUNTEST = PYTHONPATH=.:$(PYTHONPATH) $(PYTHON) -m $(TESTRUNNER)
 
 all: build build-inplace
 
@@ -15,14 +20,11 @@ install::
 	$(SETUP) install
 
 check:: build-inplace
-	PYTHONPATH=. $(PYTHON) $(TESTRUNNER) subvertpy
-
-coverage::
-	PYTHONPATH=. $(PYTHON) $(TESTRUNNER) --cover-package=subvertpy --with-coverage --cover-erase --cover-inclusive subvertpy
+	$(RUNTEST) subvertpy.tests.test_suite
 
 clean::
 	$(SETUP) clean
 	rm -f subvertpy/*.so subvertpy/*.o subvertpy/*.pyc
 
 pydoctor:
-	$(PYDOCTOR) -c subvertpy.cfg --make-html
+	$(PYDOCTOR) --introspect-c-modules -c subvertpy.cfg --make-html

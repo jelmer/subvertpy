@@ -404,13 +404,16 @@ static PyObject *api_version(PyObject *self)
 						 ver->patch, ver->tag);
 }
 
-
-
-
 static PyMethodDef repos_module_methods[] = {
-	{ "create", (PyCFunction)repos_create, METH_VARARGS, NULL },
-	{ "delete", (PyCFunction)repos_delete, METH_VARARGS, NULL },
-	{ "hotcopy", (PyCFunction)repos_hotcopy, METH_VARARGS, NULL },
+	{ "create", (PyCFunction)repos_create, METH_VARARGS, 
+		"create(path, config=None, fs_config=None)\n\n"
+		"Create a new repository." },
+	{ "delete", (PyCFunction)repos_delete, METH_VARARGS, 
+		"delete(path)\n\n"
+		"Delete a repository." },
+	{ "hotcopy", (PyCFunction)repos_hotcopy, METH_VARARGS, 
+		"hotcopy(src_path, dest_path, clean_logs=False)\n\n"
+		"Make a hot copy of a repository." },
 	{ "api_version", (PyCFunction)api_version, METH_NOARGS,
 		"api_version() -> (major, minor, patch, tag)\n\n"
 		"Version of libsvn_client Subvertpy was compiled against."
@@ -485,7 +488,7 @@ PyTypeObject Repository_Type = {
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
 	
-	NULL, /*	const char *tp_doc;  Documentation string */
+	"Local repository", /*	const char *tp_doc;  Documentation string */
 	
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */

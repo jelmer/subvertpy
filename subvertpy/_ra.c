@@ -2207,8 +2207,8 @@ static PyMethodDef ra_methods[] = {
 		"S.replay_range(start_rev, end_rev, low_water_mark, cbs, send_deltas=True)\n"
 		"Replay a range of revisions, reporting them to an update editor.\n"
 		"cbs is a two-tuple with two callbacks:\n"
-		"  start_rev_cb(revision, revprops) -> editor\n"
-		"  finish_rev_cb(revision, revprops, editor)\n"
+		"- start_rev_cb(revision, revprops) -> editor\n"
+		"- finish_rev_cb(revision, revprops, editor)\n"
 	},
 	{ "do_switch", ra_do_switch, METH_VARARGS, 
 		"S.do_switch(revision_to_update_to, update_target, recurse, switch_url, update_editor)\n" },
