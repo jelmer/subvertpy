@@ -43,11 +43,12 @@ from subvertpy.ra import (
 
 class TestCase(unittest.TestCase):
 
-    def assertIsInstance(self, obj, kls):
+    def assertIsInstance(self, obj, kls, msg=None):
         """Fail if obj is not an instance of kls"""
         if not isinstance(obj, kls):
-            self.fail("%r is an instance of %s rather than %s" % (
-                obj, obj.__class__, kls))
+            if msg is None: msg = "%r is an instance of %s rather than %s" % (
+                obj, obj.__class__, kls)
+            self.fail(msg)
 
     def assertIs(self, left, right, message=None):
         if not (left is right):

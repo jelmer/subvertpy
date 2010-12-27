@@ -38,8 +38,19 @@ MAX_ENCODED_INT_LEN = 10
 
 DELTA_WINDOW_SIZE = 102400
 
-def apply_txdelta_window(sbuf, window):
-    (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
+def apply_txdelta_window(sbuf,
+            (sview_offset, sview_len, tview_len, src_ops, ops, new_data)):
+    """Apply a txdelta window to a buffer.
+
+    :param sbuf: Source buffer (as bytestring)
+    :param sview_offset: Offset of the source view
+    :param sview_len: Length of the source view
+    :param tview_len: Target view length
+    :param src_ops: Operations to apply to sview
+    :param ops: Ops to apply
+    :param new_data: Buffer with possible new data
+    :return: Target buffer
+    """
     sview = sbuf[sview_offset:sview_offset+sview_len]
     tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
     if len(tview) != tview_len:
@@ -202,6 +213,11 @@ def unpack_svndiff_instruction(text):
 SVNDIFF0_HEADER = "SVN\0"
 
 def pack_svndiff0_window(window):
+    """Pack an individual window using svndiff0.
+
+    :param window: Window to pack
+    :return: Packed diff (as bytestring)
+    """
     (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
     ret = [encode_length(sview_offset) + \
            encode_length(sview_len) + \
