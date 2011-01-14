@@ -935,11 +935,11 @@ class SVNServer(SVNConnection):
         else:
             args = [dirent["name"], dirent["kind"], dirent["size"],
                           dirent["has-props"], dirent["created-rev"]]
-            if dirent.has_key("created-date"):
+            if "created-date" in dirent:
                 args.append([dirent["created-date"]])
             else:
                 args.append([])
-            if dirent.has_key("last-author"):
+            if "last-author" in dirent:
                 args.append([dirent["last-author"]])
             else:
                 args.append([])
