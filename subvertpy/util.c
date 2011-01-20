@@ -43,7 +43,6 @@ void PyErr_SetAprStatus(apr_status_t status)
 		apr_strerror(status, errmsg, sizeof(errmsg)));
 }
 
-
 apr_pool_t *Pool(apr_pool_t *parent)
 {
 	apr_status_t status;
@@ -68,6 +67,26 @@ PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void)
 
 	excobj = PyObject_GetAttrString(coremod, "SubversionException");
 	Py_DECREF(coremod);
+
+	if (excobj == NULL) {
+		PyErr_BadInternalCall();
+		return NULL;
+	}
+
+	return (PyTypeObject *)excobj;
+}
+
+PyTypeObject *PyErr_GetGaiExceptionTypeObject(void)
+{
+	PyObject *socketmod, *excobj;
+	socketmod = PyImport_ImportModule("socket");
+
+	if (socketmod == NULL) {
+		return NULL;
+	}
+
+	excobj = PyObject_GetAttrString(socketmod, "gaierror");
+	Py_DECREF(socketmod);
 
 	if (excobj == NULL) {
 		PyErr_BadInternalCall();
@@ -124,10 +143,27 @@ void PyErr_SetSubversionException(svn_error_t *error)
 	}
 
 	if (error->apr_err >= APR_OS_START_SYSERR && 
-		error->apr_err < APR_OS_START_SYSERR + 1000) {
+		error->apr_err < APR_OS_START_SYSERR + APR_OS_ERRSPACE_SIZE) {
 		PyObject *excval = Py_BuildValue("(iz)", error->apr_err - APR_OS_START_SYSERR, error->message);
 		PyErr_SetObject(PyExc_OSError, excval);
 		Py_DECREF(excval);
+		return;
+	}
+
+	if (error->apr_err >= APR_OS_START_EAIERR &&
+		error->apr_err < APR_OS_START_EAIERR + APR_OS_ERRSPACE_SIZE) {
+		excobj = (PyObject *)PyErr_GetGaiExceptionTypeObject();
+		if (excobj == NULL)
+			return;
+
+		excval = Py_BuildValue("(is)", error->apr_err - APR_OS_START_EAIERR,
+							   error->message);
+		if (excval == NULL)
+			return;
+
+		PyErr_SetObject(excobj, excval);
+		Py_DECREF(excval);
+		Py_DECREF(excobj);
 		return;
 	}
 
