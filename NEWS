@@ -6,6 +6,9 @@
 
   * Add basic manual page for subvertpy-fast-export. (Jelmer Vernooij)
 
+  * Automatically convert the appropriate errors to socket.gaierror.
+    (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
