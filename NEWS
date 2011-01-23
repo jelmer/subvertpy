@@ -16,6 +16,10 @@
     Instead, subvertpy will raise socket.gaierror.
     (Jelmer Vernooij)
 
+ BUG FIXES
+
+  * Fix handling of DST in time_from_cstring. (Max Bowsher, #656226)
+
 0.7.5   2010-10-26
 
  BUG FIXES

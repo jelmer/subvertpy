@@ -18,7 +18,7 @@
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 __docformat__ = "restructuredText"
 
-import bisect, time, urlparse
+import bisect, calendar, time, urlparse
 
 
 class InvalidExternalsDescription(Exception):
@@ -61,7 +61,7 @@ def time_from_cstring(text):
     assert usecstr[-1] == "Z"
     tm_usec = int(usecstr[:-1])
     tm = time.strptime(basestr, "%Y-%m-%dT%H:%M:%S")
-    return (long(time.mktime((tm[0], tm[1], tm[2], tm[3], tm[4], tm[5], tm[6], tm[7], -1)) - time.timezone) * 1000000 + tm_usec)
+    return (long(calendar.timegm(tm)) * 1000000 + tm_usec)
 
 
 def parse_externals_description(base_url, val):
