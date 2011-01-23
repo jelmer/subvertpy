@@ -1,8 +1,9 @@
 subvertpy (0.7.5+bzr2275-1) UNRELEASED; urgency=low
 
   * New upstream snapshot.
+  * Make dependency on python-testtools versioned.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Tue, 28 Dec 2010 03:46:45 +0100
+ -- Jelmer Vernooij <jelmer@debian.org>  Sat, 22 Jan 2011 22:51:06 -0800
 
 subvertpy (0.7.5-1) unstable; urgency=low
 
