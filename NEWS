@@ -29,6 +29,8 @@
 
   * Add subvertpy.wc.WorkingCopy.relocate. (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.crop_tree. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated

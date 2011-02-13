@@ -1244,6 +1244,38 @@ static PyObject *relocate(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *crop_tree(PyObject *self, PyObject *args)
+{
+	char *target;
+	svn_depth_t depth;
+	PyObject *notify, *cancel;
+	apr_pool_t *temp_pool;
+	AdmObject *admobj = (AdmObject *)self;
+
+	if (!PyArg_ParseTuple(args, "si|OO", &target, &depth, &notify, &cancel))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crop_tree(admobj->adm, 
+		target, depth, py_wc_notify_func, notify,
+		py_cancel_func, cancel, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+#else
+	PyErr_SetString(PyExc_NotImplementedError, 
+					"crop_tree only available on subversion < 1.6");
+	return NULL;
+#endif
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1282,6 +1314,8 @@ static PyMethodDef adm_methods[] = {
 		"S.remove_from_revision_control(name, destroy_wf=False, instant_error=False, cancel_func=None)" },
 	{ "relocate", (PyCFunction)relocate, METH_VARARGS,
 		"S.relocate(path, from, to, recurse=TRUE, validator=None)" },
+	{ "crop_tree", (PyCFunction)crop_tree, METH_VARARGS,
+		"S.crop_tree(target, depth, notify=None, cancel=None)" },
 	{ NULL, }
 };
 
