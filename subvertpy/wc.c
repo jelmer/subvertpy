@@ -860,6 +860,27 @@ static bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_arra
 	return true;
 }
 
+static PyObject *adm_has_binary_prop(PyObject *self, PyObject *args)
+{
+	char *path;
+	svn_boolean_t binary;
+	AdmObject *admobj = (AdmObject *)self;
+	apr_pool_t *temp_pool;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_has_binary_prop(&binary, path, admobj->adm, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	return PyBool_FromLong(binary);
+}
+
 static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	char *path, *rev_date = NULL, *rev_author = NULL;
@@ -989,6 +1010,7 @@ static PyMethodDef adm_methods[] = {
 		"s.entry(path, show_hidden=False) -> entry" },
 	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, "S.process_committed(path, recurse, new_revnum, rev_date, rev_author, wcprop_changes=None, remove_lock=False, digest=None)" },
 	{ "remove_lock", (PyCFunction)adm_remove_lock, METH_VARARGS, "S.remove_lock(path)" }, 
+	{ "has_binary_prop", (PyCFunction)adm_has_binary_prop, METH_VARARGS, "S.has_binary_prop(path)" },
 	{ NULL, }
 };
 

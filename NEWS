@@ -11,6 +11,8 @@
 
   * Add subvertpy.wc.set_adm_dir(). (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.has_binary_prop. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated

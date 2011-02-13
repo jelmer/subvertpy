@@ -15,10 +15,13 @@
 
 """Subversion ra library tests."""
 
+import os
+
 from subvertpy import (
     wc,
     )
 from subvertpy.tests import (
+    SubversionTestCase,
     TestCase,
     )
 
@@ -64,3 +67,15 @@ class WorkingCopyTests(TestCase):
         self.assertTrue(wc.match_ignore_list("foo", ["foo"]))
         self.assertFalse(wc.match_ignore_list("foo", []))
         self.assertFalse(wc.match_ignore_list("foo", ["bar"]))
+
+
+class AdmTests(SubversionTestCase):
+
+    def test_has_binary_prop(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "\x00\x01"})
+        self.client_add('checkout/bar')
+        adm = wc.WorkingCopy(None, "checkout")
+        path = os.path.join(self.test_dir, "checkout/bar")
+        self.assertFalse(adm.has_binary_prop(path))
+        adm.close()
