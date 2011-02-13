@@ -24,6 +24,10 @@
 
   * Fix handling of DST in time_from_cstring. (Max Bowsher, #656226)
 
+  * Re-using a WorkingCopy object after calling close() on it
+    now raises an exception rather than trigger a segfault.
+    (Jelmer Vernooij)
+
 0.7.5   2010-10-26
 
  BUG FIXES

@@ -368,6 +368,12 @@ typedef struct {
 	apr_pool_t *pool;
 } AdmObject;
 
+#define ADM_CHECK_CLOSED(adm_obj) \
+	if (adm_obj->adm == NULL) { \
+		PyErr_SetString(PyExc_RuntimeError, "WorkingCopy instance already closed"); \
+		return NULL; \
+	}
+
 static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 {
 	PyObject *associated;
@@ -412,12 +418,14 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *adm_access_path(PyObject *self)
 {
 	AdmObject *admobj = (AdmObject *)self;
+	ADM_CHECK_CLOSED(admobj);
 	return PyString_FromString(svn_wc_adm_access_path(admobj->adm));
 }
 
 static PyObject *adm_locked(PyObject *self)
 {
 	AdmObject *admobj = (AdmObject *)self;
+	ADM_CHECK_CLOSED(admobj);
 	return PyBool_FromLong(svn_wc_adm_locked(admobj->adm));
 }
 
@@ -431,6 +439,8 @@ static PyObject *adm_prop_get(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "ss", &name, &path))
 		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -459,6 +469,8 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "ss#s|bO", &name, &value, &vallen, &path, &skip_checks,
 						  &notify_func))
 		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -492,6 +504,8 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "|b", &show_hidden))
 		return NULL;
 
+	ADM_CHECK_CLOSED(admobj);
+
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
@@ -523,6 +537,8 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "sO|bOi", &path, &callbacks, &show_hidden, &cancel_func,
 						  &depth))
 		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -560,6 +576,8 @@ static PyObject *adm_entry(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|b", &path, &show_hidden))
 		return NULL;
 
+	ADM_CHECK_CLOSED(admobj);
+
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
@@ -582,6 +600,8 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -619,11 +639,13 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 	apr_pool_t *temp_pool;
 	svn_depth_t depth = svn_depth_infinity;
 
-	temp_pool = Pool(NULL);
-	if (temp_pool == NULL)
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zlOOi", kwnames, &path, &copyfrom_url, &copyfrom_rev, &cancel_func, &notify_func, &depth))
 		return NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zlOOi", kwnames, &path, &copyfrom_url, &copyfrom_rev, &cancel_func, &notify_func, &depth))
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
 		return NULL;
 
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
@@ -663,6 +685,8 @@ static PyObject *adm_copy(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "ss|OO", &src, &dst, &cancel_func, &notify_func))
 		return NULL;
 
+	ADM_CHECK_CLOSED(admobj);
+
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
@@ -689,6 +713,8 @@ static PyObject *adm_delete(PyObject *self, PyObject *args, PyObject *kwargs)
 									 &path, &cancel_func, &notify_func, 
 									 &keep_local))
 		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -733,6 +759,8 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO|bbbObb", kwnames, &path, &reporter, &restore_files, &recurse, &use_commit_times,
 						  &notify_func, &depth_compatibility_trick, &honor_depth_exclude))
 		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -783,6 +811,8 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|bbOOzbb", &target, &use_commit_times, &recurse, &notify_func, &cancel_func, &diff3_cmd,
 						  &depth_is_sticky, &allow_unver_obstructions))
 		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
 
 	pool = Pool(NULL);
 	if (pool == NULL)
@@ -870,6 +900,8 @@ static PyObject *adm_has_binary_prop(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
+	ADM_CHECK_CLOSED(admobj);
+
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
@@ -900,6 +932,8 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 									 &rev_author, &py_wcprop_changes, 
 									 &remove_lock, &digest, &remove_changelist))
 		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -959,6 +993,9 @@ static void adm_dealloc(PyObject *self)
 static PyObject *adm_repr(PyObject *self)
 {
 	AdmObject *admobj = (AdmObject *)self;
+
+	ADM_CHECK_CLOSED(admobj);
+
 	return PyString_FromFormat("<wc.WorkingCopy at '%s'>", 
 							   svn_wc_adm_access_path(admobj->adm));
 }
@@ -972,10 +1009,11 @@ static PyObject *adm_remove_lock(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
+	ADM_CHECK_CLOSED(admobj);
+
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-
 
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_remove_lock(path, admobj->adm, temp_pool))
 
