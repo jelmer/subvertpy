@@ -9,6 +9,8 @@
   * Automatically convert the appropriate errors to socket.gaierror.
     (Jelmer Vernooij)
 
+  * Add subvertpy.wc.set_adm_dir(). (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated

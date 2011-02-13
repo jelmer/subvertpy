@@ -1157,6 +1157,22 @@ static PyObject *get_adm_dir(PyObject *self)
 	return ret;
 }
 
+static PyObject *set_adm_dir(PyObject *self, PyObject *args)
+{
+	apr_pool_t *temp_pool;
+	char *name;
+
+	if (!PyArg_ParseTuple(args, "s", &name))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_set_adm_dir(name, temp_pool));
+	apr_pool_destroy(temp_pool);
+	Py_RETURN_NONE;
+}
+
 static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 {
 	apr_pool_t *pool;
@@ -1348,6 +1364,8 @@ static PyMethodDef wc_methods[] = {
 		"ensure_adm(path, uuid, url, repos=None, rev=None)" },
 	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS, 
 		"get_adm_dir() -> name" },
+	{ "set_adm_dir", (PyCFunction)set_adm_dir, METH_VARARGS,
+		"set_adm_dir(name)" },
 	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS, 
 		"get_pristine_copy_path(path) -> path" },
 	{ "get_pristine_contents", get_pristine_contents, METH_VARARGS,

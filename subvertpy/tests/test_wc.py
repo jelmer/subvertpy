@@ -39,6 +39,14 @@ class WorkingCopyTests(TestCase):
     def test_get_adm_dir(self):
         self.assertEquals(".svn", wc.get_adm_dir())
 
+    def test_set_adm_dir(self):
+        old_dir_name = wc.get_adm_dir()
+        try:
+            wc.set_adm_dir("_svn")
+            self.assertEquals("_svn", wc.get_adm_dir())
+        finally:
+            wc.set_adm_dir(old_dir_name)
+
     def test_is_normal_prop(self):
         self.assertTrue(wc.is_normal_prop("svn:ignore"))
 
