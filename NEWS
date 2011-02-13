@@ -13,6 +13,8 @@
 
   * Add subvertpy.wc.WorkingCopy.has_binary_prop. (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.get_ancestry. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated

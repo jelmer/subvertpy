@@ -79,3 +79,12 @@ class AdmTests(SubversionTestCase):
         path = os.path.join(self.test_dir, "checkout/bar")
         self.assertFalse(adm.has_binary_prop(path))
         adm.close()
+
+    def test_get_ancestry(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "\x00\x01"})
+        self.client_add('checkout/bar')
+        adm = wc.WorkingCopy(None, "checkout")
+        path = os.path.join(self.test_dir, "checkout/bar")
+        self.assertEquals(("%s/bar" % repos_url, 0), adm.get_ancestry("checkout/bar"))
+        adm.close()
