@@ -1099,6 +1099,15 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
 
 	new_contents = new_py_stream(temp_pool, py_new_contents);
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR < 6
+	if (cancel_func != Py_None) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"cancel not support for svn < 1.6");
+		return NULL;
+	}
+#endif
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add_repos_file3(dst_path, admobj->adm,
 						   new_base_contents,
 						   new_contents,
@@ -1107,6 +1116,11 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
 						   copyfrom_url, copyfrom_rev,
 						   py_cancel_func, cancel_func,
 						   py_wc_notify_func, notify, temp_pool));
+#else
+	PyErr_SetString(PyExc_NotImplementedError,
+					"add_repos_file3 not supported on svn < 1.6");
+	apr_pool_destroy(temp_pool);
+#endif
 
 	apr_pool_destroy(temp_pool);
 
