@@ -102,3 +102,12 @@ class AdmTests(SubversionTestCase):
         adm.add_repos_file("checkout/bar", StringIO("oldbasecontents"), StringIO("oldcontents"), {}, {})
         adm.add_repos_file("checkout/bar", StringIO("basecontents"), StringIO("contents"), {}, {})
         self.assertEquals("basecontents", wc.get_pristine_contents("checkout/bar").read())
+
+    def test_mark_missing_deleted(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "\x00\x01"})
+        self.client_add('checkout/bar')
+        adm = wc.WorkingCopy(None, "checkout", True)
+        os.remove("checkout/bar")
+        adm.mark_missing_deleted("checkout/bar")
+        self.assertFalse(os.path.exists("checkout/bar"))
