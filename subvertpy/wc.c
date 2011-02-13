@@ -1173,7 +1173,75 @@ static PyObject *remove_from_revision_control(PyObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
+}
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+static svn_error_t *wc_validator3(void *baton, const char *uuid, const char *url, const char *root_url, apr_pool_t *pool)
+{
+	PyObject *py_validator = baton, *ret;
+
+	if (py_validator == Py_None) {
+		return NULL;
+	}
+
+	ret = PyObject_CallFunction(py_validator, "sss", uuid, url, root_url);
+	if (ret == NULL) {
+		return py_svn_error();
+	}
+
+	Py_DECREF(ret);
+
+	return NULL;
+}
+
+#else
+
+static svn_error_t *wc_validator2(void *baton, const char *uuid, const char *url, apr_pool_t *pool)
+{
+	PyObject *py_validator = baton, *ret;
+
+	if (py_validator == Py_None) {
+		return NULL;
+	}
+
+	ret = PyObject_CallFunction(py_validator, "ssO", uuid, url, Py_None);
+	if (ret == NULL) {
+		return py_svn_error();
+	}
+
+	Py_DECREF(ret);
+
+	return NULL;
+}
+
+#endif
+
+static PyObject *relocate(PyObject *self, PyObject *args)
+{
+	char *path, *from, *to;
+	AdmObject *admobj = (AdmObject *)self;
+	apr_pool_t *temp_pool;
+	svn_boolean_t recurse = TRUE;
+	PyObject *py_validator = Py_None;
+
+	if (!PyArg_ParseTuple(args, "sss|bO", &path, &from, &to, &recurse, &py_validator))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_relocate3(path, admobj->adm, from, to, recurse, wc_validator3, py_validator, temp_pool));
+#else
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_relocate2(path, admobj->adm, from, to, recurse, wc_validator2, py_validator, temp_pool));
+#endif
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
 }
 
 static PyMethodDef adm_methods[] = { 
@@ -1212,6 +1280,8 @@ static PyMethodDef adm_methods[] = {
 		"S.mark_missing_deleted(path)" },
 	{ "remove_from_revision_control", (PyCFunction)remove_from_revision_control, METH_VARARGS,
 		"S.remove_from_revision_control(name, destroy_wf=False, instant_error=False, cancel_func=None)" },
+	{ "relocate", (PyCFunction)relocate, METH_VARARGS,
+		"S.relocate(path, from, to, recurse=TRUE, validator=None)" },
 	{ NULL, }
 };
 

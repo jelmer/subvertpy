@@ -120,3 +120,7 @@ class AdmTests(SubversionTestCase):
         adm.remove_from_revision_control("bar")
         self.assertTrue(os.path.exists("checkout/bar"))
 
+    def test_relocate(self):
+        repos_url = self.make_client("repos", "checkout")
+        adm = wc.WorkingCopy(None, "checkout", True)
+        adm.relocate("checkout", "file://", "http://")
