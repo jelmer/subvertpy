@@ -1276,6 +1276,45 @@ static PyObject *crop_tree(PyObject *self, PyObject *args)
 #endif
 }
 
+static PyObject *translated_stream(PyObject *self, PyObject *args)
+{
+	char *path, *versioned_file;
+	StreamObject *ret;
+	svn_stream_t *stream;
+	AdmObject *admobj = (AdmObject *)self;
+	apr_pool_t *stream_pool;
+	int flags;
+
+	if (!PyArg_ParseTuple(args, "ssi", &path, &versioned_file, &flags))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	stream_pool = Pool(NULL);
+	if (stream_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(stream_pool,
+		svn_wc_translated_stream(&stream, path, versioned_file, admobj->adm, 
+			flags, stream_pool));
+
+	ret = PyObject_New(StreamObject, &Stream_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->pool = stream_pool;
+	ret->closed = FALSE;
+	ret->stream = stream;
+
+	return (PyObject *)ret;
+#else
+	PyErr_SetString(PyExc_NotImplementedError,
+		"translated_stream() is only available on Subversion >= 1.5");
+	return NULL;
+#endif
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1316,6 +1355,8 @@ static PyMethodDef adm_methods[] = {
 		"S.relocate(path, from, to, recurse=TRUE, validator=None)" },
 	{ "crop_tree", (PyCFunction)crop_tree, METH_VARARGS,
 		"S.crop_tree(target, depth, notify=None, cancel=None)" },
+	{ "translated_stream", (PyCFunction)translated_stream, METH_VARARGS,
+		"S.translated_stream(path, versioned_file, flags)" },
 	{ NULL, }
 };
 
@@ -1788,6 +1829,13 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "STATUS_OBSTRUCTED", svn_wc_status_obstructed);
 	PyModule_AddIntConstant(mod, "STATUS_EXTERNAL", svn_wc_status_external);
 	PyModule_AddIntConstant(mod, "STATUS_INCOMPLETE", svn_wc_status_incomplete);
+
+	PyModule_AddIntConstant(mod, "TRANSLATE_FROM_NF", SVN_WC_TRANSLATE_FROM_NF);
+	PyModule_AddIntConstant(mod, "TRANSLATE_TO_NF", SVN_WC_TRANSLATE_TO_NF);
+	PyModule_AddIntConstant(mod, "TRANSLATE_FORCE_EOL_REPAIR", SVN_WC_TRANSLATE_FORCE_EOL_REPAIR);
+	PyModule_AddIntConstant(mod, "TRANSLATE_NO_OUTPUT_CLEANUP", SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP);
+	PyModule_AddIntConstant(mod, "TRANSLATE_FORCE_COPY", SVN_WC_TRANSLATE_FORCE_COPY);
+	PyModule_AddIntConstant(mod, "TRANSLATE_USE_GLOBAL_TMP", SVN_WC_TRANSLATE_USE_GLOBAL_TMP);
 
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);

@@ -31,6 +31,8 @@
 
   * Add subvertpy.wc.WorkingCopy.crop_tree. (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.translated_stream. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
