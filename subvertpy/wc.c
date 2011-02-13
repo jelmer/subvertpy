@@ -1046,6 +1046,26 @@ static PyObject *get_ancestry(PyObject *self, PyObject *args)
 	return Py_BuildValue("(si)", url, rev);
 }
 
+static PyObject *maybe_set_repos_root(PyObject *self, PyObject *args)
+{
+	char *path, *repos;
+	apr_pool_t *temp_pool;
+	AdmObject *admobj = (AdmObject *)self;
+
+	if (!PyArg_ParseTuple(args, "ss", &path, &repos))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_maybe_set_repos_root(admobj->adm, path, repos, temp_pool));
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1075,6 +1095,7 @@ static PyMethodDef adm_methods[] = {
 	{ "has_binary_prop", (PyCFunction)adm_has_binary_prop, METH_VARARGS, "S.has_binary_prop(path)" },
 	{ "get_ancestry", (PyCFunction)get_ancestry, METH_VARARGS,
 		"S.get_ancestry(path) -> (url, rev)" },
+	{ "maybe_set_repos_root", (PyCFunction)maybe_set_repos_root, METH_VARARGS, "S.maybe_set_repos_root(path, repos)" },
 	{ NULL, }
 };
 

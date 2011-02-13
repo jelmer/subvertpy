@@ -15,6 +15,9 @@
 
   * Add subvertpy.wc.WorkingCopy.get_ancestry. (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.maybe_set_repos_root.
+    (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated

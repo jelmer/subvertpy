@@ -88,3 +88,9 @@ class AdmTests(SubversionTestCase):
         path = os.path.join(self.test_dir, "checkout/bar")
         self.assertEquals(("%s/bar" % repos_url, 0), adm.get_ancestry("checkout/bar"))
         adm.close()
+
+    def test_maybe_set_repos_root(self):
+        repos_url = self.make_client("repos", "checkout")
+        adm = wc.WorkingCopy(None, "checkout")
+        adm.maybe_set_repos_root(os.path.join(self.test_dir, "checkout"), repos_url)
+        adm.close()
