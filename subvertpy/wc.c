@@ -1149,6 +1149,33 @@ static PyObject *mark_missing_deleted(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *remove_from_revision_control(PyObject *self, PyObject *args)
+{
+	char *name;
+	svn_boolean_t destroy_wf = FALSE, instant_error = FALSE;
+	AdmObject *admobj = (AdmObject *)self;
+	PyObject *cancel_func = Py_None;
+	apr_pool_t *temp_pool;
+
+	if (!PyArg_ParseTuple(args, "s|bbO", &name, &destroy_wf, &instant_error, &cancel_func))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_wc_remove_from_revision_control(admobj->adm, name,
+			destroy_wf, instant_error, py_cancel_func, cancel_func, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1183,6 +1210,8 @@ static PyMethodDef adm_methods[] = {
 		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url, copyfrom_rev, cancel_func, notify)" },
 	{ "mark_missing_deleted", (PyCFunction)mark_missing_deleted, METH_VARARGS,
 		"S.mark_missing_deleted(path)" },
+	{ "remove_from_revision_control", (PyCFunction)remove_from_revision_control, METH_VARARGS,
+		"S.remove_from_revision_control(name, destroy_wf=False, instant_error=False, cancel_func=None)" },
 	{ NULL, }
 };
 

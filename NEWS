@@ -24,6 +24,9 @@
   * Add subvertpy.wc.WorkingCopy.mark_missing_deleted.
     (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.remove_from_revision_control.
+    (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
