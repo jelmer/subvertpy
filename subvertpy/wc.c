@@ -1066,6 +1066,53 @@ static PyObject *maybe_set_repos_root(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	char *kwnames[] = { "dst_path", "new_base_contents", "new_contents",
+		"new_base_props", "new_props", "copyfrom_url", "copyfrom_rev",
+		"cancel_func", "notify", NULL };
+	AdmObject *admobj = (AdmObject *)self;
+	apr_pool_t *temp_pool;
+	char *dst_path, *copyfrom_url = NULL;
+	svn_revnum_t copyfrom_rev = -1;
+	PyObject *py_new_base_contents, *py_new_contents, *py_new_base_props,
+			 *py_new_props, *cancel_func = Py_None, *notify = Py_None;
+	svn_stream_t *new_contents, *new_base_contents;
+	apr_hash_t *new_props, *new_base_props;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOOOO|ziOO", kwnames,
+			&dst_path, &py_new_base_contents, &py_new_contents, &py_new_base_props, 
+			&py_new_props, &copyfrom_url, &copyfrom_rev, &cancel_func, &notify))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	new_base_props = prop_dict_to_hash(temp_pool, py_new_base_props);
+
+	new_props = prop_dict_to_hash(temp_pool, py_new_props);
+
+	new_base_contents = new_py_stream(temp_pool, py_new_base_contents);
+
+	new_contents = new_py_stream(temp_pool, py_new_contents);
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add_repos_file3(dst_path, admobj->adm,
+						   new_base_contents,
+						   new_contents,
+						   new_base_props,
+						   new_props,
+						   copyfrom_url, copyfrom_rev,
+						   py_cancel_func, cancel_func,
+						   py_wc_notify_func, notify, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1096,6 +1143,8 @@ static PyMethodDef adm_methods[] = {
 	{ "get_ancestry", (PyCFunction)get_ancestry, METH_VARARGS,
 		"S.get_ancestry(path) -> (url, rev)" },
 	{ "maybe_set_repos_root", (PyCFunction)maybe_set_repos_root, METH_VARARGS, "S.maybe_set_repos_root(path, repos)" },
+	{ "add_repos_file", (PyCFunction)add_repos_file, METH_KEYWORDS, 
+		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url, copyfrom_rev, cancel_func, notify)" },
 	{ NULL, }
 };
 

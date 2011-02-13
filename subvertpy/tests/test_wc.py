@@ -15,6 +15,7 @@
 
 """Subversion ra library tests."""
 
+from StringIO import StringIO
 import os
 
 from subvertpy import (
@@ -94,3 +95,10 @@ class AdmTests(SubversionTestCase):
         adm = wc.WorkingCopy(None, "checkout")
         adm.maybe_set_repos_root(os.path.join(self.test_dir, "checkout"), repos_url)
         adm.close()
+
+    def test_add_repos_file(self):
+        repos_url = self.make_client("repos", "checkout")
+        adm = wc.WorkingCopy(None, "checkout", True)
+        adm.add_repos_file("checkout/bar", StringIO("oldbasecontents"), StringIO("oldcontents"), {}, {})
+        adm.add_repos_file("checkout/bar", StringIO("basecontents"), StringIO("contents"), {}, {})
+        self.assertEquals("basecontents", wc.get_pristine_contents("checkout/bar").read())
