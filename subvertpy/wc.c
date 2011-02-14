@@ -1689,7 +1689,8 @@ static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	RUN_SVN_WITH_POOL(pool, 
-					  svn_wc_ensure_adm3(path, uuid, url, repos, rev, depth, pool));
+					  svn_wc_ensure_adm3(svn_path_canonicalize(path, pool),
+										 uuid, url, repos, rev, depth, pool));
 #else
 	if (depth != svn_depth_infinity) {
 		PyErr_SetString(PyExc_NotImplementedError, 
@@ -1698,7 +1699,8 @@ static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	RUN_SVN_WITH_POOL(pool, 
-					  svn_wc_ensure_adm2(path, uuid, url, repos, rev, pool));
+					  svn_wc_ensure_adm2(svn_path_canonicalize(path, pool),
+										 uuid, url, repos, rev, pool));
 #endif
 	apr_pool_destroy(pool);
 	Py_RETURN_NONE;
