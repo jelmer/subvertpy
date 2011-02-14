@@ -33,9 +33,8 @@
 #define REPORTER_T svn_ra_reporter2_t
 #endif
 
-extern PyTypeObject Entry_Type;
-extern PyTypeObject Adm_Type;
-extern PyTypeObject Stream_Type;
+staticforward PyTypeObject Entry_Type;
+staticforward PyTypeObject Adm_Type;
 
 static PyObject *py_entry(const svn_wc_entry_t *entry);
 
@@ -282,7 +281,7 @@ static PyMemberDef entry_members[] = {
 	{ NULL, }
 };
 
-PyTypeObject Entry_Type = {
+static PyTypeObject Entry_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"wc.Entry", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EntryObject), 
@@ -1380,7 +1379,7 @@ static PyMethodDef adm_methods[] = {
 	{ "get_prop_diffs", adm_get_prop_diffs, METH_VARARGS, 
 		"S.get_prop_diffs(path) -> (propchanges, originalprops)" },
 	{ "add", (PyCFunction)adm_add, METH_VARARGS|METH_KEYWORDS, "S.add(path, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None, notify_func=None)" },
-	{ "copy", adm_copy, METH_VARARGS, "S.copy(src_path, dest_path, cancel_func=None, notify_func=None" },
+	{ "copy", adm_copy, METH_VARARGS, "S.copy(src_path, dest_path, cancel_func=None, notify_func=None)" },
 	{ "delete", (PyCFunction)adm_delete, METH_VARARGS|METH_KEYWORDS, "S.delete(path, cancel_func=None, notify_func=None, keep_local=False)" },
 	{ "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS, 
 		"S.crawl_revisions(path, reporter, restore_files=True, recurse=True, use_commit_times=True, notify_func=None) -> None" },
@@ -1391,14 +1390,14 @@ static PyMethodDef adm_methods[] = {
 		"s.entry(path, show_hidden=False) -> entry" },
 	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, "S.process_committed(path, recurse, new_revnum, rev_date, rev_author, wcprop_changes=None, remove_lock=False, digest=None)" },
 	{ "remove_lock", (PyCFunction)adm_remove_lock, METH_VARARGS, "S.remove_lock(path)" }, 
-	{ "has_binary_prop", (PyCFunction)adm_has_binary_prop, METH_VARARGS, "S.has_binary_prop(path)" },
+	{ "has_binary_prop", (PyCFunction)adm_has_binary_prop, METH_VARARGS, "S.has_binary_prop(path) -> bool" },
 	{ "text_modified", (PyCFunction)adm_text_modified, METH_VARARGS, "S.text_modified(filename, force_comparison=False) -> bool" },
 	{ "props_modified", (PyCFunction)adm_props_modified, METH_VARARGS, "S.props_modified(filename) -> bool" },
 	{ "get_ancestry", (PyCFunction)get_ancestry, METH_VARARGS,
 		"S.get_ancestry(path) -> (url, rev)" },
 	{ "maybe_set_repos_root", (PyCFunction)maybe_set_repos_root, METH_VARARGS, "S.maybe_set_repos_root(path, repos)" },
 	{ "add_repos_file", (PyCFunction)add_repos_file, METH_KEYWORDS, 
-		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url, copyfrom_rev, cancel_func, notify)" },
+		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None, notify=None)" },
 	{ "mark_missing_deleted", (PyCFunction)mark_missing_deleted, METH_VARARGS,
 		"S.mark_missing_deleted(path)" },
 	{ "remove_from_revision_control", (PyCFunction)remove_from_revision_control, METH_VARARGS,
@@ -1408,11 +1407,11 @@ static PyMethodDef adm_methods[] = {
 	{ "crop_tree", (PyCFunction)crop_tree, METH_VARARGS,
 		"S.crop_tree(target, depth, notify=None, cancel=None)" },
 	{ "translated_stream", (PyCFunction)translated_stream, METH_VARARGS,
-		"S.translated_stream(path, versioned_file, flags)" },
+		"S.translated_stream(path, versioned_file, flags) -> stream" },
 	{ NULL, }
 };
 
-PyTypeObject Adm_Type = {
+static PyTypeObject Adm_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"wc.WorkingCopy", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AdmObject), 

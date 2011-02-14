@@ -20,8 +20,6 @@
 #ifndef _BZR_SVN_RA_H_
 #define _BZR_SVN_RA_H_
 
-extern PyTypeObject Auth_Type;
-
 typedef struct {
 	PyObject_HEAD
     svn_auth_baton_t *auth_baton;

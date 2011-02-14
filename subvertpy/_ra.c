@@ -39,11 +39,11 @@
 
 static PyObject *busy_exc;
 
-extern PyTypeObject Reporter_Type;
-extern PyTypeObject RemoteAccess_Type;
+staticforward PyTypeObject Reporter_Type;
+staticforward PyTypeObject RemoteAccess_Type;
 staticforward PyTypeObject AuthProvider_Type;
-extern PyTypeObject CredentialsIter_Type;
-extern PyTypeObject TxDeltaWindowHandler_Type;
+staticforward PyTypeObject CredentialsIter_Type;
+staticforward PyTypeObject Auth_Type;
 
 static bool ra_check_svn_path(char *path)
 {
@@ -256,7 +256,7 @@ static void reporter_dealloc(PyObject *self)
 	PyObject_Del(self);
 }
 
-PyTypeObject Reporter_Type = {
+static PyTypeObject Reporter_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.Reporter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(ReporterObject), 
@@ -2251,7 +2251,7 @@ static PyMemberDef ra_members[] = {
 	{ NULL, }
 };
 
-PyTypeObject RemoteAccess_Type = {
+static PyTypeObject RemoteAccess_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.RemoteAccess", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(RemoteAccessObject), 
@@ -2535,7 +2535,7 @@ static PyObject *credentials_iter_next(CredentialsIterObject *iterator)
 	return ret;
 }
 
-PyTypeObject CredentialsIter_Type = {
+static PyTypeObject CredentialsIter_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.CredentialsIter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(CredentialsIterObject),
@@ -2612,7 +2612,7 @@ static void auth_dealloc(PyObject *self)
 	Py_XDECREF(auth->providers);
 }
 
-PyTypeObject Auth_Type = {
+static PyTypeObject Auth_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.Auth", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthObject),
