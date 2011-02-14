@@ -1341,6 +1341,30 @@ static PyObject *adm_text_modified(PyObject *self, PyObject *args)
 	return PyBool_FromLong(ret);
 }
 
+static PyObject *adm_props_modified(PyObject *self, PyObject *args)
+{
+	char *path;
+	apr_pool_t *temp_pool;
+	svn_boolean_t ret;
+	AdmObject *admobj = (AdmObject *)self;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool,
+		  svn_wc_props_modified_p(&ret, path, admobj->adm, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	return PyBool_FromLong(ret);
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1369,6 +1393,7 @@ static PyMethodDef adm_methods[] = {
 	{ "remove_lock", (PyCFunction)adm_remove_lock, METH_VARARGS, "S.remove_lock(path)" }, 
 	{ "has_binary_prop", (PyCFunction)adm_has_binary_prop, METH_VARARGS, "S.has_binary_prop(path)" },
 	{ "text_modified", (PyCFunction)adm_text_modified, METH_VARARGS, "S.text_modified(filename, force_comparison=False) -> bool" },
+	{ "props_modified", (PyCFunction)adm_props_modified, METH_VARARGS, "S.props_modified(filename) -> bool" },
 	{ "get_ancestry", (PyCFunction)get_ancestry, METH_VARARGS,
 		"S.get_ancestry(path) -> (url, rev)" },
 	{ "maybe_set_repos_root", (PyCFunction)maybe_set_repos_root, METH_VARARGS, "S.maybe_set_repos_root(path, repos)" },

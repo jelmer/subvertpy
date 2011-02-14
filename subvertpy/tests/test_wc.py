@@ -146,3 +146,14 @@ class AdmTests(SubversionTestCase):
         self.assertFalse(adm.text_modified("checkout/bar"))
         self.build_tree({"checkout/bar": "gambon"})
         self.assertTrue(adm.text_modified("checkout/bar", True))
+
+    def test_props_modified(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "My id: $Id$"})
+        self.client_add('checkout/bar')
+        self.client_set_prop("checkout/bar", "svn:keywords", "Id\n")
+        self.client_commit("checkout", "foo")
+        adm = wc.WorkingCopy(None, "checkout", True)
+        self.assertFalse(adm.props_modified("checkout/bar"))
+        adm.prop_set("aprop", "avalue", "checkout/bar")
+        self.assertTrue(adm.props_modified("checkout/bar"))

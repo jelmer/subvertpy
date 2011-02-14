@@ -35,6 +35,8 @@
 
   * Add subvertpy.wc.WorkingCopy.text_modified. (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.props_modified. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
