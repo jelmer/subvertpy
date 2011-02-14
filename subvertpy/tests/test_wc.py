@@ -135,3 +135,14 @@ class AdmTests(SubversionTestCase):
         path = os.path.join(self.test_dir, "checkout/bar")
         stream = adm.translated_stream(path, path, wc.TRANSLATE_TO_NF)
         self.assertTrue(stream.read().startswith("My id: $Id: "))
+
+    def test_text_modified(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "My id: $Id$"})
+        self.client_add('checkout/bar')
+        self.client_set_prop("checkout/bar", "svn:keywords", "Id\n")
+        self.client_commit("checkout", "foo")
+        adm = wc.WorkingCopy(None, "checkout")
+        self.assertFalse(adm.text_modified("checkout/bar"))
+        self.build_tree({"checkout/bar": "gambon"})
+        self.assertTrue(adm.text_modified("checkout/bar", True))
