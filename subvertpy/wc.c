@@ -38,14 +38,76 @@ staticforward PyTypeObject Adm_Type;
 
 static PyObject *py_entry(const svn_wc_entry_t *entry);
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR < 5
+struct svn_wc_committed_queue_t
+{
+	apr_pool_t *pool;
+	apr_array_header_t *queue;
+	svn_boolean_t have_recursive;
+};
+
+typedef struct
+{
+	const char *path;
+	svn_wc_adm_access_t *adm_access;
+	svn_boolean_t recurse;
+	svn_boolean_t remove_lock;
+	apr_array_header_t *wcprop_changes;
+	unsigned char *digest;
+} committed_queue_item_t;
+
+static svn_wc_committed_queue_t *svn_wc_committed_queue_create(apr_pool_t *pool)
+{
+	svn_wc_committed_queue_t *q;
+
+	q = apr_palloc(pool, sizeof(*q));
+	q->pool = pool;
+	q->queue = apr_array_make(pool, 1, sizeof(committed_queue_item_t *));
+	q->have_recursive = FALSE;
+
+	return q;
+}
+
+static svn_error_t *svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t recurse,
+                        apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        unsigned char checksum[],
+                        apr_pool_t *scratch_pool)
+{
+  committed_queue_item_t *cqi;
+
+  (*queue)->have_recursive |= recurse;
+
+  /* Use the same pool as the one QUEUE was allocated in,
+     to prevent lifetime issues.  Intermediate operations
+     should use SCRATCH_POOL. */
+
+  /* Add to the array with paths and options */
+  cqi = apr_palloc(queue->pool, sizeof(*cqi));
+  cqi->path = path;
+  cqi->adm_access = adm_access;
+  cqi->recurse = recurse;
+  cqi->remove_lock = remove_lock;
+  cqi->wcprop_changes = wcprop_changes;
+  cqi->checksum = checksum;
+
+  APR_ARRAY_PUSH(queue->queue, committed_queue_item_t *) = cqi;
+
+  return SVN_NO_ERROR;
+}
+
+#endif
+
 typedef struct {
 	PyObject_HEAD
 	apr_pool_t *pool;
 	svn_wc_committed_queue_t *queue;
 } CommittedQueueObject;
 staticforward PyTypeObject CommittedQueue_Type;
-#endif
 
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_revnum_t revision, svn_depth_t depth, int start_empty, const char *lock_token, apr_pool_t *pool)
@@ -949,6 +1011,13 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 									 &remove_lock, &digest, &remove_changelist))
 		return NULL;
 
+#if PY_VERSION_HEX < 0x02050000
+	PyErr_Warn(PyExc_DeprecationWarning, "process_committed is deprecated. Use process_committed_queue instead.");
+#else
+	PyErr_WarnEx(PyExc_DeprecationWarning, "process_committed is deprecated. Use process_committed_queue instead.", 2);
+#endif
+
+
 	ADM_CHECK_CLOSED(admobj);
 
 	temp_pool = Pool(NULL);
@@ -1383,12 +1452,14 @@ static PyObject *adm_props_modified(PyObject *self, PyObject *args)
 
 static PyObject *adm_process_committed_queue(PyObject *self, PyObject *args)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	apr_pool_t *temp_pool;
 	AdmObject *admobj = (AdmObject *)self;
 	svn_revnum_t revnum;
 	char *date, *author;
 	CommittedQueueObject *py_queue;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR < 5
+	int i;
+#endif
 
 	if (!PyArg_ParseTuple(args, "O!Iss", &CommittedQueue_Type, &py_queue, &revnum, &date, &author))
 		return NULL;
@@ -1399,15 +1470,21 @@ static PyObject *adm_process_committed_queue(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed_queue(py_queue->queue, admobj->adm, revnum, date, author, temp_pool));
+#else
+	for (i = 0; i < py_queue->queue->queue->nelts; i++) {
+		committed_queue_item_t *cqi = APR_ARRAY_IDX(queue->queue, i,
+													committed_queue_item_t *);
 
+		RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(cqi->path, admobj->adm,
+			   cqi->recurse, revnum, date, author, cqi->wcprop_changes,
+			   cqi->remove_lock, cqi->digest, temp_pool));
+	}
+#endif
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
-#else
-	PyErr_SetString(PyExc_NotImplementedError, "process_committed_queue not available for Subversion < 1.5");
-	return NULL;
-#endif
 }
 
 static PyMethodDef adm_methods[] = { 
