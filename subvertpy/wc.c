@@ -39,6 +39,15 @@ staticforward PyTypeObject Adm_Type;
 static PyObject *py_entry(const svn_wc_entry_t *entry);
 
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+typedef struct {
+	PyObject_HEAD
+	apr_pool_t *pool;
+	svn_wc_committed_queue_t *queue;
+} CommittedQueueObject;
+staticforward PyTypeObject CommittedQueue_Type;
+#endif
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_revnum_t revision, svn_depth_t depth, int start_empty, const char *lock_token, apr_pool_t *pool)
 {
 	PyObject *self = (PyObject *)baton, *py_lock_token, *ret;
@@ -511,6 +520,10 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entries_read(&entries, admobj->adm, 
 				 show_hidden, temp_pool));
 	py_entries = PyDict_New();
+	if (py_entries == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	idx = apr_hash_first(temp_pool, entries);
 	while (idx != NULL) {
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&entry);
@@ -608,6 +621,10 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_prop_diffs(&propchanges, &original_props, 
 				svn_path_canonicalize(path, temp_pool), admobj->adm, temp_pool));
 	py_propchanges = PyList_New(propchanges->nelts);
+	if (py_propchanges == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	for (i = 0; i < propchanges->nelts; i++) {
 		el = APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 		if (el.value != NULL)
@@ -1364,6 +1381,35 @@ static PyObject *adm_props_modified(PyObject *self, PyObject *args)
 	return PyBool_FromLong(ret);
 }
 
+static PyObject *adm_process_committed_queue(PyObject *self, PyObject *args)
+{
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	apr_pool_t *temp_pool;
+	AdmObject *admobj = (AdmObject *)self;
+	svn_revnum_t revnum;
+	char *date, *author;
+	CommittedQueueObject *py_queue;
+
+	if (!PyArg_ParseTuple(args, "O!Iss", &CommittedQueue_Type, &py_queue, &revnum, &date, &author))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed_queue(py_queue->queue, admobj->adm, revnum, date, author, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+#else
+	PyErr_SetString(PyExc_NotImplementedError, "process_committed_queue not available for Subversion < 1.5");
+	return NULL;
+#endif
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1389,6 +1435,7 @@ static PyMethodDef adm_methods[] = {
 	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, 
 		"s.entry(path, show_hidden=False) -> entry" },
 	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, "S.process_committed(path, recurse, new_revnum, rev_date, rev_author, wcprop_changes=None, remove_lock=False, digest=None)" },
+	{ "process_committed_queue", (PyCFunction)adm_process_committed_queue, METH_VARARGS, "S.process_committed_queue(queue, new_revnum, rev_date, rev_author)" },
 	{ "remove_lock", (PyCFunction)adm_remove_lock, METH_VARARGS, "S.remove_lock(path)" }, 
 	{ "has_binary_prop", (PyCFunction)adm_has_binary_prop, METH_VARARGS, "S.has_binary_prop(path) -> bool" },
 	{ "text_modified", (PyCFunction)adm_text_modified, METH_VARARGS, "S.text_modified(filename, force_comparison=False) -> bool" },
@@ -1479,8 +1526,156 @@ static PyTypeObject Adm_Type = {
 	NULL, /*	initproc tp_init;	*/
 	NULL, /*	allocfunc tp_alloc;	*/
 	adm_init, /*	newfunc tp_new;	*/
-
 };
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+
+static void committed_queue_dealloc(PyObject *self)
+{
+	apr_pool_destroy(((CommittedQueueObject *)self)->pool);
+	PyObject_Del(self);
+}
+
+static PyObject *committed_queue_repr(PyObject *self)
+{
+	CommittedQueueObject *cqobj = (CommittedQueueObject *)self;
+
+	return PyString_FromFormat("<wc.CommittedQueue at 0x%p>", cqobj->queue);
+}
+
+static PyObject *committed_queue_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
+{
+	CommittedQueueObject *ret;
+	char *kwnames[] = { NULL };
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwnames))
+		return NULL;
+
+	ret = PyObject_New(CommittedQueueObject, &CommittedQueue_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->pool = Pool(NULL);
+	if (ret->pool == NULL)
+		return NULL;
+	ret->queue = svn_wc_committed_queue_create(ret->pool);
+	if (ret->queue == NULL) {
+		PyObject_Del(ret);
+		PyErr_NoMemory();
+		return NULL;
+	}
+
+	return (PyObject *)ret;
+}
+
+static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *args)
+{
+	char *path;
+	AdmObject *admobj;
+	PyObject *py_wcprop_changes = Py_None;
+	svn_boolean_t remove_lock = FALSE, remove_changelist = FALSE;
+	char *digest = NULL;
+	svn_boolean_t recurse = FALSE;
+	apr_pool_t *temp_pool;
+	apr_array_header_t *wcprop_changes;
+
+	if (!PyArg_ParseTuple(args, "sO!|bObbz", &path, &Adm_Type, &admobj, &recurse, &py_wcprop_changes, &remove_lock, &remove_changelist, &digest))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	if (!py_dict_to_wcprop_changes(py_wcprop_changes, temp_pool, &wcprop_changes)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+	RUN_SVN_WITH_POOL(temp_pool, 
+		svn_wc_queue_committed(&self->queue, path, admobj->adm, recurse,
+							   wcprop_changes, remove_lock, remove_changelist, (unsigned char *)digest, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
+static PyMethodDef committed_queue_methods[] = {
+	{ "queue", (PyCFunction)committed_queue_queue, METH_VARARGS,
+		"S.queue(path, adm, recurse, wcprop_changes, remove_lock, remove_changelist, digest)" },
+	{ NULL }
+};
+
+static PyTypeObject CommittedQueue_Type = {
+	PyObject_HEAD_INIT(NULL) 0,
+	"wc.CommittedQueue", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(CommittedQueueObject), 
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+	
+	/* Methods to implement standard operations */
+	
+	committed_queue_dealloc, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	committed_queue_repr, /*	reprfunc tp_repr;	*/
+	
+	/* Method suites for standard classes */
+	
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+	
+	/* More standard operations (here for binary compatibility) */
+	
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+	
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+	
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+	
+	"Committed queue", /*	const char *tp_doc;  Documentation string */
+	
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+	
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+	
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+	
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+	
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+	
+	/* Attribute descriptor and subclassing stuff */
+	committed_queue_methods, /*	struct PyMethodDef *tp_methods;	*/
+	NULL, /*	struct PyMemberDef *tp_members;	*/
+	NULL, /*	struct PyGetSetDef *tp_getset;	*/
+	NULL, /*	struct _typeobject *tp_base;	*/
+	NULL, /*	PyObject *tp_dict;	*/
+	NULL, /*	descrgetfunc tp_descr_get;	*/
+	NULL, /*	descrsetfunc tp_descr_set;	*/
+	0, /*	Py_ssize_t tp_dictoffset;	*/
+	NULL, /*	initproc tp_init;	*/
+	NULL, /*	allocfunc tp_alloc;	*/
+	committed_queue_init, /*	newfunc tp_new;	*/
+};
+#endif
 
 /** 
  * Determine the revision status of a specified working copy.
@@ -1838,6 +2033,9 @@ void initwc(void)
 	if (PyType_Ready(&Stream_Type) < 0)
 		return;
 
+	if (PyType_Ready(&CommittedQueue_Type) < 0)
+		return;
+
 	initeditor();
 
 	apr_initialize();
@@ -1892,4 +2090,9 @@ void initwc(void)
 
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
+
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
+	Py_INCREF(&CommittedQueue_Type);
+#endif
 }

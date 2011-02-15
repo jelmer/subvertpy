@@ -24,6 +24,7 @@ from subvertpy import (
 from subvertpy.tests import (
     SubversionTestCase,
     TestCase,
+    SkipTest,
     )
 
 class VersionTest(TestCase):
@@ -157,3 +158,11 @@ class AdmTests(SubversionTestCase):
         self.assertFalse(adm.props_modified("checkout/bar"))
         adm.prop_set("aprop", "avalue", "checkout/bar")
         self.assertTrue(adm.props_modified("checkout/bar"))
+
+    def test_committed_queue(self):
+        if getattr(wc, "CommittedQueue", None) is None:
+            raise SkipTest("CommittedQueue not available")
+        cq = wc.CommittedQueue()
+        repos_url = self.make_client("repos", "checkout")
+        adm = wc.WorkingCopy(None, "checkout", True)
+        adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
