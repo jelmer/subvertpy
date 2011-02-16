@@ -183,3 +183,11 @@ class AdmTests(SubversionTestCase):
         repos_url = self.make_client("repos", ".")
         self.assertEquals((self.test_dir, "bla"),
             wc.get_actual_target("%s/bla" % self.test_dir))
+
+    def test_is_wc_root(self):
+        repos_url = self.make_client("repos", ".")
+        self.build_tree({"bar": None})
+        self.client_add('bar')
+        adm = wc.WorkingCopy(None, ".")
+        self.assertTrue(adm.is_wc_root(self.test_dir))
+        self.assertFalse(adm.is_wc_root(os.path.join(self.test_dir, "bar")))

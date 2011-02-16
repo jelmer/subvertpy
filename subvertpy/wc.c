@@ -1522,6 +1522,30 @@ static PyObject *get_actual_target(PyObject *self, PyObject *args)
 	return ret;
 }
 
+static PyObject *is_wc_root(PyObject *self, PyObject *args)
+{
+	char *path;
+	svn_boolean_t wc_root;
+	apr_pool_t *temp_pool;
+	AdmObject *admobj = (AdmObject *)self;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool,
+		  svn_wc_is_wc_root(&wc_root, path, admobj->adm, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	return PyBool_FromLong(wc_root);
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1567,6 +1591,8 @@ static PyMethodDef adm_methods[] = {
 		"S.crop_tree(target, depth, notify=None, cancel=None)" },
 	{ "translated_stream", (PyCFunction)translated_stream, METH_VARARGS,
 		"S.translated_stream(path, versioned_file, flags) -> stream" },
+	{ "is_wc_root", (PyCFunction)is_wc_root, METH_VARARGS,
+		"S.is_wc_root(path) -> wc_root" },
 	{ NULL, }
 };
 
