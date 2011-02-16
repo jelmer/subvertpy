@@ -166,3 +166,15 @@ class AdmTests(SubversionTestCase):
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
+
+    def test_entry_not_found(self):
+        repos_url = self.make_client("repos", "checkout")
+        adm = wc.WorkingCopy(None, "checkout")
+        self.assertRaises(KeyError, adm.entry, "bar")
+
+    def test_entry(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "\x00\x01"})
+        self.client_add('checkout/bar')
+        adm = wc.WorkingCopy(None, "checkout")
+        self.assertEquals("bar", adm.entry("checkout/bar").name)

@@ -418,9 +418,6 @@ static PyObject *py_entry(const svn_wc_entry_t *entry)
 {
 	EntryObject *ret;
 
-	if (entry == NULL)
-		Py_RETURN_NONE;
-	
 	ret = PyObject_New(EntryObject, &Entry_Type);
 	if (ret == NULL)
 		return NULL;
@@ -589,7 +586,12 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 	idx = apr_hash_first(temp_pool, entries);
 	while (idx != NULL) {
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&entry);
-		obj = py_entry(entry);
+		if (entry == NULL) {
+			obj = Py_None;
+			Py_INCREF(obj);
+		} else {
+			obj = py_entry(entry);
+		}
 		PyDict_SetItemString(py_entries, key, obj);
 		Py_DECREF(obj);
 		idx = apr_hash_next(idx);
@@ -646,6 +648,7 @@ static PyObject *adm_entry(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	AdmObject *admobj = (AdmObject *)self;
 	const svn_wc_entry_t *entry;
+	PyObject *ret;
 
 	if (!PyArg_ParseTuple(args, "s|b", &path, &show_hidden))
 		return NULL;
@@ -656,9 +659,16 @@ static PyObject *adm_entry(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entry(&entry, svn_path_canonicalize(path, temp_pool), admobj->adm, show_hidden, temp_pool));
-	apr_pool_destroy(temp_pool);
 
-	return py_entry(entry);
+	if (entry == NULL) {
+		PyErr_Format(PyExc_KeyError, "No such entry '%s'", path);
+		ret = NULL;
+	} else  {
+		ret = py_entry(entry);
+	}
+
+	apr_pool_destroy(temp_pool);
+	return ret;
 }
 
 static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)

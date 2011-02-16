@@ -54,6 +54,11 @@
     now raises an exception rather than trigger a segfault.
     (Jelmer Vernooij)
 
+ API BREAKS
+
+  * WorkingCopy.entry() will now raise KeyError if the specified entry was not found.
+    (Jelmer Vernooij)
+
 0.7.5   2010-10-26
 
  BUG FIXES
