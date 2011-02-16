@@ -178,3 +178,8 @@ class AdmTests(SubversionTestCase):
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout")
         self.assertEquals("bar", adm.entry("checkout/bar").name)
+
+    def test_get_actual_target(self):
+        repos_url = self.make_client("repos", ".")
+        self.assertEquals((self.test_dir, "bla"),
+            wc.get_actual_target("%s/bla" % self.test_dir))

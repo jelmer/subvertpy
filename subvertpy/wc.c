@@ -1497,6 +1497,31 @@ static PyObject *adm_process_committed_queue(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *get_actual_target(PyObject *self, PyObject *args)
+{
+	char *path;
+	const char *anchor = NULL, *target = NULL;
+	apr_pool_t *temp_pool;
+	PyObject *ret;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(temp_pool,
+		  svn_wc_get_actual_target(svn_path_canonicalize(path, temp_pool),
+								   &anchor, &target, temp_pool));
+
+	ret = Py_BuildValue("(ss)", anchor, target);
+
+	apr_pool_destroy(temp_pool);
+
+	return ret;
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -2104,6 +2129,8 @@ static PyMethodDef wc_methods[] = {
 	},
 	{ "match_ignore_list", (PyCFunction)match_ignore_list, METH_VARARGS,
 		"match_ignore_list(str, patterns) -> bool" },
+	{ "get_actual_target", (PyCFunction)get_actual_target, METH_VARARGS,
+		"get_actual_target(path) -> (anchor, target)" },
 	{ NULL, }
 };
 

@@ -39,6 +39,8 @@
 
   * Add subvertpy.wc.CommittedQueue. (Jelmer Vernooij)
 
+  * Add subvertpy.wc.get_actual_target. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
