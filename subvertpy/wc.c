@@ -1457,9 +1457,6 @@ static PyObject *adm_process_committed_queue(PyObject *self, PyObject *args)
 	svn_revnum_t revnum;
 	char *date, *author;
 	CommittedQueueObject *py_queue;
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR < 5
-	int i;
-#endif
 
 	if (!PyArg_ParseTuple(args, "O!Iss", &CommittedQueue_Type, &py_queue, &revnum, &date, &author))
 		return NULL;
@@ -1473,13 +1470,16 @@ static PyObject *adm_process_committed_queue(PyObject *self, PyObject *args)
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed_queue(py_queue->queue, admobj->adm, revnum, date, author, temp_pool));
 #else
-	for (i = 0; i < py_queue->queue->queue->nelts; i++) {
-		committed_queue_item_t *cqi = APR_ARRAY_IDX(queue->queue, i,
-													committed_queue_item_t *);
+	{
+		int i;
+		for (i = 0; i < py_queue->queue->queue->nelts; i++) {
+			committed_queue_item_t *cqi = APR_ARRAY_IDX(queue->queue, i,
+														committed_queue_item_t *);
 
-		RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(cqi->path, admobj->adm,
-			   cqi->recurse, revnum, date, author, cqi->wcprop_changes,
-			   cqi->remove_lock, cqi->digest, temp_pool));
+			RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(cqi->path, admobj->adm,
+				   cqi->recurse, revnum, date, author, cqi->wcprop_changes,
+				   cqi->remove_lock, cqi->digest, temp_pool));
+		}
 	}
 #endif
 	apr_pool_destroy(temp_pool);
@@ -1604,8 +1604,6 @@ static PyTypeObject Adm_Type = {
 	NULL, /*	allocfunc tp_alloc;	*/
 	adm_init, /*	newfunc tp_new;	*/
 };
-
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 
 static void committed_queue_dealloc(PyObject *self)
 {
@@ -1767,7 +1765,6 @@ static PyTypeObject CommittedQueue_Type = {
 	NULL, /*	allocfunc tp_alloc;	*/
 	committed_queue_init, /*	newfunc tp_new;	*/
 };
-#endif
 
 /** 
  * Determine the revision status of a specified working copy.
@@ -2183,8 +2180,6 @@ void initwc(void)
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
 	Py_INCREF(&CommittedQueue_Type);
-#endif
 }
