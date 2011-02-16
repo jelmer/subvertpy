@@ -1663,14 +1663,29 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	if (temp_pool == NULL)
 		return NULL;
 
-	if (!py_dict_to_wcprop_changes(py_wcprop_changes, temp_pool, &wcprop_changes)) {
+	if (!py_dict_to_wcprop_changes(py_wcprop_changes, self->pool, &wcprop_changes)) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
 
+	path = apr_pstrdup(self->pool, path);
+	if (path == NULL) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+
+	if (digest != NULL) {
+		digest = apr_pstrdup(self->pool, digest);
+		if (digest == NULL) {
+			PyErr_NoMemory();
+			return NULL;
+		}
+	}
+
 	RUN_SVN_WITH_POOL(temp_pool, 
 		svn_wc_queue_committed(&self->queue, path, admobj->adm, recurse,
-							   wcprop_changes, remove_lock, remove_changelist, (unsigned char *)digest, temp_pool));
+							   wcprop_changes, remove_lock, remove_changelist,
+							   (unsigned char *)digest, temp_pool));
 
 	apr_pool_destroy(temp_pool);
 
