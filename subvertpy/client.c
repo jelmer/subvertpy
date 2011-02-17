@@ -508,6 +508,47 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
     return ret;
 }
 
+static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ClientObject *client = (ClientObject *)self;
+    char *kwnames[] = { "from", "to", "rev", "peg_rev", "recurse", "ignore_externals", "overwrite", "native_eol", NULL };
+    svn_revnum_t result_rev;
+    svn_opt_revision_t c_peg_rev, c_rev;
+    char *from, *to;
+    apr_pool_t *temp_pool;
+	char *native_eol = NULL;
+    PyObject *peg_rev=Py_None, *rev=Py_None;
+    bool recurse=true, ignore_externals=false, overwrite=false;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObbb", kwnames, &from, &to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol))
+        return NULL;
+
+    if (!to_opt_revision(peg_rev, &c_peg_rev))
+        return NULL;
+    if (!to_opt_revision(rev, &c_rev))
+        return NULL;
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_export4(&result_rev, from, 
+        svn_path_canonicalize(to, temp_pool),
+        &c_peg_rev, &c_rev, overwrite, ignore_externals,
+		recurse?svn_depth_infinity:svn_depth_files, 
+        native_eol, client->client, temp_pool));
+#else
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_export3(&result_rev, from,
+        svn_path_canonicalize(to, temp_pool),
+        &c_peg_rev, &c_rev, overwrite, ignore_externals, recurse, 
+        native_eol, client->client, temp_pool));
+#endif
+    apr_pool_destroy(temp_pool);
+    return PyLong_FromLong(result_rev);
+}
+
+
+
 static PyObject *client_delete(PyObject *self, PyObject *args)
 {
     PyObject *paths; 
@@ -1088,6 +1129,8 @@ static PyMethodDef client_methods[] = {
         "S.add(path, recursive=True, force=False, no_ignore=False)" },
     { "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS, 
         "S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False, allow_unver_obstructions=False)" },
+	{ "export", (PyCFunction)client_export, METH_VARARGS|METH_KEYWORDS,
+		"S.export(from, to, rev=None, peg_rev=None, recurse=True, ignore_externals=False, overwrite=False, native_eol=None)" },
     { "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True, revprops=None) -> (revnum, date, author)" },
     { "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
     { "copy", (PyCFunction)client_copy, METH_VARARGS|METH_KEYWORDS, "S.copy(src_path, dest_path, srv_rev=None)" },

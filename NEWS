@@ -52,6 +52,8 @@
 
   * Add subvertpy.wc.WorkingCopy.probe_try. (Jelmer Vernooij)
 
+  * Add subvertpy.client.export. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
