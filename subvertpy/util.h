@@ -17,8 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _BZR_SVN_UTIL_H_
-#define _BZR_SVN_UTIL_H_
+#ifndef _SUBVERTPY_UTIL_H_
+#define _SUBVERTPY_UTIL_H_
 
 /* There's no Py_ssize_t in 2.4, apparently */
 #if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION < 5
@@ -111,4 +111,4 @@ typedef struct {
 
 extern PyTypeObject Stream_Type;
 
-#endif /* _BZR_SVN_UTIL_H_ */
+#endif /* _SUBVERTPY_UTIL_H_ */
