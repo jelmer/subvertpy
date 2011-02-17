@@ -1619,6 +1619,37 @@ static PyObject *transmit_prop_deltas(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *retrieve(PyObject *self, PyObject *args)
+{
+	char *path;
+	svn_wc_adm_access_t *result;
+	AdmObject *admobj = (AdmObject *)self, *ret;
+	apr_pool_t *pool;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	pool = Pool(NULL);
+	if (pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(pool, svn_wc_adm_retrieve(&result, admobj->adm, 
+		svn_path_canonicalize(path, pool), pool));
+
+	ret = PyObject_New(AdmObject, &Adm_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->pool = pool;
+	ret->adm = result;
+
+	return (PyObject *)ret;
+}
+
+
+
 static PyObject *probe_retrieve(PyObject *self, PyObject *args)
 {
 	char *path;
@@ -1701,6 +1732,8 @@ static PyMethodDef adm_methods[] = {
 		"S.transmit_prop_deltas(path, entry, editor)" },
 	{ "probe_retrieve", (PyCFunction)probe_retrieve, METH_VARARGS,
 		"S.probe_retrieve(path) -> WorkingCopy" },
+	{ "retrieve", (PyCFunction)retrieve, METH_VARARGS,
+		"S.retrieve(path) -> WorkingCopy" },
 	{ NULL, }
 };
 

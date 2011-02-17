@@ -47,7 +47,8 @@
 
   * Add subvertpy.wc.WorkingCopy.transmit_prop_deltas. (Jelmer Vernooij)
 
-  * Add subvertpy.wc.WorkingCopy.probe_retrieve. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.probe_retrieve, subvertpy.wc.WorkingCopy.retrieve.
+    (Jelmer Vernooij)
 
  DEPRECATIONS
 
