@@ -1,10 +1,76 @@
-0.7.6   UNRELEASED
+0.8.0   UNRELEASED
 
  FEATURES
 
   * Add --version option to subvertpy-fast-export. (Jelmer Vernooij)
 
   * Add basic manual page for subvertpy-fast-export. (Jelmer Vernooij)
+
+  * Automatically convert the appropriate errors to socket.gaierror.
+    (Jelmer Vernooij)
+
+  * Add subvertpy.wc.set_adm_dir(). (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.has_binary_prop. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.get_ancestry. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.maybe_set_repos_root.
+    (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.add_repos_file.
+    (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.mark_missing_deleted.
+    (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.remove_from_revision_control.
+    (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.relocate. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.crop_tree. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.translated_stream. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.text_modified. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.props_modified. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.CommittedQueue. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.get_actual_target. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.is_wc_root. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.transmit_text_deltas. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.transmit_prop_deltas. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.probe_retrieve, subvertpy.wc.WorkingCopy.retrieve.
+    (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.probe_try. (Jelmer Vernooij)
+
+ DEPRECATIONS
+
+  * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
+    and will be removed in the next version of subvertpy.
+    Instead, subvertpy will raise socket.gaierror.
+    (Jelmer Vernooij)
+
+ BUG FIXES
+
+  * Fix handling of DST in time_from_cstring. (Max Bowsher, #656226)
+
+  * Re-using a WorkingCopy object after calling close() on it
+    now raises an exception rather than trigger a segfault.
+    (Jelmer Vernooij)
+
+ API BREAKS
+
+  * WorkingCopy.entry() will now raise KeyError if the specified entry was not found.
+    (Jelmer Vernooij)
 
 0.7.5   2010-10-26
 

@@ -39,11 +39,11 @@
 
 static PyObject *busy_exc;
 
-extern PyTypeObject Reporter_Type;
-extern PyTypeObject RemoteAccess_Type;
+staticforward PyTypeObject Reporter_Type;
+staticforward PyTypeObject RemoteAccess_Type;
 staticforward PyTypeObject AuthProvider_Type;
-extern PyTypeObject CredentialsIter_Type;
-extern PyTypeObject TxDeltaWindowHandler_Type;
+staticforward PyTypeObject CredentialsIter_Type;
+staticforward PyTypeObject Auth_Type;
 
 static bool ra_check_svn_path(char *path)
 {
@@ -256,7 +256,7 @@ static void reporter_dealloc(PyObject *self)
 	PyObject_Del(self);
 }
 
-PyTypeObject Reporter_Type = {
+static PyTypeObject Reporter_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.Reporter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(ReporterObject), 
@@ -342,275 +342,6 @@ static PyObject *api_version(PyObject *self)
 	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
 						 ver->patch, ver->tag);
 }
-
-static svn_error_t *py_cb_editor_set_target_revision(void *edit_baton, svn_revnum_t target_revision, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)edit_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-
-	ret = PyObject_CallMethod(self, "set_target_revision", "l", target_revision);
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_open_root(void *edit_baton, svn_revnum_t base_revision, apr_pool_t *pool, void **root_baton)
-{
-	PyObject *self = (PyObject *)edit_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	*root_baton = NULL;
-	ret = PyObject_CallMethod(self, "open_root", "l", base_revision);
-	CB_CHECK_PYRETVAL(ret);
-	*root_baton = (void *)ret;
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_delete_entry(const char *path, svn_revnum_t revision, void *parent_baton, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)parent_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallMethod(self, "delete_entry", "sl", path, revision);
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_add_directory(const char *path, void *parent_baton, const char *copyfrom_path, svn_revnum_t copyfrom_revision, apr_pool_t *pool, void **child_baton)
-{
-	PyObject *self = (PyObject *)parent_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	*child_baton = NULL;
-
-	if (copyfrom_path == NULL) {
-		ret = PyObject_CallMethod(self, "add_directory", "s", path);
-	} else {
-		ret = PyObject_CallMethod(self, "add_directory", "ssl", path, copyfrom_path, copyfrom_revision);
-	}
-	CB_CHECK_PYRETVAL(ret);
-	*child_baton = (void *)ret;
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_open_directory(const char *path, void *parent_baton, svn_revnum_t base_revision, apr_pool_t *pool, void **child_baton)
-{
-	PyObject *self = (PyObject *)parent_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	*child_baton = NULL;
-	ret = PyObject_CallMethod(self, "open_directory", "sl", path, base_revision);
-	CB_CHECK_PYRETVAL(ret);
-	*child_baton = (void *)ret;
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_change_prop(void *dir_baton, const char *name, const svn_string_t *value, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)dir_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-
-	if (value != NULL) {
-		ret = PyObject_CallMethod(self, "change_prop", "sz#", name, value->data, value->len);
-	} else {
-		ret = PyObject_CallMethod(self, "change_prop", "sO", name, Py_None);
-	}
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_close_directory(void *dir_baton, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)dir_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallMethod(self, "close", "");
-	Py_DECREF(self);
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_absent_directory(const char *path, void *parent_baton, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)parent_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallMethod(self, "absent_directory", "s", path);
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_add_file(const char *path, void *parent_baton, const char *copy_path, svn_revnum_t copy_revision, apr_pool_t *file_pool, void **file_baton)
-{
-	PyObject *self = (PyObject *)parent_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	if (copy_path == NULL) {
-		ret = PyObject_CallMethod(self, "add_file", "s", path);
-	} else {
-		ret = PyObject_CallMethod(self, "add_file", "ssl", path, copy_path, 
-								  copy_revision);
-	}
-	CB_CHECK_PYRETVAL(ret);
-	*file_baton = (void *)ret;
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_open_file(const char *path, void *parent_baton, svn_revnum_t base_revision, apr_pool_t *file_pool, void **file_baton)
-{
-	PyObject *self = (PyObject *)parent_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallMethod(self, "open_file", "sl", path, base_revision);
-	CB_CHECK_PYRETVAL(ret);
-	*file_baton = (void *)ret;
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton)
-{
-	int i;
-	PyObject *ops, *ret;
-	PyObject *fn = (PyObject *)baton, *py_new_data, *py_window;
-	PyGILState_STATE state;
-	if (fn == Py_None) {
-		/* User doesn't care about deltas */
-		return NULL;
-	}
-
-	state = PyGILState_Ensure();
-
-	if (window == NULL) {
-		py_window = Py_None;
-		Py_INCREF(py_window);
-	} else {
-		ops = PyList_New(window->num_ops);
-		if (ops == NULL)
-			return NULL;
-		for (i = 0; i < window->num_ops; i++) {
-			PyObject *pyval = Py_BuildValue("(iII)", 
-											window->ops[i].action_code, 
-											window->ops[i].offset, 
-											window->ops[i].length);
-			CB_CHECK_PYRETVAL(pyval);
-			PyList_SetItem(ops, i, pyval);
-		}
-		if (window->new_data != NULL && window->new_data->data != NULL) {
-			py_new_data = PyString_FromStringAndSize(window->new_data->data, window->new_data->len);
-		} else {
-			py_new_data = Py_None;
-			Py_INCREF(py_new_data);
-		}
-		py_window = Py_BuildValue("((LIIiNN))", 
-								  window->sview_offset, 
-								  window->sview_len, 
-								  window->tview_len, 
-								  window->src_ops, ops, py_new_data);
-		CB_CHECK_PYRETVAL(py_window);
-	}
-	ret = PyObject_CallFunction(fn, "O", py_window);
-	Py_DECREF(py_window);
-	if (window == NULL) {
-		/* Signals all delta windows have been received */
-		Py_DECREF(fn);
-	}
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_apply_textdelta(void *file_baton, const char *base_checksum, apr_pool_t *pool, svn_txdelta_window_handler_t *handler, void **handler_baton)
-{
-	PyObject *self = (PyObject *)file_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	*handler_baton = NULL;
-
-	ret = PyObject_CallMethod(self, "apply_textdelta", "z", base_checksum);
-	CB_CHECK_PYRETVAL(ret);
-	*handler_baton = (void *)ret;
-	*handler = py_txdelta_window_handler;
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_close_file(void *file_baton, 
-										 const char *text_checksum, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)file_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-
-	if (text_checksum != NULL) {
-		ret = PyObject_CallMethod(self, "close", "");
-	} else {
-		ret = PyObject_CallMethod(self, "close", "s", text_checksum);
-	}
-	Py_DECREF(self);
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_absent_file(const char *path, void *parent_baton, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)parent_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallMethod(self, "absent_file", "s", path);
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_close_edit(void *edit_baton, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)edit_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallMethod(self, "close", "");
-	Py_DECREF(self);
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static svn_error_t *py_cb_editor_abort_edit(void *edit_baton, apr_pool_t *pool)
-{
-	PyObject *self = (PyObject *)edit_baton, *ret;
-	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallMethod(self, "abort", "");
-	Py_DECREF(self);
-	CB_CHECK_PYRETVAL(ret);
-	Py_DECREF(ret);
-	PyGILState_Release(state);
-	return NULL;
-}
-
-static const svn_delta_editor_t py_editor = {
-	py_cb_editor_set_target_revision,
-	py_cb_editor_open_root,
-	py_cb_editor_delete_entry,
-	py_cb_editor_add_directory,
-	py_cb_editor_open_directory,
-	py_cb_editor_change_prop,
-	py_cb_editor_close_directory,
-	py_cb_editor_absent_directory,
-	py_cb_editor_add_file,
-	py_cb_editor_open_file,
-	py_cb_editor_apply_textdelta,
-	py_cb_editor_change_prop,
-	py_cb_editor_close_file,
-	py_cb_editor_absent_file,
-	py_cb_editor_close_edit,
-	py_cb_editor_abort_edit
-};
 
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
 static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_boolean_t result_of_merge, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
@@ -2251,7 +1982,7 @@ static PyMemberDef ra_members[] = {
 	{ NULL, }
 };
 
-PyTypeObject RemoteAccess_Type = {
+static PyTypeObject RemoteAccess_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.RemoteAccess", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(RemoteAccessObject), 
@@ -2535,7 +2266,7 @@ static PyObject *credentials_iter_next(CredentialsIterObject *iterator)
 	return ret;
 }
 
-PyTypeObject CredentialsIter_Type = {
+static PyTypeObject CredentialsIter_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.CredentialsIter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(CredentialsIterObject),
@@ -2612,7 +2343,7 @@ static void auth_dealloc(PyObject *self)
 	Py_XDECREF(auth->providers);
 }
 
-PyTypeObject Auth_Type = {
+static PyTypeObject Auth_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.Auth", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthObject),
