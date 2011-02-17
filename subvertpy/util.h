@@ -25,9 +25,9 @@
 #endif
 
 #ifdef SUBVERTPY_OVERRIDE_SVN_VER_MINOR
-#define ONLY_SINCE_SVN(maj, min) (SUBVERTPY_OVERRIDE_SVN_VER_MINOR >= min)
+#define ONLY_SINCE_SVN(maj, min) (SUBVERTPY_OVERRIDE_SVN_VER_MINOR >= (min))
 #else
-#define ONLY_SINCE_SVN(maj, min) (SVN_VER_MINOR >= min)
+#define ONLY_SINCE_SVN(maj, min) (SVN_VER_MINOR >= (min))
 #endif
 
 #define ONLY_BEFORE_SVN(maj, min) (!(ONLY_SINCE_SVN(maj, min)))
