@@ -25,6 +25,10 @@ import shutil
 import sys
 import tempfile
 import unittest
+try:
+    from unittest import SkipTest
+except ImportError:
+    from unittest2 import SkipTest
 import urllib2
 import urlparse
 

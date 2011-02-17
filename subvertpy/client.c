@@ -22,6 +22,7 @@
 #include <svn_opt.h>
 #include <svn_client.h>
 #include <svn_config.h>
+#include <svn_path.h>
 
 #include "util.h"
 #include "ra.h"
@@ -422,7 +423,8 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     if (temp_pool == NULL)
         return NULL;
 #if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, url, path, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, url, 
+        svn_path_canonicalize(path, temp_pool),
         &c_peg_rev, &c_rev, recurse?svn_depth_infinity:svn_depth_files, 
         ignore_externals, allow_unver_obstructions, client->client, temp_pool));
 #else
@@ -433,7 +435,8 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
         return NULL;
     }
 
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout2(&result_rev, url, path, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout2(&result_rev, url,
+        svn_path_canonicalize(path, temp_pool),
         &c_peg_rev, &c_rev, recurse, 
         ignore_externals, client->client, temp_pool));
 #endif
