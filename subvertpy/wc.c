@@ -1570,7 +1570,8 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
 	Py_INCREF(editor_obj);
 
 	RUN_SVN_WITH_POOL(temp_pool,
-		svn_wc_transmit_text_deltas2(&tempfile, digest, path, admobj->adm, fulltext,
+		svn_wc_transmit_text_deltas2(&tempfile, digest, 
+			svn_path_canonicalize(path, temp_pool), admobj->adm, fulltext,
 			&py_editor, editor_obj, temp_pool));
 
 	py_digest = PyString_FromStringAndSize((char *)digest, APR_MD5_DIGESTSIZE);
