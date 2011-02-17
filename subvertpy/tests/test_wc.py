@@ -19,6 +19,7 @@ from StringIO import StringIO
 import os
 
 from subvertpy import (
+    NODE_FILE,
     wc,
     )
 from subvertpy.tests import (
@@ -196,7 +197,7 @@ class AdmTests(SubversionTestCase):
         repos_url = self.make_client("repos", ".")
         self.build_tree({"bar": "blala"})
         self.client_add('bar')
-        adm = wc.WorkingCopy(None, ".")
+        adm = wc.WorkingCopy(None, ".", True)
         class Editor(object):
             """Editor"""
 
@@ -215,4 +216,25 @@ class AdmTests(SubversionTestCase):
         self.assertEquals(editor._windows, [(0L, 0, 5, 0, [(2, 0, 5)], 'blala'), None])
         self.assertIsInstance(tmpfile, str)
         self.assertEquals(16, len(digest))
-        import pdb; pdb.set_trace()
+
+        cq = wc.CommittedQueue()
+        cq.queue("bar", adm)
+        adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
+        bar = adm.entry("bar")
+        self.assertEquals("bar", bar.name)
+        self.assertEquals(NODE_FILE, bar.kind)
+        self.assertEquals(wc.SCHEDULE_NORMAL, bar.schedule)
+        self.assertEquals(1, bar.revision)
+
+    def test_process_committed_queue(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "la"})
+        self.client_add('checkout/bar')
+        adm = wc.WorkingCopy(None, "checkout", True)
+        cq = wc.CommittedQueue()
+        cq.queue("bar", adm)
+        adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
+        bar = adm.entry("checkout/bar")
+        self.assertEquals("bar", bar.name)
+        self.assertEquals(NODE_FILE, bar.kind)
+        self.assertEquals(wc.SCHEDULE_ADD, bar.schedule)

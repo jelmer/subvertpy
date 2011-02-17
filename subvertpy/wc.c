@@ -1567,7 +1567,7 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-    Py_INCREF(editor_obj);
+	Py_INCREF(editor_obj);
 
 	RUN_SVN_WITH_POOL(temp_pool,
 		svn_wc_transmit_text_deltas2(&tempfile, digest, path, admobj->adm, fulltext,
