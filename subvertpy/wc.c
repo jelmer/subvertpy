@@ -23,6 +23,7 @@
 #include <svn_props.h>
 #include <structmember.h>
 #include <stdbool.h>
+#include <apr_md5.h>
 
 #include "util.h"
 #include "editor.h"
@@ -1546,6 +1547,49 @@ static PyObject *is_wc_root(PyObject *self, PyObject *args)
 	return PyBool_FromLong(wc_root);
 }
 
+static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
+{
+	char *path;
+	const char *tempfile;
+	svn_boolean_t fulltext;
+	PyObject *editor_obj, *py_digest;
+	unsigned char digest[APR_MD5_DIGESTSIZE];
+	apr_pool_t *temp_pool;
+	AdmObject *admobj = (AdmObject *)self;
+	PyObject *ret;
+
+	if (!PyArg_ParseTuple(args, "sbO", &path, &fulltext, &editor_obj))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+    Py_INCREF(editor_obj);
+
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_wc_transmit_text_deltas2(&tempfile, digest, path, admobj->adm, fulltext,
+			&py_editor, editor_obj, temp_pool));
+
+	py_digest = PyString_FromStringAndSize((char *)digest, APR_MD5_DIGESTSIZE);
+	if (py_digest == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+	ret = Py_BuildValue("sN", tempfile, py_digest);
+	if (ret == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+	apr_pool_destroy(temp_pool);
+
+	return ret;
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1593,6 +1637,8 @@ static PyMethodDef adm_methods[] = {
 		"S.translated_stream(path, versioned_file, flags) -> stream" },
 	{ "is_wc_root", (PyCFunction)is_wc_root, METH_VARARGS,
 		"S.is_wc_root(path) -> wc_root" },
+	{ "transmit_text_deltas", (PyCFunction)transmit_text_deltas, METH_VARARGS,
+		"S.transmit_text_deltas(fulltext, editor) -> (tempfile, digest)" },
 	{ NULL, }
 };
 

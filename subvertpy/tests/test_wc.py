@@ -191,3 +191,28 @@ class AdmTests(SubversionTestCase):
         adm = wc.WorkingCopy(None, ".")
         self.assertTrue(adm.is_wc_root(self.test_dir))
         self.assertFalse(adm.is_wc_root(os.path.join(self.test_dir, "bar")))
+
+    def test_transmit_text_deltas(self):
+        repos_url = self.make_client("repos", ".")
+        self.build_tree({"bar": "blala"})
+        self.client_add('bar')
+        adm = wc.WorkingCopy(None, ".")
+        class Editor(object):
+            """Editor"""
+
+            def __init__(self):
+                self._windows = []
+
+            def apply_textdelta(self, checksum):
+                def window_handler(window):
+                    self._windows.append(window)
+                return window_handler
+
+            def close(self):
+                pass
+        editor = Editor()
+        (tmpfile, digest) = adm.transmit_text_deltas("bar", True, editor)
+        self.assertEquals(editor._windows, [(0L, 0, 5, 0, [(2, 0, 5)], 'blala'), None])
+        self.assertIsInstance(tmpfile, str)
+        self.assertEquals(16, len(digest))
+        import pdb; pdb.set_trace()

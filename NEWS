@@ -43,6 +43,8 @@
 
   * Add subvertpy.wc.WorkingCopy.is_wc_root. (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.send_text_deltas. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
