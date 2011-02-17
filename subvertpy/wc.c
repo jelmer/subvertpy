@@ -1591,6 +1591,34 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
 	return ret;
 }
 
+static PyObject *transmit_prop_deltas(PyObject *self, PyObject *args)
+{
+	char *path;
+	PyObject *editor_obj;
+	apr_pool_t *temp_pool;
+	AdmObject *admobj = (AdmObject *)self;
+	EntryObject *py_entry;
+
+	if (!PyArg_ParseTuple(args, "sO!O", &path, &Entry_Type, &py_entry, &editor_obj))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+	Py_INCREF(editor_obj);
+
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_wc_transmit_prop_deltas(svn_path_canonicalize(path, temp_pool),
+			admobj->adm, &(py_entry->entry), &py_editor, editor_obj, NULL, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1640,6 +1668,8 @@ static PyMethodDef adm_methods[] = {
 		"S.is_wc_root(path) -> wc_root" },
 	{ "transmit_text_deltas", (PyCFunction)transmit_text_deltas, METH_VARARGS,
 		"S.transmit_text_deltas(fulltext, editor) -> (tempfile, digest)" },
+	{ "transmit_prop_deltas", (PyCFunction)transmit_prop_deltas, METH_VARARGS,
+		"S.transmit_prop_deltas(path, entry, editor)" },
 	{ NULL, }
 };
 

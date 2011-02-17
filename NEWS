@@ -43,7 +43,9 @@
 
   * Add subvertpy.wc.WorkingCopy.is_wc_root. (Jelmer Vernooij)
 
-  * Add subvertpy.wc.WorkingCopy.send_text_deltas. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.transmit_text_deltas. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.transmit_prop_deltas. (Jelmer Vernooij)
 
  DEPRECATIONS
 
