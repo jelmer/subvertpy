@@ -47,6 +47,8 @@
 
   * Add subvertpy.wc.WorkingCopy.transmit_prop_deltas. (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.probe_retrieve. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
