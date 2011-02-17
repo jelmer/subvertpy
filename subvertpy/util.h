@@ -20,6 +20,18 @@
 #ifndef _SUBVERTPY_UTIL_H_
 #define _SUBVERTPY_UTIL_H_
 
+#if SVN_VER_MAJOR != 1
+#error "only svn 1.x is supported"
+#endif
+
+#ifdef SUBVERTPY_OVERRIDE_SVN_VER_MINOR
+#define ONLY_SINCE_SVN(maj, min) (SUBVERTPY_OVERRIDE_SVN_VER_MINOR >= min)
+#else
+#define ONLY_SINCE_SVN(maj, min) (SVN_VER_MINOR >= min)
+#endif
+
+#define ONLY_BEFORE_SVN(maj, min) (!(ONLY_SINCE_SVN(maj, min)))
+
 /* There's no Py_ssize_t in 2.4, apparently */
 #if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION < 5
 typedef int Py_ssize_t;
@@ -74,12 +86,12 @@ void PyErr_SetAprStatus(apr_status_t status);
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
 PyObject *PyOS_tmpfile(void);
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool);
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 PyObject *pyify_changed_paths2(apr_hash_t *changed_paths2, apr_pool_t *pool);
 #endif
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool);
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool);
 #endif
 
@@ -91,7 +103,7 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 		return py_svn_error(); \
 	}
 
-#if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 5
+#if SVN_VER_MINOR < 5
 typedef enum svn_depth_t {
 	svn_depth_unknown = -2,
 	svn_depth_exclude = -1,

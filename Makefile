@@ -28,3 +28,6 @@ clean::
 
 pydoctor:
 	$(PYDOCTOR) --introspect-c-modules -c subvertpy.cfg --make-html
+
+check-1.%::
+	$(MAKE) check CFLAGS+=-DSUBVERTPY_OVERRIDE_SVN_VER_MINOR=$*

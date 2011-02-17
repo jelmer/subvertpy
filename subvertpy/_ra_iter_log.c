@@ -166,7 +166,7 @@ PyTypeObject LogIterator_Type = {
 	(iternextfunc)log_iter_next, /*	iternextfunc tp_iternext;	*/
 };
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
 	PyObject *revprops, *py_changed_paths, *ret, *tuple;
@@ -176,7 +176,7 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 
 	state = PyGILState_Ensure();
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 	py_changed_paths = pyify_changed_paths2(log_entry->changed_paths2, pool);
 #else
 	py_changed_paths = pyify_changed_paths(log_entry->changed_paths, true, pool);
@@ -285,7 +285,7 @@ static void py_iter_log(void *baton)
 	svn_error_t *error;
 	PyGILState_STATE state;
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	error = svn_ra_get_log2(iter->ra->ra, 
 			iter->apr_paths, iter->start, iter->end, iter->limit,
 			iter->discover_changed_paths, iter->strict_node_history, 
@@ -351,7 +351,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-#if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 5
+#if ONLY_BEFORE_SVN(1, 5)
 	if (revprops == Py_None) {
 		PyErr_SetString(PyExc_NotImplementedError, "fetching all revision properties not supported");	
 		apr_pool_destroy(temp_pool);
