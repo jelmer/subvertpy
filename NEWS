@@ -50,6 +50,8 @@
   * Add subvertpy.wc.WorkingCopy.probe_retrieve, subvertpy.wc.WorkingCopy.retrieve.
     (Jelmer Vernooij)
 
+  * Add subvertpy.wc.WorkingCopy.probe_try. (Jelmer Vernooij)
+
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated

@@ -1090,10 +1090,12 @@ static PyObject *adm_repr(PyObject *self)
 {
 	AdmObject *admobj = (AdmObject *)self;
 
-	ADM_CHECK_CLOSED(admobj);
-
-	return PyString_FromFormat("<wc.WorkingCopy at '%s'>", 
-							   svn_wc_adm_access_path(admobj->adm));
+	if (admobj->adm == NULL) {
+		return PyString_FromFormat("<wc.WorkingCopy (closed) at 0x%p>", admobj);
+	} else {
+		return PyString_FromFormat("<wc.WorkingCopy at '%s'>", 
+								   svn_wc_adm_access_path(admobj->adm));
+	}
 }
 
 static PyObject *adm_remove_lock(PyObject *self, PyObject *args)
@@ -1648,8 +1650,6 @@ static PyObject *retrieve(PyObject *self, PyObject *args)
 	return (PyObject *)ret;
 }
 
-
-
 static PyObject *probe_retrieve(PyObject *self, PyObject *args)
 {
 	char *path;
@@ -1668,6 +1668,44 @@ static PyObject *probe_retrieve(PyObject *self, PyObject *args)
 
 	RUN_SVN_WITH_POOL(pool, svn_wc_adm_probe_retrieve(&result, admobj->adm, 
 		svn_path_canonicalize(path, pool), pool));
+
+	ret = PyObject_New(AdmObject, &Adm_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->pool = pool;
+	ret->adm = result;
+
+	return (PyObject *)ret;
+}
+
+static PyObject *probe_try(PyObject *self, PyObject *args)
+{
+	char *path;
+	svn_wc_adm_access_t *result = NULL;
+	AdmObject *admobj = (AdmObject *)self, *ret;
+	apr_pool_t *pool;
+	PyObject *cancelfunc = Py_None;
+	int levels_to_lock = -1;
+	svn_boolean_t writelock = FALSE;
+
+	if (!PyArg_ParseTuple(args, "s|biO", &path, &writelock, &levels_to_lock, &cancelfunc))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	pool = Pool(NULL);
+	if (pool == NULL)
+		return NULL;
+
+	RUN_SVN_WITH_POOL(pool, svn_wc_adm_probe_try3(&result, admobj->adm, 
+		svn_path_canonicalize(path, pool), writelock, levels_to_lock,
+		py_cancel_func, cancelfunc, pool));
+
+	if (result == NULL) {
+		apr_pool_destroy(pool);
+		Py_RETURN_NONE;
+	}
 
 	ret = PyObject_New(AdmObject, &Adm_Type);
 	if (ret == NULL)
@@ -1734,6 +1772,8 @@ static PyMethodDef adm_methods[] = {
 		"S.probe_retrieve(path) -> WorkingCopy" },
 	{ "retrieve", (PyCFunction)retrieve, METH_VARARGS,
 		"S.retrieve(path) -> WorkingCopy" },
+	{ "probe_try", (PyCFunction)probe_try, METH_VARARGS,
+		"S.probe_try(path, write_lock=False, levels_to_lock=-1)" },
 	{ NULL, }
 };
 
@@ -1762,7 +1802,7 @@ static PyTypeObject Adm_Type = {
 	
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
-	NULL, /*	reprfunc tp_str;	*/
+	adm_repr, /*	reprfunc tp_repr;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
 	

@@ -238,3 +238,11 @@ class AdmTests(SubversionTestCase):
         self.assertEquals("bar", bar.name)
         self.assertEquals(NODE_FILE, bar.kind)
         self.assertEquals(wc.SCHEDULE_ADD, bar.schedule)
+
+    def test_probe_try(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "la"})
+        self.client_add('checkout/bar')
+        adm = wc.WorkingCopy(None, "checkout", True)
+        self.assertIs(None, adm.probe_try(self.test_dir))
+        self.assertEquals("checkout", adm.probe_try(os.path.join("checkout", "bar")).access_path())
