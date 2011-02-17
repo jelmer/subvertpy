@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 7, 6)
+__version__ = (0, 8, 0)
 
 NODE_DIR = 2
 NODE_FILE = 1
@@ -74,6 +74,8 @@ ERR_ENTRY_NOT_FOUND = 150000
 
 ERR_APR_OS_START_EAIERR = 670000
 ERR_APR_OS_ERRSPACE_SIZE = 50000
+ERR_CATEGORY_SIZE = 5000
+
 
 # These will be removed in the next version of subvertpy
 ERR_EAI_NONAME = 670008
