@@ -22,6 +22,7 @@
 #include <svn_types.h>
 #include <svn_ra.h>
 #include <svn_path.h>
+#include <svn_props.h>
 #include <apr_file_io.h>
 #include <apr_portable.h>
 
@@ -31,7 +32,7 @@
 #include "util.h"
 #include "ra.h"
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 #define REPORTER_T svn_ra_reporter3_t
 #else
 #define REPORTER_T svn_ra_reporter2_t
@@ -145,8 +146,7 @@ static PyObject *reporter_set_path(PyObject *self, PyObject *args)
 						  &lock_token, &depth))
 		return NULL;
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
-
+#if ONLY_SINCE_SVN(1, 5)
 	RUN_SVN(reporter->reporter->set_path(reporter->report_baton, 
 												  path, revision, depth, start_empty, 
 					 lock_token, reporter->pool));
@@ -188,7 +188,7 @@ static PyObject *reporter_link_path(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "sslb|zi", &path, &url, &revision, &start_empty, &lock_token, &depth))
 		return NULL;
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	RUN_SVN(reporter->reporter->link_path(reporter->report_baton, path, url, 
 				revision, depth, start_empty, lock_token, reporter->pool));
 #else
@@ -343,7 +343,7 @@ static PyObject *api_version(PyObject *self)
 						 ver->patch, ver->tag);
 }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_boolean_t result_of_merge, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
 {
 	PyObject *fn = (PyObject *)baton, *ret, *py_rev_props;
@@ -422,7 +422,7 @@ static bool ra_check_busy(RemoteAccessObject *raobj)
 	return false;
 }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_get_client_string(void *baton, const char **name, apr_pool_t *pool)
 {
 	RemoteAccessObject *self = (RemoteAccessObject *)baton;
@@ -462,7 +462,7 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 
 		SVN_ERR (svn_io_temp_dir (&path, pool));
 		path = svn_path_join (path, "subvertpy", pool);
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 		SVN_ERR (svn_io_open_unique_file3(fp, NULL, path, svn_io_file_del_on_pool_cleanup, pool, pool));
 #else
 		SVN_ERR (svn_io_open_unique_file (fp, NULL, path, ".tmp", TRUE, pool));
@@ -585,7 +585,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	Py_INCREF(progress_cb);
 	ret->progress_func = progress_cb;
 	callbacks2->progress_baton = (void *)ret;
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	callbacks2->get_client_string = py_get_client_string;
 #endif
 	config_hash = config_hash_from_object(config, ret->pool);
@@ -594,7 +594,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	err = svn_ra_open3(&ret->ra, ret->url, uuid,
 			   callbacks2, ret, config_hash, ret->pool);
 #else
@@ -632,7 +632,7 @@ static PyObject *ra_get_uuid(PyObject *self)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid2(ra->ra, &uuid, temp_pool));
 #else
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid(ra->ra, &uuid, temp_pool));
@@ -721,7 +721,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-#if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 5
+#if ONLY_BEFORE_SVN(1, 5)
 	if (revprops == Py_None) {
 		PyErr_SetString(PyExc_NotImplementedError,
 			"fetching all revision properties not supported");
@@ -759,7 +759,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_log2(ra->ra, 
 			apr_paths, start, end, limit,
 			discover_changed_paths, strict_node_history, 
@@ -793,7 +793,7 @@ static PyObject *ra_get_repos_root(PyObject *self)
 		temp_pool = Pool(NULL);
 		if (temp_pool == NULL)
 			return NULL;
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 		RUN_RA_WITH_POOL(temp_pool, ra,
 						  svn_ra_get_repos_root2(ra->ra, &root, temp_pool));
 #else
@@ -820,7 +820,7 @@ static PyObject *ra_get_url(PyObject *self, void *closure)
 	if (ra_check_busy(ra))
 		return NULL;
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	temp_pool = Pool(NULL);
 
 	RUN_RA_WITH_POOL(temp_pool, ra,
@@ -864,7 +864,7 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 		return NULL;
 
 	Py_INCREF(update_editor);
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_ra_do_update2(ra->ra, &reporter, 
 												  &report_baton, 
@@ -933,7 +933,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	Py_INCREF(update_editor);
 	Py_BEGIN_ALLOW_THREADS
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	err = svn_ra_do_switch2(
 						ra->ra, &reporter, &report_baton, 
 						revision_to_update_to, update_target, 
@@ -990,7 +990,7 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 
 	Py_INCREF(diff_editor);
 	Py_BEGIN_ALLOW_THREADS
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	err = svn_ra_do_diff3(ra->ra, &reporter, &report_baton, 
 												  revision_to_update_to, 
 												  diff_target, recurse?svn_depth_infinity:svn_depth_files,
@@ -1058,7 +1058,7 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_revstart_cb(svn_revnum_t revision, void *replay_baton,
    const svn_delta_editor_t **editor, void **edit_baton, apr_hash_t *rev_props, apr_pool_t *pool)
 {
@@ -1101,7 +1101,7 @@ static svn_error_t *py_revfinish_cb(svn_revnum_t revision, void *replay_baton,
 
 static PyObject *ra_replay_range(PyObject *self, PyObject *args)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_pool_t *temp_pool;
 	svn_revnum_t start_revision, end_revision, low_water_mark;
@@ -1174,10 +1174,10 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	void *edit_baton;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_hash_t *hash_lock_tokens;
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR < 5
-	PyObject *py_log_msg;
-#else
+#if ONLY_SINCE_SVN(1, 5)
 	apr_hash_t *hash_revprops;
+#else
+	PyObject *py_log_msg;
 #endif
 	svn_error_t *err;
 
@@ -1208,7 +1208,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (ra_check_busy(ra))
 		return NULL;
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	hash_revprops = prop_dict_to_hash(pool, revprops);
 	if (hash_revprops == NULL) {
 		apr_pool_destroy(pool);
@@ -1473,7 +1473,7 @@ static PyObject *ra_stat(PyObject *self, PyObject *args)
 
 static PyObject *ra_has_capability(PyObject *self, PyObject *args)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	char *capability;
 	apr_pool_t *temp_pool;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
@@ -1659,7 +1659,7 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 	return ret;
 }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 static PyObject *range_to_tuple(svn_merge_range_t *range)
 {
 	return Py_BuildValue("(llb)", range->start, range->end, range->inheritable);
@@ -1706,7 +1706,7 @@ static PyObject *mergeinfo_to_dict(svn_mergeinfo_t mergeinfo, apr_pool_t *temp_p
 
 static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_array_header_t *apr_paths;
 	apr_pool_t *temp_pool;
@@ -1764,7 +1764,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 #endif
 }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_location_segment_receiver(svn_location_segment_t *segment, void *baton, apr_pool_t *pool)
 {
 	PyObject *fn = baton, *ret;
@@ -1780,7 +1780,7 @@ static svn_error_t *py_location_segment_receiver(svn_location_segment_t *segment
 
 static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t peg_revision, start_revision, end_revision;
 	char *path;
@@ -1835,7 +1835,7 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs2(ra->ra, path, start, end, 
 				include_merged_revisions, 
 				py_file_rev_handler, (void *)file_rev_handler, 
@@ -2762,7 +2762,7 @@ static PyObject *get_username_provider(PyObject *self)
 	return (PyObject *)auth;
 }
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 static svn_error_t *py_cb_get_simple_provider_prompt(svn_boolean_t *may_save_plaintext,
                                                      const char *realmstring,
                                                      void *baton,
@@ -2802,7 +2802,7 @@ static PyObject *get_simple_provider(PyObject *self, PyObject *args)
 	auth->pool = Pool(NULL);
 	if (auth->pool == NULL)
 		return NULL;
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 	Py_INCREF(callback);
 	auth->callback = callback;
 	svn_auth_get_simple_provider2(&auth->provider, py_cb_get_simple_provider_prompt, callback, auth->pool);
@@ -2853,7 +2853,7 @@ static PyObject *get_ssl_client_cert_pw_file_provider(PyObject *self)
 	if (auth->pool == NULL)
 		return NULL;
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 	svn_auth_get_ssl_client_cert_pw_file_provider2(&auth->provider, NULL, NULL, auth->pool);
 #else
 	svn_auth_get_ssl_client_cert_pw_file_provider(&auth->provider, auth->pool);
@@ -2899,7 +2899,7 @@ static PyObject *get_windows_simple_provider(PyObject* self)
 	return (PyObject *)auth;
 }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 static PyObject *get_windows_ssl_server_trust_provider(PyObject *self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
@@ -2932,7 +2932,7 @@ static PyObject *get_keychain_simple_provider(PyObject* self)
 
 static PyObject *get_platform_specific_client_providers(PyObject *self)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 	/* svn_auth_get_platform_specific_client_providers() allocates all the
 	 * providers in a single pool, so we can't use it :/ */
 	const char *provider_names[] = {
@@ -2988,7 +2988,7 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 	PyList_Append(pylist, provider);
 	Py_DECREF(provider);
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	provider = get_windows_ssl_server_trust_provider(self);
 	if (provider == NULL)
 		return NULL;
@@ -3023,7 +3023,7 @@ static PyMethodDef ra_module_methods[] = {
 	{ "get_simple_provider", (PyCFunction)get_simple_provider, METH_VARARGS, NULL },
 #if defined(WIN32)
 	{ "get_windows_simple_provider", (PyCFunction)get_windows_simple_provider, METH_NOARGS, NULL },
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	{ "get_windows_ssl_server_trust_provider", (PyCFunction)get_windows_ssl_server_trust_provider, METH_NOARGS, NULL },
 #endif
 #endif
@@ -3113,7 +3113,7 @@ void init_ra(void)
 	PyModule_AddIntConstant(mod, "DIRENT_LAST_AUTHOR", SVN_DIRENT_LAST_AUTHOR);
 	PyModule_AddIntConstant(mod, "DIRENT_ALL", SVN_DIRENT_ALL);
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	PyModule_AddIntConstant(mod, "MERGEINFO_EXPLICIT", svn_mergeinfo_explicit);
 	PyModule_AddIntConstant(mod, "MERGEINFO_INHERITED", svn_mergeinfo_inherited);
 	PyModule_AddIntConstant(mod, "MERGEINFO_NEAREST_ANCESTOR", svn_mergeinfo_nearest_ancestor);

@@ -119,7 +119,7 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
     return ret;
 }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *proplist_receiver(void *prop_list, const char *path,
                                       apr_hash_t *prop_hash, apr_pool_t *pool)
 {
@@ -372,7 +372,7 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
                           &path, &recursive, &force, &no_ignore, &add_parents))
         return NULL;
 
-#if SVN_VER_MAJOR <= 1 && SVN_VER_MINOR < 4
+#if ONLY_BEFORE_SVN(1, 4)
     if (add_parents == false) {
         PyErr_SetString(PyExc_NotImplementedError, 
             "Subversion < 1.4 does not support add_parents=false");
@@ -384,7 +384,7 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
     if (temp_pool == NULL)
         return NULL;
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, 
         svn_client_add4(path, recursive?svn_depth_infinity:svn_depth_empty, 
                         force, no_ignore, add_parents, 
@@ -422,7 +422,7 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, url, 
         svn_path_canonicalize(path, temp_pool),
         &c_peg_rev, &c_rev, recurse?svn_depth_infinity:svn_depth_files, 
@@ -455,7 +455,7 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
     apr_array_header_t *apr_targets;
     PyObject *revprops = Py_None;
     char *kwnames[] = { "targets", "recurse", "keep_locks", "revprops", NULL };
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     apr_hash_t *hash_revprops;
 #endif
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bbO", kwnames, &targets, &recurse, &keep_locks, &revprops))
@@ -475,7 +475,7 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     if (revprops != Py_None) {
         hash_revprops = prop_dict_to_hash(temp_pool, revprops);
         if (hash_revprops == NULL) {
@@ -508,6 +508,47 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
     return ret;
 }
 
+static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ClientObject *client = (ClientObject *)self;
+    char *kwnames[] = { "from", "to", "rev", "peg_rev", "recurse", "ignore_externals", "overwrite", "native_eol", NULL };
+    svn_revnum_t result_rev;
+    svn_opt_revision_t c_peg_rev, c_rev;
+    char *from, *to;
+    apr_pool_t *temp_pool;
+	char *native_eol = NULL;
+    PyObject *peg_rev=Py_None, *rev=Py_None;
+    bool recurse=true, ignore_externals=false, overwrite=false;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObbb", kwnames, &from, &to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol))
+        return NULL;
+
+    if (!to_opt_revision(peg_rev, &c_peg_rev))
+        return NULL;
+    if (!to_opt_revision(rev, &c_rev))
+        return NULL;
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+#if ONLY_SINCE_SVN(1, 5)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_export4(&result_rev, from, 
+        svn_path_canonicalize(to, temp_pool),
+        &c_peg_rev, &c_rev, overwrite, ignore_externals,
+		recurse?svn_depth_infinity:svn_depth_files, 
+        native_eol, client->client, temp_pool));
+#else
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_export3(&result_rev, from,
+        svn_path_canonicalize(to, temp_pool),
+        &c_peg_rev, &c_rev, overwrite, ignore_externals, recurse, 
+        native_eol, client->client, temp_pool));
+#endif
+    apr_pool_destroy(temp_pool);
+    return PyLong_FromLong(result_rev);
+}
+
+
+
 static PyObject *client_delete(PyObject *self, PyObject *args)
 {
     PyObject *paths; 
@@ -529,7 +570,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
         return NULL;
     }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_delete3(&commit_info, 
                                                     apr_paths,
                 force, keep_local, NULL, client->client, temp_pool));
@@ -567,10 +608,10 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     char *kwnames[] = { "src_path", "dst_path", "src_rev", "copy_as_child",
         "make_parents", "ignore_externals", "revprpos", NULL };
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 4
+#if ONLY_SINCE_SVN(1, 4)
     PyObject *py_revprops = Py_None;
 #endif
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     apr_array_header_t *src_paths;
     svn_client_copy_source_t src;
 #endif
@@ -595,7 +636,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
         revprops = NULL;
     }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR < 4
+#if ONLY_BEFORE_SVN(1, 4)
     if (copy_as_child) {
         PyErr_SetString(PyExc_NotImplementedError, 
                         "copy_as_child not supported in svn <= 1.4");
@@ -615,7 +656,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 #endif
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR < 5
+#if ONLY_BEFORE_SVN(1, 5)
     if (ignore_externals) {
         PyErr_SetString(PyExc_NotImplementedError, 
                         "ignore_externals not supported in svn <= 1.5");
@@ -623,7 +664,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 #endif
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     src.path = src_path;
     src.revision = src.peg_revision = &c_src_rev;
     src_paths = apr_array_make(temp_pool, 1, sizeof(svn_client_copy_source_t *));
@@ -634,11 +675,11 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     APR_ARRAY_IDX(src_paths, 0, svn_client_copy_source_t *) = &src;
 #endif
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR > 5
+#if ONLY_SINCE_SVN(1, 6)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_copy5(&commit_info, src_paths, 
                 dst_path, copy_as_child, make_parents, 
                 ignore_externals, revprops, client->client, temp_pool));
-#elif SVN_VER_MAJOR >= 1 && SVN_VER_MINOR == 5
+#elif ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_copy4(&commit_info, src_paths, 
                 dst_path, copy_as_child, make_parents, 
                 revprops, client->client, temp_pool));
@@ -660,7 +701,7 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
     ClientObject *client = (ClientObject *)self;
     apr_pool_t *temp_pool;
     char *target;
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     svn_commit_info_t *commit_info = NULL;
 #endif
     PyObject *ret, *py_revprops = Py_None;
@@ -686,7 +727,7 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
         revprops = NULL;
     }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     /* FIXME: Support changelists */
     /* FIXME: Support depth */
     RUN_SVN_WITH_POOL(temp_pool, svn_client_propset3(&commit_info, propname,
@@ -734,7 +775,7 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     /* FIXME: Support changelists */
     /* FIXME: Support actual_revnum */
     /* FIXME: Support depth properly */
@@ -782,7 +823,7 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
         return NULL;
     }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_proplist3(target, &c_peg_rev, &c_rev,
                                            depth, NULL,
@@ -842,7 +883,7 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
 
 static PyObject *client_resolve(PyObject *self, PyObject *args)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     svn_depth_t depth;
     svn_wc_conflict_choice_t choice;
     ClientObject *client = (ClientObject *)self;
@@ -896,7 +937,7 @@ static PyObject *client_update(PyObject *self, PyObject *args)
         apr_pool_destroy(temp_pool);
         return NULL;
     }
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_update3(&result_revs, 
             apr_paths, &c_rev, 
             recurse?svn_depth_infinity:svn_depth_files, depth_is_sticky, 
@@ -950,7 +991,7 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_list2(path, &c_peg_rev, &c_rev,
                                        depth, dirents, false,
@@ -977,7 +1018,7 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
 
 static PyObject *client_diff(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
     char *kwnames[] = {
         "rev1", "rev2", "path1", "path2",
         "relative_to_dir", "diffopts", "encoding",
@@ -1088,6 +1129,8 @@ static PyMethodDef client_methods[] = {
         "S.add(path, recursive=True, force=False, no_ignore=False)" },
     { "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS, 
         "S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False, allow_unver_obstructions=False)" },
+	{ "export", (PyCFunction)client_export, METH_VARARGS|METH_KEYWORDS,
+		"S.export(from, to, rev=None, peg_rev=None, recurse=True, ignore_externals=False, overwrite=False, native_eol=None)" },
     { "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True, revprops=None) -> (revnum, date, author)" },
     { "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
     { "copy", (PyCFunction)client_copy, METH_VARARGS|METH_KEYWORDS, "S.copy(src_path, dest_path, srv_rev=None)" },
