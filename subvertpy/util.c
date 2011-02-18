@@ -122,7 +122,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 		Py_INCREF(child);
 	}
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 4
+#if ONLY_SINCE_SVN(1, 4)
 	message = svn_err_best_message(error, buf, sizeof(buf));
 #else
 	message = error->message;
@@ -376,7 +376,7 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 	return py_changed_paths;
 }
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 {
 	PyObject *py_changed_paths, *pyval;
@@ -406,7 +406,7 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 }
 #endif
 
-#if SVN_VER_MAJOR == 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
 	PyObject *revprops, *py_changed_paths, *ret;
@@ -774,7 +774,7 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 		apr_pool_destroy(temp_pool);
 		return ret;
 	} else {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 		svn_string_t *result;
 		RUN_SVN_WITH_POOL(temp_pool, svn_string_from_stream(&result, 
 							   self->stream,

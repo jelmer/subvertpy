@@ -428,7 +428,7 @@ static PyMethodDef repos_module_methods[] = {
 
 static PyObject *repos_has_capability(RepositoryObject *self, PyObject *args)
 {
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 5
+#if ONLY_SINCE_SVN(1, 5)
 	char *name;
 	svn_boolean_t has;
 	apr_pool_t *temp_pool;
@@ -665,7 +665,7 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	apr_pool_t *temp_pool;
 	svn_boolean_t force = FALSE;
 	char *path;
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 	svn_checksum_kind_t kind;
 	const char *cstr;
 	svn_checksum_t *checksum;
@@ -681,7 +681,7 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_checksum(&checksum, kind, 
 													  self->root, 
 											   path, force, temp_pool));
@@ -843,7 +843,7 @@ void initrepos(void)
 	PyModule_AddObject(mod, "PATH_CHANGE_DELETE", PyInt_FromLong(svn_fs_path_change_delete));
 	PyModule_AddObject(mod, "PATH_CHANGE_REPLACE", PyInt_FromLong(svn_fs_path_change_replace));
 
-#if SVN_VER_MAJOR >= 1 && SVN_VER_MINOR >= 6
+#if ONLY_SINCE_SVN(1, 6)
 	PyModule_AddObject(mod, "CHECKSUM_MD5", PyInt_FromLong(svn_checksum_md5));
 	PyModule_AddObject(mod, "CHECKSUM_SHA1", PyInt_FromLong(svn_checksum_sha1));
 #else
