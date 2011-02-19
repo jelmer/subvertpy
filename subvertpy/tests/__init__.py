@@ -49,6 +49,10 @@ from subvertpy.ra import (
 
 
 class TestCase(unittest.TestCase):
+    """Base test case.
+
+    :note: Adds assertIsInstance and assertIs.
+    """
 
     def assertIsInstance(self, obj, kls, msg=None):
         """Fail if obj is not an instance of kls"""
@@ -66,6 +70,7 @@ class TestCase(unittest.TestCase):
 
 
 class TestCaseInTempDir(TestCase):
+    """Test case that runs in a temporary directory."""
 
     def setUp(self):
         TestCase.setUp(self)
@@ -80,6 +85,7 @@ class TestCaseInTempDir(TestCase):
 
 
 class TestFileEditor(object):
+    """Simple file editor wrapper that doesn't require closing."""
 
     def __init__(self, file):
         self.file = file
@@ -101,6 +107,7 @@ class TestFileEditor(object):
 
 
 class TestDirEditor(object):
+    """Simple dir editor wrapper that doesn't require closing."""
 
     def __init__(self, dir, baseurl, revnum):
         self.dir = dir
@@ -164,6 +171,7 @@ class TestDirEditor(object):
 
 
 class TestCommitEditor(TestDirEditor):
+    """Simple commit editor wrapper."""
 
     def __init__(self, editor, baseurl, revnum):
         self.editor = editor
@@ -222,14 +230,17 @@ class SubversionTestCase(TestCaseInTempDir):
 
 
     def make_checkout(self, repos_url, relpath):
+        """Create a new checkout."""
         self.client_ctx.checkout(repos_url, relpath, "HEAD")
 
     def client_set_prop(self, path, name, value):
+        """Set a property on a local file or directory."""
         if value is None:
             value = ""
         self.client_ctx.propset(name, value, path, False, True)
 
     def client_get_prop(self, path, name, revnum=None, recursive=False):
+        """Retrieve a property from a local or remote file or directory."""
         if revnum is None:
             rev = "WORKING"
         else:
@@ -252,10 +263,18 @@ class SubversionTestCase(TestCaseInTempDir):
         return r.rev_proplist(revnum)[name]
 
     def client_set_revprop(self, url, revnum, name, value):
+        """Set a revision property on a repository.
+
+        :param url: URL of the repository
+        :param revnum: Revision number of the revision
+        :param name: Name of the property
+        :param value: Value of the property, None to remove
+        """
         r = ra.RemoteAccess(url, auth=Auth([ra.get_username_provider()]))
         r.change_rev_prop(revnum, name, value)
 
     def client_resolve(self, path, choice, depth=0):
+        """Resolve a conflict set on a local path."""
         self.client_ctx.resolve(path, depth, choice)
 
     def client_commit(self, dir, message=None, recursive=True):
