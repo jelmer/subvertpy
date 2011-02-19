@@ -28,7 +28,10 @@ import unittest
 try:
     from unittest import SkipTest
 except ImportError:
-    from unittest2 import SkipTest
+    try:
+        from unittest2 import SkipTest
+    except ImportError:
+        from testtools.testcase import TestSkipped as SkipTest
 import urllib2
 import urlparse
 
