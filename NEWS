@@ -61,6 +61,8 @@
     Instead, subvertpy will raise socket.gaierror.
     (Jelmer Vernooij)
 
+  * Use svn_fs_paths_changed2() if available. (Jelmer Vernooij)
+
  BUG FIXES
 
   * Fix handling of DST in time_from_cstring. (Max Bowsher, #656226)

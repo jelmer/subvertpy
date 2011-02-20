@@ -547,6 +547,48 @@ static PyObject *py_string_from_svn_node_id(const svn_fs_id_t *id)
 	return PyString_FromStringAndSize(str->data, str->len);
 }
 
+#if ONLY_BEFORE_SVN(1, 6)
+static PyObject *py_fs_path_change(svn_fs_path_change_t *val)
+{
+	PyObject *ret, *py_node_id;
+
+	py_node_id = py_string_from_svn_node_id(val->node_rev_id);
+	if (py_node_id == NULL) {
+		return NULL;
+	}
+	ret = Py_BuildValue("(Oibb)", py_node_id,
+						   val->change_kind, val->text_mod, val->prop_mod);
+	Py_DECREF(py_node_id);
+	if (ret == NULL) {
+		return NULL;
+	}
+
+	return ret;
+}
+
+#else
+
+static PyObject *py_fs_path_change2(svn_fs_path_change2_t *val)
+{
+	PyObject *ret, *py_node_id;
+
+	py_node_id = py_string_from_svn_node_id(val->node_rev_id);
+	if (py_node_id == NULL) {
+		return NULL;
+	}
+	ret = Py_BuildValue("(Oibb)", py_node_id,
+						   val->change_kind, val->text_mod, val->prop_mod);
+	Py_DECREF(py_node_id);
+	if (ret == NULL) {
+		return NULL;
+	}
+
+	/* FIXME: copyfrom information */
+
+	return ret;
+}
+#endif
+
 static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
 {
 	apr_pool_t *temp_pool;
@@ -558,22 +600,28 @@ static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+#if ONLY_SINCE_SVN(1, 6)
+	RUN_SVN_WITH_POOL(temp_pool, 
+					  svn_fs_paths_changed2(&changed_paths, self->root, temp_pool));
+#else
 	RUN_SVN_WITH_POOL(temp_pool, 
 					  svn_fs_paths_changed(&changed_paths, self->root, temp_pool));
+#endif
 	ret = PyDict_New();
 	for (idx = apr_hash_first(temp_pool, changed_paths); idx != NULL;
 		 idx = apr_hash_next(idx)) {
-		PyObject *py_val, *py_node_id;
+		PyObject *py_val;
+#if ONLY_SINCE_SVN(1, 6)
+		svn_fs_path_change2_t *val;
+#else
 		svn_fs_path_change_t *val;
+#endif
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-		py_node_id = py_string_from_svn_node_id(val->node_rev_id);
-		if (py_node_id == NULL) {
-			apr_pool_destroy(temp_pool);
-			PyObject_Del(ret);
-			return NULL;
-		}
-		py_val = Py_BuildValue("(sibb)", py_node_id,
-							   val->change_kind, val->text_mod, val->prop_mod);
+#if ONLY_SINCE_SVN(1, 6)
+		py_val = py_fs_path_change2(val);
+#else
+		py_val = py_fs_path_change(val);
+#endif
 		if (py_val == NULL) {
 			apr_pool_destroy(temp_pool);
 			PyObject_Del(ret);
