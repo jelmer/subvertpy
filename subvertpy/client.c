@@ -696,6 +696,7 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
 {
     char *propname;
     svn_string_t c_propval;
+    int vallen;
     int recurse = true;
     int skip_checks = false;
     ClientObject *client = (ClientObject *)self;
@@ -709,9 +710,11 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
     apr_hash_t *revprops;
 
     if (!PyArg_ParseTuple(args, "sz#s|bblO", &propname, &c_propval.data,
-                          &c_propval.len, &target, &recurse, &skip_checks,
+                          &vallen, &target, &recurse, &skip_checks,
                           &base_revision_for_url, &py_revprops))
         return NULL;
+
+    c_propval.len = vallen;
 
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)

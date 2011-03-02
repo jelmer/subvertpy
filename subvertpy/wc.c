@@ -2040,7 +2040,11 @@ static PyObject *revision_status(PyObject *self, PyObject *args, PyObject *kwarg
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_revision_status(&revstatus, wc_path, trail_url,
+	RUN_SVN_WITH_POOL(temp_pool, 
+			svn_wc_revision_status(
+				&revstatus, 
+				svn_path_canonicalize(wc_path, temp_pool),
+				trail_url,
 				 committed, py_cancel_func, cancel_func, temp_pool));
 	ret = Py_BuildValue("(llbb)", revstatus->min_rev, revstatus->max_rev, 
 			revstatus->switched, revstatus->modified);

@@ -72,6 +72,19 @@ class WorkingCopyTests(TestCase):
         self.assertFalse(wc.match_ignore_list("foo", ["bar"]))
 
 
+class WcTests(SubversionTestCase):
+
+    def test_revision_status(self):
+        repos_url = self.make_client("repos", "checkout")
+        ret = wc.revision_status("checkout")
+        self.assertEquals((0, 0, 0, 0), ret)
+
+    def test_revision_status_trailing(self):
+        repos_url = self.make_client("repos", "checkout")
+        ret = wc.revision_status("checkout/")
+        self.assertEquals((0, 0, 0, 0), ret)
+
+
 class AdmTests(SubversionTestCase):
 
     def test_has_binary_prop(self):

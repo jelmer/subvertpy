@@ -97,8 +97,16 @@ class TestRemoteAccess(SubversionTestCase):
         ret = self.ra.get_dir("", 0)
         self.assertIsInstance(ret, tuple)
 
+    def test_get_dir_leading_slash(self):
         ret = self.ra.get_dir("/", 0)
         self.assertIsInstance(ret, tuple)
+
+    def test_get_dir_kind(self):
+        self.do_commit()
+        (dirents, fetch_rev, props) = self.ra.get_dir("/", 1, fields=ra.DIRENT_KIND)
+        self.assertIsInstance(props, dict)
+        self.assertEquals(1, fetch_rev)
+        self.assertEquals(NODE_DIR, dirents["foo"]["kind"])
 
     def test_change_rev_prop(self):
         self.do_commit()

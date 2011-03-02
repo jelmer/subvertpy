@@ -1290,7 +1290,7 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 }
 
 
-static PyObject *ra_get_dir(PyObject *self, PyObject *args)
+static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	apr_pool_t *temp_pool;
 	apr_hash_t *dirents;
@@ -1303,10 +1303,12 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args)
 	apr_ssize_t klen;
 	char *path;
 	svn_revnum_t revision = -1;
-	long dirent_fields = 0;
+	unsigned int dirent_fields = 0;
 	PyObject *py_dirents, *py_props;
+    char *kwnames[] = { "path", "revision", "fields", NULL };
 
-	if (!PyArg_ParseTuple(args, "s|lI", &path, &revision, &dirent_fields))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|lI", kwnames,
+                                     &path, &revision, &dirent_fields))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1916,7 +1918,7 @@ static PyMethodDef ra_methods[] = {
 	{ "get_lock", ra_get_lock, METH_VARARGS, 
 		"S.get_lock(path) -> lock\n"
 	},
-	{ "get_dir", ra_get_dir, METH_VARARGS, 
+	{ "get_dir", ra_get_dir, METH_VARARGS|METH_KEYWORDS, 
 		"S.get_dir(path, revision, dirent_fields=-1) -> (dirents, fetched_rev, properties)\n"
 		"Get the contents of a directory. "},
 	{ "get_file", ra_get_file, METH_VARARGS, 
