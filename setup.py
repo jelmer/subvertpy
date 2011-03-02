@@ -329,14 +329,14 @@ def subvertpy_modules():
         ]
 
 
-subvertpy_version = (0, 8, 0)
+subvertpy_version = (0, 8, 1)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
 if __name__ == "__main__":
     setup(name='subvertpy',
           description='Alternative Python bindings for Subversion',
-          keywords='plugin svn',
+          keywords='svn subvertpy subversion bindings',
           version=subvertpy_version_string,
           url='http://samba.org/~jelmer/subvertpy',
           download_url="http://samba.org/~jelmer/subvertpy/subvertpy-%s.tar.gz" % subvertpy_version_string,
