@@ -73,6 +73,9 @@
 
   * Fix type mismatch in svn.ra.get_dir(). (Jelmer Vernooij, #686663)
 
+  * Cope with trailing slash being specified to subvertpy.wc.revision_stats().
+    (Ronny Pfannschmidt)
+
  API BREAKS
 
   * WorkingCopy.entry() will now raise KeyError if the specified entry was not found.

@@ -79,6 +79,11 @@ class WcTests(SubversionTestCase):
         ret = wc.revision_status("checkout")
         self.assertEquals((0, 0, 0, 0), ret)
 
+    def test_revision_status_trailing(self):
+        repos_url = self.make_client("repos", "checkout")
+        ret = wc.revision_status("checkout/")
+        self.assertEquals((0, 0, 0, 0), ret)
+
 
 class AdmTests(SubversionTestCase):
 
