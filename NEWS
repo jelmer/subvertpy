@@ -1,4 +1,4 @@
-0.8.0   UNRELEASED
+0.8.0   2011-03-02
 
  FEATURES
 
@@ -61,6 +61,8 @@
     Instead, subvertpy will raise socket.gaierror.
     (Jelmer Vernooij)
 
+  * Use svn_fs_paths_changed2() if available. (Jelmer Vernooij)
+
  BUG FIXES
 
   * Fix handling of DST in time_from_cstring. (Max Bowsher, #656226)
@@ -68,6 +70,11 @@
   * Re-using a WorkingCopy object after calling close() on it
     now raises an exception rather than trigger a segfault.
     (Jelmer Vernooij)
+
+  * Fix type mismatch in svn.ra.get_dir(). (Jelmer Vernooij, #686663)
+
+  * Cope with trailing slash being specified to subvertpy.wc.revision_stats().
+    (Ronny Pfannschmidt)
 
  API BREAKS
 
