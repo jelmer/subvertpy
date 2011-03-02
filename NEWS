@@ -71,6 +71,8 @@
     now raises an exception rather than trigger a segfault.
     (Jelmer Vernooij)
 
+  * Fix type mismatch in svn.ra.get_dir(). (Jelmer Vernooij, #686663)
+
  API BREAKS
 
   * WorkingCopy.entry() will now raise KeyError if the specified entry was not found.
