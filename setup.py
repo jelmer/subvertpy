@@ -344,7 +344,7 @@ if __name__ == "__main__":
           author='Jelmer Vernooij',
           author_email='jelmer@samba.org',
           long_description="""
-          Alternative Python bindings for Subversion, split out from bzr-svn. The goal is to have complete, portable and "Pythonic" Python bindings. 
+          Alternative Python bindings for Subversion. The goal is to have complete, portable and "Pythonic" Python bindings. 
           """,
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
