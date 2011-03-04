@@ -1756,7 +1756,7 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 										conflict_choice, py_wc_notify_func,
 									   (void *)notify_func, py_cancel_func,
 									   cancel_func, temp_pool));
-#else
+#elif ONLY_SINCE_SVN(1, 5)
 	if (resolve_tree) {
 		PyErr_SetString(PyExc_NotImplementedError,
 						"resolve_tree not supported with svn < 1.6");
@@ -1764,6 +1764,22 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 		RUN_SVN_WITH_POOL(temp_pool,
 			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text, 
 											resolve_props, depth,
+											conflict_choice, py_wc_notify_func,
+										   (void *)notify_func, py_cancel_func,
+										   cancel_func, temp_pool));
+	}
+#else
+	if (resolve_tree) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"resolve_tree not supported with svn < 1.6");
+	} else if (depth != svn_depth_infinity && depth != svn_depth_empty) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"only infinity and empty values for depth are supported");
+	} else {
+		RUN_SVN_WITH_POOL(temp_pool,
+			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text, 
+											resolve_props, 
+											(depth == svn_depth_infinity),
 											conflict_choice, py_wc_notify_func,
 										   (void *)notify_func, py_cancel_func,
 										   cancel_func, temp_pool));
