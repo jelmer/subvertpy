@@ -1728,6 +1728,53 @@ static PyObject *probe_try(PyObject *self, PyObject *args)
 	return (PyObject *)ret;
 }
 
+static PyObject *resolved_conflict(PyObject *self, PyObject *args)
+{
+	AdmObject *admobj = (AdmObject *)self;
+	apr_pool_t *temp_pool;
+	svn_boolean_t resolve_props, resolve_tree, resolve_text;
+	int depth;
+	svn_wc_conflict_choice_t conflict_choice;
+	PyObject *notify_func = Py_None, *cancel_func = Py_None;
+	char *path;
+
+	if (!PyArg_ParseTuple(args, "sbbbii|OO", &path, &resolve_text,
+						  &resolve_props, &resolve_tree, &depth,
+						  &conflict_choice, &notify_func, &cancel_func))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+#if ONLY_SINCE_SVN(1, 6)
+	RUN_SVN_WITH_POOL(temp_pool,
+		  svn_wc_resolved_conflict4(path, admobj->adm, resolve_text, 
+										resolve_props, resolve_tree, depth,
+										conflict_choice, py_wc_notify_func,
+									   (void *)notify_func, py_cancel_func,
+									   cancel_func, temp_pool));
+#else
+	if (resolve_tree) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"resolve_tree not supported with svn < 1.6");
+	} else {
+		RUN_SVN_WITH_POOL(temp_pool,
+			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text, 
+											resolve_props, depth,
+											conflict_choice, py_wc_notify_func,
+										   (void *)notify_func, py_cancel_func,
+										   cancel_func, temp_pool));
+	}
+#endif
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyObject *conflicted(PyObject *self, PyObject *args)
 {
 	char *path;
@@ -1796,7 +1843,7 @@ static PyMethodDef adm_methods[] = {
 		"S.get_ancestry(path) -> (url, rev)" },
 	{ "maybe_set_repos_root", (PyCFunction)maybe_set_repos_root, METH_VARARGS, "S.maybe_set_repos_root(path, repos)" },
 	{ "add_repos_file", (PyCFunction)add_repos_file, METH_KEYWORDS, 
-		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None, notify=None)" },
+		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None, notify_func=None)" },
 	{ "mark_missing_deleted", (PyCFunction)mark_missing_deleted, METH_VARARGS,
 		"S.mark_missing_deleted(path)" },
 	{ "remove_from_revision_control", (PyCFunction)remove_from_revision_control, METH_VARARGS,
@@ -1804,7 +1851,7 @@ static PyMethodDef adm_methods[] = {
 	{ "relocate", (PyCFunction)relocate, METH_VARARGS,
 		"S.relocate(path, from, to, recurse=TRUE, validator=None)" },
 	{ "crop_tree", (PyCFunction)crop_tree, METH_VARARGS,
-		"S.crop_tree(target, depth, notify=None, cancel=None)" },
+		"S.crop_tree(target, depth, notify_func=None, cancel=None)" },
 	{ "translated_stream", (PyCFunction)translated_stream, METH_VARARGS,
 		"S.translated_stream(path, versioned_file, flags) -> stream" },
 	{ "is_wc_root", (PyCFunction)is_wc_root, METH_VARARGS,
@@ -1821,6 +1868,8 @@ static PyMethodDef adm_methods[] = {
 		"S.probe_try(path, write_lock=False, levels_to_lock=-1)" },
 	{ "conflicted", (PyCFunction)conflicted, METH_VARARGS,
 		"S.conflicted(path) -> (text_conflicted, prop_conflicted, tree_conflicted)" },
+	{ "resolved_conflict", (PyCFunction)resolved_conflict, METH_VARARGS,
+		"S.resolved_conflict(path, resolve_text, resolve_props, resolve_tree, depth, conflict_choice, notify_func=None, cancel=None)" },
 	{ NULL, }
 };
 
@@ -2473,6 +2522,14 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "TRANSLATE_NO_OUTPUT_CLEANUP", SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP);
 	PyModule_AddIntConstant(mod, "TRANSLATE_FORCE_COPY", SVN_WC_TRANSLATE_FORCE_COPY);
 	PyModule_AddIntConstant(mod, "TRANSLATE_USE_GLOBAL_TMP", SVN_WC_TRANSLATE_USE_GLOBAL_TMP);
+
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_POSTPONE", svn_wc_conflict_choose_postpone);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_BASE", svn_wc_conflict_choose_base);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_FULL", svn_wc_conflict_choose_theirs_full);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_FULL", svn_wc_conflict_choose_mine_full);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_CONFLICT", svn_wc_conflict_choose_theirs_conflict);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_CONFLICT", svn_wc_conflict_choose_mine_conflict);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED", svn_wc_conflict_choose_merged);
 
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
