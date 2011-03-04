@@ -1918,7 +1918,7 @@ static PyMethodDef ra_methods[] = {
 	{ "get_lock", ra_get_lock, METH_VARARGS, 
 		"S.get_lock(path) -> lock\n"
 	},
-	{ "get_dir", ra_get_dir, METH_VARARGS|METH_KEYWORDS, 
+	{ "get_dir", (PyCFunction)ra_get_dir, METH_VARARGS|METH_KEYWORDS, 
 		"S.get_dir(path, revision, dirent_fields=-1) -> (dirents, fetched_rev, properties)\n"
 		"Get the contents of a directory. "},
 	{ "get_file", ra_get_file, METH_VARARGS, 
