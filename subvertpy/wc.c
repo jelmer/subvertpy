@@ -1051,9 +1051,10 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	}
 
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed4(svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
-														   rev_date, rev_author, wcprop_changes, 
-														   remove_lock, remove_changelist, digest, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed4(
+		svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
+			rev_date, rev_author, wcprop_changes, 
+			remove_lock, remove_changelist, digest, temp_pool));
 #else
 	if (remove_changelist) {
 		PyErr_SetString(PyExc_NotImplementedError, "remove_changelist only supported in svn < 1.6");
@@ -1727,6 +1728,40 @@ static PyObject *probe_try(PyObject *self, PyObject *args)
 	return (PyObject *)ret;
 }
 
+static PyObject *conflicted(PyObject *self, PyObject *args)
+{
+	char *path;
+	apr_pool_t *temp_pool;
+	PyObject *ret;
+	AdmObject *admobj = (AdmObject *)self;
+	svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+#if ONLY_SINCE_SVN(1, 6)
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_conflicted_p2(&text_conflicted,
+		&prop_conflicted, &tree_conflicted, path, admobj->adm, temp_pool));
+
+	ret = Py_BuildValue("(bbb)", text_conflicted, prop_conflicted, tree_conflicted);
+#else
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_conflicted_p(&text_conflicted,
+		&prop_conflicted, path, admobj->adm, temp_pool));
+
+	ret = Py_BuildValue("(bbO)", text_conflicted, prop_conflicted, Py_None);
+#endif
+
+	apr_pool_destroy(temp_pool);
+
+	return ret;
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1784,6 +1819,8 @@ static PyMethodDef adm_methods[] = {
 		"S.retrieve(path) -> WorkingCopy" },
 	{ "probe_try", (PyCFunction)probe_try, METH_VARARGS,
 		"S.probe_try(path, write_lock=False, levels_to_lock=-1)" },
+	{ "conflicted", (PyCFunction)conflicted, METH_VARARGS,
+		"S.conflicted(path) -> (text_conflicted, prop_conflicted, tree_conflicted)" },
 	{ NULL, }
 };
 
@@ -2150,7 +2187,9 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 #else
 	PyErr_WarnEx(PyExc_DeprecationWarning, "get_pristine_copy_path is deprecated. Use get_pristine_contents instead.", 2);
 #endif
-	RUN_SVN_WITH_POOL(pool, svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool), &pristine_path, pool));
+	RUN_SVN_WITH_POOL(pool,
+		  svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool),
+										&pristine_path, pool));
 	ret = PyString_FromString(pristine_path);
 	apr_pool_destroy(pool);
 	return ret;
