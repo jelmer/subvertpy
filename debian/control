@@ -13,9 +13,9 @@ Architecture: any
 Conflicts: bzr-svn (<< 0.5.0~rc2~)
 Depends: ${shlibs:Depends}, ${python:Depends}, ${misc:Depends}
 Description: Alternative Python bindings for Subversion
- Python bindings for the Subversion version control system. The aim of 
- these bindings is to be fast, complete and providing an API that feels native 
+ Python bindings for the Subversion version control system. The aim of
+ these bindings is to be fast, complete and to provide an API that feels native
  to Python programmers.
  .
- This also includes an experimental server-side implementation of the 
+ This also includes an experimental server-side implementation of the
  Subversion protocol.
