@@ -2,7 +2,6 @@
 
 export HOME=$(CURDIR)/nonexistent
 
-DEB_PYTHON_SYSTEM=pysupport
 DEB_INSTALL_EXAMPLES_python-subvertpy = $(wildcard examples/*.py)
 
 include /usr/share/cdbs/1/rules/debhelper.mk

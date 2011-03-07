@@ -1,3 +1,9 @@
+subvertpy (0.8.0-2) UNRELEASED; urgency=low
+
+  * Switch to dh_python2.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Mon, 07 Mar 2011 03:17:32 +0100
+
 subvertpy (0.8.0-1) unstable; urgency=low
 
   * New upstream release.
