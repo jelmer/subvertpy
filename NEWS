@@ -10,6 +10,8 @@
 
   * Fix compilation on OS X. (#728574)
 
+  * Keep reference to commit callback in editor. (Jelmer Vernooij, #732120)
+
 0.8.0   2011-03-02
 
  FEATURES

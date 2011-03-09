@@ -1208,6 +1208,8 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (ra_check_busy(ra))
 		return NULL;
 
+	Py_INCREF(commit_callback);
+
 #if ONLY_SINCE_SVN(1, 5)
 	hash_revprops = prop_dict_to_hash(pool, revprops);
 	if (hash_revprops == NULL) {
@@ -1260,7 +1262,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 
 	Py_INCREF(ra);
 	return new_editor_object(editor, edit_baton, pool, 
-								  &Editor_Type, ra_done_handler, ra);
+			  &Editor_Type, ra_done_handler, ra, commit_callback);
 }
 
 static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)

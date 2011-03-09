@@ -955,7 +955,7 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	Py_END_ALLOW_THREADS
-	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL, NULL);
+	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL, NULL, NULL);
 }
 
 static bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_array_header_t **ret)
