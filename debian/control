@@ -3,7 +3,7 @@ Section: python
 Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Homepage: http://samba.org/~jelmer/subvertpy
-Build-Depends: cdbs (>= 0.4.90~), python (>= 2.6.6-3), debhelper (>= 5.0.37.2), libsvn-dev, python-all-dev (>= 2.6.6-3), python-testtools (>= 0.9.2~), python-pydoctor (>= 0.3+bzr567), python-docutils
+Build-Depends: python (>= 2.6.6-3), debhelper (>= 7.0.50~), libsvn-dev, python-all-dev (>= 2.6.6-3), python-testtools (>= 0.9.2~), python-pydoctor (>= 0.3+bzr567), python-docutils
 Standards-Version: 3.9.1
 X-Python-Version: >= 2.4
 Vcs-Bzr: http://bzr.debian.org/users/jelmer/subvertpy/unstable

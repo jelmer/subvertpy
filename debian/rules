@@ -2,26 +2,19 @@
 
 export HOME=$(CURDIR)/nonexistent
 
-DEB_INSTALL_EXAMPLES_python-subvertpy = $(wildcard examples/*.py)
+%:
+	dh --buildsystem=python_distutils $*
 
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/python-distutils.mk
-
-build/python-subvertpy::
+override_dh_auto_build:
+	dh_auto_build
 	$(MAKE) pydoctor
 
-install/python-subvertpy::
-	mkdir -p $(cdbs_python_destdir)/usr/share/doc/python-subvertpy
-	mv apidocs $(cdbs_python_destdir)/usr/share/doc/python-subvertpy/api
+override_dh_auto_install:
+	dh_auto_install
+	mkdir -p debian/python-subvertpy/usr/share/doc/python-subvertpy
+	mv apidocs debian/python-subvertpy/usr/share/doc/python-subvertpy/api
 
-DEB_PYTHON_BUILD_ARGS += --executable=/usr/bin/python
-
+override_dh_auto_test:
 ifeq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
-build/python-subvertpy:: debian/stamp-check
-debian/stamp-check:
 	$(MAKE) check TESTRUNNER=testtools.run
-	touch $@
-
-clean::
-	rm -f debian/stamp-check
 endif

@@ -1,6 +1,7 @@
 subvertpy (0.8.0-3) UNRELEASED; urgency=low
 
-  * Add missing Breaks: field to python-dulwich.
+  * Add missing Breaks: field to python-subvertpy.
+  * Switch to debhelper 7, drop cdbs.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Mon, 07 Mar 2011 04:27:11 +0100
 
