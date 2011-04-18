@@ -132,7 +132,9 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 		py_lock_token = PyString_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, depth);
+	Py_DECREF(py_lock_token);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -148,7 +150,9 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 		py_lock_token = PyString_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, depth);
+	Py_DECREF(py_lock_token);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -167,6 +171,7 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 	}
 	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, svn_depth_infinity);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -183,6 +188,7 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 	}
 	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, svn_depth_infinity);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -196,6 +202,7 @@ static svn_error_t *py_ra_report_delete_path(void *baton, const char *path, apr_
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallMethod(self, "delete_path", "s", path);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -206,6 +213,7 @@ static svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool)
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallMethod(self, "finish", "");
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -216,6 +224,7 @@ static svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool)
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallMethod(self, "abort", "");
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -268,6 +277,7 @@ static svn_error_t *py_wc_found_entry(const char *path, const svn_wc_entry_t *en
 	}
 	ret = PyObject_CallFunction(fn, "sO", path, py_entry(entry));
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -289,6 +299,7 @@ svn_error_t *py_wc_handle_error(const char *path, svn_error_t *err, void *walk_b
 	py_err = PyErr_NewSubversionException(err);
 	ret = PyObject_CallFunction(fn, "sO", path, py_err);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	Py_DECREF(py_err);
 	return NULL;
