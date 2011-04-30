@@ -903,7 +903,8 @@ svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton
 			PyList_SetItem(ops, i, pyval);
 		}
 		if (window->new_data != NULL && window->new_data->data != NULL) {
-			py_new_data = PyString_FromStringAndSize(window->new_data->data, window->new_data->len);
+			py_new_data = PyString_FromStringAndSize(window->new_data->data,
+													 window->new_data->len);
 		} else {
 			py_new_data = Py_None;
 			Py_INCREF(py_new_data);

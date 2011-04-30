@@ -934,7 +934,8 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 	/* FIXME: Support fetch_func */
 	/* FIXME: Support conflict func */
 	err = svn_wc_get_update_editor3(latest_revnum, admobj->adm, target, 
-				use_commit_times, recurse?svn_depth_infinity:svn_depth_files, depth_is_sticky, allow_unver_obstructions, 
+				use_commit_times, recurse?svn_depth_infinity:svn_depth_files,
+				depth_is_sticky, allow_unver_obstructions, 
 				py_wc_notify_func, (void *)notify_func, 
 				py_cancel_func, (void *)cancel_func, 
 				NULL, NULL, NULL, NULL,
