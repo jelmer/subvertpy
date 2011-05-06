@@ -1746,7 +1746,11 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	svn_boolean_t resolve_props, resolve_tree, resolve_text;
 	int depth;
+#if ONLY_SINCE_SVN(1, 5)
 	svn_wc_conflict_choice_t conflict_choice;
+#else
+	int conflict_choice;
+#endif
 	PyObject *notify_func = Py_None, *cancel_func = Py_None;
 	char *path;
 
@@ -1772,6 +1776,8 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 	if (resolve_tree) {
 		PyErr_SetString(PyExc_NotImplementedError,
 						"resolve_tree not supported with svn < 1.6");
+		apr_pool_destroy(temp_pool);
+		return NULL;
 	} else {
 		RUN_SVN_WITH_POOL(temp_pool,
 			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text, 
@@ -1784,17 +1790,25 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 	if (resolve_tree) {
 		PyErr_SetString(PyExc_NotImplementedError,
 						"resolve_tree not supported with svn < 1.6");
-	} else if (depth != svn_depth_infinity && depth != svn_depth_empty) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	} else if (depth != svn_depth_infinity && depth != svn_depth_filesy) {
 		PyErr_SetString(PyExc_NotImplementedError,
-						"only infinity and empty values for depth are supported");
+						"only infinity and files values for depth are supported");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	} else if (conflict_choice != 0) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"conflict choice not supported with svn < 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
 	} else {
 		RUN_SVN_WITH_POOL(temp_pool,
-			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text, 
-											resolve_props, 
+			  svn_wc_resolved_conflict2(path, admobj->adm, resolve_text,
+											resolve_props,
 											(depth == svn_depth_infinity),
-											conflict_choice, py_wc_notify_func,
-										   (void *)notify_func, py_cancel_func,
-										   cancel_func, temp_pool));
+											py_wc_notify_func,
+										   (void *)notify_func, temp_pool));
 	}
 #endif
 
@@ -2551,6 +2565,7 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "TRANSLATE_FORCE_COPY", SVN_WC_TRANSLATE_FORCE_COPY);
 	PyModule_AddIntConstant(mod, "TRANSLATE_USE_GLOBAL_TMP", SVN_WC_TRANSLATE_USE_GLOBAL_TMP);
 
+#if ONLY_SINCE_SVN(1, 5)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_POSTPONE", svn_wc_conflict_choose_postpone);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_BASE", svn_wc_conflict_choose_base);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_FULL", svn_wc_conflict_choose_theirs_full);
@@ -2558,6 +2573,7 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_CONFLICT", svn_wc_conflict_choose_theirs_conflict);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_CONFLICT", svn_wc_conflict_choose_mine_conflict);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED", svn_wc_conflict_choose_merged);
+#endif
 
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
