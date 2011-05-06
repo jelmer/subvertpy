@@ -1792,7 +1792,7 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 						"resolve_tree not supported with svn < 1.6");
 		apr_pool_destroy(temp_pool);
 		return NULL;
-	} else if (depth != svn_depth_infinity && depth != svn_depth_filesy) {
+	} else if (depth != svn_depth_infinity && depth != svn_depth_files) {
 		PyErr_SetString(PyExc_NotImplementedError,
 						"only infinity and files values for depth are supported");
 		apr_pool_destroy(temp_pool);
@@ -1808,7 +1808,9 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 											resolve_props,
 											(depth == svn_depth_infinity),
 											py_wc_notify_func,
-										   (void *)notify_func, temp_pool));
+										   (void *)notify_func, py_cancel_func,
+										   cancel_func,
+										   temp_pool));
 	}
 #endif
 
