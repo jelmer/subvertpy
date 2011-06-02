@@ -645,7 +645,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 		Py_DECREF(obj);
 	}
 	if (dirent_fields & SVN_DIRENT_SIZE) {
-		obj = PyLong_FromLong(dirent->size);
+		obj = PyLong_FromLongLong(dirent->size);
 		PyDict_SetItemString(ret, "size", obj);
 		Py_DECREF(obj);
 	}
@@ -660,7 +660,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 		Py_DECREF(obj);
 	}
 	if (dirent_fields & SVN_DIRENT_TIME) {
-		obj = PyLong_FromLong(dirent->time);
+		obj = PyLong_FromLongLong(dirent->time);
 		PyDict_SetItemString(ret, "time", obj);
 		Py_DECREF(obj);
 	}

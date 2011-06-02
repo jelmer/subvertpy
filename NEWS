@@ -1,4 +1,4 @@
-0.8.1   UNRELEASED
+0.8.1   2011-06-02
 
  FEATURES
 
@@ -15,6 +15,9 @@
   * Keep reference to commit callback in editor. (Jelmer Vernooij, #732120)
 
   * Properly check return values of PyInt_AsLong() in various places.
+
+  * Convert times and file sizes to 64 bit integer objects.
+    (Jelmer Vernooij, #786156)
 
 0.8.0   2011-03-02
 

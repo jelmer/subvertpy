@@ -20,7 +20,9 @@
 #ifndef _BZR_SVN_EDITOR_H_
 #define _BZR_SVN_EDITOR_H_
 
+#ifdef __GNUC__
 #pragma GCC visibility push(hidden)
+#endif
 
 extern PyTypeObject DirectoryEditor_Type;
 extern PyTypeObject FileEditor_Type;
@@ -39,11 +41,13 @@ typedef struct {
 	void *txdelta_baton;
 } TxDeltaWindowHandlerObject;
 
+svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton);
+
+#ifdef __GNUC__
 #pragma GCC visibility pop
+#endif
 
 extern void initeditor(void);
-
-svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton);
 
 extern const svn_delta_editor_t py_editor;
 
