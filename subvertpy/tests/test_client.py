@@ -53,6 +53,11 @@ class TestClient(SubversionTestCase):
         self.build_tree({"dc/foo": None})
         self.client.add("dc/foo")
 
+    def test_mkdir(self):
+        self.client.mkdir(["dc/foo"])
+        self.client.mkdir("dc/bar")
+        self.client.mkdir("dc/bla", revprops={"svn:commit": "foo"})
+
     def test_export(self):
         self.build_tree({"dc/foo": "bla"})
         self.client.add("dc/foo")

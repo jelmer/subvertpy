@@ -253,19 +253,23 @@ bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **
 		*ret = NULL;
 		return true;
 	}
-	if (!PyList_Check(l)) {
+	if (PyString_Check(l)) {
+		*ret = apr_array_make(pool, 1, sizeof(char *));
+		APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(l), pool);
+	} else if (PyList_Check(l)) {
+		*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
+		for (i = 0; i < PyList_GET_SIZE(l); i++) {
+			PyObject *item = PyList_GET_ITEM(l, i);
+			if (!PyString_Check(item)) {
+				PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
+				return false;
+			}
+			APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(item), pool);
+		}
+	} else {
 		PyErr_Format(PyExc_TypeError, "Expected list of strings, got: %s",
 					 l->ob_type->tp_name);
 		return false;
-	}
-	*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
-	for (i = 0; i < PyList_GET_SIZE(l); i++) {
-		PyObject *item = PyList_GET_ITEM(l, i);
-		if (!PyString_Check(item)) {
-			PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
-			return false;
-		}
-		APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(item), pool);
 	}
 	return true;
 }
@@ -488,13 +492,22 @@ apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l)
 	if (l == Py_None) {
 		return NULL;
 	}
+	if (!PyList_Check(l)) {
+		PyErr_SetString(PyExc_TypeError, "expected list with revision numbers");
+		return NULL;
+	}
 	ret = apr_array_make(pool, PyList_Size(l), sizeof(svn_revnum_t));
 	if (ret == NULL) {
 		PyErr_NoMemory();
 		return NULL;
 	}
 	for (i = 0; i < PyList_Size(l); i++) {
-		APR_ARRAY_PUSH(ret, svn_revnum_t) = PyLong_AsLong(PyList_GetItem(l, i));
+		PyObject *item = PyList_GetItem(l, i);
+		long rev = PyInt_AsLong(item);
+		if (rev == -1 && PyErr_Occurred()) {
+			return NULL;
+		}
+		APR_ARRAY_PUSH(ret, svn_revnum_t) = rev;
 	}
 	return ret;
 }
@@ -632,7 +645,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 		Py_DECREF(obj);
 	}
 	if (dirent_fields & SVN_DIRENT_SIZE) {
-		obj = PyLong_FromLong(dirent->size);
+		obj = PyLong_FromLongLong(dirent->size);
 		PyDict_SetItemString(ret, "size", obj);
 		Py_DECREF(obj);
 	}
@@ -647,7 +660,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 		Py_DECREF(obj);
 	}
 	if (dirent_fields & SVN_DIRENT_TIME) {
-		obj = PyLong_FromLong(dirent->time);
+		obj = PyLong_FromLongLong(dirent->time);
 		PyDict_SetItemString(ret, "time", obj);
 		Py_DECREF(obj);
 	}

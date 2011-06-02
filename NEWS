@@ -1,3 +1,24 @@
+0.8.1   2011-06-02
+
+ FEATURES
+
+  * Add subvertpy.wc.WorkingCopy.conflicted. (Jelmer Vernooij)
+
+  * Add subvertpy.wc.WorkingCopy.resolved_conflict. (Jelmer Vernooij)
+
+  * Add subvertpy.client.Client.mkdir. (Jelmer Vernooij)
+
+ BUG FIXES
+
+  * Fix compilation on OS X. (#728574)
+
+  * Keep reference to commit callback in editor. (Jelmer Vernooij, #732120)
+
+  * Properly check return values of PyInt_AsLong() in various places.
+
+  * Convert times and file sizes to 64 bit integer objects.
+    (Jelmer Vernooij, #786156)
+
 0.8.0   2011-03-02
 
  FEATURES

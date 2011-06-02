@@ -132,7 +132,9 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 		py_lock_token = PyString_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, depth);
+	Py_DECREF(py_lock_token);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -148,7 +150,9 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 		py_lock_token = PyString_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, depth);
+	Py_DECREF(py_lock_token);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -167,6 +171,7 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 	}
 	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, svn_depth_infinity);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -183,6 +188,7 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 	}
 	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, svn_depth_infinity);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -196,6 +202,7 @@ static svn_error_t *py_ra_report_delete_path(void *baton, const char *path, apr_
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallMethod(self, "delete_path", "s", path);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -206,6 +213,7 @@ static svn_error_t *py_ra_report_finish(void *baton, apr_pool_t *pool)
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallMethod(self, "finish", "");
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -216,6 +224,7 @@ static svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool)
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallMethod(self, "abort", "");
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -268,6 +277,7 @@ static svn_error_t *py_wc_found_entry(const char *path, const svn_wc_entry_t *en
 	}
 	ret = PyObject_CallFunction(fn, "sO", path, py_entry(entry));
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 }
@@ -289,6 +299,7 @@ svn_error_t *py_wc_handle_error(const char *path, svn_error_t *err, void *walk_b
 	py_err = PyErr_NewSubversionException(err);
 	ret = PyObject_CallFunction(fn, "sO", path, py_err);
 	CB_CHECK_PYRETVAL(ret);
+	Py_DECREF(ret);
 	PyGILState_Release(state);
 	Py_DECREF(py_err);
 	return NULL;
@@ -923,7 +934,8 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 	/* FIXME: Support fetch_func */
 	/* FIXME: Support conflict func */
 	err = svn_wc_get_update_editor3(latest_revnum, admobj->adm, target, 
-				use_commit_times, recurse?svn_depth_infinity:svn_depth_files, depth_is_sticky, allow_unver_obstructions, 
+				use_commit_times, recurse?svn_depth_infinity:svn_depth_files,
+				depth_is_sticky, allow_unver_obstructions, 
 				py_wc_notify_func, (void *)notify_func, 
 				py_cancel_func, (void *)cancel_func, 
 				NULL, NULL, NULL, NULL,
@@ -955,7 +967,7 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	Py_END_ALLOW_THREADS
-	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL, NULL);
+	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL, NULL, NULL);
 }
 
 static bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_array_header_t **ret)
@@ -1051,9 +1063,10 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	}
 
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed4(svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
-														   rev_date, rev_author, wcprop_changes, 
-														   remove_lock, remove_changelist, digest, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed4(
+		svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
+			rev_date, rev_author, wcprop_changes, 
+			remove_lock, remove_changelist, digest, temp_pool));
 #else
 	if (remove_changelist) {
 		PyErr_SetString(PyExc_NotImplementedError, "remove_changelist only supported in svn < 1.6");
@@ -1582,7 +1595,7 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
 	Py_INCREF(editor_obj);
 
 	RUN_SVN_WITH_POOL(temp_pool,
-		svn_wc_transmit_text_deltas2(&tempfile, digest, 
+		svn_wc_transmit_text_deltas2(&tempfile, digest,
 			svn_path_canonicalize(path, temp_pool), admobj->adm, fulltext,
 			&py_editor, editor_obj, temp_pool));
 
@@ -1727,6 +1740,119 @@ static PyObject *probe_try(PyObject *self, PyObject *args)
 	return (PyObject *)ret;
 }
 
+static PyObject *resolved_conflict(PyObject *self, PyObject *args)
+{
+	AdmObject *admobj = (AdmObject *)self;
+	apr_pool_t *temp_pool;
+	svn_boolean_t resolve_props, resolve_tree, resolve_text;
+	int depth;
+#if ONLY_SINCE_SVN(1, 5)
+	svn_wc_conflict_choice_t conflict_choice;
+#else
+	int conflict_choice;
+#endif
+	PyObject *notify_func = Py_None, *cancel_func = Py_None;
+	char *path;
+
+	if (!PyArg_ParseTuple(args, "sbbbii|OO", &path, &resolve_text,
+						  &resolve_props, &resolve_tree, &depth,
+						  &conflict_choice, &notify_func, &cancel_func))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+#if ONLY_SINCE_SVN(1, 6)
+	RUN_SVN_WITH_POOL(temp_pool,
+		  svn_wc_resolved_conflict4(path, admobj->adm, resolve_text, 
+										resolve_props, resolve_tree, depth,
+										conflict_choice, py_wc_notify_func,
+									   (void *)notify_func, py_cancel_func,
+									   cancel_func, temp_pool));
+#elif ONLY_SINCE_SVN(1, 5)
+	if (resolve_tree) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"resolve_tree not supported with svn < 1.6");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	} else {
+		RUN_SVN_WITH_POOL(temp_pool,
+			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text, 
+											resolve_props, depth,
+											conflict_choice, py_wc_notify_func,
+										   (void *)notify_func, py_cancel_func,
+										   cancel_func, temp_pool));
+	}
+#else
+	if (resolve_tree) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"resolve_tree not supported with svn < 1.6");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	} else if (depth != svn_depth_infinity && depth != svn_depth_files) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"only infinity and files values for depth are supported");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	} else if (conflict_choice != 0) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"conflict choice not supported with svn < 1.5");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	} else {
+		RUN_SVN_WITH_POOL(temp_pool,
+			  svn_wc_resolved_conflict2(path, admobj->adm, resolve_text,
+											resolve_props,
+											(depth == svn_depth_infinity),
+											py_wc_notify_func,
+										   (void *)notify_func, py_cancel_func,
+										   cancel_func,
+										   temp_pool));
+	}
+#endif
+
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
+static PyObject *conflicted(PyObject *self, PyObject *args)
+{
+	char *path;
+	apr_pool_t *temp_pool;
+	PyObject *ret;
+	AdmObject *admobj = (AdmObject *)self;
+	svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	ADM_CHECK_CLOSED(admobj);
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+
+#if ONLY_SINCE_SVN(1, 6)
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_conflicted_p2(&text_conflicted,
+		&prop_conflicted, &tree_conflicted, path, admobj->adm, temp_pool));
+
+	ret = Py_BuildValue("(bbb)", text_conflicted, prop_conflicted, tree_conflicted);
+#else
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_conflicted_p(&text_conflicted,
+		&prop_conflicted, path, admobj->adm, temp_pool));
+
+	ret = Py_BuildValue("(bbO)", text_conflicted, prop_conflicted, Py_None);
+#endif
+
+	apr_pool_destroy(temp_pool);
+
+	return ret;
+}
+
 static PyMethodDef adm_methods[] = { 
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
 	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
@@ -1761,7 +1887,7 @@ static PyMethodDef adm_methods[] = {
 		"S.get_ancestry(path) -> (url, rev)" },
 	{ "maybe_set_repos_root", (PyCFunction)maybe_set_repos_root, METH_VARARGS, "S.maybe_set_repos_root(path, repos)" },
 	{ "add_repos_file", (PyCFunction)add_repos_file, METH_KEYWORDS, 
-		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None, notify=None)" },
+		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url=None, copyfrom_rev=-1, cancel_func=None, notify_func=None)" },
 	{ "mark_missing_deleted", (PyCFunction)mark_missing_deleted, METH_VARARGS,
 		"S.mark_missing_deleted(path)" },
 	{ "remove_from_revision_control", (PyCFunction)remove_from_revision_control, METH_VARARGS,
@@ -1769,7 +1895,7 @@ static PyMethodDef adm_methods[] = {
 	{ "relocate", (PyCFunction)relocate, METH_VARARGS,
 		"S.relocate(path, from, to, recurse=TRUE, validator=None)" },
 	{ "crop_tree", (PyCFunction)crop_tree, METH_VARARGS,
-		"S.crop_tree(target, depth, notify=None, cancel=None)" },
+		"S.crop_tree(target, depth, notify_func=None, cancel=None)" },
 	{ "translated_stream", (PyCFunction)translated_stream, METH_VARARGS,
 		"S.translated_stream(path, versioned_file, flags) -> stream" },
 	{ "is_wc_root", (PyCFunction)is_wc_root, METH_VARARGS,
@@ -1784,6 +1910,10 @@ static PyMethodDef adm_methods[] = {
 		"S.retrieve(path) -> WorkingCopy" },
 	{ "probe_try", (PyCFunction)probe_try, METH_VARARGS,
 		"S.probe_try(path, write_lock=False, levels_to_lock=-1)" },
+	{ "conflicted", (PyCFunction)conflicted, METH_VARARGS,
+		"S.conflicted(path) -> (text_conflicted, prop_conflicted, tree_conflicted)" },
+	{ "resolved_conflict", (PyCFunction)resolved_conflict, METH_VARARGS,
+		"S.resolved_conflict(path, resolve_text, resolve_props, resolve_tree, depth, conflict_choice, notify_func=None, cancel=None)" },
 	{ NULL, }
 };
 
@@ -2150,7 +2280,9 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 #else
 	PyErr_WarnEx(PyExc_DeprecationWarning, "get_pristine_copy_path is deprecated. Use get_pristine_contents instead.", 2);
 #endif
-	RUN_SVN_WITH_POOL(pool, svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool), &pristine_path, pool));
+	RUN_SVN_WITH_POOL(pool,
+		  svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool),
+										&pristine_path, pool));
 	ret = PyString_FromString(pristine_path);
 	apr_pool_destroy(pool);
 	return ret;
@@ -2434,6 +2566,16 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "TRANSLATE_NO_OUTPUT_CLEANUP", SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP);
 	PyModule_AddIntConstant(mod, "TRANSLATE_FORCE_COPY", SVN_WC_TRANSLATE_FORCE_COPY);
 	PyModule_AddIntConstant(mod, "TRANSLATE_USE_GLOBAL_TMP", SVN_WC_TRANSLATE_USE_GLOBAL_TMP);
+
+#if ONLY_SINCE_SVN(1, 5)
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_POSTPONE", svn_wc_conflict_choose_postpone);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_BASE", svn_wc_conflict_choose_base);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_FULL", svn_wc_conflict_choose_theirs_full);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_FULL", svn_wc_conflict_choose_mine_full);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_CONFLICT", svn_wc_conflict_choose_theirs_conflict);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_CONFLICT", svn_wc_conflict_choose_mine_conflict);
+	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED", svn_wc_conflict_choose_merged);
+#endif
 
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);

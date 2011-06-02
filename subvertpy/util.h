@@ -37,7 +37,9 @@
 typedef int Py_ssize_t;
 #endif
 
+#ifdef __GNUC__
 #pragma GCC visibility push(hidden)
+#endif
 
 __attribute__((warn_unused_result)) apr_pool_t *Pool(apr_pool_t *parent);
 __attribute__((warn_unused_result)) bool check_error(svn_error_t *error);
@@ -95,7 +97,9 @@ apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool);
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool);
 #endif
 
+#ifdef __GNUC__
 #pragma GCC visibility pop
+#endif
 
 #define CB_CHECK_PYRETVAL(ret) \
 	if (ret == NULL) { \

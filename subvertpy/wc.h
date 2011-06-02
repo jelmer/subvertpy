@@ -20,6 +20,14 @@
 #ifndef _BZR_SVN_WC_H_
 #define _BZR_SVN_WC_H_
 
+#ifdef __GNUC__
+#pragma GCC visibility push(hidden)
+#endif
+
 void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool);
+
+#ifdef __GNUC__
+#pragma GCC visibility pop
+#endif
 
 #endif /* _BZR_SVN_WC_H_ */
