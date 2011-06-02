@@ -32,11 +32,12 @@ typedef struct {
 	apr_pool_t *pool;
 	void (*done_cb) (void *baton);
 	void *done_baton;
+	PyObject *commit_callback;
 } EditorObject;
 
 PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton,
 							apr_pool_t *pool, PyTypeObject *type,
-							void (*done_cb) (void *), void *done_baton)
+							void (*done_cb) (void *), void *done_baton, PyObject *commit_callback)
 {
 	EditorObject *obj = PyObject_New(EditorObject, type);
 	if (obj == NULL)
@@ -46,12 +47,14 @@ PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton,
 	obj->pool = pool;
 	obj->done_cb = done_cb;
 	obj->done_baton = done_baton;
+	obj->commit_callback = commit_callback;
 	return (PyObject *)obj;
 }
 
 static void py_editor_dealloc(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
+	Py_XDECREF(editor->commit_callback);
 	apr_pool_destroy(editor->pool);
 	editor->pool = NULL;
 	PyObject_Del(self);
@@ -339,7 +342,7 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, child_baton, subpool, 
-							 &DirectoryEditor_Type, NULL, NULL);
+							 &DirectoryEditor_Type, NULL, NULL, NULL);
 }
 
 static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
@@ -367,7 +370,7 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, child_baton, subpool, 
-							 &DirectoryEditor_Type, NULL, NULL);
+							 &DirectoryEditor_Type, NULL, NULL, NULL);
 }
 
 static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
@@ -453,7 +456,7 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, file_baton, subpool,
-							 &FileEditor_Type, NULL, NULL);
+							 &FileEditor_Type, NULL, NULL, NULL);
 }
 
 static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
@@ -481,7 +484,7 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, file_baton, subpool,
-							 &FileEditor_Type, NULL, NULL);
+							 &FileEditor_Type, NULL, NULL, NULL);
 }
 
 static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
@@ -620,7 +623,7 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 		return NULL;
 
 	return new_editor_object(editor->editor, root_baton, subpool,
-							 &DirectoryEditor_Type, NULL, NULL);
+							 &DirectoryEditor_Type, NULL, NULL, NULL);
 }
 
 static PyObject *py_editor_close(PyObject *self)
@@ -900,7 +903,8 @@ svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton
 			PyList_SetItem(ops, i, pyval);
 		}
 		if (window->new_data != NULL && window->new_data->data != NULL) {
-			py_new_data = PyString_FromStringAndSize(window->new_data->data, window->new_data->len);
+			py_new_data = PyString_FromStringAndSize(window->new_data->data,
+													 window->new_data->len);
 		} else {
 			py_new_data = Py_None;
 			Py_INCREF(py_new_data);

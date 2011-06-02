@@ -49,9 +49,11 @@ static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
 static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 {
-    if (PyInt_Check(arg)) {
+    if (PyInt_Check(arg) || PyLong_Check(arg)) {
         ret->kind = svn_opt_revision_number;
-        ret->value.number = PyLong_AsLong(arg);
+        ret->value.number = PyInt_AsLong(arg);
+        if (ret->value.number == -1 && PyErr_Occurred())
+            return false;
         return true;
     } else if (arg == Py_None) {
         ret->kind = svn_opt_revision_unspecified;
@@ -592,6 +594,76 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 
     return ret;
 }
+
+static PyObject *client_mkdir(PyObject *self, PyObject *args)
+{
+    PyObject *paths, *revprops = NULL;
+    svn_boolean_t make_parents=FALSE;
+    apr_pool_t *temp_pool;
+    svn_commit_info_t *commit_info = NULL;
+    PyObject *ret;
+    apr_array_header_t *apr_paths;
+    apr_hash_t *hash_revprops;
+    ClientObject *client = (ClientObject *)self;
+
+    if (!PyArg_ParseTuple(args, "O|bO", &paths, &make_parents, &revprops))
+        return NULL;
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+    if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+    if (revprops != NULL && !PyDict_Check(revprops)) {
+        apr_pool_destroy(temp_pool);
+        PyErr_SetString(PyExc_TypeError, "Expected dictionary with revision properties");
+        return NULL;
+    }
+
+#if ONLY_SINCE_SVN(1, 5)
+    if (revprops != NULL && revprops != Py_None) {
+        hash_revprops = prop_dict_to_hash(temp_pool, revprops);
+        if (hash_revprops == NULL) {
+            apr_pool_destroy(temp_pool);
+            return NULL;
+        }
+    } else {
+        hash_revprops = NULL;
+    }
+
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_mkdir3(&commit_info,
+                                                    apr_paths,
+                make_parents, hash_revprops, client->client, temp_pool));
+#else
+    if (make_parents) {
+        PyErr_SetString(PyExc_ValueError,
+                        "make_parents not supported against svn 1.4");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+    if (revprops != Py_None) {
+        PyErr_SetString(PyExc_ValueError,
+                        "revprops not supported against svn 1.4");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_mkdir2(&commit_info, 
+                                                    apr_paths,
+                client->client, temp_pool));
+#endif
+
+    ret = py_commit_info_tuple(commit_info);
+
+    apr_pool_destroy(temp_pool);
+
+    return ret;
+}
+
+
 
 static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 {
@@ -1142,8 +1214,9 @@ static PyMethodDef client_methods[] = {
     { "proplist", (PyCFunction)client_proplist, METH_VARARGS|METH_KEYWORDS, "S.proplist(path, peg_revision, depth, revision=None)" },
     { "resolve", client_resolve, METH_VARARGS, "S.resolve(path, depth, choice)" },
     { "update", client_update, METH_VARARGS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
-    { "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.update(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
+    { "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.list(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
     { "diff", (PyCFunction)client_diff, METH_VARARGS|METH_KEYWORDS, "S.diff(rev1, rev2, path1=None, path2=None, relative_to_dir=None, diffopts=[], encoding=\"utf-8\", ignore_ancestry=True, no_diff_deleted=True, ignore_content_type=False) -> unified diff as a string" },
+    { "mkdir", (PyCFunction)client_mkdir, METH_VARARGS|METH_KEYWORDS, "S.mkdir(paths, make_parents=False, revprops=None) -> (revnum, date, author)" },
     { NULL, }
 };
 

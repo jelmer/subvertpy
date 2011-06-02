@@ -20,13 +20,15 @@
 #ifndef _BZR_SVN_EDITOR_H_
 #define _BZR_SVN_EDITOR_H_
 
+#ifdef __GNUC__
 #pragma GCC visibility push(hidden)
+#endif
 
 extern PyTypeObject DirectoryEditor_Type;
 extern PyTypeObject FileEditor_Type;
 extern PyTypeObject Editor_Type;
 extern PyTypeObject TxDeltaWindowHandler_Type;
-PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, void (*done_cb) (void *baton), void *done_baton);
+PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, void (*done_cb) (void *baton), void *done_baton, PyObject *commit_callback);
 
 #define DirectoryEditor_Check(op) PyObject_TypeCheck(op, &DirectoryEditor_Type)
 #define FileEditor_Check(op) PyObject_TypeCheck(op, &FileEditor_Type)
@@ -39,12 +41,14 @@ typedef struct {
 	void *txdelta_baton;
 } TxDeltaWindowHandlerObject;
 
+svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton);
+
+#ifdef __GNUC__
 #pragma GCC visibility pop
+#endif
 
 extern void initeditor(void);
 
-svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton);
-
-const svn_delta_editor_t py_editor;
+extern const svn_delta_editor_t py_editor;
 
 #endif /* _BZR_SVN_EDITOR_H_ */

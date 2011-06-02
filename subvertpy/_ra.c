@@ -1208,6 +1208,8 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (ra_check_busy(ra))
 		return NULL;
 
+	Py_INCREF(commit_callback);
+
 #if ONLY_SINCE_SVN(1, 5)
 	hash_revprops = prop_dict_to_hash(pool, revprops);
 	if (hash_revprops == NULL) {
@@ -1260,7 +1262,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 
 	Py_INCREF(ra);
 	return new_editor_object(editor, edit_baton, pool, 
-								  &Editor_Type, ra_done_handler, ra);
+			  &Editor_Type, ra_done_handler, ra, commit_callback);
 }
 
 static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
@@ -1559,7 +1561,11 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 
 	while (PyDict_Next(path_revs, &idx, &k, &v)) {
 		rev = (svn_revnum_t *)apr_palloc(temp_pool, sizeof(svn_revnum_t));
-		*rev = PyLong_AsLong(v);
+		*rev = PyInt_AsLong(v);
+		if (*rev == -1 && PyErr_Occurred()) {
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
 		apr_hash_set(hash_path_revs, PyString_AsString(k), PyString_Size(k), 
 					 rev);
 	}
@@ -1918,7 +1924,7 @@ static PyMethodDef ra_methods[] = {
 	{ "get_lock", ra_get_lock, METH_VARARGS, 
 		"S.get_lock(path) -> lock\n"
 	},
-	{ "get_dir", ra_get_dir, METH_VARARGS|METH_KEYWORDS, 
+	{ "get_dir", (PyCFunction)ra_get_dir, METH_VARARGS|METH_KEYWORDS, 
 		"S.get_dir(path, revision, dirent_fields=-1) -> (dirents, fetched_rev, properties)\n"
 		"Get the contents of a directory. "},
 	{ "get_file", ra_get_file, METH_VARARGS, 
@@ -2149,8 +2155,11 @@ static PyObject *auth_set_parameter(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!strcmp(name, SVN_AUTH_PARAM_SSL_SERVER_FAILURES)) {
+		long ret = PyInt_AsLong(value);
+		if (ret == -1 && PyErr_Occurred())
+			return NULL;
 		vvalue = apr_pcalloc(auth->pool, sizeof(apr_uint32_t));
-		*((apr_uint32_t *)vvalue) = PyInt_AsLong(value);
+		*((apr_uint32_t *)vvalue) = ret;
 	} else if (!strcmp(name, SVN_AUTH_PARAM_DEFAULT_USERNAME) ||
 			   !strcmp(name, SVN_AUTH_PARAM_DEFAULT_PASSWORD)) {
 		vvalue = apr_pstrdup(auth->pool, PyString_AsString(value));
@@ -2560,6 +2569,7 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 	PyObject *ret;
 	PyObject *py_cert, *py_may_save, *py_accepted_failures;
 	PyGILState_STATE state = PyGILState_Ensure();
+	long accepted_failures;
 
 	if (cert_info == NULL) {
 		py_cert = Py_None;
@@ -2577,11 +2587,13 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 	CB_CHECK_PYRETVAL(ret);
 
 	if (!PyTuple_Check(ret)) {
+		Py_DECREF(ret);
 		PyErr_SetString(PyExc_TypeError, "expected tuple with server trust credentials");
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
 	if (PyTuple_Size(ret) != 2) {
+		Py_DECREF(ret);
 		PyErr_SetString(PyExc_TypeError, "expected tuple of size 2");
 		PyGILState_Release(state);
 		return py_svn_error();
@@ -2589,6 +2601,7 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 
 	py_accepted_failures = PyTuple_GetItem(ret, 0);
 	if (!PyInt_Check(py_accepted_failures)) {
+		Py_DECREF(ret);
 		PyErr_SetString(PyExc_TypeError, "accepted_failures should be integer");
 		PyGILState_Release(state);
 		return py_svn_error();
@@ -2596,13 +2609,20 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 
 	py_may_save = PyTuple_GetItem(ret, 1);
 	if (!PyBool_Check(py_may_save)) {
+		Py_DECREF(ret);
 		PyErr_SetString(PyExc_TypeError, "may_save should be boolean");
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
 
+	accepted_failures = PyInt_AsLong(py_accepted_failures);
+	if (accepted_failures == -1 && PyErr_Occurred()) {
+		Py_DECREF(ret);
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->accepted_failures = PyInt_AsLong(py_accepted_failures);
+	(*cred)->accepted_failures = accepted_failures;
 	(*cred)->may_save = (py_may_save == Py_True);
 
 	Py_DECREF(ret);

@@ -1,9 +1,11 @@
-subvertpy (0.8.0-3) UNRELEASED; urgency=low
+subvertpy (0.8.1-1) unstable; urgency=low
 
   * Add missing Breaks: field to python-subvertpy.
   * Switch to debhelper 7, drop cdbs.
+  * New upstream release.
+  * Bump standards version to 3.9.2 (no changes).
 
- -- Jelmer Vernooij <jelmer@debian.org>  Mon, 07 Mar 2011 04:27:11 +0100
+ -- Jelmer Vernooij <jelmer@debian.org>  Thu, 02 Jun 2011 19:14:31 +0200
 
 subvertpy (0.8.0-2) unstable; urgency=low
 

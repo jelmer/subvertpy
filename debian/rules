@@ -16,5 +16,5 @@ override_dh_auto_install:
 
 override_dh_auto_test:
 ifeq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
-	$(MAKE) check TESTRUNNER=testtools.run
+	$(MAKE) check
 endif

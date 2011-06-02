@@ -201,12 +201,12 @@ if os.name == "nt":
         if not svn_bdb_dir or not os.path.isdir(svn_bdb_dir):
             raise Exception(
                 "Please set SVN_BDB to the location of the svn BDB packages "
-                "- see README.txt in the SV_DEV dir")
+                "- see README.txt in the SVN_DEV dir")
         svn_libintl_dir = os.environ.get("SVN_LIBINTL")
         if not svn_libintl_dir or not os.path.isdir(svn_libintl_dir):
             raise Exception(
                 "Please set SVN_LIBINTL to the location of the svn libintl "
-                "packages - see README.txt in the SV_DEV dir")
+                "packages - see README.txt in the SVN_DEV dir")
 
         svn_version = get_svn_version()
         apr_version = get_apr_version()
@@ -329,14 +329,14 @@ def subvertpy_modules():
         ]
 
 
-subvertpy_version = (0, 8, 0)
+subvertpy_version = (0, 8, 1)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
 if __name__ == "__main__":
     setup(name='subvertpy',
           description='Alternative Python bindings for Subversion',
-          keywords='plugin svn',
+          keywords='svn subvertpy subversion bindings',
           version=subvertpy_version_string,
           url='http://samba.org/~jelmer/subvertpy',
           download_url="http://samba.org/~jelmer/subvertpy/subvertpy-%s.tar.gz" % subvertpy_version_string,
@@ -344,7 +344,7 @@ if __name__ == "__main__":
           author='Jelmer Vernooij',
           author_email='jelmer@samba.org',
           long_description="""
-          Alternative Python bindings for Subversion, split out from bzr-svn. The goal is to have complete, portable and "Pythonic" Python bindings. 
+          Alternative Python bindings for Subversion. The goal is to have complete, portable and "Pythonic" Python bindings. 
           """,
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
