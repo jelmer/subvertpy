@@ -1142,7 +1142,7 @@ static PyMethodDef client_methods[] = {
     { "proplist", (PyCFunction)client_proplist, METH_VARARGS|METH_KEYWORDS, "S.proplist(path, peg_revision, depth, revision=None)" },
     { "resolve", client_resolve, METH_VARARGS, "S.resolve(path, depth, choice)" },
     { "update", client_update, METH_VARARGS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
-    { "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.update(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
+    { "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.list(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
     { "diff", (PyCFunction)client_diff, METH_VARARGS|METH_KEYWORDS, "S.diff(rev1, rev2, path1=None, path2=None, relative_to_dir=None, diffopts=[], encoding=\"utf-8\", ignore_ancestry=True, no_diff_deleted=True, ignore_content_type=False) -> unified diff as a string" },
     { NULL, }
 };
