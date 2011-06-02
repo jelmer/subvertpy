@@ -14,6 +14,8 @@
 
   * Keep reference to commit callback in editor. (Jelmer Vernooij, #732120)
 
+  * Properly check return values of PyInt_AsLong() in various places.
+
 0.8.0   2011-03-02
 
  FEATURES

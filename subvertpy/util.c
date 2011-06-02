@@ -492,13 +492,22 @@ apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l)
 	if (l == Py_None) {
 		return NULL;
 	}
+	if (!PyList_Check(l)) {
+		PyErr_SetString(PyExc_TypeError, "expected list with revision numbers");
+		return NULL;
+	}
 	ret = apr_array_make(pool, PyList_Size(l), sizeof(svn_revnum_t));
 	if (ret == NULL) {
 		PyErr_NoMemory();
 		return NULL;
 	}
 	for (i = 0; i < PyList_Size(l); i++) {
-		APR_ARRAY_PUSH(ret, svn_revnum_t) = PyLong_AsLong(PyList_GetItem(l, i));
+		PyObject *item = PyList_GetItem(l, i);
+		long rev = PyInt_AsLong(item);
+		if (rev == -1 && PyErr_Occurred()) {
+			return NULL;
+		}
+		APR_ARRAY_PUSH(ret, svn_revnum_t) = rev;
 	}
 	return ret;
 }

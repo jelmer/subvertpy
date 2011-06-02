@@ -49,9 +49,11 @@ static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
 static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 {
-    if (PyInt_Check(arg)) {
+    if (PyInt_Check(arg) || PyLong_Check(arg)) {
         ret->kind = svn_opt_revision_number;
-        ret->value.number = PyLong_AsLong(arg);
+        ret->value.number = PyInt_AsLong(arg);
+        if (ret->value.number == -1 && PyErr_Occurred())
+            return false;
         return true;
     } else if (arg == Py_None) {
         ret->kind = svn_opt_revision_unspecified;
