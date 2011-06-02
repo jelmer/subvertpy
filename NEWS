@@ -6,6 +6,8 @@
 
   * Add subvertpy.wc.WorkingCopy.resolved_conflict. (Jelmer Vernooij)
 
+  * Add subvertpy.client.Client.mkdir. (Jelmer Vernooij)
+
  BUG FIXES
 
   * Fix compilation on OS X. (#728574)
