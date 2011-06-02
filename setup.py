@@ -201,12 +201,12 @@ if os.name == "nt":
         if not svn_bdb_dir or not os.path.isdir(svn_bdb_dir):
             raise Exception(
                 "Please set SVN_BDB to the location of the svn BDB packages "
-                "- see README.txt in the SV_DEV dir")
+                "- see README.txt in the SVN_DEV dir")
         svn_libintl_dir = os.environ.get("SVN_LIBINTL")
         if not svn_libintl_dir or not os.path.isdir(svn_libintl_dir):
             raise Exception(
                 "Please set SVN_LIBINTL to the location of the svn libintl "
-                "packages - see README.txt in the SV_DEV dir")
+                "packages - see README.txt in the SVN_DEV dir")
 
         svn_version = get_svn_version()
         apr_version = get_apr_version()
