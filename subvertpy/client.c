@@ -596,7 +596,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 static PyObject *client_mkdir(PyObject *self, PyObject *args)
 {
     PyObject *paths, *revprops = NULL;
-    bool make_parents=false;
+    svn_boolean_t make_parents=FALSE;
     apr_pool_t *temp_pool;
     svn_commit_info_t *commit_info = NULL;
     PyObject *ret;

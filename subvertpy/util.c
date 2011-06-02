@@ -253,19 +253,23 @@ bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **
 		*ret = NULL;
 		return true;
 	}
-	if (!PyList_Check(l)) {
+	if (PyString_Check(l)) {
+		*ret = apr_array_make(pool, 1, sizeof(char *));
+		APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(l), pool);
+	} else if (PyList_Check(l)) {
+		*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
+		for (i = 0; i < PyList_GET_SIZE(l); i++) {
+			PyObject *item = PyList_GET_ITEM(l, i);
+			if (!PyString_Check(item)) {
+				PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
+				return false;
+			}
+			APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(item), pool);
+		}
+	} else {
 		PyErr_Format(PyExc_TypeError, "Expected list of strings, got: %s",
 					 l->ob_type->tp_name);
 		return false;
-	}
-	*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
-	for (i = 0; i < PyList_GET_SIZE(l); i++) {
-		PyObject *item = PyList_GET_ITEM(l, i);
-		if (!PyString_Check(item)) {
-			PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
-			return false;
-		}
-		APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(item), pool);
 	}
 	return true;
 }
