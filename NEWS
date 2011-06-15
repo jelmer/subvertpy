@@ -5,6 +5,8 @@
   * Abort immediately if a callback raises an exception.
     (Jelmer Vernooij)
 
+  * Fix leaking of error objects. (Jelmer Vernooij)
+
 0.8.1   2011-06-02 "ornithologic reptile"
 
  FEATURES

@@ -43,7 +43,7 @@ typedef int Py_ssize_t;
 
 svn_error_t *py_cancel_check(void *cancel_baton);
 __attribute__((warn_unused_result)) apr_pool_t *Pool(apr_pool_t *parent);
-__attribute__((warn_unused_result)) bool check_error(svn_error_t *error);
+void handle_svn_error(svn_error_t *error);
 bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
 bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
 PyObject *prop_hash_to_dict(apr_hash_t *props);
@@ -62,7 +62,9 @@ PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void);
 	_save = PyEval_SaveThread(); \
 	err = (cmd); \
 	PyEval_RestoreThread(_save); \
-	if (!check_error(err)) { \
+	if (err != NULL) { \
+		handle_svn_error(err); \
+		svn_error_clear(err); \
 		return NULL; \
 	} \
 }
@@ -73,7 +75,9 @@ PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void);
 	_save = PyEval_SaveThread(); \
 	err = (cmd); \
 	PyEval_RestoreThread(_save); \
-	if (!check_error(err)) { \
+	if (err != NULL) { \
+		handle_svn_error(err); \
+		svn_error_clear(err); \
 		apr_pool_destroy(pool); \
 		return NULL; \
 	} \

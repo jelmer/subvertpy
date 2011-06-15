@@ -103,7 +103,10 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	err = svn_repos_open(&ret->repos, svn_path_canonicalize(path, ret->pool),
                             ret->pool);
 	Py_END_ALLOW_THREADS
-    if (!check_error(err)) {
+
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
 		Py_DECREF(ret);
 		return NULL;
 	}

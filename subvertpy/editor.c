@@ -133,7 +133,9 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 	Py_BEGIN_ALLOW_THREADS
 	error = obj->txdelta_handler(&window, obj->txdelta_baton);
 	Py_END_ALLOW_THREADS
-	if (!check_error(error)) {
+	if (error != NULL) {
+		handle_svn_error(error);
+		svn_error_clear(error);
 		free(ops);
 		return NULL;
 	}

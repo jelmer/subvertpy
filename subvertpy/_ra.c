@@ -403,7 +403,9 @@ static void ra_done_handler(void *_ra)
 	_save = PyEval_SaveThread(); \
 	err = (cmd); \
 	PyEval_RestoreThread(_save); \
-	if (!check_error(err)) { \
+	if (err != NULL) { \
+		handle_svn_error(err); \
+		svn_error_clear(err); \
 		apr_pool_destroy(pool); \
 		ra->busy = false; \
 		return NULL; \
@@ -569,7 +571,10 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	if (!check_error(svn_ra_create_callbacks(&callbacks2, ret->pool))) {
+	err = svn_ra_create_callbacks(&callbacks2, ret->pool);
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
 		Py_DECREF(ret);
 		return NULL;
 	}
@@ -607,7 +612,9 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			   callbacks2, ret, config_hash, ret->pool);
 #endif
 	Py_END_ALLOW_THREADS
-	if (!check_error(err)) {
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
 		Py_DECREF(ret);
 		return NULL;
 	}
@@ -888,10 +895,11 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 
 #endif
 	Py_END_ALLOW_THREADS
-	if (!check_error(err)) {
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
 		apr_pool_destroy(temp_pool);
 		ra->busy = false;
-
 		return NULL;
 	}
 
@@ -948,7 +956,9 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 
 	Py_END_ALLOW_THREADS
 
-	if (!check_error(err)) {
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
 		apr_pool_destroy(temp_pool);
 		ra->busy = false;
 		return NULL;
@@ -1009,10 +1019,11 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 												  temp_pool);
 #endif
 	Py_END_ALLOW_THREADS
-	if (!check_error(err)) {
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
 		apr_pool_destroy(temp_pool);
 		ra->busy = false;
-
 		return NULL;
 	}
 
@@ -1253,7 +1264,9 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 #endif
 	Py_END_ALLOW_THREADS
 
-	if (!check_error(err)) {
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
 		apr_pool_destroy(pool);
 		ra->busy = false;
 		return NULL;

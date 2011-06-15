@@ -328,7 +328,7 @@ void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_pool_t *p
 		ret = PyObject_CallFunction(func, "O", excval);
 		Py_DECREF(excval);
 		Py_XDECREF(ret);
-		/* FIXME: Use return value */
+		/* If ret was NULL, the cancel func should abort the operation. */
 	}
 }
 
@@ -496,7 +496,10 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 						   ret->pool);
 	Py_END_ALLOW_THREADS
 	
-	if (!check_error(err)) {
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
+		Py_DECREF(ret);
 		return NULL;
 	}
 
@@ -955,12 +958,13 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 				py_cancel_check, NULL, diff3_cmd, &editor, &edit_baton, 
 				NULL, pool);
 #endif
-	if (!check_error(err)) {
+	Py_END_ALLOW_THREADS
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
 		apr_pool_destroy(pool);
-		PyEval_RestoreThread(_save);
 		return NULL;
 	}
-	Py_END_ALLOW_THREADS
 	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL, NULL, NULL);
 }
 
