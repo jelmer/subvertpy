@@ -62,7 +62,6 @@ static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, voi
 {
 	PyObject *fn = (PyObject *)baton, *ret;
 	PyGILState_STATE state;
-	svn_error_t *err = NULL;
 
 	if (fn == Py_None)
 		return NULL;
@@ -75,7 +74,7 @@ static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, voi
 	CB_CHECK_PYRETVAL(ret);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
-	return err;
+	return NULL;
 }
 
 static PyObject *pyify_lock(const svn_lock_t *lock)
