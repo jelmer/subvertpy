@@ -311,20 +311,19 @@ PyTypeObject FileSystem_Type = {
 static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	const char *parent_dir = "";
-	PyObject *dumpstream, *feedback_stream, *cancel_func = Py_None;
+	PyObject *dumpstream, *feedback_stream;
 	bool use_pre_commit_hook = false, use_post_commit_hook = false;
 	char *kwnames[] = { "dumpstream", "feedback_stream", "uuid_action",
 		                "parent_dir", "use_pre_commit_hook", 
-						"use_post_commit_hook", "cancel_func", NULL };
+						"use_post_commit_hook", NULL };
 	int uuid_action;
 	apr_pool_t *temp_pool;
 	RepositoryObject *reposobj = (RepositoryObject *)self;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOi|sbbO", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOi|sbb", kwnames,
 								&dumpstream, &feedback_stream, &uuid_action,
 								&parent_dir, &use_pre_commit_hook, 
-								&use_post_commit_hook,
-								&cancel_func))
+								&use_post_commit_hook))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -334,7 +333,7 @@ static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 				new_py_stream(temp_pool, dumpstream), 
 				new_py_stream(temp_pool, feedback_stream),
 				uuid_action, parent_dir, use_pre_commit_hook, 
-				use_post_commit_hook, py_cancel_func, (void *)cancel_func,
+				use_post_commit_hook, py_cancel_check, NULL,
 				reposobj->pool));
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;

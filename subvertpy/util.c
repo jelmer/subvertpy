@@ -591,20 +591,6 @@ svn_error_t *py_cancel_check(void *cancel_baton)
 	return NULL;
 }
 
-svn_error_t *py_cancel_func(void *cancel_baton)
-{
-	PyObject *py_fn = (PyObject *)cancel_baton;
-	if (py_fn != Py_None) {
-		PyObject *ret = PyObject_CallFunction(py_fn, "");
-		if (PyBool_Check(ret) && ret == Py_True) {
-			Py_DECREF(ret);
-			return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
-		}
-		Py_DECREF(ret);
-	}
-	return NULL;
-}
-
 static apr_hash_t *get_default_config(void)
 {
 	static bool initialised = false;
