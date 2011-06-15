@@ -203,6 +203,10 @@ bool check_error(svn_error_t *error)
 	if (error->apr_err == BZR_SVN_APR_ERROR_OFFSET)
 		return false; /* Just let Python deal with it */
 
+	if (error->apr_err == SVN_ERR_CANCELLED &&
+		error->child != NULL && error->child->apr_err == BZR_SVN_APR_ERROR_OFFSET)
+		return false; /* Cancelled because of a Python exception, let Python deal with it. */
+
 	if (error->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD) {
 		/* svnserve doesn't handle the 'failure' command sent back 
 		 * by the client if one of the editor commands failed.
@@ -571,6 +575,20 @@ svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py)
 	svn_stream_set_write(stream, py_stream_write);
 	svn_stream_set_close(stream, py_stream_close);
 	return stream;
+}
+
+svn_error_t *py_cancel_check(void *cancel_baton)
+{
+	PyGILState_STATE state = PyGILState_Ensure();
+
+	if (PyErr_Occurred()) {
+		PyGILState_Release(state);
+		return svn_error_create(SVN_ERR_CANCELLED, py_svn_error(),
+			"Python exception raised");
+	}
+	PyGILState_Release(state);
+
+	return NULL;
 }
 
 svn_error_t *py_cancel_func(void *cancel_baton)

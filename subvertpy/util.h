@@ -41,6 +41,7 @@ typedef int Py_ssize_t;
 #pragma GCC visibility push(hidden)
 #endif
 
+svn_error_t *py_cancel_check(void *cancel_baton);
 __attribute__((warn_unused_result)) apr_pool_t *Pool(apr_pool_t *parent);
 __attribute__((warn_unused_result)) bool check_error(svn_error_t *error);
 bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);

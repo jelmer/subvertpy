@@ -513,7 +513,6 @@ static void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, a
 	PyObject *fn = (PyObject *)ra->progress_func, *ret;
 	if (fn != Py_None) {
 		ret = PyObject_CallFunction(fn, "LL", progress, total);
-		/* TODO: What to do with exceptions raised here ? */
 		Py_XDECREF(ret);
 	}
 	PyGILState_Release(state);
@@ -548,15 +547,15 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	ret->root = NULL;
 	ret->pool = Pool(NULL);
 	if (ret->pool == NULL) {
-        Py_DECREF(ret);
+		Py_DECREF(ret);
 		return NULL;
-    }
+	}
 
 	ret->url = svn_path_canonicalize(url, ret->pool);
-    if (ret->url == NULL) {
-        Py_DECREF(ret);
-        return NULL;
-    }
+	if (ret->url == NULL) {
+		Py_DECREF(ret);
+		return NULL;
+	}
 
 	if ((PyObject *)auth == Py_None) {
 		ret->auth = NULL;
@@ -582,6 +581,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	callbacks2->progress_func = py_progress_func;
 	callbacks2->auth_baton = auth_baton;
 	callbacks2->open_tmp_file = py_open_tmp_file;
+	callbacks2->cancel_func = py_cancel_check;
 	Py_INCREF(progress_cb);
 	ret->progress_func = progress_cb;
 	callbacks2->progress_baton = (void *)ret;

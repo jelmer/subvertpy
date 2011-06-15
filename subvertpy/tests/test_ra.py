@@ -196,6 +196,13 @@ class TestRemoteAccess(SubversionTestCase):
                         strict_node_history=False, revprops=["svn:date", "svn:author", "svn:log"])
         check_results(returned)
 
+    def test_get_log_cancel(self):
+        def cb(*args):
+            raise KeyError
+        self.do_commit()
+        self.assertRaises(KeyError,
+            self.ra.get_log, cb, [""], 0, 0, revprops=["svn:date", "svn:author", "svn:log"])
+
     def test_get_commit_editor_busy(self):
         def mycb(rev):
             pass
@@ -215,6 +222,18 @@ class TestRemoteAccess(SubversionTestCase):
         editor.close()
 
         self.assertEquals(set(['bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date', 'svn:log']), set(self.ra.rev_proplist(1).keys()))
+
+    def test_get_commit_editor_context_manager(self):
+        def mycb(paths, rev, revprops):
+            pass
+        editor = self.ra.get_commit_editor({"svn:log": "foo"}, mycb)
+        self.assertIs(editor, editor.__enter__())
+        dir = editor.open_root(0)
+        subdir = dir.add_directory("foo")
+        self.assertIs(subdir, subdir.__enter__())
+        subdir.__exit__(None, None, None)
+        dir.__exit__(None, None, None)
+        editor.__exit__(None, None, None)
 
     def test_get_commit_editor(self):
         def mycb(paths, rev, revprops):

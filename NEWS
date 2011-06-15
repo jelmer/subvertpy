@@ -1,5 +1,10 @@
 0.8.2   UNRELEASED "mathematically annoying"
 
+ BUG FIXES
+
+  * Abort immediately if a callback raises an exception.
+    (Jelmer Vernooij)
+
 0.8.1   2011-06-02 "ornithologic reptile"
 
  FEATURES
