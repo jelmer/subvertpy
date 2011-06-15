@@ -253,6 +253,8 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	ret->py_config = NULL;
 	ret->client->notify_func2 = NULL;
 	ret->client->notify_baton2 = NULL;
+	ret->client->cancel_func = py_cancel_check;
+	ret->client->cancel_baton = NULL;
 	client_set_config((PyObject *)ret, config, NULL);
 	client_set_auth((PyObject *)ret, auth, NULL);
 	return (PyObject *)ret;
