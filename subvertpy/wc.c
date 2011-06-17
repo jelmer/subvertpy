@@ -474,7 +474,8 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 	AdmObject *ret;
 	char *kwnames[] = { "associated", "path", "write_lock", "depth", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|bi", kwnames, &associated, &path, &write_lock, &depth))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|bi", kwnames,
+			&associated, &path, &write_lock, &depth))
 		return NULL;
 
 	ret = PyObject_New(AdmObject, &Adm_Type);
@@ -748,7 +749,8 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 	apr_pool_t *temp_pool;
 	svn_depth_t depth = svn_depth_infinity;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zlOi", kwnames, &path, &copyfrom_url, &copyfrom_rev, &notify_func, &depth))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|zlOi", kwnames, &path,
+			&copyfrom_url, &copyfrom_rev, &notify_func, &depth))
 		return NULL;
 
 	ADM_CHECK_CLOSED(admobj);
@@ -816,9 +818,8 @@ static PyObject *adm_delete(PyObject *self, PyObject *args, PyObject *kwargs)
 	PyObject *notify_func=Py_None;
 	bool keep_local = false;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|Ob", kwnames, 
-									 &path, &notify_func, 
-									 &keep_local))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|Ob:delete", kwnames, 
+			&path, &notify_func, &keep_local))
 		return NULL;
 
 	ADM_CHECK_CLOSED(admobj);
@@ -863,8 +864,9 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 	svn_boolean_t honor_depth_exclude = FALSE;
 	char *kwnames[] = { "path", "reporter", "restore_files", "recurse", "use_commit_times", "notify_func", "depth_compatibility_trick", "honor_depth_exclude,", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO|bbbObb", kwnames, &path, &reporter, &restore_files, &recurse, &use_commit_times,
-						  &notify_func, &depth_compatibility_trick, &honor_depth_exclude))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO|bbbObb", kwnames, &path,
+			&reporter, &restore_files, &recurse, &use_commit_times,
+			&notify_func, &depth_compatibility_trick, &honor_depth_exclude))
 		return NULL;
 
 	ADM_CHECK_CLOSED(admobj);
@@ -915,8 +917,9 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 	svn_boolean_t allow_unver_obstructions = FALSE;
 	svn_boolean_t depth_is_sticky = FALSE;
 
-	if (!PyArg_ParseTuple(args, "s|bbOzbb", &target, &use_commit_times, &recurse, &notify_func, &diff3_cmd,
-						  &depth_is_sticky, &allow_unver_obstructions))
+	if (!PyArg_ParseTuple(args, "s|bbOzbb", &target, &use_commit_times,
+			&recurse, &notify_func, &diff3_cmd, &depth_is_sticky,
+			&allow_unver_obstructions))
 		return NULL;
 
 	ADM_CHECK_CLOSED(admobj);
@@ -1199,7 +1202,7 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
 	svn_stream_t *new_contents, *new_base_contents;
 	apr_hash_t *new_props, *new_base_props;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOOOO|ziO", kwnames,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOOOO|zlO", kwnames,
 			&dst_path, &py_new_base_contents, &py_new_contents, &py_new_base_props, 
 			&py_new_props, &copyfrom_url, &copyfrom_rev, &notify))
 		return NULL;
@@ -1334,7 +1337,8 @@ static PyObject *relocate(PyObject *self, PyObject *args)
 	svn_boolean_t recurse = TRUE;
 	PyObject *py_validator = Py_None;
 
-	if (!PyArg_ParseTuple(args, "sss|bO", &path, &from, &to, &recurse, &py_validator))
+	if (!PyArg_ParseTuple(args, "sss|bO:relocate", &path, &from, &to, &recurse,
+			&py_validator))
 		return NULL;
 
 	ADM_CHECK_CLOSED(admobj);
@@ -1483,7 +1487,8 @@ static PyObject *adm_process_committed_queue(PyObject *self, PyObject *args)
 	char *date, *author;
 	CommittedQueueObject *py_queue;
 
-	if (!PyArg_ParseTuple(args, "O!lss", &CommittedQueue_Type, &py_queue, &revnum, &date, &author))
+	if (!PyArg_ParseTuple(args, "O!lss", &CommittedQueue_Type, &py_queue,
+			&revnum, &date, &author))
 		return NULL;
 
 	ADM_CHECK_CLOSED(admobj);

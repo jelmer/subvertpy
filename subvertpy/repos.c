@@ -46,7 +46,7 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
     apr_hash_t *hash_config, *hash_fs_config;
 	RepositoryObject *ret;
 
-	if (!PyArg_ParseTuple(args, "s|OO", &path, &config, &fs_config))
+	if (!PyArg_ParseTuple(args, "s|OO:create", &path, &config, &fs_config))
 		return NULL;
 
     pool = Pool(NULL);

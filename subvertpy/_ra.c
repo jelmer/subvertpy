@@ -1048,7 +1048,7 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 	PyObject *update_editor;
 	bool send_deltas = true;
 
-	if (!PyArg_ParseTuple(args, "llO|b", &revision, &low_water_mark, &update_editor, &send_deltas))
+	if (!PyArg_ParseTuple(args, "llO|b:replay", &revision, &low_water_mark, &update_editor, &send_deltas))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1118,7 +1118,7 @@ static PyObject *ra_replay_range(PyObject *self, PyObject *args)
 	PyObject *cbs;
 	bool send_deltas = true;
 
-	if (!PyArg_ParseTuple(args, "lllO|b", &start_revision, &end_revision, &low_water_mark, &cbs, &send_deltas))
+	if (!PyArg_ParseTuple(args, "lllO|b:replay_range", &start_revision, &end_revision, &low_water_mark, &cbs, &send_deltas))
 		return NULL;
 
 	if (!PyTuple_Check(cbs)) {
@@ -1157,7 +1157,7 @@ static PyObject *ra_rev_proplist(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t rev;
 	PyObject *py_props;
-	if (!PyArg_ParseTuple(args, "l", &rev))
+	if (!PyArg_ParseTuple(args, "l:rev_proplist", &rev))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1191,7 +1191,8 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 #endif
 	svn_error_t *err;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOb", kwnames, &revprops, &commit_callback, &lock_tokens, &keep_locks))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOb:get_commit_editor",
+		kwnames, &revprops, &commit_callback, &lock_tokens, &keep_locks))
 		return NULL;
 
 	pool = Pool(NULL);
@@ -2831,7 +2832,7 @@ static PyObject *get_simple_provider(PyObject *self, PyObject *args)
 	PyObject *callback = Py_None;
 	apr_pool_t *pool;
 
-	if (!PyArg_ParseTuple(args, "|O", &callback))
+	if (!PyArg_ParseTuple(args, "|O:get_simple_provider", &callback))
 		return NULL;
 
 	pool = Pool(NULL);
