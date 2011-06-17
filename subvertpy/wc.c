@@ -1483,7 +1483,7 @@ static PyObject *adm_process_committed_queue(PyObject *self, PyObject *args)
 	char *date, *author;
 	CommittedQueueObject *py_queue;
 
-	if (!PyArg_ParseTuple(args, "O!Iss", &CommittedQueue_Type, &py_queue, &revnum, &date, &author))
+	if (!PyArg_ParseTuple(args, "O!lss", &CommittedQueue_Type, &py_queue, &revnum, &date, &author))
 		return NULL;
 
 	ADM_CHECK_CLOSED(admobj);
