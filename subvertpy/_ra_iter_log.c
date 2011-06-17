@@ -56,6 +56,7 @@ static void log_iter_dealloc(PyObject *self)
 	Py_XDECREF(iter->exc_val);
 	Py_DECREF(iter->ra);
 	apr_pool_destroy(iter->pool);
+	PyObject_Del(iter);
 }
 
 static PyObject *log_iter_next(LogIteratorObject *iter)

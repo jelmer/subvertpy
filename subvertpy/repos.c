@@ -245,9 +245,9 @@ static PyMethodDef fs_methods[] = {
 static void fs_dealloc(PyObject *self)
 {
 	FileSystemObject *fsobj = (FileSystemObject *)self;
-
 	Py_DECREF(fsobj->repos);
 	apr_pool_destroy(fsobj->pool);
+	PyObject_DEL(fsobj);
 }
 
 PyTypeObject FileSystem_Type = {
