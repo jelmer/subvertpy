@@ -35,6 +35,12 @@ typedef struct {
 	PyObject *commit_callback;
 } EditorObject;
 
+static PyObject *py_editor_ctx_enter(PyObject *self)
+{
+	Py_INCREF(self);
+	return self;
+}
+
 PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton,
 							apr_pool_t *pool, PyTypeObject *type,
 							void (*done_cb) (void *), void *done_baton, PyObject *commit_callback)
@@ -127,7 +133,9 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 	Py_BEGIN_ALLOW_THREADS
 	error = obj->txdelta_handler(&window, obj->txdelta_baton);
 	Py_END_ALLOW_THREADS
-	if (!check_error(error)) {
+	if (error != NULL) {
+		handle_svn_error(error);
+		svn_error_clear(error);
 		free(ops);
 		return NULL;
 	}
@@ -228,10 +236,31 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *py_file_editor_ctx_enter(PyObject *self)
+{
+	Py_INCREF(self);
+	return self;
+}
+
+static PyObject *py_file_editor_ctx_exit(PyObject *self, PyObject *args)
+{
+	EditorObject *editor = (EditorObject *)self;
+	if (!FileEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
+	RUN_SVN(editor->editor->close_file(editor->baton, NULL, editor->pool));
+
+	Py_RETURN_FALSE;
+}
+
 static PyMethodDef py_file_editor_methods[] = {
 	{ "change_prop", py_file_editor_change_prop, METH_VARARGS, NULL },
 	{ "close", py_file_editor_close, METH_VARARGS, NULL },
 	{ "apply_textdelta", py_file_editor_apply_textdelta, METH_VARARGS, NULL },
+	{ "__enter__", (PyCFunction)py_file_editor_ctx_enter, METH_NOARGS, NULL },
+	{ "__exit__", py_file_editor_ctx_exit, METH_VARARGS, NULL },
 	{ NULL }
 };
 
@@ -506,8 +535,30 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *py_dir_editor_ctx_enter(PyObject *self)
+{
+	Py_INCREF(self);
+	return self;
+}
+
+static PyObject *py_dir_editor_ctx_exit(PyObject *self, PyObject *args)
+{
+	EditorObject *editor = (EditorObject *)self;
+
+	if (!DirectoryEditor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
+	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
+
+	Py_RETURN_FALSE;
+}
+
 static PyMethodDef py_dir_editor_methods[] = {
-	{ "absent_file", py_dir_editor_absent_file, METH_VARARGS, NULL },
+	{ "absent_file", py_dir_editor_absent_file, METH_VARARGS,
+		"S.absent_file(path)\n\n"
+		"Indicate a file is not present." },
 	{ "absent_directory", py_dir_editor_absent_directory, METH_VARARGS, NULL },
 	{ "delete_entry", py_dir_editor_delete_entry, METH_VARARGS, NULL },
 	{ "add_file", py_dir_editor_add_file, METH_VARARGS, NULL },
@@ -516,7 +567,8 @@ static PyMethodDef py_dir_editor_methods[] = {
 	{ "open_directory", py_dir_editor_open_directory, METH_VARARGS, NULL },
 	{ "close", (PyCFunction)py_dir_editor_close, METH_NOARGS, NULL },
 	{ "change_prop", py_dir_editor_change_prop, METH_VARARGS, NULL },
-
+	{ "__enter__", (PyCFunction)py_dir_editor_ctx_enter, METH_NOARGS, NULL },
+	{ "__exit__", py_dir_editor_ctx_exit, METH_VARARGS, NULL },
 	{ NULL, }
 };
 
@@ -660,6 +712,31 @@ static PyObject *py_editor_abort(PyObject *self)
 	Py_RETURN_NONE;
 }
 
+static PyObject *py_editor_ctx_exit(PyObject *self, PyObject *args)
+{
+	EditorObject *editor = (EditorObject *)self;
+	PyObject *exc_type, *exc_val, *exc_tb;
+
+	if (!Editor_Check(self)) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+
+	if (!PyArg_ParseTuple(args, "OOO", &exc_type, &exc_val, &exc_tb))
+		return NULL;
+
+	if (exc_type != Py_None) {
+		RUN_SVN(editor->editor->abort_edit(editor->baton, editor->pool));
+	} else {
+		RUN_SVN(editor->editor->close_edit(editor->baton, editor->pool));
+	}
+
+	if (editor->done_cb != NULL)
+		editor->done_cb(editor->done_baton);
+
+	Py_RETURN_FALSE;
+}
+
 static PyMethodDef py_editor_methods[] = { 
 	{ "abort", (PyCFunction)py_editor_abort, METH_NOARGS, 
 		"S.abort()\n"
@@ -673,7 +750,9 @@ static PyMethodDef py_editor_methods[] = {
 	{ "set_target_revision", py_editor_set_target_revision, METH_VARARGS,
 		"S.set_target_revision(target_revision)\n"
 		"Set the target revision created by the reported revision."},
-	{ NULL, }
+	{ "__enter__", (PyCFunction)py_editor_ctx_enter, METH_NOARGS, NULL },
+	{ "__exit__", py_editor_ctx_exit, METH_VARARGS, NULL },
+	{ NULL }
 };
 
 PyTypeObject Editor_Type = { 

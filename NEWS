@@ -1,4 +1,13 @@
-0.8.1   2011-06-02
+0.8.2   2011-06-17 "mathematically annoying"
+
+ BUG FIXES
+
+  * Abort immediately if a callback raises an exception.
+    (Jelmer Vernooij)
+
+  * Fix leaking of error objects. (Jelmer Vernooij)
+
+0.8.1   2011-06-02 "ornithologic reptile"
 
  FEATURES
 
@@ -19,7 +28,7 @@
   * Convert times and file sizes to 64 bit integer objects.
     (Jelmer Vernooij, #786156)
 
-0.8.0   2011-03-02
+0.8.0   2011-03-02 "("
 
  FEATURES
 

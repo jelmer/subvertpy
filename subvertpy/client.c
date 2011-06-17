@@ -224,34 +224,40 @@ typedef struct {
 
 static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-    ClientObject *ret;
-    PyObject *config = Py_None, *auth = Py_None;
-    char *kwnames[] = { "config", "auth", NULL };
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO", kwnames, &config, &auth))
-        return NULL;
+	ClientObject *ret;
+	PyObject *config = Py_None, *auth = Py_None;
+	char *kwnames[] = { "config", "auth", NULL };
+	svn_error_t *err;
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO", kwnames, &config, &auth))
+		return NULL;
 
-    ret = PyObject_New(ClientObject, &Client_Type);
-    if (ret == NULL)
-        return NULL;
+	ret = PyObject_New(ClientObject, &Client_Type);
+	if (ret == NULL)
+		return NULL;
 
-    ret->pool = Pool(NULL);
-    if (ret->pool == NULL) {
-        Py_DECREF(ret);
-        return NULL;
-    }
+	ret->pool = Pool(NULL);
+	if (ret->pool == NULL) {
+		Py_DECREF(ret);
+		return NULL;
+	}
 
-    if (!check_error(svn_client_create_context(&ret->client, ret->pool))) {
-        Py_DECREF(ret);
-        return NULL;
-    }
+	err = svn_client_create_context(&ret->client, ret->pool);
+	if (err != NULL) {
+		handle_svn_error(err);
+		svn_error_clear(err);
+		Py_DECREF(ret);
+		return NULL;
+	}
 
-    ret->py_auth = NULL;
-    ret->py_config = NULL;
-    ret->client->notify_func2 = NULL;
-    ret->client->notify_baton2 = NULL;
-    client_set_config((PyObject *)ret, config, NULL);
-    client_set_auth((PyObject *)ret, auth, NULL);
-    return (PyObject *)ret;
+	ret->py_auth = NULL;
+	ret->py_config = NULL;
+	ret->client->notify_func2 = NULL;
+	ret->client->notify_baton2 = NULL;
+	ret->client->cancel_func = py_cancel_check;
+	ret->client->cancel_baton = NULL;
+	client_set_config((PyObject *)ret, config, NULL);
+	client_set_auth((PyObject *)ret, auth, NULL);
+	return (PyObject *)ret;
 }
 
 static void client_dealloc(PyObject *self)

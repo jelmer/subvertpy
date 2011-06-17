@@ -194,14 +194,14 @@ PyObject *PyOS_tmpfile(void)
 	return PyObject_CallObject(tmpfile_fn, NULL);
 }
 
-
-bool check_error(svn_error_t *error)
+void handle_svn_error(svn_error_t *error)
 {
-	if (error == NULL)
-		return true;
-
 	if (error->apr_err == BZR_SVN_APR_ERROR_OFFSET)
-		return false; /* Just let Python deal with it */
+		return; /* Just let Python deal with it */
+
+	if (error->apr_err == SVN_ERR_CANCELLED &&
+		error->child != NULL && error->child->apr_err == BZR_SVN_APR_ERROR_OFFSET)
+		return; /* Cancelled because of a Python exception, let Python deal with it. */
 
 	if (error->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD) {
 		/* svnserve doesn't handle the 'failure' command sent back 
@@ -210,16 +210,15 @@ bool check_error(svn_error_t *error)
 		 * (BZR_SVN_APR_ERROR_OFFSET for example), it will send 
 		 * SVN_ERR_RA_SVN_UNKNOWN_CMD. */
 		if (PyErr_Occurred() != NULL)
-			return false;
+			return;
 	}
 
 	if (error->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED) {
 		PyErr_SetString(PyExc_NotImplementedError, error->message);
-		return false;
+		return;
 	}
 
 	PyErr_SetSubversionException(error);
-	return false;
 }
 
 bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **ret)
@@ -573,17 +572,17 @@ svn_stream_t *new_py_stream(apr_pool_t *pool, PyObject *py)
 	return stream;
 }
 
-svn_error_t *py_cancel_func(void *cancel_baton)
+svn_error_t *py_cancel_check(void *cancel_baton)
 {
-	PyObject *py_fn = (PyObject *)cancel_baton;
-	if (py_fn != Py_None) {
-		PyObject *ret = PyObject_CallFunction(py_fn, "");
-		if (PyBool_Check(ret) && ret == Py_True) {
-			Py_DECREF(ret);
-			return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
-		}
-		Py_DECREF(ret);
+	PyGILState_STATE state = PyGILState_Ensure();
+
+	if (PyErr_Occurred()) {
+		PyGILState_Release(state);
+		return svn_error_create(SVN_ERR_CANCELLED, py_svn_error(),
+			"Python exception raised");
 	}
+	PyGILState_Release(state);
+
 	return NULL;
 }
 
