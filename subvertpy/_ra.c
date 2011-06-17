@@ -1048,7 +1048,7 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 	PyObject *update_editor;
 	bool send_deltas = true;
 
-	if (!PyArg_ParseTuple(args, "llO|b", &revision, &low_water_mark, &update_editor, &send_deltas))
+	if (!PyArg_ParseTuple(args, "llO|b:replay", &revision, &low_water_mark, &update_editor, &send_deltas))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1118,7 +1118,7 @@ static PyObject *ra_replay_range(PyObject *self, PyObject *args)
 	PyObject *cbs;
 	bool send_deltas = true;
 
-	if (!PyArg_ParseTuple(args, "lllO|b", &start_revision, &end_revision, &low_water_mark, &cbs, &send_deltas))
+	if (!PyArg_ParseTuple(args, "lllO|b:replay_range", &start_revision, &end_revision, &low_water_mark, &cbs, &send_deltas))
 		return NULL;
 
 	if (!PyTuple_Check(cbs)) {
@@ -1157,7 +1157,7 @@ static PyObject *ra_rev_proplist(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t rev;
 	PyObject *py_props;
-	if (!PyArg_ParseTuple(args, "l", &rev))
+	if (!PyArg_ParseTuple(args, "l:rev_proplist", &rev))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1191,7 +1191,8 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 #endif
 	svn_error_t *err;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOb", kwnames, &revprops, &commit_callback, &lock_tokens, &keep_locks))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOb:get_commit_editor",
+		kwnames, &revprops, &commit_callback, &lock_tokens, &keep_locks))
 		return NULL;
 
 	pool = Pool(NULL);
@@ -2084,6 +2085,7 @@ static void auth_provider_dealloc(PyObject *self)
 {
 	AuthProviderObject *auth_provider = (AuthProviderObject *)self;
 	Py_XDECREF(auth_provider->callback);
+	auth_provider->callback = NULL;
 	apr_pool_destroy(auth_provider->pool);
 	PyObject_Del(self);
 }
@@ -2105,50 +2107,50 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	char *kwnames[] = { "providers", NULL };
 	apr_array_header_t *c_providers;
 	svn_auth_provider_object_t **el;
-	PyObject *providers = Py_None;
+	PyObject *providers;
 	AuthObject *ret;
 	int i;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwnames, &providers))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwnames, &providers))
 		return NULL;
 
 	ret = PyObject_New(AuthObject, &Auth_Type);
 	if (ret == NULL)
 		return NULL;
 
-	if (!PySequence_Check(providers)) {
-		PyErr_SetString(PyExc_TypeError, "Auth providers should be a sequence");
-		PyObject_Del(ret);
-		return NULL;
-	}
+	ret->providers = NULL;
 
 	ret->pool = Pool(NULL);
 	if (ret->pool == NULL) {
 		PyErr_NoMemory();
-		apr_pool_destroy(ret->pool);
-		PyObject_Del(ret);
+		Py_DECREF(ret);
 		return NULL;
 	}
 
-	ret->providers = providers;
-	Py_INCREF(providers);
+	if (!PySequence_Check(providers)) {
+		PyErr_SetString(PyExc_TypeError, "Auth providers should be a sequence");
+		Py_DECREF(ret);
+		return NULL;
+	}
 
-	c_providers = apr_array_make(ret->pool, PySequence_Size(providers), sizeof(svn_auth_provider_object_t *));
+	Py_INCREF(providers);
+	ret->providers = providers;
+
+	c_providers = apr_array_make(ret->pool, PySequence_Size(providers),
+								 sizeof(svn_auth_provider_object_t *));
 	if (c_providers == NULL) {
 		PyErr_NoMemory();
-		apr_pool_destroy(ret->pool);
-		PyObject_Del(ret);
+		Py_DECREF(ret);
 		return NULL;
 	}
 	for (i = 0; i < PySequence_Size(providers); i++) {
+		PyObject *item;
 		AuthProviderObject *provider;
 		el = (svn_auth_provider_object_t **)apr_array_push(c_providers);
-		/* FIXME: Check that provider is indeed a AuthProviderObject object */
 		provider = (AuthProviderObject *)PySequence_GetItem(providers, i);
 		if (!PyObject_TypeCheck(provider, &AuthProvider_Type)) {
 			PyErr_SetString(PyExc_TypeError, "Invalid auth provider");
-			apr_pool_destroy(ret->pool);
-			PyObject_Del(ret);
+			Py_DECREF(ret);
 			return NULL;
 		}
 		*el = provider->provider;
@@ -2364,6 +2366,7 @@ static void auth_dealloc(PyObject *self)
 	AuthObject *auth = (AuthObject *)self;
 	apr_pool_destroy(auth->pool);
 	Py_XDECREF(auth->providers);
+	PyObject_Del(auth);
 }
 
 static PyTypeObject Auth_Type = {
@@ -2500,7 +2503,8 @@ static PyObject *get_username_prompt_provider(PyObject *self, PyObject *args)
 		return NULL;
 	Py_INCREF(prompt_func);
 	auth->callback = prompt_func;
-	svn_auth_get_username_prompt_provider(&auth->provider, py_username_prompt, (void *)prompt_func, retry_limit, auth->pool);
+	svn_auth_get_username_prompt_provider(&auth->provider, py_username_prompt,
+		 (void *)prompt_func, retry_limit, auth->pool);
 	return (PyObject *)auth;
 }
 
@@ -2826,26 +2830,34 @@ static PyObject *get_simple_provider(PyObject *self, PyObject *args)
 {
 	AuthProviderObject *auth;
 	PyObject *callback = Py_None;
+	apr_pool_t *pool;
 
-	if (!PyArg_ParseTuple(args, "|O", &callback))
+	if (!PyArg_ParseTuple(args, "|O:get_simple_provider", &callback))
 		return NULL;
 
+	pool = Pool(NULL);
+	if (pool == NULL)
+		return NULL;
 	auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
-	if (auth == NULL)
+	if (auth == NULL) {
+		apr_pool_destroy(pool);
 		return NULL;
-	auth->pool = Pool(NULL);
-	if (auth->pool == NULL)
-		return NULL;
+	}
+	auth->pool = pool;
 #if ONLY_SINCE_SVN(1, 6)
 	Py_INCREF(callback);
 	auth->callback = callback;
-	svn_auth_get_simple_provider2(&auth->provider, py_cb_get_simple_provider_prompt, callback, auth->pool);
+	svn_auth_get_simple_provider2(&auth->provider,
+		  py_cb_get_simple_provider_prompt, auth->callback, auth->pool);
 #else
+	auth->callback = NULL;
+	auth->provider = NULL;
 	if (callback != Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError, "callback not supported with svn < 1.6");
+		PyErr_SetString(PyExc_NotImplementedError,
+			"callback not supported with svn < 1.6");
+		Py_DECREF(auth);
 		return NULL;
 	}
-	auth->callback = NULL;
 	svn_auth_get_simple_provider(&auth->provider, auth->pool);
 #endif
 	return (PyObject *)auth;
