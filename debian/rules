@@ -1,5 +1,14 @@
 #!/usr/bin/make -f
 
+# Get the supported Python versions
+PYVERS = $(shell pyversions -r -v)
+# Get the default Python version
+PYVERSION = $(shell pyversions -d -v)
+
+# Callable functions to determine the correct PYTHONPATH
+pythonpath = $$(ls -d $(CURDIR)/build/lib.*-$(1))
+pythonpath_dbg = $$(ls -d $(CURDIR)/build/lib_d.*-$(1) 2>/dev/null || ls -d $(CURDIR)/build/lib.*$(1)-pydebug)
+
 export HOME=$(CURDIR)/nonexistent
 
 %:
@@ -10,11 +19,23 @@ override_dh_auto_build:
 	$(MAKE) pydoctor
 
 override_dh_auto_install:
+	# Install everything excluding the *_d.so debug extensions to python-foo
+	dh_install -X"*_d.so" "debian/tmp/*" -p python-subvertpy
+	# Install the debug extensions to python-foo-dbg
+	find debian/tmp -name "*_d.so" -exec dh_install '{}' -p python-subvertpy-dbg \;
 	dh_auto_install
 	mkdir -p debian/python-subvertpy/usr/share/doc/python-subvertpy
 	mv apidocs debian/python-subvertpy/usr/share/doc/python-subvertpy/api
 
 override_dh_auto_test:
+	echo foo
 ifeq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
-	$(MAKE) check
+		set -e -x; \
+		for py in $(PYVERS); do \
+			cd $(call pythonpath,$$py); python$$py -m testtools.run subvertpy.tests.test_suite ;\
+			cd $(call pythonpath_dbg,$$py); python$$py-dbg -m testtools.run subvertpy.tests.test_suite ;\
+		done
 endif
+
+override_dh_strip:
+	dh_strip --dbg-package=python-subvertpy-dbg

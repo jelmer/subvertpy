@@ -3,7 +3,14 @@ Section: python
 Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Homepage: http://samba.org/~jelmer/subvertpy
-Build-Depends: python (>= 2.6.6-3), debhelper (>= 7.0.50~), libsvn-dev, python-all-dev (>= 2.6.6-3), python-unittest2, python-pydoctor (>= 0.3+bzr567), python-docutils
+Build-Depends: debhelper (>= 7.0.50~),
+               libsvn-dev,
+               python (>= 2.6.6-3),
+               python-all-dev (>= 2.6.6-3),
+               python-all-dbg (>= 2.6.6-3),
+               python-docutils,
+               python-pydoctor (>= 0.3+bzr567),
+               python-unittest2
 Standards-Version: 3.9.2
 X-Python-Version: >= 2.4
 Vcs-Bzr: http://bzr.debian.org/users/jelmer/subvertpy/unstable
@@ -11,8 +18,9 @@ Vcs-Bzr: http://bzr.debian.org/users/jelmer/subvertpy/unstable
 Package: python-subvertpy
 Architecture: any
 Conflicts: bzr-svn (<< 0.5.0~rc2~)
-Depends: ${shlibs:Depends}, ${python:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
 Breaks: ${python:Breaks}
+Suggests: python-subvertpy-dbg
 Description: Alternative Python bindings for Subversion
  Python bindings for the Subversion version control system. The aim of
  these bindings is to be fast, complete and to provide an API that feels native
@@ -20,3 +28,22 @@ Description: Alternative Python bindings for Subversion
  .
  This also includes an experimental server-side implementation of the
  Subversion protocol.
+
+Package: python-subvertpy-dbg
+Architecture: any
+Conflicts: bzr-svn (<< 0.5.0~rc2~)
+Priority: extra
+Section: debug
+Depends: libapr1-dbg,
+         libaprutil1-dbg,
+         python-dbg,
+         python-subvertpy (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
+Breaks: ${python:Breaks}
+Description: Alternative Python bindings for Subversion - Debugging Symbols
+ Python bindings for the Subversion version control system. The aim of
+ these bindings is to be fast, complete and to provide an API that feels native
+ to Python programmers.
+ .
+ This package contains the debugging symbols for APR util.
