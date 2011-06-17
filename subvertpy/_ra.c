@@ -2144,7 +2144,6 @@ static PyObject *auth_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	for (i = 0; i < PySequence_Size(providers); i++) {
-		PyObject *item;
 		AuthProviderObject *provider;
 		el = (svn_auth_provider_object_t **)apr_array_push(c_providers);
 		provider = (AuthProviderObject *)PySequence_GetItem(providers, i);
