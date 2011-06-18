@@ -1,3 +1,11 @@
+0.8.3   UNRELEASED "manual override"
+
+ BUG FIXES
+
+  * Fix memory management in subvertpy.ra.Auth. (Jelmer Vernooij)
+
+  * Fix type for revnum in process_committed_queue. (Jelmer Vernooij, #730931)
+
 0.8.2   2011-06-17 "mathematically annoying"
 
  BUG FIXES

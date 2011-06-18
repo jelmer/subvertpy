@@ -1,8 +1,10 @@
-subvertpy (0.8.2-2) UNRELEASED; urgency=low
+subvertpy (0.8.2+bzr2352-1) UNRELEASED; urgency=low
 
   * Add python-subvertpy-dbg package with debugging symbols.
+  * New upstream snapshot.
+   + Fixes test_transmit_text_deltas test. Closes: #625722, LP: #730931
 
- -- Jelmer Vernooij <jelmer@debian.org>  Fri, 17 Jun 2011 17:07:36 +0200
+ -- Jelmer Vernooij <jelmer@debian.org>  Fri, 17 Jun 2011 19:25:01 +0200
 
 subvertpy (0.8.2-1) unstable; urgency=low
 

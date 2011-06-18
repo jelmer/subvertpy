@@ -191,7 +191,16 @@ class AdmTests(SubversionTestCase):
         self.build_tree({"checkout/bar": "\x00\x01"})
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout")
-        self.assertEquals("bar", adm.entry("checkout/bar").name)
+        entry = adm.entry("checkout/bar")
+        self.assertEquals("bar", entry.name)
+        self.assertEquals(NODE_FILE, entry.kind)
+        self.assertEquals(0, entry.revision)
+        self.client_commit("checkout", "msg")
+        adm = wc.WorkingCopy(None, "checkout")
+        entry = adm.entry("checkout/bar")
+        self.assertEquals("bar", entry.name)
+        self.assertEquals(NODE_FILE, entry.kind)
+        self.assertEquals(1, entry.revision)
 
     def test_get_actual_target(self):
         repos_url = self.make_client("repos", ".")
@@ -230,6 +239,10 @@ class AdmTests(SubversionTestCase):
         self.assertIsInstance(tmpfile, str)
         self.assertEquals(16, len(digest))
 
+        bar = adm.entry("bar")
+        self.assertEquals(-1, bar.cmt_rev)
+        self.assertEquals(0, bar.revision)
+
         cq = wc.CommittedQueue()
         cq.queue("bar", adm)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
@@ -237,6 +250,8 @@ class AdmTests(SubversionTestCase):
         self.assertEquals("bar", bar.name)
         self.assertEquals(NODE_FILE, bar.kind)
         self.assertEquals(wc.SCHEDULE_NORMAL, bar.schedule)
+        self.assertIs(None, bar.checksum)
+        self.assertEquals(1, bar.cmt_rev)
         self.assertEquals(1, bar.revision)
 
     def test_process_committed_queue(self):

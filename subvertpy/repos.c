@@ -46,7 +46,7 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
     apr_hash_t *hash_config, *hash_fs_config;
 	RepositoryObject *ret;
 
-	if (!PyArg_ParseTuple(args, "s|OO", &path, &config, &fs_config))
+	if (!PyArg_ParseTuple(args, "s|OO:create", &path, &config, &fs_config))
 		return NULL;
 
     pool = Pool(NULL);
@@ -245,9 +245,9 @@ static PyMethodDef fs_methods[] = {
 static void fs_dealloc(PyObject *self)
 {
 	FileSystemObject *fsobj = (FileSystemObject *)self;
-
 	Py_DECREF(fsobj->repos);
 	apr_pool_destroy(fsobj->pool);
+	PyObject_DEL(fsobj);
 }
 
 PyTypeObject FileSystem_Type = {

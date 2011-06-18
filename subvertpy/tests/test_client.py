@@ -71,9 +71,11 @@ class TestClient(SubversionTestCase):
         adm = wc.WorkingCopy(None, os.path.join(os.getcwd(), "dc"))
         e = adm.entry(os.path.join(os.getcwd(), "dc", "trunk"))
         self.assertEquals(e.kind, NODE_DIR)
+        self.assertEquals(e.revision, -1)
         adm2 = wc.WorkingCopy(None, os.path.join(os.getcwd(), "dc", "trunk"))
         e = adm2.entry(os.path.join(os.getcwd(), "dc", "trunk", "foo"))
         self.assertEquals(e.kind, NODE_FILE)
+        self.assertEquals(e.revision, 0)
 
     def test_get_config(self):
         self.assertIsInstance(client.get_config().__dict__, dict)

@@ -12,23 +12,25 @@ pythonpath_dbg = $$(ls -d $(CURDIR)/build/lib_d.*-$(1) 2>/dev/null || ls -d $(CU
 export HOME=$(CURDIR)/nonexistent
 
 %:
-	dh --buildsystem=python_distutils $*
+	dh --with python2 --buildsystem=python_distutils $*
 
 override_dh_auto_build:
 	dh_auto_build
 	$(MAKE) pydoctor
 
 override_dh_auto_install:
-	# Install everything excluding the *_d.so debug extensions to python-foo
+	dh_auto_install --destdir=debian/tmp
+	# Install everything excluding the *_d.so debug extensions to python-subvertpy
 	dh_install -X"*_d.so" "debian/tmp/*" -p python-subvertpy
-	# Install the debug extensions to python-foo-dbg
-	find debian/tmp -name "*_d.so" -exec dh_install '{}' -p python-subvertpy-dbg \;
-	dh_auto_install
+	# Install the debug extensions to python-subvertpy-dbg
+	dh_install "debian/tmp/usr/lib/python*/*-packages/subvertpy/*_d.so" -p python-subvertpy-dbg
 	mkdir -p debian/python-subvertpy/usr/share/doc/python-subvertpy
 	mv apidocs debian/python-subvertpy/usr/share/doc/python-subvertpy/api
 
+override_dh_installdocs:
+	dh_installdocs --link-doc=python-subvertpy
+
 override_dh_auto_test:
-	echo foo
 ifeq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
 		set -e -x; \
 		for py in $(PYVERS); do \
@@ -38,4 +40,6 @@ ifeq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
 endif
 
 override_dh_strip:
+ifeq (,$(filter nostrip,$(DEB_BUILD_OPTIONS)))
 	dh_strip --dbg-package=python-subvertpy-dbg
+endif

@@ -705,6 +705,8 @@ static void stream_dealloc(PyObject *self)
 	StreamObject *streamself = (StreamObject *)self;
 
 	apr_pool_destroy(streamself->pool);
+
+	PyObject_Del(self);
 }
 
 static PyObject *stream_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
