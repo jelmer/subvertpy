@@ -6,6 +6,9 @@
 
   * Fix type for revnum in process_committed_queue. (Jelmer Vernooij, #730931)
 
+  * Fix double free when calling close() more than once on editor objects.
+    (Jelmer Vernooij)
+
 0.8.2   2011-06-17 "mathematically annoying"
 
  BUG FIXES

@@ -354,7 +354,8 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #if ONLY_BEFORE_SVN(1, 5)
 	if (revprops == Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError, "fetching all revision properties not supported");	
+		PyErr_SetString(PyExc_NotImplementedError,
+		"fetching all revision properties not supported");
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	} else if (!PySequence_Check(revprops)) {

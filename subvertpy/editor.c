@@ -32,6 +32,7 @@ typedef struct {
 	apr_pool_t *pool;
 	void (*done_cb) (void *baton);
 	void *done_baton;
+	bool done;
 	PyObject *commit_callback;
 } EditorObject;
 
@@ -52,6 +53,7 @@ PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton,
 	obj->baton = baton;
 	obj->pool = pool;
 	obj->done_cb = done_cb;
+	obj->done = false;
 	obj->done_baton = done_baton;
 	obj->commit_callback = commit_callback;
 	return (PyObject *)obj;
@@ -231,8 +233,17 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "|z", &c_checksum))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "file editor was already closed");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->close_file(editor->baton, c_checksum, 
 					editor->pool));
+
+	editor->done = true;
+
 	Py_RETURN_NONE;
 }
 
@@ -434,7 +445,14 @@ static PyObject *py_dir_editor_close(PyObject *self)
 		return NULL;
 	}
 
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor was already closed");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
+
+	editor->done = true;
 
 	Py_RETURN_NONE;
 }
@@ -448,7 +466,6 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 		PyErr_BadArgument();
 		return NULL;
 	}
-
 
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
@@ -687,7 +704,14 @@ static PyObject *py_editor_close(PyObject *self)
 		return NULL;
 	}
 
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->close_edit(editor->baton, editor->pool));
+
+	editor->done = true;
 
 	if (editor->done_cb != NULL)
 		editor->done_cb(editor->done_baton);
@@ -704,11 +728,18 @@ static PyObject *py_editor_abort(PyObject *self)
 		return NULL;
 	}
 
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->abort_edit(editor->baton, editor->pool));
+
+	editor->done = true;
 
 	if (editor->done_cb != NULL)
 		editor->done_cb(editor->done_baton);
-	
+
 	Py_RETURN_NONE;
 }
 
