@@ -1,8 +1,8 @@
-subvertpy (0.8.2+bzr2353-1) UNRELEASED; urgency=low
+subvertpy (0.8.2+bzr2354-1) UNRELEASED; urgency=low
 
   * New upstream snapshot.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sat, 18 Jun 2011 23:44:12 +0200
+ -- Jelmer Vernooij <jelmer@debian.org>  Sun, 19 Jun 2011 01:18:08 +0200
 
 subvertpy (0.8.2+bzr2352-1) unstable; urgency=low
 

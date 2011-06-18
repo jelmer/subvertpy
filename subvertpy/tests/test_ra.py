@@ -137,6 +137,12 @@ class TestRemoteAccess(SubversionTestCase):
         reporter.set_path("", 0, True)
         reporter.finish()
 
+    def test_iter_log_invalid(self):
+        self.assertRaises(SubversionException, list, self.ra.iter_log(
+                ["idontexist"], 0, 0, revprops=["svn:date", "svn:author", "svn:log"]))
+        self.assertRaises(SubversionException, list, self.ra.iter_log(
+                [""], 0, 1000, revprops=["svn:date", "svn:author", "svn:log"]))
+
     def test_iter_log(self):
         def check_results(returned):
             self.assertEquals(2, len(returned))
@@ -159,11 +165,12 @@ class TestRemoteAccess(SubversionTestCase):
             self.assertEquals(revnum, 1)
             self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
                               set(props.keys()))
-        returned = list(self.ra.iter_log([""], 0, 0, revprops=["svn:date", "svn:author", "svn:log"]))
+        returned = list(self.ra.iter_log([""], 0, 0,
+            revprops=["svn:date", "svn:author", "svn:log"]))
         self.assertEquals(1, len(returned))
         self.do_commit()
         returned = list(self.ra.iter_log(None, 0, 1, discover_changed_paths=True, 
-                        strict_node_history=False, revprops=["svn:date", "svn:author", "svn:log"]))
+            strict_node_history=False, revprops=["svn:date", "svn:author", "svn:log"]))
         check_results(returned)
 
     def test_get_log(self):
@@ -203,11 +210,23 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertRaises(KeyError,
             self.ra.get_log, cb, [""], 0, 0, revprops=["svn:date", "svn:author", "svn:log"])
 
+    def test_get_commit_editor_double_close(self):
+        def mycb(*args):
+            pass
+        editor = self.ra.get_commit_editor({"svn:log": "foo"}, mycb)
+        dir = editor.open_root()
+        dir.close()
+        self.assertRaises(RuntimeError, dir.close)
+        editor.close()
+        self.assertRaises(RuntimeError, editor.close)
+        self.assertRaises(RuntimeError, editor.abort)
+
     def test_get_commit_editor_busy(self):
         def mycb(rev):
             pass
         editor = self.ra.get_commit_editor({"svn:log": "foo"}, mycb)
-        self.assertRaises(ra.BusyException, self.ra.get_commit_editor, {"svn:log": "foo"}, mycb)
+        self.assertRaises(ra.BusyException, self.ra.get_commit_editor,
+            {"svn:log": "foo"}, mycb)
         editor.abort()
 
     def test_get_commit_editor_custom_revprops(self):
