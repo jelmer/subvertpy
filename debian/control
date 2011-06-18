@@ -46,4 +46,4 @@ Description: Alternative Python bindings for Subversion - Debugging Symbols
  these bindings is to be fast, complete and to provide an API that feels native
  to Python programmers.
  .
- This package contains the debugging symbols for APR util.
+ This package contains the debug extension.
