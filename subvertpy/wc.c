@@ -902,6 +902,13 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 	Py_RETURN_NONE;
 }
 
+static void wc_done_handler(void *self)
+{
+	AdmObject *admobj = (AdmObject *)self;
+
+	Py_DECREF(admobj);
+}
+
 static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 {
 	char *target;
@@ -968,7 +975,9 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 		apr_pool_destroy(pool);
 		return NULL;
 	}
-	return new_editor_object(editor, edit_baton, pool, &Editor_Type, NULL, NULL, NULL);
+	Py_INCREF(admobj);
+	return new_editor_object(editor, edit_baton, pool, &Editor_Type,
+		wc_done_handler, admobj, NULL);
 }
 
 static bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_array_header_t **ret)

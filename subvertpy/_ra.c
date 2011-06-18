@@ -394,7 +394,7 @@ static void ra_done_handler(void *_ra)
 
 	ra->busy = false;
 
-	Py_XDECREF(ra);
+	Py_DECREF(ra);
 }
 
 #define RUN_RA_WITH_POOL(pool, ra, cmd) { \
