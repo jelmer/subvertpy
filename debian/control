@@ -20,6 +20,7 @@ Architecture: any
 Conflicts: bzr-svn (<< 0.5.0~rc2~)
 Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
 Breaks: ${python:Breaks}
+Provides: ${python:Provides}
 Suggests: python-subvertpy-dbg
 Description: Alternative Python bindings for Subversion
  Python bindings for the Subversion version control system. The aim of
@@ -35,11 +36,11 @@ Conflicts: bzr-svn (<< 0.5.0~rc2~)
 Priority: extra
 Section: debug
 Recommends: libapr1-dbg, libaprutil1-dbg, python-dbg
+Provides: ${python:Provides}
 Depends: python-subvertpy (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends},
          ${python:Depends}
-Breaks: ${python:Breaks}
 Description: Alternative Python bindings for Subversion - Debugging Symbols
  Python bindings for the Subversion version control system. The aim of
  these bindings is to be fast, complete and to provide an API that feels native
