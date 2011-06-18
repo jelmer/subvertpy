@@ -203,7 +203,7 @@ static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
 	char *name;
-   	svn_string_t c_value;
+	svn_string_t c_value;
 	int vallen;
 
 	if (!FileEditor_Check(self)) {
@@ -218,6 +218,7 @@ static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
 
 	RUN_SVN(editor->editor->change_file_prop(editor->baton, name, 
 				(c_value.data == NULL)?NULL:&c_value, editor->pool));
+
 	Py_RETURN_NONE;
 }
 
