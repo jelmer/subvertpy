@@ -1,3 +1,9 @@
+subvertpy (0.8.2+bzr2353-1) UNRELEASED; urgency=low
+
+  * New upstream snapshot.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sat, 18 Jun 2011 23:44:12 +0200
+
 subvertpy (0.8.2+bzr2352-1) unstable; urgency=low
 
   * Add python-subvertpy-dbg package with debugging symbols.
