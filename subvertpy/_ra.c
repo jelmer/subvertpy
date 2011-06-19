@@ -141,7 +141,7 @@ static PyObject *reporter_set_path(PyObject *self, PyObject *args)
 	svn_depth_t depth = svn_depth_infinity;
 	ReporterObject *reporter = (ReporterObject *)self;
 
-	if (!PyArg_ParseTuple(args, "slb|zi", &path, &revision, &start_empty, 
+	if (!PyArg_ParseTuple(args, "slb|zi:set_path", &path, &revision, &start_empty, 
 						  &lock_token, &depth))
 		return NULL;
 
@@ -166,7 +166,7 @@ static PyObject *reporter_delete_path(PyObject *self, PyObject *args)
 {
 	ReporterObject *reporter = (ReporterObject *)self;
 	char *path;
-	if (!PyArg_ParseTuple(args, "s", &path))
+	if (!PyArg_ParseTuple(args, "s:delete_path", &path))
 		return NULL;
 
 	RUN_SVN(reporter->reporter->delete_path(reporter->report_baton, 
@@ -184,7 +184,8 @@ static PyObject *reporter_link_path(PyObject *self, PyObject *args)
 	ReporterObject *reporter = (ReporterObject *)self;
 	svn_depth_t depth = svn_depth_infinity;
 
-	if (!PyArg_ParseTuple(args, "sslb|zi", &path, &url, &revision, &start_empty, &lock_token, &depth))
+	if (!PyArg_ParseTuple(args, "sslb|zi:kink_path", &path, &url, &revision,
+			&start_empty, &lock_token, &depth))
 		return NULL;
 
 #if ONLY_SINCE_SVN(1, 5)
@@ -655,7 +656,7 @@ static PyObject *ra_reparent(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 
-	if (!PyArg_ParseTuple(args, "s", &url))
+	if (!PyArg_ParseTuple(args, "s:reparent", &url))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1288,7 +1289,8 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	svn_string_t *val_string;
 
-	if (!PyArg_ParseTuple(args, "lss#", &rev, &name, &value, &vallen))
+	if (!PyArg_ParseTuple(args, "lss#:change_rev_prop", &rev, &name, &value,
+			&vallen))
 		return NULL;
 	if (ra_check_busy(ra))
 		return NULL;
@@ -1322,7 +1324,7 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 	PyObject *py_dirents, *py_props;
     char *kwnames[] = { "path", "revision", "fields", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|lI", kwnames,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|lI:get_dir", kwnames,
                                      &path, &revision, &dirent_fields))
 		return NULL;
 
@@ -1381,7 +1383,7 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 	PyObject *py_stream, *py_props;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "sO|l", &path, &py_stream, &revision))
+	if (!PyArg_ParseTuple(args, "sO|l:get_file", &path, &py_stream, &revision))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1408,7 +1410,7 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 	}
 
 	apr_pool_destroy(temp_pool);
-		 
+
 	return Py_BuildValue("(lN)", fetch_rev, py_props);
 }
 
@@ -1419,7 +1421,7 @@ static PyObject *ra_get_lock(PyObject *self, PyObject *args)
 	svn_lock_t *lock;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "s", &path))
+	if (!PyArg_ParseTuple(args, "s:get_lock", &path))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1442,7 +1444,7 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 	svn_node_kind_t kind;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "sl", &path, &revision))
+	if (!PyArg_ParseTuple(args, "sl:check_path", &path, &revision))
 		return NULL;
 	if (ra_check_svn_path(path))
 		return NULL;
@@ -1469,7 +1471,7 @@ static PyObject *ra_stat(PyObject *self, PyObject *args)
 	svn_dirent_t *dirent;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "sl", &path, &revision))
+	if (!PyArg_ParseTuple(args, "sl:stat", &path, &revision))
 		return NULL;
 	if (ra_check_svn_path(path))
 		return NULL;
@@ -1496,7 +1498,7 @@ static PyObject *ra_has_capability(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	int has = 0;
 
-	if (!PyArg_ParseTuple(args, "s", &capability))
+	if (!PyArg_ParseTuple(args, "s:has_capability", &capability))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1524,7 +1526,7 @@ static PyObject *ra_unlock(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	apr_hash_t *hash_path_tokens;
 
-	if (!PyArg_ParseTuple(args, "ObO", &path_tokens, &break_lock, &lock_func))
+	if (!PyArg_ParseTuple(args, "ObO:unlock", &path_tokens, &break_lock, &lock_func))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1556,7 +1558,7 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 	svn_revnum_t *rev;
 	Py_ssize_t idx = 0;
 
-	if (!PyArg_ParseTuple(args, "OsbO", &path_revs, &comment, &steal_lock, 
+	if (!PyArg_ParseTuple(args, "OsbO:lock", &path_revs, &comment, &steal_lock,
 						  &lock_func))
 		return NULL;
 
@@ -1600,7 +1602,7 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 	svn_lock_t *lock;
 	PyObject *ret;
 
-	if (!PyArg_ParseTuple(args, "s", &path))
+	if (!PyArg_ParseTuple(args, "s:get_locks", &path))
 		return NULL;
 
 	if (ra_check_svn_path(path))
@@ -1647,7 +1649,7 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 	apr_ssize_t klen;
 	char *val;
 
-	if (!PyArg_ParseTuple(args, "slO", &path, &peg_revision, &location_revisions))
+	if (!PyArg_ParseTuple(args, "slO:get_locations", &path, &peg_revision, &location_revisions))
 		return NULL;
 
 	if (ra_check_svn_path(path))
@@ -1742,7 +1744,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 	svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
 	svn_boolean_t include_descendants;
 
-	if (!PyArg_ParseTuple(args, "O|lib", &paths, &revision, &inherit, &include_descendants))
+	if (!PyArg_ParseTuple(args, "O|lib:mergeinfo", &paths, &revision, &inherit, &include_descendants))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -1808,8 +1810,8 @@ static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 	PyObject *py_rcvr;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "slllO", &path, &peg_revision, &start_revision, 
-						  &end_revision, &py_rcvr))
+	if (!PyArg_ParseTuple(args, "slllO:get_location_segments", &path,
+			&peg_revision, &start_revision, &end_revision, &py_rcvr))
 		return NULL;
 
 	if (ra_check_svn_path(path))
@@ -1842,8 +1844,8 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_boolean_t include_merged_revisions = FALSE;
 
-	if (!PyArg_ParseTuple(args, "sllO|b", &path, &start, &end, &file_rev_handler, 
-						  &include_merged_revisions))
+	if (!PyArg_ParseTuple(args, "sllO|b:get_file_revs", &path, &start,
+			&end, &file_rev_handler, &include_merged_revisions))
 		return NULL;
 
 	if (ra_check_svn_path(path))
@@ -2164,7 +2166,7 @@ static PyObject *auth_set_parameter(PyObject *self, PyObject *args)
 	char *name;
 	PyObject *value;
 	void *vvalue;
-	if (!PyArg_ParseTuple(args, "sO", &name, &value))
+	if (!PyArg_ParseTuple(args, "sO:set_parameter", &name, &value))
 		return NULL;
 
 	if (!strcmp(name, SVN_AUTH_PARAM_SSL_SERVER_FAILURES)) {
@@ -2192,7 +2194,7 @@ static PyObject *auth_get_parameter(PyObject *self, PyObject *args)
 	const void *value;
 	AuthObject *auth = (AuthObject *)self;
 
-	if (!PyArg_ParseTuple(args, "s", &name))
+	if (!PyArg_ParseTuple(args, "s:get_parameter", &name))
 		return NULL;
 
 	value = svn_auth_get_parameter(auth->auth_baton, name);
@@ -2226,7 +2228,7 @@ static PyObject *auth_first_credentials(PyObject *self, PyObject *args)
 	CredentialsIterObject *ret;
 	svn_auth_iterstate_t *state;
 
-	if (!PyArg_ParseTuple(args, "ss", &cred_kind, &realmstring))
+	if (!PyArg_ParseTuple(args, "ss:credentials", &cred_kind, &realmstring))
 		return NULL;
 
 	pool = Pool(NULL);
@@ -2492,7 +2494,8 @@ static PyObject *get_username_prompt_provider(PyObject *self, PyObject *args)
 	AuthProviderObject *auth;
 	PyObject *prompt_func;
 	int retry_limit;
-	if (!PyArg_ParseTuple(args, "Oi", &prompt_func, &retry_limit))
+	if (!PyArg_ParseTuple(args, "Oi:get_username_prompt_provider",
+			  &prompt_func, &retry_limit))
 		return NULL;
 	auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
 	if (auth == NULL)

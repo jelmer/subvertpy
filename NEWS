@@ -9,6 +9,8 @@
   * Fix double free when calling close() more than once on editor objects.
     (Jelmer Vernooij)
 
+  * Fix too early free during iter_log. (Jelmer Vernooij)
+
 0.8.2   2011-06-17 "mathematically annoying"
 
  BUG FIXES

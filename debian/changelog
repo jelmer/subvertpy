@@ -1,8 +1,10 @@
-subvertpy (0.8.2+bzr2354-1) UNRELEASED; urgency=low
+subvertpy (0.8.2+bzr2357-1) UNRELEASED; urgency=low
 
   * New upstream snapshot.
+   + Fixes several double free issues.
+  * Fix typo in python-subvertpy-dbg package description.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sun, 19 Jun 2011 01:18:08 +0200
+ -- Jelmer Vernooij <jelmer@debian.org>  Sun, 19 Jun 2011 02:43:07 +0200
 
 subvertpy (0.8.2+bzr2352-1) unstable; urgency=low
 
