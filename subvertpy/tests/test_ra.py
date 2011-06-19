@@ -136,6 +136,7 @@ class TestRemoteAccess(SubversionTestCase):
         reporter = self.ra.do_diff(1, "", self.ra.get_repos_root(), MyEditor())
         reporter.set_path("", 0, True)
         reporter.finish()
+        self.assertRaises(RuntimeError, reporter.finish)
 
     def test_iter_log_invalid(self):
         self.assertRaises(SubversionException, list, self.ra.iter_log(

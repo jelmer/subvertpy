@@ -48,14 +48,14 @@ staticforward PyTypeObject Auth_Type;
 
 static bool ra_check_svn_path(char *path)
 {
-    /* svn_ra_check_path will raise an assertion error if the path has a
-     * leading '/'. Raise a Python exception if there ar eleading '/'s so that 
+	/* svn_ra_check_path will raise an assertion error if the path has a
+	 * leading '/'. Raise a Python exception if there ar eleading '/'s so that 
 	 * the Python interpreter won't crash and die. */
-    if (*path == '/') {
-        PyErr_SetString(PyExc_ValueError, "invalid path has a leading '/'");
-        return true;
-    }
-    return false;
+	if (*path == '/') {
+		PyErr_SetString(PyExc_ValueError, "invalid path has a leading '/'");
+		return true;
+	}
+	return false;
 }
 
 static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, void *baton, apr_pool_t *pool)
@@ -129,6 +129,7 @@ typedef struct {
 	const REPORTER_T *reporter;
 	void *report_baton;
 	apr_pool_t *pool;
+	bool done;
 	RemoteAccessObject *ra;
 } ReporterObject;
 
@@ -208,6 +209,14 @@ static PyObject *reporter_finish(PyObject *self)
 {
 	ReporterObject *reporter = (ReporterObject *)self;
 
+	if (reporter->done) {
+		PyErr_SetString(PyExc_RuntimeError,
+			"Reporter already finished.");
+		return NULL;
+	}
+
+	reporter->done = true;
+
 	reporter->ra->busy = false;
 
 	RUN_SVN(reporter->reporter->finish_report(reporter->report_baton, 
@@ -222,12 +231,18 @@ static PyObject *reporter_abort(PyObject *self)
 {
 	ReporterObject *reporter = (ReporterObject *)self;
 
+	if (reporter->done) {
+		PyErr_SetString(PyExc_RuntimeError,
+			"Reporter already finished.");
+		return NULL;
+	}
+
+	reporter->done = true;
+
 	reporter->ra->busy = false;
 
 	RUN_SVN(reporter->reporter->abort_report(reporter->report_baton, 
 													 reporter->pool));
-
-	Py_XDECREF(reporter->ra);
 
 	Py_RETURN_NONE;
 }
@@ -253,6 +268,7 @@ static void reporter_dealloc(PyObject *self)
 	ReporterObject *reporter = (ReporterObject *)self;
 	/* FIXME: Warn the user if abort_report/finish_report wasn't called? */
 	apr_pool_destroy(reporter->pool);
+	Py_DECREF(reporter->ra);
 	PyObject_Del(self);
 }
 
@@ -386,8 +402,6 @@ static svn_error_t *py_ra_file_rev_handler(void *baton, const char *path, svn_re
 
 
 #endif
-
-
 
 static void ra_done_handler(void *_ra)
 {
@@ -908,6 +922,7 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	if (ret == NULL)
 		return NULL;
 	ret->reporter = reporter;
+	ret->done = false;
 	ret->report_baton = report_baton;
 	ret->pool = temp_pool;
 	Py_INCREF(ra);
@@ -968,6 +983,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	if (ret == NULL)
 		return NULL;
 	ret->reporter = reporter;
+	ret->done = false;
 	ret->report_baton = report_baton;
 	ret->pool = temp_pool;
 	Py_INCREF(ra);
@@ -1032,6 +1048,7 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 	if (ret == NULL)
 		return NULL;
 	ret->reporter = reporter;
+	ret->done = false;
 	ret->report_baton = report_baton;
 	ret->pool = temp_pool;
 	Py_INCREF(ra);
