@@ -54,8 +54,8 @@ static void log_iter_dealloc(PyObject *self)
 	}
 	Py_XDECREF(iter->exc_type);
 	Py_XDECREF(iter->exc_val);
-	Py_DECREF(iter->ra);
 	apr_pool_destroy(iter->pool);
+	Py_DECREF(iter->ra);
 	PyObject_Del(iter);
 }
 
@@ -63,11 +63,13 @@ static PyObject *log_iter_next(LogIteratorObject *iter)
 {
 	struct log_entry *first;
 	PyObject *ret;
+	Py_INCREF(iter);
 
 	while (iter->head == NULL) {
 		/* Done, raise exception */
 		if (iter->exc_type != NULL) {
 			PyErr_SetObject(iter->exc_type, iter->exc_val);
+			Py_DECREF(iter);
 			return NULL;
 		} else {
 			Py_BEGIN_ALLOW_THREADS
@@ -82,6 +84,7 @@ static PyObject *log_iter_next(LogIteratorObject *iter)
 		iter->tail = NULL;
 	free(first);
 	iter->queue_size--;
+	Py_DECREF(iter);
 	return ret;
 }
 
@@ -326,7 +329,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	PyObject *revprops = Py_None;
 	LogIteratorObject *ret;
-	apr_pool_t *temp_pool;
+	apr_pool_t *pool;
 	apr_array_header_t *apr_paths;
 	apr_array_header_t *apr_revprops;
 
@@ -339,16 +342,16 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (ra_check_busy(ra))
 		return NULL;
 
-	temp_pool = Pool(NULL);
-	if (temp_pool == NULL)
+	pool = Pool(ra->pool);
+	if (pool == NULL)
 		return NULL;
 	if (paths == Py_None) {
 		/* The subversion libraries don't behave as expected, 
 		 * so tweak our own parameters a bit. */
-		apr_paths = apr_array_make(temp_pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(temp_pool, "");
-	} else if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
-		apr_pool_destroy(temp_pool);
+		apr_paths = apr_array_make(pool, 1, sizeof(char *));
+		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(pool, "");
+	} else if (!path_list_to_apr_array(pool, paths, &apr_paths)) {
+		apr_pool_destroy(pool);
 		return NULL;
 	}
 
@@ -356,11 +359,11 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (revprops == Py_None) {
 		PyErr_SetString(PyExc_NotImplementedError,
 		"fetching all revision properties not supported");
-		apr_pool_destroy(temp_pool);
+		apr_pool_destroy(pool);
 		return NULL;
 	} else if (!PySequence_Check(revprops)) {
 		PyErr_SetString(PyExc_TypeError, "revprops should be a sequence");
-		apr_pool_destroy(temp_pool);
+		apr_pool_destroy(pool);
 		return NULL;
 	} else {
 		int i;
@@ -371,7 +374,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 				strcmp(SVN_PROP_REVISION_DATE, n)) {
 				PyErr_SetString(PyExc_NotImplementedError,
 								"fetching custom revision properties not supported");
-				apr_pool_destroy(temp_pool);
+				apr_pool_destroy(pool);
 				return NULL;
 			}
 		}
@@ -380,13 +383,13 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (include_merged_revisions) {
 		PyErr_SetString(PyExc_NotImplementedError, 
 			"include_merged_revisions not supported in Subversion 1.4");
-		apr_pool_destroy(temp_pool);
+		apr_pool_destroy(pool);
 		return NULL;
 	}
 #endif
 
-	if (!string_list_to_apr_array(temp_pool, revprops, &apr_revprops)) {
-		apr_pool_destroy(temp_pool);
+	if (!string_list_to_apr_array(pool, revprops, &apr_revprops)) {
+		apr_pool_destroy(pool);
 		return NULL;
 	}
 
@@ -400,7 +403,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	ret->end = end;
 	ret->limit = limit;
 	ret->apr_paths = apr_paths;
-	ret->pool = temp_pool;
+	ret->pool = pool;
 	ret->include_merged_revisions = include_merged_revisions;
 	ret->strict_node_history = strict_node_history;
 	ret->apr_revprops = apr_revprops;
