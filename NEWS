@@ -11,6 +11,10 @@
 
   * Fix too early free during iter_log. (Jelmer Vernooij)
 
+ FEATURES
+
+  * Add constant ERR_BAD_PROPERTY_VALUE. (Jelmer Vernooij)
+
 0.8.2   2011-06-17 "mathematically annoying"
 
  BUG FIXES
