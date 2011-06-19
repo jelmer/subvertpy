@@ -19,7 +19,6 @@ Package: python-subvertpy
 Architecture: any
 Conflicts: bzr-svn (<< 0.5.0~rc2~)
 Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
-Breaks: ${python:Breaks}
 Provides: ${python:Provides}
 Suggests: python-subvertpy-dbg
 Description: Alternative Python bindings for Subversion
