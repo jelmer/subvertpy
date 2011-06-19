@@ -302,17 +302,18 @@ static void py_iter_log(void *baton)
 			iter, iter->pool);
 #endif
 	state = PyGILState_Ensure();
-	iter->done = TRUE;
-	iter->ra->busy = false;
 	if (error != NULL) {
 		iter->exc_type = (PyObject *)PyErr_GetSubversionExceptionTypeObject();
 		iter->exc_val  = PyErr_NewSubversionException(error);
+		svn_error_clear(error);
 	} else {
 		iter->exc_type = PyExc_StopIteration;
 		Py_INCREF(iter->exc_type);
 		iter->exc_val = Py_None;
 		Py_INCREF(iter->exc_val);
 	}
+	iter->done = TRUE;
+	iter->ra->busy = false;
 
 	Py_DECREF(iter);
 	PyGILState_Release(state);
