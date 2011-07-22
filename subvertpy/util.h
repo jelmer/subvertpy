@@ -20,6 +20,8 @@
 #ifndef _SUBVERTPY_UTIL_H_
 #define _SUBVERTPY_UTIL_H_
 
+#include <svn_version.h>
+
 #if SVN_VER_MAJOR != 1
 #error "only svn 1.x is supported"
 #endif

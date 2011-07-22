@@ -26,7 +26,6 @@
 #include <apr_errno.h>
 #include <svn_error_codes.h>
 #include <svn_config.h>
-#include <svn_version.h>
 #include <svn_path.h>
 #include <svn_props.h>
 
