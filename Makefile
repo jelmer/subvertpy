@@ -6,7 +6,8 @@ TESTRUNNER = unittest
 else
 TESTRUNNER = unittest2.__main__
 endif
-RUNTEST = PYTHONPATH=.:$(PYTHONPATH) $(PYTHON) -m $(TESTRUNNER)
+DEBUGGER ?=
+RUNTEST = PYTHONPATH=.:$(PYTHONPATH) $(DEBUGGER) $(PYTHON) -m $(TESTRUNNER)
 
 all: build build-inplace
 
@@ -21,6 +22,9 @@ install::
 
 check:: build-inplace
 	$(RUNTEST) subvertpy.tests.test_suite
+
+gdb-check::
+	$(MAKE) check DEBUGGER="gdb --args"
 
 clean::
 	$(SETUP) clean
