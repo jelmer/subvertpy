@@ -3166,8 +3166,6 @@ void init_ra(void)
 	if (PyType_Ready(&LogIterator_Type) < 0)
 		return;
 
-	initeditor();
-
 	apr_initialize();
 	pool = Pool(NULL);
 	if (pool == NULL)

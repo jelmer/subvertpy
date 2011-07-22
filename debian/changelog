@@ -1,11 +1,12 @@
-subvertpy (0.8.2+bzr2363-1) UNRELEASED; urgency=low
+subvertpy (0.8.2+bzr2368-1) UNRELEASED; urgency=low
 
   * New upstream snapshot.
    + Fixes several double free issues.
+   + Prevents freeing RemoteAccess object before requests. LP: #803353,
+     Closes: #635006
   * Fix typo in python-subvertpy-dbg package description.
-  * New upstream snapshot.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Fri, 22 Jul 2011 18:59:40 +0200
+ -- Jelmer Vernooij <jelmer@debian.org>  Fri, 22 Jul 2011 23:40:08 +0200
 
 subvertpy (0.8.2+bzr2352-1) unstable; urgency=low
 

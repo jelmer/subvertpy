@@ -63,8 +63,10 @@ static void py_editor_dealloc(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
 	Py_XDECREF(editor->commit_callback);
-	apr_pool_destroy(editor->pool);
-	editor->pool = NULL;
+	if (editor->pool != NULL) {
+		apr_pool_destroy(editor->pool);
+		editor->pool = NULL;
+	}
 	PyObject_Del(self);
 }
 
@@ -147,6 +149,11 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 	Py_RETURN_NONE;
 }
 
+static void py_txdelta_window_handler_dealloc(PyObject *self)
+{
+	PyObject_Del(self);
+}
+
 PyTypeObject TxDeltaWindowHandler_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.TxDeltaWindowHandler", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
@@ -155,7 +162,7 @@ PyTypeObject TxDeltaWindowHandler_Type = {
 	
 	/* Methods to implement standard operations */
 	
-	NULL, /* destructor tp_dealloc;	(done in initeditor()) */
+	py_txdelta_window_handler_dealloc, /* destructor tp_dealloc; */
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
@@ -183,13 +190,14 @@ static PyObject *py_file_editor_apply_textdelta(PyObject *self, PyObject *args)
 	void *txdelta_baton;
 	TxDeltaWindowHandlerObject *py_txdelta;
 
-	if (!FileEditor_Check(self)) {
-		PyErr_BadArgument();
+	if (!PyArg_ParseTuple(args, "|z", &c_base_checksum))
+		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "file editor already closed");
 		return NULL;
 	}
 
-	if (!PyArg_ParseTuple(args, "|z", &c_base_checksum))
-		return NULL;
 	RUN_SVN(editor->editor->apply_textdelta(editor->baton,
 				c_base_checksum, editor->pool, 
 				&txdelta_handler, &txdelta_baton));
@@ -206,13 +214,13 @@ static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
 	svn_string_t c_value;
 	int vallen;
 
-	if (!FileEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &vallen))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "file editor already closed");
+		return NULL;
+	}
 
 	c_value.len = vallen;
 
@@ -227,11 +235,6 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	char *c_checksum = NULL;
 
-	if (!FileEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "|z", &c_checksum))
 		return NULL;
 
@@ -244,6 +247,8 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 					editor->pool));
 
 	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	Py_RETURN_NONE;
 }
@@ -257,12 +262,17 @@ static PyObject *py_file_editor_ctx_enter(PyObject *self)
 static PyObject *py_file_editor_ctx_exit(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
-	if (!FileEditor_Check(self)) {
-		PyErr_BadArgument();
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "file editor already closed");
 		return NULL;
 	}
 
 	RUN_SVN(editor->editor->close_file(editor->baton, NULL, editor->pool));
+
+	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	Py_RETURN_FALSE;
 }
@@ -284,7 +294,7 @@ PyTypeObject FileEditor_Type = {
 	
 	/* Methods to implement standard operations */
 	
-	NULL, /*	destructor tp_dealloc; (Done in initeditor()) 	*/
+	py_editor_dealloc, /*	destructor tp_dealloc; 	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
@@ -342,13 +352,13 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 	char *path; 
 	svn_revnum_t revision = -1;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s|l", &path, &revision))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->delete_entry(svn_path_canonicalize(path, editor->pool),
 										 revision, editor->baton, editor->pool));
@@ -365,20 +375,20 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copyfrom_path, &copyfrom_rev))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->add_directory(
 		svn_path_canonicalize(path, editor->pool), editor->baton,
 		copyfrom_path == NULL?NULL:svn_path_canonicalize(copyfrom_path, editor->pool), 
 		copyfrom_rev, editor->pool, &child_baton));
 
-	subpool = Pool(NULL);
+	subpool = Pool(editor->pool);
 	if (subpool == NULL)
 		return NULL;
 
@@ -394,13 +404,13 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 	void *child_baton;
 	apr_pool_t *subpool;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->open_directory(
 		svn_path_canonicalize(path, editor->pool), editor->baton,
@@ -421,13 +431,13 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	int vallen;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &vallen))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	c_value.len = vallen;
 
@@ -441,11 +451,6 @@ static PyObject *py_dir_editor_close(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (editor->done) {
 		PyErr_SetString(PyExc_RuntimeError, "directory editor was already closed");
 		return NULL;
@@ -454,6 +459,8 @@ static PyObject *py_dir_editor_close(PyObject *self)
 	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
 
 	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	Py_RETURN_NONE;
 }
@@ -463,14 +470,14 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 	char *path;
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
 		return NULL;
 	}
 
-	if (!PyArg_ParseTuple(args, "s", &path))
-		return NULL;
-	
 	RUN_SVN(editor->editor->absent_directory(
 		svn_path_canonicalize(path, editor->pool), editor->baton, editor->pool));
 
@@ -485,13 +492,13 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copy_path, &copy_rev))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->add_file(svn_path_canonicalize(path, editor->pool),
 		editor->baton, 
@@ -514,13 +521,13 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->open_file(svn_path_canonicalize(path, editor->pool),
 									  editor->baton, base_revision, 
@@ -539,13 +546,14 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 	char *path;
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
+	if (!PyArg_ParseTuple(args, "s", &path))
+		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
 		return NULL;
 	}
 
-	if (!PyArg_ParseTuple(args, "s", &path))
-		return NULL;
 
 	RUN_SVN(editor->editor->absent_file(
 		svn_path_canonicalize(path, editor->pool), editor->baton, editor->pool));
@@ -563,12 +571,16 @@ static PyObject *py_dir_editor_ctx_exit(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
 		return NULL;
 	}
 
 	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
+
+	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	Py_RETURN_FALSE;
 }
@@ -598,7 +610,7 @@ PyTypeObject DirectoryEditor_Type = {
 	
 	/* Methods to implement standard operations */
 	
-	NULL, /* destructor tp_dealloc;	(Done in initeditor()) */
+	py_editor_dealloc, /* destructor tp_dealloc;  */
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
@@ -656,20 +668,20 @@ static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
 	svn_revnum_t target_revision;
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "l", &target_revision))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->set_target_revision(editor->baton,
 					target_revision, editor->pool));
 
 	Py_RETURN_NONE;
 }
-	
+
 static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 {
 	svn_revnum_t base_revision=-1;
@@ -677,13 +689,13 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "|l:open_root", &base_revision))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->open_root(editor->baton, base_revision,
 					editor->pool, &root_baton));
@@ -700,11 +712,6 @@ static PyObject *py_editor_close(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (editor->done) {
 		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
 		return NULL;
@@ -713,6 +720,8 @@ static PyObject *py_editor_close(PyObject *self)
 	RUN_SVN(editor->editor->close_edit(editor->baton, editor->pool));
 
 	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	if (editor->done_cb != NULL)
 		editor->done_cb(editor->done_baton);
@@ -724,11 +733,6 @@ static PyObject *py_editor_abort(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (editor->done) {
 		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
 		return NULL;
@@ -737,6 +741,8 @@ static PyObject *py_editor_abort(PyObject *self)
 	RUN_SVN(editor->editor->abort_edit(editor->baton, editor->pool));
 
 	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	if (editor->done_cb != NULL)
 		editor->done_cb(editor->done_baton);
@@ -749,13 +755,13 @@ static PyObject *py_editor_ctx_exit(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	PyObject *exc_type, *exc_val, *exc_tb;
 
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "OOO", &exc_type, &exc_val, &exc_tb))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
+		return NULL;
+	}
 
 	if (exc_type != Py_None) {
 		RUN_SVN(editor->editor->abort_edit(editor->baton, editor->pool));
@@ -847,13 +853,6 @@ PyTypeObject Editor_Type = {
 	py_editor_methods, /*	struct PyMethodDef *tp_methods;	*/
 };
 
-
-void initeditor(void)
-{
-    TxDeltaWindowHandler_Type.tp_dealloc = (destructor)PyObject_Del;
-    FileEditor_Type.tp_dealloc = (destructor)PyObject_Del;
-    DirectoryEditor_Type.tp_dealloc = (destructor)PyObject_Del;
-}
 
 static svn_error_t *py_cb_editor_set_target_revision(void *edit_baton, svn_revnum_t target_revision, apr_pool_t *pool)
 {
