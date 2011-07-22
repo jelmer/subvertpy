@@ -183,11 +183,6 @@ static PyObject *py_file_editor_apply_textdelta(PyObject *self, PyObject *args)
 	void *txdelta_baton;
 	TxDeltaWindowHandlerObject *py_txdelta;
 
-	if (!FileEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "|z", &c_base_checksum))
 		return NULL;
 	RUN_SVN(editor->editor->apply_textdelta(editor->baton,
@@ -206,11 +201,6 @@ static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
 	svn_string_t c_value;
 	int vallen;
 
-	if (!FileEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &vallen))
 		return NULL;
 
@@ -226,11 +216,6 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
 	char *c_checksum = NULL;
-
-	if (!FileEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
 
 	if (!PyArg_ParseTuple(args, "|z", &c_checksum))
 		return NULL;
@@ -257,10 +242,6 @@ static PyObject *py_file_editor_ctx_enter(PyObject *self)
 static PyObject *py_file_editor_ctx_exit(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
-	if (!FileEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
 
 	RUN_SVN(editor->editor->close_file(editor->baton, NULL, editor->pool));
 
@@ -342,11 +323,6 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 	char *path; 
 	svn_revnum_t revision = -1;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s|l", &path, &revision))
 		return NULL;
 
@@ -364,11 +340,6 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
    	void *child_baton;
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
-
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
 
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copyfrom_path, &copyfrom_rev))
 		return NULL;
@@ -394,11 +365,6 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 	void *child_baton;
 	apr_pool_t *subpool;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
 
@@ -421,11 +387,6 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	int vallen;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &vallen))
 		return NULL;
 
@@ -440,11 +401,6 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 static PyObject *py_dir_editor_close(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
-
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
 
 	if (editor->done) {
 		PyErr_SetString(PyExc_RuntimeError, "directory editor was already closed");
@@ -463,11 +419,6 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 	char *path;
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 	
@@ -484,11 +435,6 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 	void *file_baton = NULL;
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
-
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
 
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copy_path, &copy_rev))
 		return NULL;
@@ -514,11 +460,6 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
 
@@ -539,11 +480,6 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 	char *path;
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
@@ -562,11 +498,6 @@ static PyObject *py_dir_editor_ctx_enter(PyObject *self)
 static PyObject *py_dir_editor_ctx_exit(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
-
-	if (!DirectoryEditor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
 
 	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
 
@@ -656,11 +587,6 @@ static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
 	svn_revnum_t target_revision;
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "l", &target_revision))
 		return NULL;
 
@@ -676,11 +602,6 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 	void *root_baton;
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
-
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
 
 	if (!PyArg_ParseTuple(args, "|l:open_root", &base_revision))
 		return NULL;
@@ -699,11 +620,6 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 static PyObject *py_editor_close(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
-
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
 
 	if (editor->done) {
 		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
@@ -724,11 +640,6 @@ static PyObject *py_editor_abort(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
-
 	if (editor->done) {
 		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
 		return NULL;
@@ -748,11 +659,6 @@ static PyObject *py_editor_ctx_exit(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
 	PyObject *exc_type, *exc_val, *exc_tb;
-
-	if (!Editor_Check(self)) {
-		PyErr_BadArgument();
-		return NULL;
-	}
 
 	if (!PyArg_ParseTuple(args, "OOO", &exc_type, &exc_val, &exc_tb))
 		return NULL;
