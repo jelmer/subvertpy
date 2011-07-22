@@ -11,6 +11,13 @@
 
   * Fix too early free during iter_log. (Jelmer Vernooij)
 
+  * Prevent freeing the RemoteAccess object before any
+    individual request frees. Thanks very much to Steve Langasek for the help
+    debugging this! (Jelmer Vernooij, #803353)
+
+  * Error out properly when editor objects are used after they are closed.
+    (Jelmer Vernooij)
+
  FEATURES
 
   * Add constant ERR_BAD_PROPERTY_VALUE. (Jelmer Vernooij)
