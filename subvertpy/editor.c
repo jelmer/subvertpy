@@ -63,8 +63,10 @@ static void py_editor_dealloc(PyObject *self)
 {
 	EditorObject *editor = (EditorObject *)self;
 	Py_XDECREF(editor->commit_callback);
-	apr_pool_destroy(editor->pool);
-	editor->pool = NULL;
+	if (editor->pool != NULL) {
+		apr_pool_destroy(editor->pool);
+		editor->pool = NULL;
+	}
 	PyObject_Del(self);
 }
 
@@ -245,6 +247,8 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 					editor->pool));
 
 	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	Py_RETURN_NONE;
 }
@@ -267,6 +271,8 @@ static PyObject *py_file_editor_ctx_exit(PyObject *self, PyObject *args)
 	RUN_SVN(editor->editor->close_file(editor->baton, NULL, editor->pool));
 
 	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	Py_RETURN_FALSE;
 }
@@ -382,7 +388,7 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 		copyfrom_path == NULL?NULL:svn_path_canonicalize(copyfrom_path, editor->pool), 
 		copyfrom_rev, editor->pool, &child_baton));
 
-	subpool = Pool(NULL);
+	subpool = Pool(editor->pool);
 	if (subpool == NULL)
 		return NULL;
 
@@ -453,6 +459,8 @@ static PyObject *py_dir_editor_close(PyObject *self)
 	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
 
 	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	Py_RETURN_NONE;
 }
@@ -570,6 +578,10 @@ static PyObject *py_dir_editor_ctx_exit(PyObject *self, PyObject *args)
 
 	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
 
+	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
+
 	Py_RETURN_FALSE;
 }
 
@@ -669,7 +681,7 @@ static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
 
 	Py_RETURN_NONE;
 }
-	
+
 static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 {
 	svn_revnum_t base_revision=-1;
@@ -708,6 +720,8 @@ static PyObject *py_editor_close(PyObject *self)
 	RUN_SVN(editor->editor->close_edit(editor->baton, editor->pool));
 
 	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	if (editor->done_cb != NULL)
 		editor->done_cb(editor->done_baton);
@@ -727,6 +741,8 @@ static PyObject *py_editor_abort(PyObject *self)
 	RUN_SVN(editor->editor->abort_edit(editor->baton, editor->pool));
 
 	editor->done = true;
+	apr_pool_destroy(editor->pool);
+	editor->pool = NULL;
 
 	if (editor->done_cb != NULL)
 		editor->done_cb(editor->done_baton);
