@@ -47,8 +47,6 @@ svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton
 #pragma GCC visibility pop
 #endif
 
-extern void initeditor(void);
-
 extern const svn_delta_editor_t py_editor;
 
 #endif /* _BZR_SVN_EDITOR_H_ */

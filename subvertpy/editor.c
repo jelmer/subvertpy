@@ -147,6 +147,11 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 	Py_RETURN_NONE;
 }
 
+static void py_txdelta_window_handler_dealloc(PyObject *self)
+{
+	PyObject_Del(self);
+}
+
 PyTypeObject TxDeltaWindowHandler_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.TxDeltaWindowHandler", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
@@ -155,7 +160,7 @@ PyTypeObject TxDeltaWindowHandler_Type = {
 	
 	/* Methods to implement standard operations */
 	
-	NULL, /* destructor tp_dealloc;	(done in initeditor()) */
+	py_txdelta_window_handler_dealloc, /* destructor tp_dealloc; */
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
@@ -185,6 +190,12 @@ static PyObject *py_file_editor_apply_textdelta(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "|z", &c_base_checksum))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "file editor already closed");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->apply_textdelta(editor->baton,
 				c_base_checksum, editor->pool, 
 				&txdelta_handler, &txdelta_baton));
@@ -203,6 +214,11 @@ static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &vallen))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "file editor already closed");
+		return NULL;
+	}
 
 	c_value.len = vallen;
 
@@ -243,7 +259,14 @@ static PyObject *py_file_editor_ctx_exit(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
 
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "file editor already closed");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->close_file(editor->baton, NULL, editor->pool));
+
+	editor->done = true;
 
 	Py_RETURN_FALSE;
 }
@@ -265,7 +288,7 @@ PyTypeObject FileEditor_Type = {
 	
 	/* Methods to implement standard operations */
 	
-	NULL, /*	destructor tp_dealloc; (Done in initeditor()) 	*/
+	py_editor_dealloc, /*	destructor tp_dealloc; 	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
@@ -326,6 +349,11 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|l", &path, &revision))
 		return NULL;
 
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->delete_entry(svn_path_canonicalize(path, editor->pool),
 										 revision, editor->baton, editor->pool));
 
@@ -343,6 +371,11 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copyfrom_path, &copyfrom_rev))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->add_directory(
 		svn_path_canonicalize(path, editor->pool), editor->baton,
@@ -368,6 +401,11 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
 
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->open_directory(
 		svn_path_canonicalize(path, editor->pool), editor->baton,
 					base_revision, editor->pool, &child_baton));
@@ -389,6 +427,11 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &vallen))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	c_value.len = vallen;
 
@@ -421,7 +464,12 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
-	
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->absent_directory(
 		svn_path_canonicalize(path, editor->pool), editor->baton, editor->pool));
 
@@ -438,6 +486,11 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "s|zl", &path, &copy_path, &copy_rev))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->add_file(svn_path_canonicalize(path, editor->pool),
 		editor->baton, 
@@ -463,6 +516,11 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
 		return NULL;
 
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->open_file(svn_path_canonicalize(path, editor->pool),
 									  editor->baton, base_revision, 
 									  editor->pool, &file_baton));
@@ -483,6 +541,12 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
+
+
 	RUN_SVN(editor->editor->absent_file(
 		svn_path_canonicalize(path, editor->pool), editor->baton, editor->pool));
 
@@ -498,6 +562,11 @@ static PyObject *py_dir_editor_ctx_enter(PyObject *self)
 static PyObject *py_dir_editor_ctx_exit(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "directory editor already closed");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
 
@@ -529,7 +598,7 @@ PyTypeObject DirectoryEditor_Type = {
 	
 	/* Methods to implement standard operations */
 	
-	NULL, /* destructor tp_dealloc;	(Done in initeditor()) */
+	py_editor_dealloc, /* destructor tp_dealloc;  */
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
@@ -753,13 +822,6 @@ PyTypeObject Editor_Type = {
 	py_editor_methods, /*	struct PyMethodDef *tp_methods;	*/
 };
 
-
-void initeditor(void)
-{
-    TxDeltaWindowHandler_Type.tp_dealloc = (destructor)PyObject_Del;
-    FileEditor_Type.tp_dealloc = (destructor)PyObject_Del;
-    DirectoryEditor_Type.tp_dealloc = (destructor)PyObject_Del;
-}
 
 static svn_error_t *py_cb_editor_set_target_revision(void *edit_baton, svn_revnum_t target_revision, apr_pool_t *pool)
 {
