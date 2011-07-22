@@ -659,6 +659,11 @@ static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "l", &target_revision))
 		return NULL;
 
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->set_target_revision(editor->baton,
 					target_revision, editor->pool));
 
@@ -674,6 +679,11 @@ static PyObject *py_editor_open_root(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "|l:open_root", &base_revision))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
+		return NULL;
+	}
 
 	RUN_SVN(editor->editor->open_root(editor->baton, base_revision,
 					editor->pool, &root_baton));
@@ -731,6 +741,11 @@ static PyObject *py_editor_ctx_exit(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "OOO", &exc_type, &exc_val, &exc_tb))
 		return NULL;
+
+	if (editor->done) {
+		PyErr_SetString(PyExc_RuntimeError, "Editor already closed/aborted");
+		return NULL;
+	}
 
 	if (exc_type != Py_None) {
 		RUN_SVN(editor->editor->abort_edit(editor->baton, editor->pool));
