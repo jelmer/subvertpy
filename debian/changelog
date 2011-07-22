@@ -1,4 +1,4 @@
-subvertpy (0.8.2+bzr2368-1) UNRELEASED; urgency=low
+subvertpy (0.8.2+bzr2368-1) unstable; urgency=low
 
   * New upstream snapshot.
    + Fixes several double free issues.
