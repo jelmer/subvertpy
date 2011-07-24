@@ -1,3 +1,9 @@
+subvertpy (0.8.3-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sun, 24 Jul 2011 16:30:33 +0200
+
 subvertpy (0.8.2+bzr2368-1) unstable; urgency=low
 
   * New upstream snapshot.
