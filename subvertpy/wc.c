@@ -2732,11 +2732,6 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED", svn_wc_conflict_choose_merged);
 #endif
 
-    PyModule_AddIntConstant(mod, "KIND_NONE", svn_node_none)
-    PyModule_AddIntConstant(mod, "KIND_FILE", svn_node_file)
-    PyModule_AddIntConstant(mod, "KIND_DIR", svn_node_dir)
-    PyModule_AddIntConstant(mod, "KIND_UNKNOWN", svn_node_unknown)
-
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
 
