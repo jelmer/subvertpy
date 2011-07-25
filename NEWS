@@ -1,4 +1,6 @@
-0.8.3   UNRELEASED "manual override"
+0.8.4	UNRELEASED "mimic octopus"
+
+0.8.3   2011-07-24 "manual override"
 
  BUG FIXES
 
@@ -10,6 +12,13 @@
     (Jelmer Vernooij)
 
   * Fix too early free during iter_log. (Jelmer Vernooij)
+
+  * Prevent freeing the RemoteAccess object before any
+    individual request frees. Thanks very much to Steve Langasek for the help
+    debugging this! (Jelmer Vernooij, #803353)
+
+  * Error out properly when editor objects are used after they are closed.
+    (Jelmer Vernooij)
 
  FEATURES
 

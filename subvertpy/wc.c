@@ -2672,8 +2672,6 @@ void initwc(void)
 	if (PyType_Ready(&CommittedQueue_Type) < 0)
 		return;
 
-	initeditor();
-
 	apr_initialize();
 
 	mod = Py_InitModule3("wc", wc_methods, "Working Copies");
