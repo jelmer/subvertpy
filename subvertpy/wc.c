@@ -463,6 +463,7 @@ typedef struct {
 static void status_dealloc(PyObject *self)
 {
 	apr_pool_destroy(((StatusObject *)self)->pool);
+	Py_XDECREF(((StatusObject *)self)->entry);
 	PyObject_Del(self);
 }
 
@@ -551,6 +552,7 @@ static PyTypeObject Status_Type = {
 static PyObject *py_status(const svn_wc_status2_t *status)
 {
 	StatusObject *ret;
+	svn_wc_status2_t *dup_status;
 
 	ret = PyObject_New(StatusObject, &Status_Type);
 	if (ret == NULL)
@@ -559,7 +561,15 @@ static PyObject *py_status(const svn_wc_status2_t *status)
 	ret->pool = Pool(NULL);
 	if (ret->pool == NULL)
 		return NULL;
-	ret->status = *svn_wc_dup_status2(status, ret->pool);
+
+	dup_status = svn_wc_dup_status2(status, ret->pool);
+	if (dup_status == NULL)
+	{
+		PyErr_NoMemory();
+		return NULL;
+	}
+	ret->status = *dup_status;
+
 	ret->entry = py_entry(ret->status.entry);
 	return (PyObject *)ret;
 }
@@ -1973,7 +1983,7 @@ static PyObject *conflicted(PyObject *self, PyObject *args)
  *
  * :return: A status object.
  */
-static PyObject *status(PyObject *self, PyObject *args)
+static PyObject *ra_status(PyObject *self, PyObject *args)
 {
 	char *path;
 	svn_wc_status2_t *st;
@@ -1982,17 +1992,14 @@ static PyObject *status(PyObject *self, PyObject *args)
 	AdmObject *admobj = (AdmObject *)self;
 
 	if (!PyArg_ParseTuple(args, "s", &path))
-	{
 		return NULL;
-	}
 
 	ADM_CHECK_CLOSED(admobj);
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
-	{
 		return NULL;
-	}
+
 	RUN_SVN_WITH_POOL(temp_pool, 
 			svn_wc_status2(
 				&st,
@@ -2068,7 +2075,7 @@ static PyMethodDef adm_methods[] = {
 		"S.conflicted(path) -> (text_conflicted, prop_conflicted, tree_conflicted)" },
 	{ "resolved_conflict", (PyCFunction)resolved_conflict, METH_VARARGS,
 		"S.resolved_conflict(path, resolve_text, resolve_props, resolve_tree, depth, conflict_choice, notify_func=None, cancel=None)" },
-	{ "status", (PyCFunction)status, METH_VARARGS, "status(wc_path) -> Status" },
+	{ "status", (PyCFunction)ra_status, METH_VARARGS, "status(wc_path) -> Status" },
 	{ NULL, }
 };
 
