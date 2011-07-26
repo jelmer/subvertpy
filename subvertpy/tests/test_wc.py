@@ -215,6 +215,16 @@ class AdmTests(SubversionTestCase):
         self.assertTrue(adm.is_wc_root(self.test_dir))
         self.assertFalse(adm.is_wc_root(os.path.join(self.test_dir, "bar")))
 
+    def test_status(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "text"})
+        self.client_add('checkout/bar')
+        adm = wc.WorkingCopy(None, "checkout")
+        self.assertEquals(wc.STATUS_ADDED, adm.status('bar').status)
+        self.client_commit("checkout", "foo")
+        adm = wc.WorkingCopy(None, "checkout")
+        self.assertEquals(wc.STATUS_NORMAL, adm.status('bar').status)
+
     def test_transmit_text_deltas(self):
         repos_url = self.make_client("repos", ".")
         self.build_tree({"bar": "blala"})

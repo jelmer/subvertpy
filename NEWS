@@ -1,5 +1,9 @@
 0.8.4	UNRELEASED "mimic octopus"
 
+ FEATURES
+
+  * Add subvertpy.wc.WorkingCopy.status. (Mark Lee)
+
 0.8.3   2011-07-24 "manual override"
 
  BUG FIXES
