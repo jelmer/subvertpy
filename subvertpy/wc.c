@@ -766,7 +766,8 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 #if ONLY_SINCE_SVN(1, 5)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries3(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries3(
+			  svn_path_canonicalize(path, temp_pool), admobj->adm, 
 				&py_wc_entry_callbacks2, (void *)callbacks,
 				depth, show_hidden, py_cancel_check, NULL,
 				temp_pool));
@@ -777,7 +778,8 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries2(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries2(
+			  svn_path_canonicalize(path, temp_pool), admobj->adm, 
 				&py_wc_entry_callbacks, (void *)callbacks,
 				show_hidden, py_cancel_check, NULL,
 				temp_pool));
