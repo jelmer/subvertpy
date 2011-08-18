@@ -164,13 +164,16 @@ class VersionQuery(object):
 # and hard-code a list of libraries.
 if os.name == "nt":
     def get_apr_version():
-        apr_version_file = os.path.join(os.environ["SVN_DEV"], r"include\apr\apr_version.h")
+        apr_version_file = os.path.join(os.environ["SVN_DEV"],
+                r"include\apr\apr_version.h")
         if not os.path.isfile(apr_version_file):
             raise Exception(
                 "Please check that your SVN_DEV location is correct.\n"
                 "Unable to find required apr\\apr_version.h file.")
         query = VersionQuery(apr_version_file)
-        return query.grep("APR_MAJOR_VERSION"), query.grep("APR_MINOR_VERSION"), query.grep("APR_PATCH_VERSION")
+        return (query.grep("APR_MAJOR_VERSION"),
+                query.grep("APR_MINOR_VERSION"),
+                query.grep("APR_PATCH_VERSION"))
 
     def get_svn_version():
         svn_version_file = os.path.join(os.environ["SVN_DEV"], r"include\svn_version.h")
@@ -179,7 +182,9 @@ if os.name == "nt":
                 "Please check that your SVN_DEV location is correct.\n"
                 "Unable to find required svn_version.h file.")
         query = VersionQuery(svn_version_file)
-        return query.grep("SVN_VER_MAJOR"), query.grep("SVN_VER_MINOR"), query.grep("SVN_VER_PATCH")
+        return (query.grep("SVN_VER_MAJOR"),
+                query.grep("SVN_VER_MINOR"),
+                query.grep("SVN_VER_PATCH"))
 
     # just clobber the functions above we can't use
     # for simplicitly, everything is done in the 'svn' one
@@ -254,7 +259,8 @@ if os.name == "nt":
 (svn_includedirs, svn_libdirs, svn_link_flags, extra_libs) = svn_build_data()
 
 def SvnExtension(name, *args, **kwargs):
-    kwargs["include_dirs"] = [apr_includedir, apu_includedir] + svn_includedirs + ["subvertpy"]
+    kwargs["include_dirs"] = ([apr_includedir, apu_includedir] + svn_includedirs +
+                              ["subvertpy"])
     kwargs["library_dirs"] = svn_libdirs
     # Note that the apr-util link flags are not included here, as
     # subvertpy only uses some apr util constants but does not use
@@ -270,7 +276,10 @@ def SvnExtension(name, *args, **kwargs):
         if is_keychain_provider_available():
             if "define_macros" not in kwargs:
                 kwargs["define_macros"] = []
-            kwargs["define_macros"].extend((('DARWIN', None), ('SVN_KEYCHAIN_PROVIDER_AVAILABLE', '1')))
+            kwargs["define_macros"].extend((
+                ('DARWIN', None),
+                ('SVN_KEYCHAIN_PROVIDER_AVAILABLE', '1'))
+                )
     return Extension(name, *args, **kwargs)
 
 
@@ -279,7 +288,8 @@ class install_lib_with_dlls(install_lib):
     def _get_dlls(self):
         # return a list of of (FQ-in-name, relative-out-name) tuples.
         ret = []
-        apr_bins = [libname + ".dll" for libname in extra_libs if libname.startswith("libapr")]
+        apr_bins = [libname + ".dll" for libname in extra_libs
+                    if libname.startswith("libapr")]
         if get_svn_version() >= (1,5,0):
             # Since 1.5.0 these libraries became shared
             apr_bins += """libsvn_client-1.dll libsvn_delta-1.dll libsvn_diff-1.dll
@@ -322,10 +332,16 @@ def source_path(filename):
 
 def subvertpy_modules():
     return [
-        SvnExtension("subvertpy.client", [source_path(n) for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")], libraries=["svn_client-1", "svn_subr-1", "svn_ra-1", "svn_wc-1"]), 
-        SvnExtension("subvertpy._ra", [source_path(n) for n in ("_ra.c", "util.c", "editor.c")], libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
-        SvnExtension("subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")], libraries=["svn_repos-1", "svn_subr-1", "svn_fs-1"]),
-        SvnExtension("subvertpy.wc", [source_path(n) for n in ("wc.c", "util.c", "editor.c")], libraries=["svn_wc-1", "svn_subr-1"])
+        SvnExtension("subvertpy.client", [source_path(n) for n in
+            ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")],
+            libraries=["svn_client-1", "svn_subr-1", "svn_ra-1", "svn_wc-1"]),
+        SvnExtension("subvertpy._ra", [source_path(n) for n in
+            ("_ra.c", "util.c", "editor.c")],
+            libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
+        SvnExtension("subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")],
+            libraries=["svn_repos-1", "svn_subr-1", "svn_fs-1"]),
+        SvnExtension("subvertpy.wc", [source_path(n) for n in ("wc.c",
+            "util.c", "editor.c")], libraries=["svn_wc-1", "svn_subr-1"])
         ]
 
 
@@ -339,7 +355,8 @@ if __name__ == "__main__":
           keywords='svn subvertpy subversion bindings',
           version=subvertpy_version_string,
           url='http://samba.org/~jelmer/subvertpy',
-          download_url="http://samba.org/~jelmer/subvertpy/subvertpy-%s.tar.gz" % subvertpy_version_string,
+          download_url="http://samba.org/~jelmer/subvertpy/subvertpy-%s.tar.gz" % (
+              subvertpy_version_string, ),
           license='LGPLv2.1 or later',
           author='Jelmer Vernooij',
           author_email='jelmer@samba.org',
