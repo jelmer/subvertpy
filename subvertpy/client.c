@@ -528,7 +528,7 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *peg_rev=Py_None, *rev=Py_None;
     bool recurse=true, ignore_externals=false, overwrite=false;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObbb", kwnames, &from, &to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObbbb", kwnames, &from, &to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol))
         return NULL;
 
     if (!to_opt_revision(peg_rev, &c_peg_rev))
