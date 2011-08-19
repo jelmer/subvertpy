@@ -1,3 +1,11 @@
+0.8.4	2011-08-18 "mimic octopus"
+
+ FEATURES
+
+  * Fix argument count in subvertpy.client.Client.export. (Jelmer Vernooij, #820662)
+
+  * Add subvertpy.wc.WorkingCopy.status. (Mark Lee)
+
 0.8.3   2011-07-24 "manual override"
 
  BUG FIXES
