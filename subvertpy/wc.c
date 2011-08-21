@@ -28,6 +28,10 @@
 #include "util.h"
 #include "editor.h"
 
+#ifndef T_BOOL
+#define T_BOOL T_BYTE
+#endif
+
 #if ONLY_SINCE_SVN(1, 5)
 #define REPORTER_T svn_ra_reporter3_t
 #else
