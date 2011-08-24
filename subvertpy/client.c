@@ -225,10 +225,11 @@ typedef struct {
 static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	ClientObject *ret;
-	PyObject *config = Py_None, *auth = Py_None;
-	char *kwnames[] = { "config", "auth", NULL };
+	PyObject *config = Py_None, *auth = Py_None, *log_msg_func = Py_None;
+	char *kwnames[] = { "config", "auth", "log_msg_func", NULL };
 	svn_error_t *err;
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO", kwnames, &config, &auth))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO", kwnames, &config, &auth,
+									 &log_msg_func))
 		return NULL;
 
 	ret = PyObject_New(ClientObject, &Client_Type);
@@ -255,6 +256,13 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	ret->client->notify_baton2 = NULL;
 	ret->client->cancel_func = py_cancel_check;
 	ret->client->cancel_baton = NULL;
+	if (log_msg_func != Py_None) {
+		ret->client->log_msg_func2 = py_log_msg_func2;
+	} else {
+		ret->client->log_msg_func2 = NULL;
+	}
+	Py_INCREF(log_msg_func);
+	ret->client->log_msg_baton2 = (void *)log_msg_func;
 	client_set_config((PyObject *)ret, config, NULL);
 	client_set_auth((PyObject *)ret, auth, NULL);
 	return (PyObject *)ret;

@@ -1,5 +1,10 @@
 0.8.6	UNRELEASED
 
+ FEATURES
+
+  * Allow passing in log_msg_func when creating subvertpy.client.Client.
+    (Jelmer Vernooij)
+
 0.8.5	2011-08-21 "boomerang arrow"
 
  BUG FIXES

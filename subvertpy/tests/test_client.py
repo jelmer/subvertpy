@@ -53,10 +53,29 @@ class TestClient(SubversionTestCase):
         self.build_tree({"dc/foo": None})
         self.client.add("dc/foo")
 
+    def test_commit(self):
+        self.build_tree({"dc/foo": None})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Amessage"
+        self.client.commit(["dc"])
+        r = ra.RemoteAccess(self.repos_url)
+        revprops = r.rev_proplist(1)
+        self.assertEquals("Amessage", revprops["svn:log"])
+
+    def test_commit_start(self):
+        self.build_tree({"dc/foo": None})
+        self.client = client.Client(auth=ra.Auth([ra.get_username_provider()]),
+                log_msg_func=lambda c: "Bmessage")
+        self.client.add("dc/foo")
+        self.client.commit(["dc"])
+        r = ra.RemoteAccess(self.repos_url)
+        revprops = r.rev_proplist(1)
+        self.assertEquals("Bmessage", revprops["svn:log"])
+
     def test_mkdir(self):
         self.client.mkdir(["dc/foo"])
         self.client.mkdir("dc/bar")
-        self.client.mkdir("dc/bla", revprops={"svn:commit": "foo"})
+        self.client.mkdir("dc/bla", revprops={"svn:log": "foo"})
 
     def test_export(self):
         self.build_tree({"dc/foo": "bla"})
