@@ -66,6 +66,13 @@ class TestClient(TestCaseInTempDir):
         repos.create(os.path.join(self.test_dir, "foo"))
         self.assertTrue(repos.Repository("foo").fs().revision_root(0) is not None)
 
+    def test_load_fs_invalid(self):
+        r = repos.create(os.path.join(self.test_dir, "foo"))
+        dumpfile = "Malformed"
+        feedback = StringIO()
+        self.assertRaises(SubversionException, r.load_fs, StringIO(dumpfile),
+            feedback, repos.LOAD_UUID_DEFAULT)
+
     def test_load_fs(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
         dumpfile = textwrap.dedent("""\

@@ -313,9 +313,9 @@ PyTypeObject FileSystem_Type = {
 
 static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-	const char *parent_dir = "";
+	const char *parent_dir = NULL;
 	PyObject *dumpstream, *feedback_stream;
-	bool use_pre_commit_hook = false, use_post_commit_hook = false;
+	unsigned char use_pre_commit_hook = 0, use_post_commit_hook = 0;
 	char *kwnames[] = { "dumpstream", "feedback_stream", "uuid_action",
 		                "parent_dir", "use_pre_commit_hook", 
 						"use_post_commit_hook", NULL };
@@ -323,11 +323,18 @@ static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 	apr_pool_t *temp_pool;
 	RepositoryObject *reposobj = (RepositoryObject *)self;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOi|sbb", kwnames,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOi|zbb", kwnames,
 								&dumpstream, &feedback_stream, &uuid_action,
-								&parent_dir, &use_pre_commit_hook, 
+								&parent_dir, &use_pre_commit_hook,
 								&use_post_commit_hook))
 		return NULL;
+
+	if (uuid_action != svn_repos_load_uuid_default &&
+		uuid_action != svn_repos_load_uuid_ignore &&
+		uuid_action != svn_repos_load_uuid_force) {
+		PyErr_SetString(PyExc_RuntimeError, "Invalid UUID action");
+		return NULL;
+	}
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -337,7 +344,7 @@ static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 				new_py_stream(temp_pool, feedback_stream),
 				uuid_action, parent_dir, use_pre_commit_hook, 
 				use_post_commit_hook, py_cancel_check, NULL,
-				reposobj->pool));
+				temp_pool));
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
