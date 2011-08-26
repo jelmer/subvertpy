@@ -34,7 +34,7 @@ typedef struct EditorObject {
 	void *done_baton;
 	bool done;
 	PyObject *commit_callback;
-	struct EditorObject *active_child;
+	bool active_child;
 	struct EditorObject *parent;
 } EditorObject;
 
@@ -59,10 +59,10 @@ PyObject *new_editor_object(struct EditorObject *parent,
 	obj->done = false;
 	obj->done_baton = done_baton;
 	obj->commit_callback = commit_callback;
-	obj->active_child = NULL;
+	obj->active_child = false;
 	if (parent != NULL) {
 		Py_INCREF(parent);
-		parent->active_child = obj;
+		parent->active_child = true;
 	}
 	obj->parent = (EditorObject *)parent;
 	return (PyObject *)obj;
@@ -255,7 +255,7 @@ static PyObject *py_file_editor_close(PyObject *self, PyObject *args)
 	RUN_SVN(editor->editor->close_file(editor->baton, c_checksum, 
 					editor->pool));
 
-	editor->parent->active_child = NULL;
+	editor->parent->active_child = false;
 	Py_DECREF(editor->parent);
 
 	editor->done = true;
@@ -282,7 +282,7 @@ static PyObject *py_file_editor_ctx_exit(PyObject *self, PyObject *args)
 
 	RUN_SVN(editor->editor->close_file(editor->baton, NULL, editor->pool));
 
-	editor->parent->active_child = NULL;
+	editor->parent->active_child = false;
 	Py_DECREF(editor->parent);
 
 	editor->done = true;
@@ -375,7 +375,7 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "a child is already open");
 		return NULL;
 	}
@@ -403,7 +403,7 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "child is already open");
 		return NULL;
 	}
@@ -437,7 +437,7 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "child is already open");
 		return NULL;
 	}
@@ -469,7 +469,7 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "child is already open");
 		return NULL;
 	}
@@ -491,7 +491,7 @@ static PyObject *py_dir_editor_close(PyObject *self)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "child is still open");
 		return NULL;
 	}
@@ -499,7 +499,7 @@ static PyObject *py_dir_editor_close(PyObject *self)
 	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
 
 	if (editor->parent != NULL) {
-		editor->parent->active_child = NULL;
+		editor->parent->active_child = false;
 		Py_DECREF(editor->parent);
 	}
 
@@ -523,7 +523,7 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "another child is still open");
 		return NULL;
 	}
@@ -550,7 +550,7 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "another child is still open");
 		return NULL;
 	}
@@ -584,7 +584,7 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "another child is still open");
 		return NULL;
 	}
@@ -614,7 +614,7 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "another child is still open");
 		return NULL;
 	}
@@ -640,7 +640,7 @@ static PyObject *py_dir_editor_ctx_exit(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "a child is still open");
 		return NULL;
 	}
@@ -648,7 +648,7 @@ static PyObject *py_dir_editor_ctx_exit(PyObject *self, PyObject *args)
 	RUN_SVN(editor->editor->close_directory(editor->baton, editor->pool));
 
 	if (editor->parent != NULL) {
-		editor->parent->active_child = NULL;
+		editor->parent->active_child = false;
 		Py_DECREF(editor->parent);
 	}
 
@@ -791,7 +791,7 @@ static PyObject *py_editor_close(PyObject *self)
 		return NULL;
 	}
 
-	if (editor->active_child != NULL) {
+	if (editor->active_child) {
 		PyErr_SetString(PyExc_RuntimeError, "a child is still open");
 		return NULL;
 	}
@@ -847,7 +847,7 @@ static PyObject *py_editor_ctx_exit(PyObject *self, PyObject *args)
 	if (exc_type != Py_None) {
 		RUN_SVN(editor->editor->abort_edit(editor->baton, editor->pool));
 	} else {
-		if (editor->active_child != NULL) {
+		if (editor->active_child) {
 			PyErr_SetString(PyExc_RuntimeError, "a child is still open");
 			return NULL;
 		}
