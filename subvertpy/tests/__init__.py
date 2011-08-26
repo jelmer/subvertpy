@@ -128,6 +128,7 @@ class TestDirEditor(object):
         self.dir.close()
 
     def change_prop(self, name, value):
+        self.close_children()
         self.dir.change_prop(name, value)
 
     def open_dir(self, path):
@@ -167,6 +168,7 @@ class TestDirEditor(object):
         return child
 
     def delete(self, path):
+        self.close_children()
         self.dir.delete_entry(path)
 
 

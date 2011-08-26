@@ -8,6 +8,10 @@
   * subvertpy.client.Client.update now accepts keyword arguments.
     (Jelmer Vernooij)
 
+  * Editors will now raise an exception if the protocol is not followed;
+    children have to be closed before their parents are accessed again.
+    (Jelmer Vernooij)
+
 0.8.5	2011-08-21 "boomerang arrow"
 
  BUG FIXES
