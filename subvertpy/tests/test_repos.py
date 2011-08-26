@@ -15,7 +15,9 @@
 
 """Subversion repository library tests."""
 
+from cStringIO import StringIO
 import os
+import textwrap
 
 from subvertpy import repos, SubversionException
 from subvertpy.tests import TestCaseInTempDir, TestCase
@@ -63,6 +65,27 @@ class TestClient(TestCaseInTempDir):
     def test_rev_root(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         self.assertTrue(repos.Repository("foo").fs().revision_root(0) is not None)
+
+    def test_load_fs(self):
+        r = repos.create(os.path.join(self.test_dir, "foo"))
+        dumpfile = textwrap.dedent("""\
+        SVN-fs-dump-format-version: 2
+
+        UUID: 38f0a982-fd1f-4e00-aa6b-a20720f4b9ca
+
+        Revision-number: 0
+        Prop-content-length: 56
+        Content-length: 56
+
+        K 8
+        svn:date
+        V 27
+        2011-08-26T13:08:30.187858Z
+        PROPS-END
+        """)
+        feedback = StringIO()
+        r.load_fs(StringIO(dumpfile), feedback, repos.LOAD_UUID_DEFAULT)
+        self.assertEquals(r.fs().get_uuid(), "38f0a982-fd1f-4e00-aa6b-a20720f4b9ca")
 
     def test_rev_props(self):
         repos.create(os.path.join(self.test_dir, "foo"))
