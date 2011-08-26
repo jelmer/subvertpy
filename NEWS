@@ -12,6 +12,8 @@
     children have to be closed before their parents are accessed again.
     (Jelmer Vernooij)
 
+  * Add constant ERR_DIR_NOT_EMPTY. (Jelmer Vernooij)
+
 0.8.5	2011-08-21 "boomerang arrow"
 
  BUG FIXES
