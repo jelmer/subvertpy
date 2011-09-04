@@ -41,9 +41,9 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
 {
 	char *path;
 	PyObject *config=Py_None, *fs_config=Py_None;
-    svn_repos_t *repos;
-    apr_pool_t *pool;
-    apr_hash_t *hash_config, *hash_fs_config;
+	svn_repos_t *repos = NULL;
+	apr_pool_t *pool;
+	apr_hash_t *hash_config, *hash_fs_config;
 	RepositoryObject *ret;
 
 	if (!PyArg_ParseTuple(args, "s|OO:create", &path, &config, &fs_config))
