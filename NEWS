@@ -14,6 +14,8 @@
 
   * Add constant ERR_DIR_NOT_EMPTY. (Jelmer Vernooij)
 
+  * Add constant ERR_FS_ROOT_DIR. (Jelmer Vernooij)
+
 0.8.5	2011-08-21 "boomerang arrow"
 
  BUG FIXES
