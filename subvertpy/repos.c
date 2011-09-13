@@ -476,12 +476,42 @@ static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static svn_error_t *py_pack_notify(void *baton, apr_int64_t shard, svn_fs_pack_notify_action_t action, apr_pool_t *pool)
+{
+	PyObject *ret;
+	if (baton == Py_None)
+		return NULL;
+	ret = PyObject_CallFunction((PyObject *)baton, "li", shard, action);
+	if (ret == NULL)
+		return py_svn_error();
+	Py_DECREF(ret);
+	return NULL;
+}
+
+static PyObject *repos_pack(RepositoryObject *self, PyObject *args)
+{
+	apr_pool_t *temp_pool;
+	PyObject *notify_func = Py_None;
+	if (!PyArg_ParseTuple(args, "|O", &notify_func))
+		return NULL;
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_repos_fs_pack(self->repos, py_pack_notify, notify_func,
+			py_cancel_check, NULL, temp_pool));
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef repos_methods[] = {
 	{ "load_fs", (PyCFunction)repos_load_fs, METH_VARARGS|METH_KEYWORDS, NULL },
 	{ "fs", (PyCFunction)repos_fs, METH_NOARGS, NULL },
 	{ "has_capability", (PyCFunction)repos_has_capability, METH_VARARGS, NULL },
 	{ "verify_fs", (PyCFunction)repos_verify, METH_VARARGS,
 		"S.verify_repos(feedback_stream, start_revnum, end_revnum)" },
+	{ "pack_fs", (PyCFunction)repos_pack, METH_VARARGS, NULL },
 	{ NULL, }
 };
 

@@ -18,6 +18,8 @@
 
   * Add `subvertpy.repos.Repository.verify_fs`. (Jelmer Vernooij)
 
+  * Add `subvertpy.repos.Repository.pack_fs`. (Jelmer Vernooij)
+
 0.8.5	2011-08-21 "boomerang arrow"
 
  BUG FIXES

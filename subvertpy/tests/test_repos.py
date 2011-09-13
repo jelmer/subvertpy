@@ -108,6 +108,10 @@ class TestRepository(TestCaseInTempDir):
         repos.create(os.path.join(self.test_dir, "foo"))
         self.assertRaises(SubversionException, repos.Repository("foo").fs().revision_root, 1)
 
+    def test_pack_fs(self):
+        r = repos.create(os.path.join(self.test_dir, "foo"))
+        r.pack_fs()
+
     def test_paths_changed(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         root = repos.Repository("foo").fs().revision_root(0)
