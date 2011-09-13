@@ -35,10 +35,10 @@ class VersionTest(TestCase):
         self.assertTrue(repos.api_version() <= repos.version())
 
 
-class TestClient(TestCaseInTempDir):
+class TestRepository(TestCaseInTempDir):
 
     def setUp(self):
-        super(TestClient, self).setUp()
+        super(TestRepository, self).setUp()
 
     def test_create(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -49,6 +49,12 @@ class TestClient(TestCaseInTempDir):
             self.assertRaises(NotImplementedError, r.has_capability, "mergeinfo")
         else:
             self.assertIsInstance(r.has_capability("mergeinfo"), bool)
+
+    def test_verify_fs(self):
+        r = repos.create(os.path.join(self.test_dir, "foo"))
+        f = StringIO()
+        r.verify_fs(f, 0, 0)
+        self.assertEquals('* Verified revision 0.\n', f.getvalue())
 
     def test_open(self):
         repos.create(os.path.join(self.test_dir, "foo"))

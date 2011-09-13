@@ -380,7 +380,8 @@ static PyObject *repos_hotcopy(RepositoryObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-	RUN_SVN_WITH_POOL(temp_pool, svn_repos_hotcopy(src_path, dest_path, clean_logs, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_repos_hotcopy(src_path, dest_path, clean_logs, temp_pool));
 
 	apr_pool_destroy(temp_pool);
 
@@ -446,7 +447,8 @@ static PyObject *repos_has_capability(RepositoryObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_repos_has_capability(self->repos, &has, name, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_repos_has_capability(self->repos, &has, name, temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(has);
 #else
@@ -455,10 +457,31 @@ static PyObject *repos_has_capability(RepositoryObject *self, PyObject *args)
 #endif
 }
 
+static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
+{
+	apr_pool_t *temp_pool;
+	PyObject *py_feedback_stream;
+	long start_rev, end_rev;
+	if (!PyArg_ParseTuple(args, "Oii", &py_feedback_stream, &start_rev, &end_rev))
+		return NULL;
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_repos_verify_fs(self->repos,
+			new_py_stream(temp_pool, py_feedback_stream), start_rev, end_rev,
+			py_cancel_check, NULL, temp_pool));
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef repos_methods[] = {
 	{ "load_fs", (PyCFunction)repos_load_fs, METH_VARARGS|METH_KEYWORDS, NULL },
 	{ "fs", (PyCFunction)repos_fs, METH_NOARGS, NULL },
 	{ "has_capability", (PyCFunction)repos_has_capability, METH_VARARGS, NULL },
+	{ "verify_fs", (PyCFunction)repos_verify, METH_VARARGS,
+		"S.verify_repos(feedback_stream, start_revnum, end_revnum)" },
 	{ NULL, }
 };
 
