@@ -165,6 +165,7 @@ static svn_error_t *list_receiver(void *dict, const char *path,
     }
 
     PyDict_SetItemString(dict, path, value);
+    Py_DECREF(value);
 
     PyGILState_Release(state);
 
@@ -1105,6 +1106,7 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
                                        list_receiver, entry_dict,
                                        client->client, temp_pool));
 #endif
+    apr_pool_destroy(temp_pool);
 
     return entry_dict;
 }

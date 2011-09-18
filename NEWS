@@ -20,6 +20,11 @@
 
   * Add `subvertpy.repos.Repository.pack_fs`. (Jelmer Vernooij)
 
+ BUG FIXES
+
+  * Fix memory leak in subvertpy.client.Client.list.
+    (Wez Furlong)
+
 0.8.5	2011-08-21 "boomerang arrow"
 
  BUG FIXES
