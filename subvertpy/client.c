@@ -144,7 +144,7 @@ static svn_error_t *proplist_receiver(void *prop_list, const char *path,
 		return py_svn_error();
 	}
 
-	if (!PyList_Append(prop_list, value)) {
+	if (PyList_Append(prop_list, value) != 0) {
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
@@ -169,7 +169,7 @@ static svn_error_t *list_receiver(void *dict, const char *path,
         return py_svn_error();
     }
 
-    if (!PyDict_SetItemString(dict, path, value)) {
+    if (PyDict_SetItemString(dict, path, value) != 0) {
         Py_DECREF(value);
         PyGILState_Release(state);
         return py_svn_error();
@@ -952,32 +952,32 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
     }
 
 
-    RUN_SVN_WITH_POOL(temp_pool,
-                      svn_client_proplist2(&props, target, &c_peg_rev, &c_rev,
-                                           (depth == svn_depth_infinity), 
-                                           client->client, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool,
+					  svn_client_proplist2(&props, target, &c_peg_rev, &c_rev,
+										   (depth == svn_depth_infinity), 
+										   client->client, temp_pool));
 
-    for (i = 0; i < props->nelts; i++) {
-        svn_client_proplist_item_t *item;
-        PyObject *prop_dict, *value;
+	for (i = 0; i < props->nelts; i++) {
+		svn_client_proplist_item_t *item;
+		PyObject *prop_dict, *value;
 
-        item = APR_ARRAY_IDX(props, i, svn_client_proplist_item_t *);
+		item = APR_ARRAY_IDX(props, i, svn_client_proplist_item_t *);
 
-        prop_dict = prop_hash_to_dict(item->prop_hash);
-        if (prop_dict == NULL) {
-            apr_pool_destroy(temp_pool);
-            Py_DECREF(prop_list);
-            return NULL;
-        }
+		prop_dict = prop_hash_to_dict(item->prop_hash);
+		if (prop_dict == NULL) {
+			apr_pool_destroy(temp_pool);
+			Py_DECREF(prop_list);
+			return NULL;
+		}
 
-        value = Py_BuildValue("(sO)", item->node_name, prop_dict);
-        if (value == NULL) {
-            apr_pool_destroy(temp_pool);
-            Py_DECREF(prop_list);
-            Py_DECREF(prop_dict);
-            return NULL;
-        }
-        if (!PyList_Append(prop_list, value)) {
+		value = Py_BuildValue("(sO)", item->node_name, prop_dict);
+		if (value == NULL) {
+			apr_pool_destroy(temp_pool);
+			Py_DECREF(prop_list);
+			Py_DECREF(prop_dict);
+			return NULL;
+		}
+		if (PyList_Append(prop_list, value) != 0) {
 			apr_pool_destroy(temp_pool);
 			Py_DECREF(prop_list);
 			Py_DECREF(prop_dict);
@@ -1278,22 +1278,34 @@ static PyGetSetDef client_getset[] = {
 
 static PyObject *get_default_ignores(PyObject *self)
 {
-    apr_array_header_t *patterns;
-    apr_pool_t *pool;
-    int i = 0;
-    ConfigObject *configobj = (ConfigObject *)self;
-    PyObject *ret;
+	apr_array_header_t *patterns;
+	apr_pool_t *pool;
+	int i = 0;
+	ConfigObject *configobj = (ConfigObject *)self;
+	PyObject *ret;
 
-    pool = Pool(NULL);
-    if (pool == NULL)
-        return NULL;
-    RUN_SVN_WITH_POOL(pool, svn_wc_get_default_ignores(&patterns, configobj->config, pool));
-    ret = PyList_New(patterns->nelts);
-    for (i = 0; i < patterns->nelts; i++) {
-        PyList_SetItem(ret, i, PyString_FromString(APR_ARRAY_IDX(patterns, i, char *)));
-    }
-    apr_pool_destroy(pool);
-    return ret;
+	pool = Pool(NULL);
+	if (pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(pool, svn_wc_get_default_ignores(&patterns, configobj->config, pool));
+	ret = PyList_New(patterns->nelts);
+	for (i = 0; i < patterns->nelts; i++) {
+		PyObject *item = PyString_FromString(APR_ARRAY_IDX(patterns, i, char *));
+		if (item == NULL) {
+			apr_pool_destroy(pool);
+			Py_DECREF(item);
+			Py_DECREF(ret);
+			return NULL;
+		}
+        if (PyList_SetItem(ret, i, item) != 0) {
+			apr_pool_destroy(pool);
+			Py_DECREF(item);
+			Py_DECREF(ret);
+			return NULL;
+		}
+	}
+	apr_pool_destroy(pool);
+	return ret;
 }
 
 static PyMethodDef config_methods[] = {

@@ -1387,16 +1387,34 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 		Py_INCREF(py_dirents);
 	} else {
 		py_dirents = PyDict_New();
+		if (py_dirents == NULL) {
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
 		idx = apr_hash_first(temp_pool, dirents);
 		while (idx != NULL) {
-			PyObject *item;
+			PyObject *item, *pykey;
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
 			item = py_dirent(dirent, dirent_fields);
 			if (item == NULL) {
+				apr_pool_destroy(temp_pool);
 				Py_DECREF(py_dirents);
 				return NULL;
 			}
-			PyDict_SetItemString(py_dirents, key, item);
+			if (key == NULL) {
+				pykey = Py_None;
+				Py_INCREF(pykey);
+			} else {
+				pykey = PyString_FromString((char *)key);
+			}
+			if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
+				Py_DECREF(py_dirents);
+				Py_DECREF(item);
+				Py_DECREF(pykey);
+				apr_pool_destroy(temp_pool);
+				return NULL;
+			}
+			Py_DECREF(pykey);
 			Py_DECREF(item);
 			idx = apr_hash_next(idx);
 		}
@@ -1404,6 +1422,7 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 
 	py_props = prop_hash_to_dict(props);
 	if (py_props == NULL) {
+		Py_DECREF(py_dirents);
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
@@ -1656,16 +1675,26 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locks(ra->ra, &hash_locks, path, temp_pool));
 
 	ret = PyDict_New();
+	if (ret == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	for (idx = apr_hash_first(temp_pool, hash_locks); idx != NULL;
 		 idx = apr_hash_next(idx)) {
 		PyObject *pyval;
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&lock);
 		pyval = pyify_lock(lock);
 		if (pyval == NULL) {
+			Py_DECREF(ret);
 			apr_pool_destroy(temp_pool);
 			return NULL;
 		}
-		PyDict_SetItemString(ret, key, pyval);
+		if (PyDict_SetItemString(ret, key, pyval) != 0) {
+			apr_pool_destroy(temp_pool);
+			Py_DECREF(pyval);
+			Py_DECREF(ret);
+			return NULL;
+		}
 		Py_DECREF(pyval);
 	}
 
@@ -1706,15 +1735,18 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 					temp_pool));
 	ret = PyDict_New();
 	if (ret == NULL) {
-		PyErr_NoMemory();
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
 
-	for (idx = apr_hash_first(temp_pool, hash_locations); idx != NULL; 
+	for (idx = apr_hash_first(temp_pool, hash_locations); idx != NULL;
 		idx = apr_hash_next(idx)) {
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-		PyDict_SetItem(ret, PyInt_FromLong(*key), PyString_FromString(val));
+		if (PyDict_SetItem(ret, PyInt_FromLong(*key), PyString_FromString(val)) != 0) {
+			Py_DECREF(ret);
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
 	}
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -1732,32 +1764,54 @@ static PyObject *merge_rangelist_to_list(apr_array_header_t *rangelist)
 	int i;
 
 	ret = PyList_New(rangelist->nelts);
+	if (ret == NULL)
+		return NULL;
 
 	for (i = 0; i < rangelist->nelts; i++) {
-		PyObject *pyval = range_to_tuple(APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *));
-		if (pyval == NULL)
+		PyObject *pyval;
+		pyval = range_to_tuple(APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *));
+		if (pyval == NULL) {
+			Py_DECREF(ret);
 			return NULL;
-		PyList_SetItem(ret, i, pyval);
+		}
+		if (PyList_SetItem(ret, i, pyval) != 0) {
+			Py_DECREF(ret);
+			Py_DECREF(pyval);
+			return NULL;
+		}
+		Py_DECREF(pyval);
 	}
+
 	return ret;
 }
 
 static PyObject *mergeinfo_to_dict(svn_mergeinfo_t mergeinfo, apr_pool_t *temp_pool)
 {
-	PyObject *ret = PyDict_New();
+	PyObject *ret;
 	char *key;
 	apr_ssize_t klen;
 	apr_hash_index_t *idx;
 	apr_array_header_t *range;
+
+	ret = PyDict_New();
+	if (ret == NULL) {
+		return NULL;
+	}
 
 	for (idx = apr_hash_first(temp_pool, mergeinfo); idx != NULL; 
 		idx = apr_hash_next(idx)) {
 		PyObject *pyval;
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&range);
 		pyval = merge_rangelist_to_list(range);
-		if (pyval == NULL)
+		if (pyval == NULL) {
+			Py_DECREF(ret);
 			return NULL;
-		PyDict_SetItemString(ret, key, pyval);
+		}
+		if (PyDict_SetItemString(ret, key, pyval) != 0) {
+			Py_DECREF(ret);
+			Py_DECREF(pyval);
+			return NULL;
+		}
 		Py_DECREF(pyval);
 	}
 
@@ -1800,6 +1854,9 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
                      temp_pool));
 
 	ret = PyDict_New();
+	if (ret == NULL) {
+		return NULL;
+	}
 
 	if (catalog != NULL) {
 		for (idx = apr_hash_first(temp_pool, catalog); idx != NULL; 
@@ -1811,7 +1868,13 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 				apr_pool_destroy(temp_pool);
 				return NULL;
 			}
-			PyDict_SetItemString(ret, key, pyval);
+			if (PyDict_SetItemString(ret, key, pyval) != 0) {
+				apr_pool_destroy(temp_pool);
+				Py_DECREF(pyval);
+				Py_DECREF(ret);
+				return NULL;
+			}
+
 			Py_DECREF(pyval);
 		}
 	}
@@ -3027,8 +3090,13 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 	const char *provider_types[] = {
 		"simple", "ssl_client_cert_pw", "ssl_server_trust", NULL,
 	};
-	PyObject *pylist = PyList_New(0);
+	PyObject *pylist;
 	int i, j;
+
+	pylist = PyList_New(0);
+	if (pylist == NULL) {
+		return NULL;
+	}
 
 	for (i = 0; provider_names[i] != NULL; i++) {
 		for (j = 0; provider_types[j] != NULL; j++) {
@@ -3066,6 +3134,11 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 #else
 	PyObject *pylist = PyList_New(0);
 	PyObject *provider = NULL;
+
+	if (pylist == NULL) {
+		Py_DECREF(pylist);
+		return NULL;
+	}
 
 #if defined(WIN32)
 	provider = get_windows_simple_provider(self);

@@ -233,6 +233,10 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 		return false;
 	}
 	*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
+	if (*ret == NULL) {
+		PyErr_NoMemory();
+		return false;
+	}
 	for (i = 0; i < PyList_GET_SIZE(l); i++) {
 		PyObject *item = PyList_GET_ITEM(l, i);
 		if (!PyString_Check(item)) {
@@ -287,9 +291,13 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 	if (pool == NULL)
 		return NULL;
 	py_props = PyDict_New();
+	if (py_props == NULL) {
+		apr_pool_destroy(pool);
+		return NULL;
+	}
 	for (idx = apr_hash_first(pool, props); idx != NULL; 
 		 idx = apr_hash_next(idx)) {
-		PyObject *py_val;
+		PyObject *py_key, *py_val;
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
 		if (val == NULL || val->data == NULL) {
 			py_val = Py_None;
@@ -297,7 +305,25 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 		} else {
 			py_val = PyString_FromStringAndSize(val->data, val->len);
 		}
-		PyDict_SetItemString(py_props, key, py_val);
+		if (py_val == NULL) {
+			Py_DECREF(py_props);
+			apr_pool_destroy(pool);
+			return NULL;
+		}
+		if (key == NULL) {
+			py_key = Py_None;
+			Py_INCREF(py_key);
+		} else {
+			py_key = PyString_FromString(key);
+		}
+		if (PyDict_SetItem(py_props, py_key, py_val) != 0) {
+			Py_DECREF(py_key);
+			Py_DECREF(py_val);
+			Py_DECREF(py_props);
+			apr_pool_destroy(pool);
+			return NULL;
+		}
+		Py_DECREF(py_key);
 		Py_DECREF(py_val);
 	}
 	apr_pool_destroy(pool);
@@ -357,6 +383,9 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 		Py_INCREF(py_changed_paths);
 	} else {
 		py_changed_paths = PyDict_New();
+		if (py_changed_paths == NULL) {
+			return NULL;
+		}
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
@@ -368,9 +397,21 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 				pyval = Py_BuildValue("(czl)", val->action, val->copyfrom_path, 
 											 val->copyfrom_rev);
 			}
-			if (pyval == NULL)
+			if (pyval == NULL) {
+				Py_DECREF(py_changed_paths);
 				return NULL;
-			PyDict_SetItemString(py_changed_paths, key, pyval);
+			}
+			if (key == NULL) {
+				PyErr_SetString(PyExc_RuntimeError, "path can not be NULL");
+				Py_DECREF(pyval);
+				Py_DECREF(py_changed_paths);
+				return NULL;
+			}
+			if (PyDict_SetItemString(py_changed_paths, key, pyval) != 0) {
+				Py_DECREF(py_changed_paths);
+				Py_DECREF(pyval);
+				return NULL;
+			}
 			Py_DECREF(pyval);
 		}
 	}
@@ -392,14 +433,29 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 		Py_INCREF(py_changed_paths);
 	} else {
 		py_changed_paths = PyDict_New();
+		if (py_changed_paths == NULL) {
+			return NULL;
+		}
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
 			pyval = Py_BuildValue("(czli)", val->action, val->copyfrom_path, 
 										 val->copyfrom_rev, val->node_kind);
-			if (pyval == NULL)
+			if (pyval == NULL) {
+				Py_DECREF(py_changed_paths);
 				return NULL;
-			PyDict_SetItemString(py_changed_paths, key, pyval);
+			}
+			if (key == NULL) {
+				PyErr_SetString(PyExc_RuntimeError, "path can not be NULL");
+				Py_DECREF(py_changed_paths);
+				Py_DECREF(pyval);
+				return NULL;
+			}
+			if (PyDict_SetItemString(py_changed_paths, key, pyval) != 0) {
+				Py_DECREF(pyval);
+				Py_DECREF(py_changed_paths);
+				return NULL;
+			}
 			Py_DECREF(pyval);
 		}
 	}
@@ -443,6 +499,10 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revn
 	CB_CHECK_PYRETVAL(py_changed_paths);
 
 	revprops = PyDict_New();
+	if (revprops == NULL) {
+		Py_DECREF(py_changed_paths);
+		return NULL;
+	}
 	CB_CHECK_PYRETVAL(revprops);
 	if (message != NULL) {
 		obj = PyString_FromString(message);
@@ -456,8 +516,7 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revn
 	}
 	if (date != NULL) {
 		obj = PyString_FromString(date);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, 
-							 obj);
+		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, obj);
 		Py_DECREF(obj);
 	}
 	ret = PyObject_CallFunction((PyObject *)baton, "OlO", py_changed_paths, 
@@ -615,6 +674,8 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 {
 	PyObject *ret, *obj;
 	ret = PyDict_New();
+	if (ret == NULL)
+		return NULL;
 	if (dirent_fields & SVN_DIRENT_KIND) {
 		obj = PyInt_FromLong(dirent->kind);
 		PyDict_SetItemString(ret, "kind", obj);
@@ -652,7 +713,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	}
 	return ret;
 }
-	
+
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool)
 {
     apr_status_t status;
