@@ -257,7 +257,8 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	if (err != NULL) {
 		handle_svn_error(err);
 		svn_error_clear(err);
-		Py_DECREF(ret);
+		apr_pool_destroy(ret->pool);
+		PyObject_Del(ret);
 		return NULL;
 	}
 
@@ -322,25 +323,26 @@ static PyObject *client_get_notify_func(PyObject *self, void *closure)
     ClientObject *client = (ClientObject *)self;
     if (client->client->notify_func2 == NULL)
         Py_RETURN_NONE;
+    Py_INCREF(client->client->notify_baton2);
     return client->client->notify_baton2;
 }
 
 static int client_set_notify_func(PyObject *self, PyObject *func, void *closure)
 {
-    ClientObject *client = (ClientObject *)self;
+	ClientObject *client = (ClientObject *)self;
 
-    if (client->client->notify_baton2 != NULL) {
-        Py_DECREF((PyObject *)client->client->notify_baton2);
-    }
-    if (func == Py_None) {
-        client->client->notify_func2 = NULL;
-        client->client->notify_baton2 = Py_None;
-    } else {
-        client->client->notify_func2 = py_wc_notify_func;
-        client->client->notify_baton2 = (void *)func;
-    }
-    Py_INCREF(func);
-    return 0;
+	if (client->client->notify_baton2 != NULL) {
+		Py_DECREF((PyObject *)client->client->notify_baton2);
+	}
+	if (func == Py_None) {
+		client->client->notify_func2 = NULL;
+		client->client->notify_baton2 = Py_None;
+	} else {
+		client->client->notify_func2 = py_wc_notify_func;
+		client->client->notify_baton2 = (void *)func;
+	}
+	Py_INCREF(func);
+	return 0;
 }
 
 static int client_set_auth(PyObject *self, PyObject *auth, void *closure)
@@ -935,8 +937,8 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
     {
         apr_array_header_t *props;
         int i;
-        
-    
+
+
     if (depth != svn_depth_infinity && depth != svn_depth_empty) {
         PyErr_SetString(PyExc_NotImplementedError, 
                         "depth can only be infinity or empty when built against svn < 1.5");
@@ -970,7 +972,14 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
             Py_DECREF(prop_dict);
             return NULL;
         }
-        PyList_Append(prop_list, value);
+        if (!PyList_Append(prop_list, value)) {
+			apr_pool_destroy(temp_pool);
+			Py_DECREF(prop_list);
+			Py_DECREF(prop_dict);
+			Py_DECREF(value);
+			return NULL;
+		}
+		Py_DECREF(value);
     }
 
     apr_pool_destroy(temp_pool);
@@ -1032,35 +1041,39 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
 			&depth_is_sticky, &allow_unver_obstructions))
 		return NULL;
 
-    if (!to_opt_revision(rev, &c_rev))
-        return NULL;
-    temp_pool = Pool(NULL);
-    if (temp_pool == NULL)
-        return NULL;
-    if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
-        apr_pool_destroy(temp_pool);
-        return NULL;
-    }
+	if (!to_opt_revision(rev, &c_rev))
+		return NULL;
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 #if ONLY_SINCE_SVN(1, 5)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_update3(&result_revs, 
-            apr_paths, &c_rev, 
-            recurse?svn_depth_infinity:svn_depth_files, depth_is_sticky, 
-            ignore_externals, allow_unver_obstructions, client->client, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_update3(&result_revs, 
+		apr_paths, &c_rev, recurse?svn_depth_infinity:svn_depth_files,
+		depth_is_sticky, ignore_externals, allow_unver_obstructions,
+		client->client, temp_pool));
 #else
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_update2(&result_revs, 
-            apr_paths, &c_rev, 
-            recurse, ignore_externals, client->client, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_update2(&result_revs, 
+													apr_paths, &c_rev, 
+													recurse, ignore_externals, client->client, temp_pool));
 #endif
-    ret = PyList_New(result_revs->nelts);
-    if (ret == NULL)
-        return NULL;
-    for (i = 0; i < result_revs->nelts; i++) {
-        ret_rev = APR_ARRAY_IDX(result_revs, i, svn_revnum_t);
-        if (PyList_SetItem(ret, i, PyLong_FromLong(ret_rev)) != 0)
-            return NULL;
-    }
-    apr_pool_destroy(temp_pool);
-    return ret;
+	ret = PyList_New(result_revs->nelts);
+	if (ret == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	for (i = 0; i < result_revs->nelts; i++) {
+		ret_rev = APR_ARRAY_IDX(result_revs, i, svn_revnum_t);
+		if (PyList_SetItem(ret, i, PyLong_FromLong(ret_rev)) != 0) {
+			Py_DECREF(ret);
+			return NULL;
+		}
+	}
+	apr_pool_destroy(temp_pool);
+	return ret;
 }
 
 static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -1293,6 +1306,10 @@ static PyObject *config_get_dict(PyObject *self, void *closure)
         return NULL;
 
     ret = PyDict_New();
+    if (ret == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
     for (idx = apr_hash_first(pool, config->config); idx != NULL; 
          idx = apr_hash_next(idx)) {
         ConfigItemObject *data;
