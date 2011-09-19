@@ -41,9 +41,9 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
 {
 	char *path;
 	PyObject *config=Py_None, *fs_config=Py_None;
-    svn_repos_t *repos;
-    apr_pool_t *pool;
-    apr_hash_t *hash_config, *hash_fs_config;
+	svn_repos_t *repos = NULL;
+	apr_pool_t *pool;
+	apr_hash_t *hash_config, *hash_fs_config;
 	RepositoryObject *ret;
 
 	if (!PyArg_ParseTuple(args, "s|OO:create", &path, &config, &fs_config))
@@ -123,7 +123,6 @@ typedef struct {
 typedef struct {
 	PyObject_HEAD
 	RepositoryObject *repos;
-	apr_pool_t *pool;
 	svn_fs_t *fs;
 } FileSystemObject;
 
@@ -146,7 +145,6 @@ static PyObject *repos_fs(PyObject *self)
 
 	ret->fs = fs;
 	ret->repos = reposobj;
-	ret->pool = reposobj->pool;
 	Py_INCREF(reposobj);
 
 	return (PyObject *)ret;
@@ -246,7 +244,6 @@ static void fs_dealloc(PyObject *self)
 {
 	FileSystemObject *fsobj = (FileSystemObject *)self;
 	Py_DECREF(fsobj->repos);
-	apr_pool_destroy(fsobj->pool);
 	PyObject_DEL(fsobj);
 }
 
@@ -313,9 +310,9 @@ PyTypeObject FileSystem_Type = {
 
 static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-	const char *parent_dir = "";
+	const char *parent_dir = NULL;
 	PyObject *dumpstream, *feedback_stream;
-	bool use_pre_commit_hook = false, use_post_commit_hook = false;
+	unsigned char use_pre_commit_hook = 0, use_post_commit_hook = 0;
 	char *kwnames[] = { "dumpstream", "feedback_stream", "uuid_action",
 		                "parent_dir", "use_pre_commit_hook", 
 						"use_post_commit_hook", NULL };
@@ -323,11 +320,18 @@ static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 	apr_pool_t *temp_pool;
 	RepositoryObject *reposobj = (RepositoryObject *)self;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOi|sbb", kwnames,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOi|zbb", kwnames,
 								&dumpstream, &feedback_stream, &uuid_action,
-								&parent_dir, &use_pre_commit_hook, 
+								&parent_dir, &use_pre_commit_hook,
 								&use_post_commit_hook))
 		return NULL;
+
+	if (uuid_action != svn_repos_load_uuid_default &&
+		uuid_action != svn_repos_load_uuid_ignore &&
+		uuid_action != svn_repos_load_uuid_force) {
+		PyErr_SetString(PyExc_RuntimeError, "Invalid UUID action");
+		return NULL;
+	}
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
@@ -337,7 +341,7 @@ static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 				new_py_stream(temp_pool, feedback_stream),
 				uuid_action, parent_dir, use_pre_commit_hook, 
 				use_post_commit_hook, py_cancel_check, NULL,
-				reposobj->pool));
+				temp_pool));
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
@@ -373,7 +377,8 @@ static PyObject *repos_hotcopy(RepositoryObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-	RUN_SVN_WITH_POOL(temp_pool, svn_repos_hotcopy(src_path, dest_path, clean_logs, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_repos_hotcopy(src_path, dest_path, clean_logs, temp_pool));
 
 	apr_pool_destroy(temp_pool);
 
@@ -439,7 +444,8 @@ static PyObject *repos_has_capability(RepositoryObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_repos_has_capability(self->repos, &has, name, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_repos_has_capability(self->repos, &has, name, temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(has);
 #else
@@ -448,10 +454,61 @@ static PyObject *repos_has_capability(RepositoryObject *self, PyObject *args)
 #endif
 }
 
+static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
+{
+	apr_pool_t *temp_pool;
+	PyObject *py_feedback_stream;
+	long start_rev, end_rev;
+	if (!PyArg_ParseTuple(args, "Oii", &py_feedback_stream, &start_rev, &end_rev))
+		return NULL;
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_repos_verify_fs(self->repos,
+			new_py_stream(temp_pool, py_feedback_stream), start_rev, end_rev,
+			py_cancel_check, NULL, temp_pool));
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
+static svn_error_t *py_pack_notify(void *baton, apr_int64_t shard, svn_fs_pack_notify_action_t action, apr_pool_t *pool)
+{
+	PyObject *ret;
+	if (baton == Py_None)
+		return NULL;
+	ret = PyObject_CallFunction((PyObject *)baton, "li", shard, action);
+	if (ret == NULL)
+		return py_svn_error();
+	Py_DECREF(ret);
+	return NULL;
+}
+
+static PyObject *repos_pack(RepositoryObject *self, PyObject *args)
+{
+	apr_pool_t *temp_pool;
+	PyObject *notify_func = Py_None;
+	if (!PyArg_ParseTuple(args, "|O", &notify_func))
+		return NULL;
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_repos_fs_pack(self->repos, py_pack_notify, notify_func,
+			py_cancel_check, NULL, temp_pool));
+	apr_pool_destroy(temp_pool);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef repos_methods[] = {
 	{ "load_fs", (PyCFunction)repos_load_fs, METH_VARARGS|METH_KEYWORDS, NULL },
 	{ "fs", (PyCFunction)repos_fs, METH_NOARGS, NULL },
 	{ "has_capability", (PyCFunction)repos_has_capability, METH_VARARGS, NULL },
+	{ "verify_fs", (PyCFunction)repos_verify, METH_VARARGS,
+		"S.verify_repos(feedback_stream, start_revnum, end_revnum)" },
+	{ "pack_fs", (PyCFunction)repos_pack, METH_VARARGS, NULL },
 	{ NULL, }
 };
 

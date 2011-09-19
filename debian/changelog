@@ -1,3 +1,12 @@
+subvertpy (0.8.6-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+   + Fixes double pool free, which caused testsuite failures on ia64.
+     Thanks Roland Mas for the help with debugging. LP: #853960,
+     Closes: #632225
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Mon, 19 Sep 2011 18:07:57 +0200
+
 subvertpy (0.8.5-1) unstable; urgency=low
 
   * New upstream release.

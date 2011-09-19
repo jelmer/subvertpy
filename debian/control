@@ -6,8 +6,8 @@ Homepage: http://samba.org/~jelmer/subvertpy
 Build-Depends: debhelper (>= 8.1.0),
                libsvn-dev,
                python (>= 2.6.6-3),
-               python-all-dev (>= 2.6.6-3),
                python-all-dbg (>= 2.6.6-3),
+               python-all-dev (>= 2.6.6-3),
                python-docutils,
                python-pydoctor (>= 0.3+bzr567),
                python-testtools
@@ -38,8 +38,8 @@ Recommends: libapr1-dbg, libaprutil1-dbg, python-dbg
 Provides: ${python:Provides}
 Depends: python-subvertpy (= ${binary:Version}),
          ${misc:Depends},
-         ${shlibs:Depends},
-         ${python:Depends}
+         ${python:Depends},
+         ${shlibs:Depends}
 Description: Alternative Python bindings for Subversion - Debugging Symbols
  Python bindings for the Subversion version control system. The aim of
  these bindings is to be fast, complete and to provide an API that feels native

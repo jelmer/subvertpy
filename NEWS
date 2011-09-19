@@ -1,3 +1,33 @@
+0.8.6	2011-09-19
+
+ FEATURES
+
+  * Allow passing in log_msg_func when creating subvertpy.client.Client.
+    (Jelmer Vernooij)
+
+  * subvertpy.client.Client.update now accepts keyword arguments.
+    (Jelmer Vernooij)
+
+  * Editors will now raise an exception if the protocol is not followed;
+    children have to be closed before their parents are accessed again.
+    (Jelmer Vernooij)
+
+  * Add constant ERR_DIR_NOT_EMPTY. (Jelmer Vernooij)
+
+  * Add constant ERR_FS_ROOT_DIR. (Jelmer Vernooij)
+
+  * Add `subvertpy.repos.Repository.verify_fs`. (Jelmer Vernooij)
+
+  * Add `subvertpy.repos.Repository.pack_fs`. (Jelmer Vernooij)
+
+ BUG FIXES
+
+  * Fix memory leak in subvertpy.client.Client.list.
+    (Wez Furlong)
+
+  * Fix double free of apr pools from subverty.repos.Repos.fs.
+    (Roland Mas, Jelmer Vernooij, #853960)
+
 0.8.5	2011-08-21 "boomerang arrow"
 
  BUG FIXES

@@ -1313,7 +1313,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	}
 
 	Py_INCREF(ra);
-	return new_editor_object(editor, edit_baton, pool, 
+	return new_editor_object(NULL, editor, edit_baton, pool, 
 			  &Editor_Type, ra_done_handler, ra, commit_callback);
 }
 
