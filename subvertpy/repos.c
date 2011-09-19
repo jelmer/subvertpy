@@ -123,7 +123,6 @@ typedef struct {
 typedef struct {
 	PyObject_HEAD
 	RepositoryObject *repos;
-	apr_pool_t *pool;
 	svn_fs_t *fs;
 } FileSystemObject;
 
@@ -146,7 +145,6 @@ static PyObject *repos_fs(PyObject *self)
 
 	ret->fs = fs;
 	ret->repos = reposobj;
-	ret->pool = reposobj->pool;
 	Py_INCREF(reposobj);
 
 	return (PyObject *)ret;
@@ -246,7 +244,6 @@ static void fs_dealloc(PyObject *self)
 {
 	FileSystemObject *fsobj = (FileSystemObject *)self;
 	Py_DECREF(fsobj->repos);
-	apr_pool_destroy(fsobj->pool);
 	PyObject_DEL(fsobj);
 }
 

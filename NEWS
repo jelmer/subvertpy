@@ -25,6 +25,9 @@
   * Fix memory leak in subvertpy.client.Client.list.
     (Wez Furlong)
 
+  * Fix double free of apr pools from subverty.repos.Repos.fs.
+    (Roland Mas, Jelmer Vernooij, #853960)
+
 0.8.5	2011-08-21 "boomerang arrow"
 
  BUG FIXES
