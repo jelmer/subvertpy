@@ -603,34 +603,12 @@ static apr_hash_t *get_default_config(void)
 
 apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool)
 {
-	Py_ssize_t idx = 0;
-	PyObject *key, *value;
-	apr_hash_t *config_hash;
-	PyObject *dict;
-
 	if (config == Py_None) {
 		return get_default_config();
 	}
 
-	config_hash = apr_hash_make(pool);
-
-	if (PyDict_Check(config)) {
-		dict = config;
-	} else {
-		dict = PyObject_GetAttrString(config, "__dict__");
-	}
-	
-	if (!PyDict_Check(dict)) {
-		PyErr_Format(PyExc_TypeError, "Expected dictionary for config, got %s", dict->ob_type->tp_name);
-		return NULL;
-	}
-
-	while (PyDict_Next(dict, &idx, &key, &value)) {
-		apr_hash_set(config_hash, apr_pstrdup(pool, PyString_AsString(key)), 
-					 PyString_Size(key), apr_pstrdup(pool, PyString_AsString(value)));
-	}
-
-	return config_hash;
+	PyErr_SetString(PyExc_TypeError, "Only the system config is supported at the moment");
+	return NULL;
 }
 
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)

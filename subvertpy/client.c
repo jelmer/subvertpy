@@ -374,16 +374,21 @@ static int client_set_auth(PyObject *self, PyObject *auth, void *closure)
 
 static int client_set_config(PyObject *self, PyObject *config, void *closure)
 {
-    ClientObject *client = (ClientObject *)self;
+	ClientObject *client = (ClientObject *)self;
 
-    Py_XDECREF(client->py_config);
+	Py_XDECREF(client->py_config);
 
-    client->client->config = config_hash_from_object(config, client->pool);
+	client->client->config = config_hash_from_object(config, client->pool);
 
-    client->py_config = config;
-    Py_INCREF(config);
+	if (client->client->config == NULL) {
+		client->py_config = NULL;
+		return -1;
+	}
 
-    return 0;
+	client->py_config = config;
+	Py_INCREF(config);
+
+	return 0;
 }
 
 
