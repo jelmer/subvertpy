@@ -53,9 +53,11 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
 	if (pool == NULL)
 		return NULL;
     hash_config = config_hash_from_object(config, pool);
-	if (hash_config == NULL)
+	if (hash_config == NULL) {
+		apr_pool_destroy(pool);
 		return NULL;
-    hash_fs_config = apr_hash_make(pool); /* FIXME */
+	}
+	hash_fs_config = apr_hash_make(pool); /* FIXME */
 	if (hash_fs_config == NULL) {
 		PyErr_SetString(PyExc_RuntimeError, "Unable to create fs config hash");
 		return NULL;

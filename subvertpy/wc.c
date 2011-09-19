@@ -842,7 +842,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_prop_diffs(&propchanges, &original_props, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_prop_diffs(&propchanges, &original_props,
 				svn_path_canonicalize(path, temp_pool), admobj->adm, temp_pool));
 	py_propchanges = PyList_New(propchanges->nelts);
 	if (py_propchanges == NULL) {
@@ -857,14 +857,21 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 			pyval = Py_BuildValue("(sO)", el.name, Py_None);
 		if (pyval == NULL) {
 			apr_pool_destroy(temp_pool);
+			Py_DECREF(py_propchanges);
 			return NULL;
 		}
-		PyList_SetItem(py_propchanges, i, pyval);
+		if (!PyList_SetItem(py_propchanges, i, pyval)) {
+			Py_DECREF(py_propchanges);
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
 	}
 	py_orig_props = prop_hash_to_dict(original_props);
 	apr_pool_destroy(temp_pool);
-	if (py_orig_props == NULL)
+	if (py_orig_props == NULL) {
+		Py_DECREF(py_propchanges);
 		return NULL;
+	}
 	return Py_BuildValue("(NN)", py_propchanges, py_orig_props);
 }
 

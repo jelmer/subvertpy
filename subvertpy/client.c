@@ -1470,8 +1470,10 @@ static PyObject *get_config(PyObject *self, PyObject *args)
         return NULL;
 
     data->pool = Pool(NULL);
-    if (data->pool == NULL)
+    if (data->pool == NULL) {
+        PyObject_Del(data);
         return NULL;
+    }
 
     RUN_SVN_WITH_POOL(data->pool, 
                       svn_config_get_config(&data->config, config_dir, data->pool));
