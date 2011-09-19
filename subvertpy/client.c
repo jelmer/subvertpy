@@ -114,8 +114,10 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
             return NULL;
         }
 
-        if (PyList_SetItem(ret, i, item) != 0)
+        if (PyList_SetItem(ret, i, item) != 0) {
+            Py_DECREF(ret);
             return NULL;
+        }
     }
 
     return ret;
@@ -125,28 +127,31 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
 static svn_error_t *proplist_receiver(void *prop_list, const char *path,
                                       apr_hash_t *prop_hash, apr_pool_t *pool)
 {
-    PyGILState_STATE state = PyGILState_Ensure();
-    PyObject *prop_dict;
-    PyObject *value;
+	PyGILState_STATE state = PyGILState_Ensure();
+	PyObject *prop_dict;
+	PyObject *value;
 
-    prop_dict = prop_hash_to_dict(prop_hash);
+	prop_dict = prop_hash_to_dict(prop_hash);
 
-    if (prop_dict == NULL) {
-        PyGILState_Release(state);
-        return py_svn_error();
-    }
+	if (prop_dict == NULL) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
 
-    value = Py_BuildValue("(sO)", path, prop_dict);
-    if (value == NULL) {
-        PyGILState_Release(state);
-        return py_svn_error();
-    }
+	value = Py_BuildValue("(sO)", path, prop_dict);
+	if (value == NULL) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
 
-    PyList_Append(prop_list, value);
+	if (!PyList_Append(prop_list, value)) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
 
-    PyGILState_Release(state);
+	PyGILState_Release(state);
 
-    return NULL;
+	return NULL;
 }
 #endif
 
@@ -164,7 +169,12 @@ static svn_error_t *list_receiver(void *dict, const char *path,
         return py_svn_error();
     }
 
-    PyDict_SetItemString(dict, path, value);
+    if (!PyDict_SetItemString(dict, path, value)) {
+        Py_DECREF(value);
+        PyGILState_Release(state);
+        return py_svn_error();
+    }
+
     Py_DECREF(value);
 
     PyGILState_Release(state);
@@ -229,8 +239,8 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	PyObject *config = Py_None, *auth = Py_None, *log_msg_func = Py_None;
 	char *kwnames[] = { "config", "auth", "log_msg_func", NULL };
 	svn_error_t *err;
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO", kwnames, &config, &auth,
-									 &log_msg_func))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO", kwnames,
+		&config, &auth, &log_msg_func))
 		return NULL;
 
 	ret = PyObject_New(ClientObject, &Client_Type);
