@@ -1291,44 +1291,6 @@ static PyObject *get_default_ignores(PyObject *self)
     return ret;
 }
 
-static PyObject *config_get_dict(PyObject *self, void *closure)
-{
-    ConfigObject *config = (ConfigObject *)self;
-    apr_pool_t *pool;
-    PyObject *ret;
-    apr_hash_index_t *idx;
-    const char *key;
-    svn_config_t *val;
-    apr_ssize_t klen;
-
-    pool = Pool(NULL);
-    if (pool == NULL)
-        return NULL;
-
-    ret = PyDict_New();
-    if (ret == NULL) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-    for (idx = apr_hash_first(pool, config->config); idx != NULL; 
-         idx = apr_hash_next(idx)) {
-        ConfigItemObject *data;
-        apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-        data = PyObject_New(ConfigItemObject, &ConfigItem_Type);
-        data->item = val;
-        data->parent = NULL;
-        PyDict_SetItemString(ret, key, (PyObject *)data);
-        Py_DECREF(data);
-    }
-
-    return ret;
-}
-
-static PyGetSetDef config_getset[] = {
-    { "__dict__", config_get_dict, NULL, NULL },
-    { NULL }
-};
-
 static PyMethodDef config_methods[] = {
     { "get_default_ignores", (PyCFunction)get_default_ignores, METH_NOARGS, NULL },
     { NULL }
@@ -1401,8 +1363,6 @@ PyTypeObject Config_Type = {
     
     /* Attribute descriptor and subclassing stuff */
     config_methods, /*    struct PyMethodDef *tp_methods;    */
-    NULL, /*    struct PyMemberDef *tp_members;    */
-    config_getset, /*    struct PyGetSetDef *tp_getset;    */
 };
 
 static void configitem_dealloc(PyObject *self)
@@ -1591,4 +1551,7 @@ void initclient(void)
                        (PyObject *)PyLong_FromLong(svn_depth_immediates));
     PyModule_AddObject(mod, "depth_infinity",
                        (PyObject *)PyLong_FromLong(svn_depth_infinity));
+
+	Py_INCREF(&Config_Type);
+	PyModule_AddObject(mod, "Config", (PyObject *)&Config_Type);
 }
