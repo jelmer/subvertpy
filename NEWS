@@ -1,3 +1,10 @@
+0.8.7	2011-09-19
+
+ BUG FIXES
+
+  * Fix revnum types in subvertpy.repos.Repos.verify_fs().
+    (Jelmer Vernooij)
+
 0.8.6	2011-09-19
 
  FEATURES
