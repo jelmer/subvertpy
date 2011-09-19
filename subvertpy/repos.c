@@ -458,8 +458,8 @@ static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
 {
 	apr_pool_t *temp_pool;
 	PyObject *py_feedback_stream;
-	long start_rev, end_rev;
-	if (!PyArg_ParseTuple(args, "Oii", &py_feedback_stream, &start_rev, &end_rev))
+	svn_revnum_t start_rev, end_rev;
+	if (!PyArg_ParseTuple(args, "Oll", &py_feedback_stream, &start_rev, &end_rev))
 		return NULL;
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
