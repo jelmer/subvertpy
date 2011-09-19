@@ -1105,7 +1105,7 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	Py_INCREF(admobj);
-	return new_editor_object(editor, edit_baton, pool, &Editor_Type,
+	return new_editor_object(NULL, editor, edit_baton, pool, &Editor_Type,
 		wc_done_handler, admobj, NULL);
 }
 

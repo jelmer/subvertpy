@@ -28,7 +28,8 @@ extern PyTypeObject DirectoryEditor_Type;
 extern PyTypeObject FileEditor_Type;
 extern PyTypeObject Editor_Type;
 extern PyTypeObject TxDeltaWindowHandler_Type;
-PyObject *new_editor_object(const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, void (*done_cb) (void *baton), void *done_baton, PyObject *commit_callback);
+struct EditorObject;
+PyObject *new_editor_object(struct EditorObject *parent, const svn_delta_editor_t *editor, void *baton, apr_pool_t *pool, PyTypeObject *type, void (*done_cb) (void *baton), void *done_baton, PyObject *commit_callback);
 
 #define DirectoryEditor_Check(op) PyObject_TypeCheck(op, &DirectoryEditor_Type)
 #define FileEditor_Check(op) PyObject_TypeCheck(op, &FileEditor_Type)

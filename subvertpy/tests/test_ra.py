@@ -231,6 +231,14 @@ class TestRemoteAccess(SubversionTestCase):
             {"svn:log": "foo"}, mycb)
         editor.abort()
 
+    def test_get_commit_editor_double_open(self):
+        def mycb(rev):
+            pass
+        editor = self.ra.get_commit_editor({"svn:log": "foo"}, mycb)
+        root = editor.open_root()
+        root.add_directory("somedir")
+        self.assertRaises(RuntimeError, root.add_directory, "foo")
+
     def test_get_commit_editor_custom_revprops(self):
         if ra.version()[:2] < (1,5):
             return

@@ -165,6 +165,7 @@ static svn_error_t *list_receiver(void *dict, const char *path,
     }
 
     PyDict_SetItemString(dict, path, value);
+    Py_DECREF(value);
 
     PyGILState_Release(state);
 
@@ -225,10 +226,11 @@ typedef struct {
 static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	ClientObject *ret;
-	PyObject *config = Py_None, *auth = Py_None;
-	char *kwnames[] = { "config", "auth", NULL };
+	PyObject *config = Py_None, *auth = Py_None, *log_msg_func = Py_None;
+	char *kwnames[] = { "config", "auth", "log_msg_func", NULL };
 	svn_error_t *err;
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO", kwnames, &config, &auth))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO", kwnames, &config, &auth,
+									 &log_msg_func))
 		return NULL;
 
 	ret = PyObject_New(ClientObject, &Client_Type);
@@ -255,6 +257,13 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	ret->client->notify_baton2 = NULL;
 	ret->client->cancel_func = py_cancel_check;
 	ret->client->cancel_baton = NULL;
+	if (log_msg_func != Py_None) {
+		ret->client->log_msg_func2 = py_log_msg_func2;
+	} else {
+		ret->client->log_msg_func2 = NULL;
+	}
+	Py_INCREF(log_msg_func);
+	ret->client->log_msg_baton2 = (void *)log_msg_func;
 	client_set_config((PyObject *)ret, config, NULL);
 	client_set_auth((PyObject *)ret, auth, NULL);
 	return (PyObject *)ret;
@@ -990,7 +999,7 @@ static PyObject *client_resolve(PyObject *self, PyObject *args)
 #endif
 }
 
-static PyObject *client_update(PyObject *self, PyObject *args)
+static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     bool recurse = true;
     bool ignore_externals = false;
@@ -1004,10 +1013,14 @@ static PyObject *client_update(PyObject *self, PyObject *args)
     ClientObject *client = (ClientObject *)self;
     svn_boolean_t allow_unver_obstructions = FALSE,
                   depth_is_sticky = FALSE;
+	char *kwnames[] =
+		{ "path", "revision", "recurse", "ignore_externals", "depth_is_sticky", 
+			"allow_unver_obstructions", NULL };
 
-    if (!PyArg_ParseTuple(args, "O|Obbbb", &paths, &rev, &recurse, &ignore_externals,
-                          &depth_is_sticky, &allow_unver_obstructions))
-        return NULL;
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|Obbbb", kwnames,
+			&paths, &rev, &recurse, &ignore_externals,
+			&depth_is_sticky, &allow_unver_obstructions))
+		return NULL;
 
     if (!to_opt_revision(rev, &c_rev))
         return NULL;
@@ -1093,6 +1106,7 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
                                        list_receiver, entry_dict,
                                        client->client, temp_pool));
 #endif
+    apr_pool_destroy(temp_pool);
 
     return entry_dict;
 }
@@ -1219,7 +1233,7 @@ static PyMethodDef client_methods[] = {
     { "propget", client_propget, METH_VARARGS, "S.propget(name, target, peg_revision, revision=None, recurse=False) -> value" },
     { "proplist", (PyCFunction)client_proplist, METH_VARARGS|METH_KEYWORDS, "S.proplist(path, peg_revision, depth, revision=None)" },
     { "resolve", client_resolve, METH_VARARGS, "S.resolve(path, depth, choice)" },
-    { "update", client_update, METH_VARARGS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
+    { "update", (PyCFunction)client_update, METH_VARARGS|METH_KEYWORDS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
     { "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.list(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
     { "diff", (PyCFunction)client_diff, METH_VARARGS|METH_KEYWORDS, "S.diff(rev1, rev2, path1=None, path2=None, relative_to_dir=None, diffopts=[], encoding=\"utf-8\", ignore_ancestry=True, no_diff_deleted=True, ignore_content_type=False) -> unified diff as a string" },
     { "mkdir", (PyCFunction)client_mkdir, METH_VARARGS|METH_KEYWORDS, "S.mkdir(paths, make_parents=False, revprops=None) -> (revnum, date, author)" },
