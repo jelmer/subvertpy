@@ -345,7 +345,7 @@ def subvertpy_modules():
         ]
 
 
-subvertpy_version = (0, 8, 6)
+subvertpy_version = (0, 8, 7)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
