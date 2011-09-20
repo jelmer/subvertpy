@@ -563,8 +563,10 @@ static PyObject *py_status(const svn_wc_status2_t *status)
 		return NULL;
 
 	ret->pool = Pool(NULL);
-	if (ret->pool == NULL)
+	if (ret->pool == NULL) {
+		PyObject_Del(ret);
 		return NULL;
+	}
 
 	dup_status = svn_wc_dup_status2(status, ret->pool);
 	if (dup_status == NULL)
