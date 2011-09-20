@@ -396,6 +396,8 @@ static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnu
 	if (delta_baton != NULL && delta_handler != NULL) {
 		*delta_baton = (void *)ret;
 		*delta_handler = py_txdelta_window_handler;
+	} else {
+		Py_DECREF(ret);
 	}
 	PyGILState_Release(state);
 	return NULL;
@@ -416,6 +418,8 @@ static svn_error_t *py_ra_file_rev_handler(void *baton, const char *path, svn_re
 	if (delta_baton != NULL && delta_handler != NULL) {
 		*delta_baton = (void *)ret;
 		*delta_handler = py_txdelta_window_handler;
+	} else {
+		Py_DECREF(ret);
 	}
 	PyGILState_Release(state);
 	return NULL;
@@ -527,8 +531,8 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 		Py_DECREF(ret);
 	} else if (PyFile_Check(ret)) {
 		*fp = apr_file_from_object(ret, pool);
+		Py_DECREF(ret);
 		if (!*fp) {
-			Py_DECREF(ret);
 			PyGILState_Release(state);
 			return py_svn_error();
 		}
@@ -1265,6 +1269,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (hash_revprops == NULL) {
 		apr_pool_destroy(pool);
 		ra->busy = false;
+		Py_DECREF(commit_callback);
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
@@ -1277,6 +1282,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (PyDict_Size(revprops) != 1) {
 		PyErr_SetString(PyExc_ValueError, "Only svn:log can be set with Subversion 1.4");
 		apr_pool_destroy(pool);
+		Py_DECREF(commit_callback);
 		ra->busy = false;
 		return NULL;
 	}
@@ -1285,6 +1291,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (py_log_msg == NULL) {
 		PyErr_SetString(PyExc_ValueError, "Only svn:log can be set with Subversion 1.4.");
 		apr_pool_destroy(pool);
+		Py_DECREF(commit_callback);
 		ra->busy = false;
 		return NULL;
 	}
@@ -1292,6 +1299,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (!PyString_Check(py_log_msg)) {
 		PyErr_SetString(PyExc_ValueError, "svn:log property should be set to string.");
 		apr_pool_destroy(pool);
+		Py_DECREF(commit_callback);
 		ra->busy = false;
 		return NULL;
 	}
@@ -1307,6 +1315,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (err != NULL) {
 		handle_svn_error(err);
 		svn_error_clear(err);
+		Py_DECREF(commit_callback);
 		apr_pool_destroy(pool);
 		ra->busy = false;
 		return NULL;
@@ -2897,8 +2906,10 @@ static PyObject *get_username_provider(PyObject *self)
 	if (auth == NULL)
 		return NULL;
 	auth->pool = Pool(NULL);
-	if (auth->pool == NULL)
+	if (auth->pool == NULL) {
+		PyObject_Del(auth);
 		return NULL;
+	}
 	svn_auth_get_username_provider(&auth->provider, auth->pool);
 	return (PyObject *)auth;
 }
@@ -2922,6 +2933,7 @@ static svn_error_t *py_cb_get_simple_provider_prompt(svn_boolean_t *may_save_pla
 			return py_svn_error();
 		}
 		*may_save_plaintext = PyObject_IsTrue(ret);
+		Py_DECREF(ret);
 		PyGILState_Release(state);
 	}
 

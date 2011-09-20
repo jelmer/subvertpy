@@ -178,7 +178,7 @@ void PyErr_SetSubversionException(svn_error_t *error)
 
 PyObject *PyOS_tmpfile(void)
 {
-	PyObject *osmodule, *tmpfile_fn;
+	PyObject *osmodule, *tmpfile_fn, *ret;
 
 	osmodule = PyImport_ImportModule("os");
 	if (osmodule == NULL)
@@ -190,7 +190,9 @@ PyObject *PyOS_tmpfile(void)
 	if (tmpfile_fn == NULL)
 		return NULL;
 
-	return PyObject_CallObject(tmpfile_fn, NULL);
+	ret = PyObject_CallObject(tmpfile_fn, NULL);
+	Py_DECREF(tmpfile_fn);
+	return ret;
 }
 
 void handle_svn_error(svn_error_t *error)

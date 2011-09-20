@@ -99,8 +99,10 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 		return NULL;
 
 	ret->pool = Pool(NULL);
-	if (ret->pool == NULL)
+	if (ret->pool == NULL) {
+		PyObject_DEL(ret);
 		return NULL;
+	}
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_repos_open(&ret->repos, svn_path_canonicalize(path, ret->pool),
                             ret->pool);
