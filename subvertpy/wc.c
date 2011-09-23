@@ -862,7 +862,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 			Py_DECREF(py_propchanges);
 			return NULL;
 		}
-		if (!PyList_SetItem(py_propchanges, i, pyval)) {
+		if (PyList_SetItem(py_propchanges, i, pyval) != 0) {
 			Py_DECREF(py_propchanges);
 			apr_pool_destroy(temp_pool);
 			return NULL;
@@ -1014,7 +1014,7 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 		return NULL;
 	traversal_info = svn_wc_init_traversal_info(temp_pool);
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(svn_path_canonicalize(path, temp_pool), admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse?svn_depth_infinity:svn_depth_files,
 				honor_depth_exclude,
@@ -1022,14 +1022,14 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #elif ONLY_SINCE_SVN(1, 5)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(svn_path_canonicalize(path, temp_pool), admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse?svn_depth_infinity:svn_depth_files, 
 				depth_compatibility_trick, use_commit_times, 
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #else
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(svn_path_canonicalize(path, temp_pool), admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse, use_commit_times, 
 				py_wc_notify_func, (void *)notify_func,
