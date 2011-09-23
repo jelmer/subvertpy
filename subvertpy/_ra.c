@@ -1864,6 +1864,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 
 	ret = PyDict_New();
 	if (ret == NULL) {
+		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
 
@@ -1875,6 +1876,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 			pyval = mergeinfo_to_dict(val, temp_pool);
 			if (pyval == NULL) {
 				apr_pool_destroy(temp_pool);
+				Py_DECREF(ret);
 				return NULL;
 			}
 			if (PyDict_SetItemString(ret, key, pyval) != 0) {
