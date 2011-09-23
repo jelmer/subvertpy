@@ -1788,7 +1788,6 @@ static PyObject *merge_rangelist_to_list(apr_array_header_t *rangelist)
 			Py_DECREF(pyval);
 			return NULL;
 		}
-		Py_DECREF(pyval);
 	}
 
 	return ret;
