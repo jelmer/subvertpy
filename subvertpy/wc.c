@@ -1182,14 +1182,15 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	apr_array_header_t *wcprop_changes = NULL;
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
+	int digest_len;
 	svn_boolean_t remove_changelist = FALSE;
 	char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author", 
 						"wcprop_changes", "remove_lock", "digest", "remove_changelist", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblzz|Obzb", kwnames, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblzz|Obz#b", kwnames, 
 									 &path, &recurse, &new_revnum, &rev_date,
 									 &rev_author, &py_wcprop_changes, 
-									 &remove_lock, &digest, &remove_changelist))
+									 &remove_lock, &digest, &digest_len, &remove_changelist))
 		return NULL;
 
 #if PY_VERSION_HEX < 0x02050000
@@ -2212,8 +2213,11 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	svn_boolean_t recurse = FALSE;
 	apr_pool_t *temp_pool;
 	apr_array_header_t *wcprop_changes;
+	int digest_len;
 
-	if (!PyArg_ParseTuple(args, "sO!|bObbz", &path, &Adm_Type, &admobj, &recurse, &py_wcprop_changes, &remove_lock, &remove_changelist, &digest))
+	if (!PyArg_ParseTuple(args, "sO!|bObbz#", &path, &Adm_Type, &admobj,
+						  &recurse, &py_wcprop_changes, &remove_lock,
+						  &remove_changelist, &digest, &digest_len))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -2232,6 +2236,11 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	}
 
 	if (digest != NULL) {
+		if (digest_len != APR_MD5_DIGESTSIZE) {
+			PyErr_SetString(PyExc_ValueError, "Invalid size for md5 digest");
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
 		digest = apr_pstrdup(self->pool, digest);
 		if (digest == NULL) {
 			PyErr_NoMemory();
