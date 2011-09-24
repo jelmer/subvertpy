@@ -173,6 +173,16 @@ class AdmTests(SubversionTestCase):
         adm.prop_set("aprop", "avalue", "checkout/bar")
         self.assertTrue(adm.props_modified("checkout/bar"))
 
+    def test_prop_set(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "file"})
+        self.client_add('checkout/bar')
+        adm = wc.WorkingCopy(None, "checkout", True)
+        adm.prop_set("aprop", "avalue", "checkout/bar")
+        self.assertEquals(adm.prop_get("aprop", "checkout/bar"), "avalue")
+        adm.prop_set("aprop", None, "checkout/bar")
+        self.assertEquals(adm.prop_get("aprop", "checkout/bar"), None)
+
     def test_committed_queue(self):
         if getattr(wc, "CommittedQueue", None) is None:
             raise SkipTest("CommittedQueue not available")

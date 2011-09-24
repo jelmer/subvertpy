@@ -687,7 +687,7 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
 	svn_string_t *cvalue;
 	PyObject *notify_func = Py_None;
 
-	if (!PyArg_ParseTuple(args, "ss#s|bO", &name, &value, &vallen, &path, &skip_checks,
+	if (!PyArg_ParseTuple(args, "sz#s|bO", &name, &value, &vallen, &path, &skip_checks,
 						  &notify_func))
 		return NULL;
 
@@ -696,7 +696,11 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	cvalue = svn_string_ncreate(value, vallen, temp_pool);
+	if (value == NULL) {
+		cvalue = NULL;
+	} else {
+		cvalue = svn_string_ncreate(value, vallen, temp_pool);
+	}
 #if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_set3(name, cvalue, path, admobj->adm, 
 				skip_checks, py_wc_notify_func, (void *)notify_func, 

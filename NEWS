@@ -8,6 +8,9 @@
   * Drop broken code to support loading configuration from has.
     (Jelmer Vernooij)
 
+  * WorkingCopy.prop_set() now accepts None as a value,
+    removing a properties. (Jelmer Vernooij)
+
  FEATURES
 
   * Add constant ERR_BAD_FILENAME. (Jelmer Vernooij)
