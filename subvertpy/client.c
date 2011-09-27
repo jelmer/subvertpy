@@ -323,7 +323,7 @@ static PyObject *client_get_notify_func(PyObject *self, void *closure)
     ClientObject *client = (ClientObject *)self;
     if (client->client->notify_func2 == NULL)
         Py_RETURN_NONE;
-    Py_INCREF(client->client->notify_baton2);
+    Py_INCREF((PyObject *)client->client->notify_baton2);
     return client->client->notify_baton2;
 }
 
