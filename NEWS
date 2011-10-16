@@ -4,6 +4,10 @@
 
   * Fix compilation with Python 2.4 and 2.5. (Jelmer Vernooij, #860621)
 
+ FEATURES
+
+  * Add constant ERR_WC_NODE_KIND_CHANGE. (Jelmer Vernooij)
+
 0.8.8	2011-09-27
 
  BUG FIXES
