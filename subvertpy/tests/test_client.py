@@ -97,7 +97,7 @@ class TestClient(SubversionTestCase):
         self.assertEquals(e.revision, 0)
 
     def test_get_config(self):
-        self.assertIsInstance(client.get_config().__dict__, dict)
+        self.assertIsInstance(client.get_config(), client.Config)
 
     def test_diff(self):
         r = ra.RemoteAccess(self.repos_url,
