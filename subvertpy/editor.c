@@ -1088,15 +1088,22 @@ svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton
 		Py_INCREF(py_window);
 	} else {
 		ops = PyList_New(window->num_ops);
-		if (ops == NULL)
+		if (ops == NULL) {
+			PyGILState_Release(state);
 			return NULL;
+		}
 		for (i = 0; i < window->num_ops; i++) {
 			PyObject *pyval = Py_BuildValue("(iII)", 
 											window->ops[i].action_code, 
 											window->ops[i].offset, 
 											window->ops[i].length);
 			CB_CHECK_PYRETVAL(pyval);
-			PyList_SetItem(ops, i, pyval);
+			if (PyList_SetItem(ops, i, pyval) != 0) {
+				Py_DECREF(ops);
+				Py_DECREF(pyval);
+				PyGILState_Release(state);
+				return NULL;
+			}
 		}
 		if (window->new_data != NULL && window->new_data->data != NULL) {
 			py_new_data = PyString_FromStringAndSize(window->new_data->data,
@@ -1105,12 +1112,18 @@ svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton
 			py_new_data = Py_None;
 			Py_INCREF(py_new_data);
 		}
+		if (py_new_data == NULL) {
+			Py_DECREF(ops);
+			PyGILState_Release(state);
+			return NULL;
+		}
+
 		py_window = Py_BuildValue("((LIIiNN))", 
 								  window->sview_offset, 
 								  window->sview_len, 
 								  window->tview_len, 
 								  window->src_ops, ops, py_new_data);
-		CB_CHECK_PYRETVAL(py_window);
+		CB_CHECK_PYRETVAL(py_window); /* FIXME: free ops and py_new_data */
 	}
 	ret = PyObject_CallFunction(fn, "O", py_window);
 	Py_DECREF(py_window);

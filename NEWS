@@ -1,3 +1,30 @@
+0.8.9	2011-10-25
+
+ BUG FIXES
+
+  * Fix compilation with Python 2.4 and 2.5. (Jelmer Vernooij, #860621)
+
+ FEATURES
+
+  * Add constant ERR_WC_NODE_KIND_CHANGE. (Jelmer Vernooij)
+
+0.8.8	2011-09-27
+
+ BUG FIXES
+
+  * Fix several memory leaks and error checks in subvertpy.client
+    pointed out by Barry Warsaw. (Jelmer Vernooij)
+
+  * Drop broken code to support loading configuration from has.
+    (Jelmer Vernooij)
+
+  * WorkingCopy.prop_set() now accepts None as a value,
+    removing a properties. (Jelmer Vernooij)
+
+ FEATURES
+
+  * Add constant ERR_BAD_FILENAME. (Jelmer Vernooij)
+
 0.8.7	2011-09-19
 
  BUG FIXES

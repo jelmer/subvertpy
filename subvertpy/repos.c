@@ -53,9 +53,11 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
 	if (pool == NULL)
 		return NULL;
     hash_config = config_hash_from_object(config, pool);
-	if (hash_config == NULL)
+	if (hash_config == NULL) {
+		apr_pool_destroy(pool);
 		return NULL;
-    hash_fs_config = apr_hash_make(pool); /* FIXME */
+	}
+	hash_fs_config = apr_hash_make(pool); /* FIXME */
 	if (hash_fs_config == NULL) {
 		PyErr_SetString(PyExc_RuntimeError, "Unable to create fs config hash");
 		return NULL;
@@ -97,8 +99,10 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 		return NULL;
 
 	ret->pool = Pool(NULL);
-	if (ret->pool == NULL)
+	if (ret->pool == NULL) {
+		PyObject_DEL(ret);
 		return NULL;
+	}
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_repos_open(&ret->repos, svn_path_canonicalize(path, ret->pool),
                             ret->pool);
@@ -667,6 +671,11 @@ static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
 					  svn_fs_paths_changed(&changed_paths, self->root, temp_pool));
 #endif
 	ret = PyDict_New();
+	if (ret == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
 	for (idx = apr_hash_first(temp_pool, changed_paths); idx != NULL;
 		 idx = apr_hash_next(idx)) {
 		PyObject *py_val;
@@ -686,7 +695,13 @@ static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
 			PyObject_Del(ret);
 			return NULL;
 		}
-		PyDict_SetItemString(ret, key, py_val);
+		if (PyDict_SetItemString(ret, key, py_val) != 0) {
+			apr_pool_destroy(temp_pool);
+			PyObject_Del(ret);
+			Py_DECREF(py_val);
+			return NULL;
+		}
+
 		Py_DECREF(py_val);
 	}
 	apr_pool_destroy(temp_pool);

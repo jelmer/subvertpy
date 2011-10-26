@@ -563,8 +563,10 @@ static PyObject *py_status(const svn_wc_status2_t *status)
 		return NULL;
 
 	ret->pool = Pool(NULL);
-	if (ret->pool == NULL)
+	if (ret->pool == NULL) {
+		PyObject_Del(ret);
 		return NULL;
+	}
 
 	dup_status = svn_wc_dup_status2(status, ret->pool);
 	if (dup_status == NULL)
@@ -685,7 +687,7 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
 	svn_string_t *cvalue;
 	PyObject *notify_func = Py_None;
 
-	if (!PyArg_ParseTuple(args, "ss#s|bO", &name, &value, &vallen, &path, &skip_checks,
+	if (!PyArg_ParseTuple(args, "sz#s|bO", &name, &value, &vallen, &path, &skip_checks,
 						  &notify_func))
 		return NULL;
 
@@ -694,7 +696,11 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	cvalue = svn_string_ncreate(value, vallen, temp_pool);
+	if (value == NULL) {
+		cvalue = NULL;
+	} else {
+		cvalue = svn_string_ncreate(value, vallen, temp_pool);
+	}
 #if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_set3(name, cvalue, path, admobj->adm, 
 				skip_checks, py_wc_notify_func, (void *)notify_func, 
@@ -842,7 +848,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_prop_diffs(&propchanges, &original_props, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_prop_diffs(&propchanges, &original_props,
 				svn_path_canonicalize(path, temp_pool), admobj->adm, temp_pool));
 	py_propchanges = PyList_New(propchanges->nelts);
 	if (py_propchanges == NULL) {
@@ -857,14 +863,21 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 			pyval = Py_BuildValue("(sO)", el.name, Py_None);
 		if (pyval == NULL) {
 			apr_pool_destroy(temp_pool);
+			Py_DECREF(py_propchanges);
 			return NULL;
 		}
-		PyList_SetItem(py_propchanges, i, pyval);
+		if (PyList_SetItem(py_propchanges, i, pyval) != 0) {
+			Py_DECREF(py_propchanges);
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
 	}
 	py_orig_props = prop_hash_to_dict(original_props);
 	apr_pool_destroy(temp_pool);
-	if (py_orig_props == NULL)
+	if (py_orig_props == NULL) {
+		Py_DECREF(py_propchanges);
 		return NULL;
+	}
 	return Py_BuildValue("(NN)", py_propchanges, py_orig_props);
 }
 
@@ -1005,7 +1018,7 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 		return NULL;
 	traversal_info = svn_wc_init_traversal_info(temp_pool);
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(svn_path_canonicalize(path, temp_pool), admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse?svn_depth_infinity:svn_depth_files,
 				honor_depth_exclude,
@@ -1013,14 +1026,14 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #elif ONLY_SINCE_SVN(1, 5)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(svn_path_canonicalize(path, temp_pool), admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse?svn_depth_infinity:svn_depth_files, 
 				depth_compatibility_trick, use_commit_times, 
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #else
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(svn_path_canonicalize(path, temp_pool), admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse, use_commit_times, 
 				py_wc_notify_func, (void *)notify_func,
@@ -1173,14 +1186,15 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	apr_array_header_t *wcprop_changes = NULL;
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
+	int digest_len;
 	svn_boolean_t remove_changelist = FALSE;
 	char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author", 
 						"wcprop_changes", "remove_lock", "digest", "remove_changelist", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblzz|Obzb", kwnames, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblzz|Obz#b", kwnames, 
 									 &path, &recurse, &new_revnum, &rev_date,
 									 &rev_author, &py_wcprop_changes, 
-									 &remove_lock, &digest, &remove_changelist))
+									 &remove_lock, &digest, &digest_len, &remove_changelist))
 		return NULL;
 
 #if PY_VERSION_HEX < 0x02050000
@@ -2203,8 +2217,11 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	svn_boolean_t recurse = FALSE;
 	apr_pool_t *temp_pool;
 	apr_array_header_t *wcprop_changes;
+	int digest_len;
 
-	if (!PyArg_ParseTuple(args, "sO!|bObbz", &path, &Adm_Type, &admobj, &recurse, &py_wcprop_changes, &remove_lock, &remove_changelist, &digest))
+	if (!PyArg_ParseTuple(args, "sO!|bObbz#", &path, &Adm_Type, &admobj,
+						  &recurse, &py_wcprop_changes, &remove_lock,
+						  &remove_changelist, &digest, &digest_len))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -2223,6 +2240,11 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	}
 
 	if (digest != NULL) {
+		if (digest_len != APR_MD5_DIGESTSIZE) {
+			PyErr_SetString(PyExc_ValueError, "Invalid size for md5 digest");
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
 		digest = apr_pstrdup(self->pool, digest);
 		if (digest == NULL) {
 			PyErr_NoMemory();
