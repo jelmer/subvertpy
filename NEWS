@@ -1,5 +1,11 @@
 0.8.10	UNRELEASED
 
+ BUG FIXES
+
+  * Fix test suite on Cygwin. (Ronald Blaschke)
+
+  * Support windows-cryptoapi on Cygwin. (Ronald Blaschke)
+
 0.8.9	2011-10-25
 
  BUG FIXES

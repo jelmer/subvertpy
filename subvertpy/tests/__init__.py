@@ -202,6 +202,10 @@ class SubversionTestCase(TestCaseInTempDir):
         super(SubversionTestCase, self).setUp()
         self._init_client()
 
+    def tearDown(self):
+        del self.client_ctx
+        super(SubversionTestCase, self).tearDown()
+
     def log_message_func(self, items):
         return self.next_message
 
