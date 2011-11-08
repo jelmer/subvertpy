@@ -3047,7 +3047,7 @@ static PyObject *print_modules(PyObject *self)
 	return ret;
 }
 
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
 static PyObject *get_windows_simple_provider(PyObject* self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
@@ -3153,7 +3153,7 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 		return NULL;
 	}
 
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
 	provider = get_windows_simple_provider(self);
 	if (provider == NULL)
 		return NULL;
@@ -3167,7 +3167,7 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 	PyList_Append(pylist, provider);
 	Py_DECREF(provider);
 #endif /* 1.5 */
-#endif /* WIN32 */
+#endif /* WIN32 || __CYGWIN__ */
 
 #if defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
 	provider = get_keychain_simple_provider(self);
@@ -3193,7 +3193,7 @@ static PyMethodDef ra_module_methods[] = {
 	{ "get_ssl_client_cert_file_provider", (PyCFunction)get_ssl_client_cert_file_provider, METH_NOARGS, NULL },
 	{ "get_ssl_server_trust_file_provider", (PyCFunction)get_ssl_server_trust_file_provider, METH_NOARGS, NULL },
 	{ "get_simple_provider", (PyCFunction)get_simple_provider, METH_VARARGS, NULL },
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
 	{ "get_windows_simple_provider", (PyCFunction)get_windows_simple_provider, METH_NOARGS, NULL },
 #if ONLY_SINCE_SVN(1, 5)
 	{ "get_windows_ssl_server_trust_provider", (PyCFunction)get_windows_ssl_server_trust_provider, METH_NOARGS, NULL },
