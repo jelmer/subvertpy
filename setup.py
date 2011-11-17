@@ -10,19 +10,6 @@ import sys
 import os
 import re
 
-# Build instructions for Windows:
-# * Install the SVN dev kit ZIP for Windows from
-#   http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91
-#   At time of writing, this was svn-win32-1.4.6_dev.zip
-# * Find the SVN binary ZIP file with the binaries for your dev kit.
-#   At time of writing, this was svn-win32-1.4.6.zip
-#   Unzip this in the *same directory* as the dev kit - README.txt will be
-#   overwritten, but that is all. This is the default location the .ZIP file
-#   will suggest (ie, the directory embedded in both .zip files are the same)
-# * Set SVN_DEV to point at this directory.
-# * Install the APR BDB and INTL packages - see README.txt from the devkit
-# * Set SVN_BDB and SVN_LIBINTL to point at these dirs.
-
 class CommandException(Exception):
     """Encapsulate exit status of command execution"""
     def __init__(self, msg, cmd, arg, status, val):
