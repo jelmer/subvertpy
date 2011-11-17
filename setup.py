@@ -245,29 +245,31 @@ if os.name == "nt":
 (apu_includedir, apu_link_flags) = apu_build_data()
 (svn_includedirs, svn_libdirs, svn_link_flags, extra_libs) = svn_build_data()
 
-def SvnExtension(name, *args, **kwargs):
-    kwargs["include_dirs"] = ([apr_includedir, apu_includedir] + svn_includedirs +
-                              ["subvertpy"])
-    kwargs["library_dirs"] = svn_libdirs
-    # Note that the apr-util link flags are not included here, as
-    # subvertpy only uses some apr util constants but does not use
-    # the library directly.
-    kwargs["extra_link_args"] = apr_link_flags + svn_link_flags
-    if os.name == 'nt':
-        # on windows, just ignore and overwrite the libraries!
-        kwargs["libraries"] = extra_libs
-        # APR needs WIN32 defined.
-        kwargs["define_macros"] = [("WIN32", None)]
-    if sys.platform == 'darwin':
-        # on Mac OS X, we need to check for Keychain availability
-        if is_keychain_provider_available():
-            if "define_macros" not in kwargs:
-                kwargs["define_macros"] = []
-            kwargs["define_macros"].extend((
-                ('DARWIN', None),
-                ('SVN_KEYCHAIN_PROVIDER_AVAILABLE', '1'))
-                )
-    return Extension(name, *args, **kwargs)
+class SvnExtension(Extension):
+
+    def __init__(self, name, *args, **kwargs):
+        kwargs["include_dirs"] = ([apr_includedir, apu_includedir] + svn_includedirs +
+                                  ["subvertpy"])
+        kwargs["library_dirs"] = svn_libdirs
+        # Note that the apr-util link flags are not included here, as
+        # subvertpy only uses some apr util constants but does not use
+        # the library directly.
+        kwargs["extra_link_args"] = apr_link_flags + svn_link_flags
+        if os.name == 'nt':
+            # on windows, just ignore and overwrite the libraries!
+            kwargs["libraries"] = extra_libs
+            # APR needs WIN32 defined.
+            kwargs["define_macros"] = [("WIN32", None)]
+        if sys.platform == 'darwin':
+            # on Mac OS X, we need to check for Keychain availability
+            if is_keychain_provider_available():
+                if "define_macros" not in kwargs:
+                    kwargs["define_macros"] = []
+                kwargs["define_macros"].extend((
+                    ('DARWIN', None),
+                    ('SVN_KEYCHAIN_PROVIDER_AVAILABLE', '1'))
+                    )
+        Extension.__init__(self, name, *args, **kwargs)
 
 
 # On Windows, we install the apr binaries too.
