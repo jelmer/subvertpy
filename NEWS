@@ -6,6 +6,9 @@
 
   * Support windows-cryptoapi on Cygwin. (Ronald Blaschke)
 
+  * Include wc.h in wc.c. FIxes build on NetBSD 5.1/amd64.
+    (#894659)
+
 0.8.9	2011-10-25
 
  BUG FIXES
