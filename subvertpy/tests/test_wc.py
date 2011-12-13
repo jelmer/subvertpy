@@ -18,6 +18,7 @@
 from StringIO import StringIO
 import os
 
+import subvertpy
 from subvertpy import (
     NODE_FILE,
     wc,
@@ -279,7 +280,7 @@ class AdmTests(SubversionTestCase):
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout", True)
         cq = wc.CommittedQueue()
-        cq.queue("bar", adm)
+        cq.queue("checkout/bar", adm)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
         bar = adm.entry("checkout/bar")
         self.assertEquals("bar", bar.name)
@@ -291,5 +292,9 @@ class AdmTests(SubversionTestCase):
         self.build_tree({"checkout/bar": "la"})
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout", True)
-        self.assertIs(None, adm.probe_try(self.test_dir))
+        try:
+            self.assertIs(None, adm.probe_try(self.test_dir))
+        except subvertpy.SubversionException, (msg, num):
+            if num != subvertpy.ERR_WC_NOT_WORKING_COPY:
+                raise
         self.assertEquals("checkout", adm.probe_try(os.path.join("checkout", "bar")).access_path())
