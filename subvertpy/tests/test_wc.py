@@ -280,7 +280,7 @@ class AdmTests(SubversionTestCase):
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout", True)
         cq = wc.CommittedQueue()
-        cq.queue("checkout/bar", adm)
+        cq.queue(os.path.join(self.test_dir, "checkout/bar"), adm)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
         bar = adm.entry("checkout/bar")
         self.assertEquals("bar", bar.name)
