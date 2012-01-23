@@ -10,19 +10,6 @@ import sys
 import os
 import re
 
-# Build instructions for Windows:
-# * Install the SVN dev kit ZIP for Windows from
-#   http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91
-#   At time of writing, this was svn-win32-1.4.6_dev.zip
-# * Find the SVN binary ZIP file with the binaries for your dev kit.
-#   At time of writing, this was svn-win32-1.4.6.zip
-#   Unzip this in the *same directory* as the dev kit - README.txt will be
-#   overwritten, but that is all. This is the default location the .ZIP file
-#   will suggest (ie, the directory embedded in both .zip files are the same)
-# * Set SVN_DEV to point at this directory.
-# * Install the APR BDB and INTL packages - see README.txt from the devkit
-# * Set SVN_BDB and SVN_LIBINTL to point at these dirs.
-
 class CommandException(Exception):
     """Encapsulate exit status of command execution"""
     def __init__(self, msg, cmd, arg, status, val):
@@ -258,29 +245,31 @@ if os.name == "nt":
 (apu_includedir, apu_link_flags) = apu_build_data()
 (svn_includedirs, svn_libdirs, svn_link_flags, extra_libs) = svn_build_data()
 
-def SvnExtension(name, *args, **kwargs):
-    kwargs["include_dirs"] = ([apr_includedir, apu_includedir] + svn_includedirs +
-                              ["subvertpy"])
-    kwargs["library_dirs"] = svn_libdirs
-    # Note that the apr-util link flags are not included here, as
-    # subvertpy only uses some apr util constants but does not use
-    # the library directly.
-    kwargs["extra_link_args"] = apr_link_flags + svn_link_flags
-    if os.name == 'nt':
-        # on windows, just ignore and overwrite the libraries!
-        kwargs["libraries"] = extra_libs
-        # APR needs WIN32 defined.
-        kwargs["define_macros"] = [("WIN32", None)]
-    if sys.platform == 'darwin':
-        # on Mac OS X, we need to check for Keychain availability
-        if is_keychain_provider_available():
-            if "define_macros" not in kwargs:
-                kwargs["define_macros"] = []
-            kwargs["define_macros"].extend((
-                ('DARWIN', None),
-                ('SVN_KEYCHAIN_PROVIDER_AVAILABLE', '1'))
-                )
-    return Extension(name, *args, **kwargs)
+class SvnExtension(Extension):
+
+    def __init__(self, name, *args, **kwargs):
+        kwargs["include_dirs"] = ([apr_includedir, apu_includedir] + svn_includedirs +
+                                  ["subvertpy"])
+        kwargs["library_dirs"] = svn_libdirs
+        # Note that the apr-util link flags are not included here, as
+        # subvertpy only uses some apr util constants but does not use
+        # the library directly.
+        kwargs["extra_link_args"] = apr_link_flags + svn_link_flags
+        if os.name == 'nt':
+            # on windows, just ignore and overwrite the libraries!
+            kwargs["libraries"] = extra_libs
+            # APR needs WIN32 defined.
+            kwargs["define_macros"] = [("WIN32", None)]
+        if sys.platform == 'darwin':
+            # on Mac OS X, we need to check for Keychain availability
+            if is_keychain_provider_available():
+                if "define_macros" not in kwargs:
+                    kwargs["define_macros"] = []
+                kwargs["define_macros"].extend((
+                    ('DARWIN', None),
+                    ('SVN_KEYCHAIN_PROVIDER_AVAILABLE', '1'))
+                    )
+        Extension.__init__(self, name, *args, **kwargs)
 
 
 # On Windows, we install the apr binaries too.
@@ -345,7 +334,7 @@ def subvertpy_modules():
         ]
 
 
-subvertpy_version = (0, 8, 9)
+subvertpy_version = (0, 8, 10)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
