@@ -1,8 +1,9 @@
 subvertpy (0.8.10-1) UNRELEASED; urgency=low
 
   * New upstream release.
+  * Format copyright file according to DEP-5.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Mon, 23 Jan 2012 14:22:30 +0100
+ -- Jelmer Vernooij <jelmer@debian.org>  Mon, 23 Jan 2012 14:23:34 +0100
 
 subvertpy (0.8.9-1) unstable; urgency=low
 
