@@ -1,0 +1,46 @@
+Subvertpy
+=========
+
+Homepage: http://samba.org/~jelmer/subvertpy/
+
+Python bindings for the Subversion version control system that are aimed to be
+complete, fast and feel native to Python programmers.
+
+Bindings are provided for the working copy, client, delta, remote access and
+repository APIs. A hookable server side implementation of the custom Subversion
+protocol (svn_ra) is also provided.
+
+Differences with similar packages
+---------------------------------
+subvertpy covers more of the APIs than python-svn. It provides a more
+"Pythonic" API than python-subversion, which wraps the Subversion C API pretty
+much directly. Neither provide a hookable server-side.
+
+Dependencies
+------------
+Subvertpy depends on Python 2.4 or later, and Subversion 1.4 or later. It should
+work on Windows as well as most POSIX-based platforms (including Linux, BSDs
+and Mac OS X).
+
+A port to Python 3 is planned but has not happened yet. Patches are welcome.
+
+Installation
+------------
+Standard distutils are used - use "setup.py build" to build and "setup.install"
+to install. On most platforms, setup will find the Python and Subversion
+development libraries by itself. On Windows you may have to set various
+environment variables, see the next section for details.
+
+Build instructions for Windows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Install the SVN dev kit ZIP for Windows from
+  http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91
+  E.g. svn-win32-1.4.6_dev.zip
+* Find the SVN binary ZIP file with the binaries for your dev kit.
+  E.g. svn-win32-1.4.6.zip
+  Unzip this in the *same directory* as the dev kit - README.txt will be
+  overwritten, but that is all. This is the default location the .ZIP file
+  will suggest (ie, the directory embedded in both .zip files are the same)
+* Set SVN_DEV to point at this directory.
+* Install the APR BDB and INTL packages - see README.txt from the devkit
+* Set SVN_BDB and SVN_LIBINTL to point at these dirs.

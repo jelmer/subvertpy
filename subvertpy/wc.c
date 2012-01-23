@@ -27,6 +27,7 @@
 
 #include "util.h"
 #include "editor.h"
+#include "wc.h"
 
 #ifndef T_BOOL
 #define T_BOOL T_BYTE

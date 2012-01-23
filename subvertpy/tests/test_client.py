@@ -49,6 +49,10 @@ class TestClient(SubversionTestCase):
         self.repos_url = self.make_client("d", "dc")
         self.client = client.Client(auth=ra.Auth([ra.get_username_provider()]))
 
+    def tearDown(self):
+        del self.client
+        super(TestClient, self).tearDown()
+
     def test_add(self):
         self.build_tree({"dc/foo": None})
         self.client.add("dc/foo")
@@ -90,7 +94,6 @@ class TestClient(SubversionTestCase):
         adm = wc.WorkingCopy(None, os.path.join(os.getcwd(), "dc"))
         e = adm.entry(os.path.join(os.getcwd(), "dc", "trunk"))
         self.assertEquals(e.kind, NODE_DIR)
-        self.assertEquals(e.revision, -1)
         adm2 = wc.WorkingCopy(None, os.path.join(os.getcwd(), "dc", "trunk"))
         e = adm2.entry(os.path.join(os.getcwd(), "dc", "trunk", "foo"))
         self.assertEquals(e.kind, NODE_FILE)
