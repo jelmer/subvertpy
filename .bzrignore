@@ -5,3 +5,5 @@ MANIFEST
 .coverage
 tags
 .testrepository
+.noseids
+apidocs
