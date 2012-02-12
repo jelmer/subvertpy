@@ -16,6 +16,7 @@
 """Subversion client library tests."""
 
 import os
+from StringIO import StringIO
 
 from subvertpy import (
     NODE_DIR, NODE_FILE,
@@ -135,3 +136,19 @@ class TestClient(SubversionTestCase):
 """, outf.read())
         self.assertEquals("", errf.read())
 
+    def assertCatEquals(self, value, revision=None):
+        io = StringIO()
+        self.client.cat("dc/foo", io, revision)
+        self.assertEquals(value, io.getvalue())
+
+    def test_cat(self):
+        self.build_tree({"dc/foo": "bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.assertCatEquals("bla")
+        self.build_tree({"dc/foo": "blabla"})
+        self.client.commit(["dc"])
+        self.assertCatEquals("blabla")
+        self.assertCatEquals("bla", revision=1)
+        self.assertCatEquals("blabla", revision=2)

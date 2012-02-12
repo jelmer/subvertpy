@@ -581,7 +581,37 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
     return PyLong_FromLong(result_rev);
 }
 
+static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ClientObject *client = (ClientObject *)self;
+    char *kwnames[] = { "path", "output_stream", "revision", "peg_revision", NULL };
+    char *path;
+    PyObject *peg_rev=Py_None, *rev=Py_None;
+    svn_opt_revision_t c_peg_rev, c_rev;
+    apr_pool_t *temp_pool;
+    svn_stream_t *stream;
+    PyObject *py_stream;
 
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO|OO", kwnames, &path, &py_stream, &rev, &peg_rev))
+        return NULL;
+
+    if (!to_opt_revision(rev, &c_rev))
+        return NULL;
+    if (!to_opt_revision(peg_rev, &c_peg_rev))
+        return NULL;
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+
+    stream = new_py_stream(temp_pool, py_stream);
+
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_cat2(stream, path,
+        &c_peg_rev, &c_rev, client->client, temp_pool));
+
+    apr_pool_destroy(temp_pool);
+    Py_RETURN_NONE;
+}
 
 static PyObject *client_delete(PyObject *self, PyObject *args)
 {
@@ -1254,6 +1284,8 @@ static PyMethodDef client_methods[] = {
         "S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False, allow_unver_obstructions=False)" },
 	{ "export", (PyCFunction)client_export, METH_VARARGS|METH_KEYWORDS,
 		"S.export(from, to, rev=None, peg_rev=None, recurse=True, ignore_externals=False, overwrite=False, native_eol=None)" },
+    { "cat", (PyCFunction)client_cat, METH_VARARGS|METH_KEYWORDS,
+        "S.cat(path, output_stream, revision=None, peg_revision=None)" },
     { "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True, revprops=None) -> (revnum, date, author)" },
     { "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
     { "copy", (PyCFunction)client_copy, METH_VARARGS|METH_KEYWORDS, "S.copy(src_path, dest_path, srv_rev=None)" },
