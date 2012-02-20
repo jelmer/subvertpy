@@ -1277,6 +1277,113 @@ static PyObject *client_diff(PyObject *self, PyObject *args, PyObject *kwargs)
 #endif
 }
 
+static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    char *kwnames[] = {
+        "callback", "paths", "start_rev", "end_rev", "limit", "peg_revision",
+        "discover_changed_paths", "strict_node_history",
+        "include_merged_revisions", "revprops",
+        NULL,
+    };
+    apr_pool_t *temp_pool;
+    ClientObject *client = (ClientObject *)self;
+
+    PyObject *callback, *paths, *start_rev = Py_None, *end_rev = Py_None,
+             *peg_revision = Py_None, *revprops = NULL;
+    int limit = 0;
+    svn_boolean_t discover_changed_paths = FALSE, strict_node_history = FALSE,
+                  include_merged_revisions = FALSE;
+    apr_array_header_t *apr_paths, *apr_revprops = NULL;
+    svn_opt_revision_t c_peg_rev, c_start_rev, c_end_rev;
+#if ONLY_SINCE_SVN(1, 6)
+    apr_array_header_t *revision_ranges;
+#endif
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OOiObbbO", kwnames,
+                                     &callback, &paths, &start_rev, &end_rev, &limit,
+                                     &peg_revision, &discover_changed_paths,
+                                     &strict_node_history, &include_merged_revisions,
+                                     &revprops))
+        return NULL;
+
+    if (!to_opt_revision(start_rev, &c_start_rev))
+        return NULL;
+    if (!to_opt_revision(end_rev, &c_end_rev))
+        return NULL;
+    if (!to_opt_revision(peg_revision, &c_peg_rev))
+        return NULL;
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+
+#if ONLY_BEFORE_SVN(1, 4)
+    if (include_merged_revisions) {
+        PyErr_SetString(PyExc_NotImplementedError, 
+                        "include_merged_revisions not supported in svn <= 1.4");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+    if (revprops) {
+        PyErr_SetString(PyExc_NotImplementedError, 
+                        "revprops not supported in svn <= 1.4");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+#endif
+
+    if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+    if (revprops) {
+        if (!path_list_to_apr_array(temp_pool, revprops, &apr_revprops)) {
+            apr_pool_destroy(temp_pool);
+            return NULL;
+        }
+    }
+
+#if ONLY_SINCE_SVN(1, 6)
+    svn_opt_revision_range_t revision_range = {
+        c_start_rev,
+        c_end_rev
+    };
+
+    revision_ranges = apr_array_make(temp_pool, 1, sizeof(svn_opt_revision_range_t *));
+    if (revision_ranges == NULL) {
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+    APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = &revision_range;
+
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_log5(apr_paths, &c_peg_rev,
+        revision_ranges, limit, discover_changed_paths,
+        strict_node_history, include_merged_revisions, apr_revprops,
+        py_svn_log_entry_receiver, (void*)callback,
+        client->client, temp_pool));
+#elif ONLY_SINCE_SVN(1, 5)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_log4(apr_paths, &c_peg_rev,
+        &c_start_rev, &c_end_rev, limit, discover_changed_paths,
+        strict_node_history, include_merged_revisions, apr_revprops,
+        py_svn_log_entry_receiver, (void*)callback,
+        client->client, temp_pool));
+#elif ONLY_SINCE_SVN(1, 4)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_log3(apr_paths, &c_peg_rev,
+        &c_start_rev, &c_end_rev, limit, discover_changed_paths,
+        strict_node_history, py_svn_log_wrapper,
+        (void*)callback, client->client, temp_pool));
+#else
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_log2(apr_paths, &c_start_rev,
+        &c_end_rev, limit, discover_changed_paths, strict_node_history,
+        py_svn_log_wrapper, (void*)callback,
+        client->client, temp_pool));
+#endif
+
+    apr_pool_destroy(temp_pool);
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef client_methods[] = {
     { "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS, 
         "S.add(path, recursive=True, force=False, no_ignore=False)" },
@@ -1297,6 +1404,8 @@ static PyMethodDef client_methods[] = {
     { "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.list(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
     { "diff", (PyCFunction)client_diff, METH_VARARGS|METH_KEYWORDS, "S.diff(rev1, rev2, path1=None, path2=None, relative_to_dir=None, diffopts=[], encoding=\"utf-8\", ignore_ancestry=True, no_diff_deleted=True, ignore_content_type=False) -> unified diff as a string" },
     { "mkdir", (PyCFunction)client_mkdir, METH_VARARGS|METH_KEYWORDS, "S.mkdir(paths, make_parents=False, revprops=None) -> (revnum, date, author)" },
+    { "log", (PyCFunction)client_log, METH_VARARGS|METH_KEYWORDS,
+        "S.log(callback, paths, start_rev=None, end_rev=None, limit=0, peg_revision=None, discover_changed_paths=False, strict_node_history=False, include_merged_revisions=False, revprops=None)" },
     { NULL, }
 };
 

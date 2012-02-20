@@ -15,6 +15,7 @@
 
 """Subversion client library tests."""
 
+from datetime import datetime, timedelta
 import os
 from StringIO import StringIO
 
@@ -152,3 +153,58 @@ class TestClient(SubversionTestCase):
         self.assertCatEquals("blabla")
         self.assertCatEquals("bla", revision=1)
         self.assertCatEquals("blabla", revision=2)
+
+    def assertLogEntryChangedPathsEquals(self, expected, entry):
+        changed_paths = entry["changed_paths"]
+        self.assertTrue(isinstance(changed_paths, dict))
+        self.assertEquals(sorted(expected), sorted(changed_paths.keys()))
+
+    def assertLogEntryMessageEquals(self, expected, entry):
+        self.assertEquals(expected, entry["revprops"]["svn:log"])
+
+    def assertLogEntryDateAlmostEquals(self, expected, entry, delta):
+        actual = datetime.strptime(entry["revprops"]["svn:date"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        self.assertTrue((actual - expected) < delta)
+
+    def test_log(self):
+        log_entries = []
+        commit_msg_1 = "Commit"
+        commit_msg_2 = "Commit 2"
+        delta = timedelta(hours=1)
+        def cb(changed_paths, revision, revprops, has_children=False):
+            log_entries.append({
+                'changed_paths': changed_paths,
+                'revision': revision,
+                'revprops': revprops,
+                'has_children': has_children,
+            })
+        self.build_tree({"dc/foo": "bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: commit_msg_1
+        self.client.commit(["dc"])
+        commit_1_dt = datetime.utcnow()
+        self.client.log(cb, "dc/foo")
+        self.assertEquals(1, len(log_entries))
+        self.assertEquals(None, log_entries[0]["changed_paths"])
+        self.assertEquals(1, log_entries[0]["revision"])
+        self.assertLogEntryMessageEquals(commit_msg_1, log_entries[0])
+        self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[0], delta)
+        self.build_tree({
+            "dc/foo": "blabla",
+            "dc/bar": "blablabla",
+        })
+        self.client.add("dc/bar")
+        self.client.log_msg_func = lambda c: commit_msg_2
+        self.client.commit(["dc"])
+        commit_2_dt = datetime.utcnow()
+        log_entries = []
+        self.client.log(cb, "dc/foo", discover_changed_paths=True)
+        self.assertEquals(2, len(log_entries))
+        self.assertLogEntryChangedPathsEquals(["/foo", "/bar"], log_entries[0])
+        self.assertEquals(2, log_entries[0]["revision"])
+        self.assertLogEntryMessageEquals(commit_msg_2, log_entries[0])
+        self.assertLogEntryDateAlmostEquals(commit_2_dt, log_entries[0], delta)
+        self.assertLogEntryChangedPathsEquals(["/foo"], log_entries[1])
+        self.assertEquals(1, log_entries[1]["revision"])
+        self.assertLogEntryMessageEquals(commit_msg_1, log_entries[1])
+        self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[1], delta)
