@@ -666,10 +666,9 @@ apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool)
 {
 	if (config == Py_None) {
 		return get_default_config();
-	}
-
-	PyErr_SetString(PyExc_TypeError, "Only the system config is supported at the moment");
-	return NULL;
+	} else {
+        return ((ConfigObject *)config)->config;
+    }
 }
 
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)

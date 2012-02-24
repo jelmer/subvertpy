@@ -34,12 +34,6 @@ extern PyTypeObject ConfigItem_Type;
 
 typedef struct {
     PyObject_HEAD
-    apr_hash_t *config;
-    apr_pool_t *pool;
-} ConfigObject;
-
-typedef struct {
-    PyObject_HEAD
     svn_config_t *item;
     PyObject *parent;
 } ConfigItemObject;

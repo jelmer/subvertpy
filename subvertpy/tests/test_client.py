@@ -18,6 +18,8 @@
 from datetime import datetime, timedelta
 import os
 from StringIO import StringIO
+import shutil
+import tempfile
 
 from subvertpy import (
     NODE_DIR, NODE_FILE,
@@ -103,6 +105,20 @@ class TestClient(SubversionTestCase):
 
     def test_get_config(self):
         self.assertIsInstance(client.get_config(), client.Config)
+        try:
+            base_dir = tempfile.mkdtemp()
+            base_dir_basename = os.path.basename(base_dir)
+            svn_cfg_dir = os.path.join(base_dir, '.subversion')
+            os.mkdir(svn_cfg_dir)
+            with open(os.path.join(svn_cfg_dir, 'config'), 'w') as svn_cfg:
+                svn_cfg.write('[miscellany]\n')
+                svn_cfg.write('global-ignores = %s' % base_dir_basename)
+            config = client.get_config(svn_cfg_dir)
+            self.assertIsInstance(config, client.Config)
+            ignores = config.get_default_ignores()
+            self.assertTrue(base_dir_basename in ignores)
+        finally:
+            shutil.rmtree(base_dir)
 
     def test_diff(self):
         r = ra.RemoteAccess(self.repos_url,
