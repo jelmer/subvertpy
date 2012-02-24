@@ -156,7 +156,7 @@ class TestClient(SubversionTestCase):
 
     def assertLogEntryChangedPathsEquals(self, expected, entry):
         changed_paths = entry["changed_paths"]
-        self.assertTrue(isinstance(changed_paths, dict))
+        self.assertIsInstance(changed_paths, dict)
         self.assertEquals(sorted(expected), sorted(changed_paths.keys()))
 
     def assertLogEntryMessageEquals(self, expected, entry):
