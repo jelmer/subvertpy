@@ -3275,6 +3275,15 @@ void init_ra(void)
 	busy_exc = PyErr_NewException("_ra.BusyException", NULL, NULL);
 	PyModule_AddObject(mod, "BusyException", busy_exc);
 
+#if ONLY_SINCE_SVN(1, 5)
+    PyModule_AddIntConstant(mod, "DEPTH_UNKNOWN", svn_depth_unknown);
+    PyModule_AddIntConstant(mod, "DEPTH_EXCLUDE", svn_depth_exclude);
+    PyModule_AddIntConstant(mod, "DEPTH_EMPTY", svn_depth_empty);
+    PyModule_AddIntConstant(mod, "DEPTH_FILES", svn_depth_files);
+    PyModule_AddIntConstant(mod, "DEPTH_IMMEDIATES", svn_depth_immediates);
+    PyModule_AddIntConstant(mod, "DEPTH_INFINITY", svn_depth_infinity);
+#endif
+
 	PyModule_AddIntConstant(mod, "DIRENT_KIND", SVN_DIRENT_KIND);
 	PyModule_AddIntConstant(mod, "DIRENT_SIZE", SVN_DIRENT_SIZE);
 	PyModule_AddIntConstant(mod, "DIRENT_HAS_PROPS", SVN_DIRENT_HAS_PROPS);
