@@ -1,3 +1,9 @@
+subvertpy (0.8.10-2) UNRELEASED; urgency=low
+
+  * Install manual page for subvertpy-fast-export.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Tue, 28 Feb 2012 13:56:06 +0100
+
 subvertpy (0.8.10-1) unstable; urgency=low
 
   * New upstream release.
