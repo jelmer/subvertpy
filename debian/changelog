@@ -1,4 +1,4 @@
-subvertpy (0.8.10-2) UNRELEASED; urgency=low
+subvertpy (0.8.10-2) unstable; urgency=low
 
   * Install manual page for subvertpy-fast-export.
   * Bump standards version to 3.9.3 (no changes).
