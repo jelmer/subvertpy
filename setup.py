@@ -232,9 +232,13 @@ if os.name == "nt":
                   libsvn_repos-1 libsvn_wc-1 libsvn_delta-1 libsvn_diff-1
                   libsvn_fs-1 libsvn_repos-1 libsvn_fs_fs-1 libsvn_fs_base-1
                   intl3_svn
-                  libdb44 xml
+                  xml
                   advapi32 shell32 ws2_32 zlibstat
                """.split()
+        if svn_version >= (1,7,0):
+            libs += ["libdb48"]
+        else:
+            libs += ["libdb44"]
         if svn_version >= (1,5,0):
             # Since 1.5.0 libsvn_ra_dav-1 was removed
             libs.remove("libsvn_ra_dav-1")
@@ -284,7 +288,11 @@ class install_lib_with_dlls(install_lib):
             apr_bins += """libsvn_client-1.dll libsvn_delta-1.dll libsvn_diff-1.dll
                            libsvn_fs-1.dll libsvn_ra-1.dll libsvn_repos-1.dll
                            libsvn_subr-1.dll libsvn_wc-1.dll libsasl.dll""".split()
-        apr_bins += """intl3_svn.dll libdb44.dll libeay32.dll ssleay32.dll""".split()
+        if get_svn_version() >= (1,7,0):
+            apr_bins += ["libdb48.dll"]
+        else:
+            apr_bins += ["libdb44.dll"]
+        apr_bins += """intl3_svn.dll libeay32.dll ssleay32.dll""".split()
         look_dirs = os.environ.get("PATH","").split(os.pathsep)
         look_dirs.insert(0, os.path.join(os.environ["SVN_DEV"], "bin"))
     
