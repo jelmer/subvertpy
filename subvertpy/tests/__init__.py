@@ -373,7 +373,7 @@ class SubversionTestCase(TestCaseInTempDir):
                     os.makedirs(os.path.dirname(f))
                 except OSError:
                     pass
-                open(f, 'w').write(files[f])
+                self.write_file(f, files[f])
 
     def make_client(self, repospath, clientpath, allow_revprop_changes=True):
         """Create a repository and a checkout. Return the checkout.
