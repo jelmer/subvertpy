@@ -312,17 +312,18 @@ class install_lib_with_dlls(install_lib):
     def run(self):
         install_lib.run(self)
         # the apr binaries.
-        if os.name == 'nt':
-            # On Windows we package up the apr dlls with the plugin.
-            for s, d in self._get_dlls():
-                self.copy_file(s, d)
+        # On Windows we package up the apr dlls with the plugin.
+        for s, d in self._get_dlls():
+            self.copy_file(s, d)
 
     def get_outputs(self):
         ret = install_lib.get_outputs(self)
-        if os.name == 'nt':
-            ret.extend([info[1] for info in self._get_dlls()])
+        ret.extend([info[1] for info in self._get_dlls()])
         return ret
 
+cmdclass = {}
+if os.name == 'nt':
+    cmdclass['install_lib'] = install_lib_with_dlls
 
 def source_path(filename):
     return os.path.join("subvertpy", filename)
@@ -364,5 +365,5 @@ if __name__ == "__main__":
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
           scripts=['bin/subvertpy-fast-export'],
-          cmdclass = { 'install_lib': install_lib_with_dlls },
+          cmdclass=cmdclass,
           )
