@@ -209,6 +209,11 @@ class SubversionTestCase(TestCaseInTempDir):
     def log_message_func(self, items):
         return self.next_message
 
+    def write_file(self, filename, content):
+        f = open(filename, 'w')
+        f.write(content)
+        f.close()
+
     def make_repository(self, relpath, allow_revprop_changes=True):
         """Create a repository.
 
@@ -222,11 +227,11 @@ class SubversionTestCase(TestCaseInTempDir):
             if sys.platform == 'win32':
                 revprop_hook = os.path.join(abspath, "hooks",
                         "pre-revprop-change.bat")
-                open(revprop_hook, 'w').write("exit 0\n")
+                self.write_file(revprop_hook, "exit 0\n")
             else:
                 revprop_hook = os.path.join(abspath, "hooks",
                         "pre-revprop-change")
-                open(revprop_hook, 'w').write("#!/bin/sh\n")
+                self.write_file(revprop_hook, "#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
         if sys.platform == 'win32':
