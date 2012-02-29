@@ -52,7 +52,8 @@ def config_value(command, arg):
     for cmd in cmds:
         try:
             return run_cmd(cmd, arg)
-        except CommandException, e:
+        except CommandException:
+            _, e, _ = sys.exc_info()
             if not e.not_found():
                 raise
     else:
@@ -135,7 +136,7 @@ class VersionQuery(object):
 
     def __init__(self, filename):
         self.filename = filename
-        f = file(filename, "rU")
+        f = open(filename, "rU")
         try:
             self.text = f.read()
         finally:
