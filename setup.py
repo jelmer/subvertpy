@@ -189,7 +189,7 @@ if os.name == "nt":
             raise Exception(
                 "Please set SVN_DEV to the location of the svn development "
                 "packages.\nThese can be downloaded from:\n"
-                "http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91")
+                "http://sourceforge.net/projects/win32svn/files/")
         svn_bdb_dir = os.environ.get("SVN_BDB")
         if not svn_bdb_dir or not os.path.isdir(svn_bdb_dir):
             raise Exception(
