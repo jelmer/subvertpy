@@ -230,7 +230,7 @@ class SubversionTestCase(TestCaseInTempDir):
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
         if sys.platform == 'win32':
-            return "file://%s" % abspath.replace("\\", "/")
+            return "file:///%s" % abspath.replace("\\", "/")
         else:
             return "file://%s" % abspath
 
