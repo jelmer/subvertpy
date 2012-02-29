@@ -22,6 +22,7 @@ __docformat__ = 'restructuredText'
 from cStringIO import StringIO
 import os
 import shutil
+import stat
 import sys
 import tempfile
 import unittest
@@ -46,6 +47,22 @@ from subvertpy.ra import (
     Auth,
     RemoteAccess,
     )
+
+
+def force_rm_handle(remove_path, path, excinfo):
+    os.chmod(
+        path,
+        os.stat(path).st_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH
+    )
+    remove_path(path)
+
+
+def rmtree(path):
+    """In Windows a read-only file cannot be removed, and shutil.rmtree fails.
+    So we implement our own version of rmtree to address this issue.
+    """
+    if os.path.exists(path):
+        shutil.rmtree(path, onerror=lambda func, path, e: force_rm_handle(func, path, e))
 
 
 class TestCase(unittest.TestCase):
@@ -81,7 +98,7 @@ class TestCaseInTempDir(TestCase):
     def tearDown(self):
         TestCase.tearDown(self)
         os.chdir(self._oldcwd)
-        shutil.rmtree(self.test_dir)
+        rmtree(self.test_dir)
 
 
 class TestFileEditor(object):
