@@ -365,18 +365,22 @@ class SubversionTestCase(TestCaseInTempDir):
         :param files: Dictionary with filenames as keys, contents as
             values. None as value indicates a directory.
         """
-        for f in files:
-            if files[f] is None:
+        for name, content in files.iteritems():
+            if content is None:
                 try:
-                    os.makedirs(f)
+                    os.makedirs(name)
                 except OSError:
                     pass
             else:
                 try:
-                    os.makedirs(os.path.dirname(f))
+                    os.makedirs(os.path.dirname(name))
                 except OSError:
                     pass
-                open(f, 'w').write(files[f])
+                f = open(name, 'w')
+                try:
+                    f.write(content)
+                finally:
+                    f.close()
 
     def make_client(self, repospath, clientpath, allow_revprop_changes=True):
         """Create a repository and a checkout. Return the checkout.
