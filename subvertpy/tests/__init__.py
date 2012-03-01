@@ -222,11 +222,19 @@ class SubversionTestCase(TestCaseInTempDir):
             if sys.platform == 'win32':
                 revprop_hook = os.path.join(abspath, "hooks",
                         "pre-revprop-change.bat")
-                open(revprop_hook, 'w').write("exit 0\n")
+                f = open(revprop_hook, 'w')
+                try:
+                    f.write("exit 0\n")
+                finally:
+                    f.close()
             else:
                 revprop_hook = os.path.join(abspath, "hooks",
                         "pre-revprop-change")
-                open(revprop_hook, 'w').write("#!/bin/sh\n")
+                f = open(revprop_hook, 'w')
+                try:
+                    f.write("#!/bin/sh\n")
+                finally:
+                    f.close()
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
         if sys.platform == 'win32':
