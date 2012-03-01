@@ -1,3 +1,9 @@
+subvertpy (0.8.10+bzr2435-1) UNRELEASED; urgency=low
+
+  * New upstream snapshot.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Thu, 01 Mar 2012 03:20:02 +0100
+
 subvertpy (0.8.10-2) unstable; urgency=low
 
   * Install manual page for subvertpy-fast-export.

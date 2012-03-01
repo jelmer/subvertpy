@@ -34,7 +34,7 @@ environment variables, see the next section for details.
 Build instructions for Windows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * Install the SVN dev kit ZIP for Windows from
-  http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91
+  http://sourceforge.net/projects/win32svn/files/
   E.g. svn-win32-1.4.6_dev.zip
 * Find the SVN binary ZIP file with the binaries for your dev kit.
   E.g. svn-win32-1.4.6.zip
@@ -42,5 +42,16 @@ Build instructions for Windows
   overwritten, but that is all. This is the default location the .ZIP file
   will suggest (ie, the directory embedded in both .zip files are the same)
 * Set SVN_DEV to point at this directory.
-* Install the APR BDB and INTL packages - see README.txt from the devkit
-* Set SVN_BDB and SVN_LIBINTL to point at these dirs.
+* Install BDB.
+  For Subversion 1.7.0 and later:
+  http://www.oracle.com/technetwork/database/berkeleydb/downloads/index-082944.html
+  download Berkeley DB 4.8.30.msi Windows installer and install it.
+  For Subversion 1.6.17 and earlier:
+  http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=688
+  download "db-4.4.20-win32.zip" or earlier version of BDB and extract it.
+* Set SVN_BDB to the installed directory or extracted directory.
+* Install SVN libintl.
+  http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=2627
+  Download svn-win32-libintl.zip.
+  extrat it to the directory that you want.
+* Set SVN_LIBINTL to the extract dir.
