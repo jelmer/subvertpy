@@ -18,6 +18,7 @@
  */
 #include <stdbool.h>
 #include <Python.h>
+#include <structmember.h>
 #include <apr_general.h>
 #include <svn_opt.h>
 #include <svn_client.h>
@@ -28,15 +29,42 @@
 #include "ra.h"
 #include "wc.h"
 
+#if ONLY_SINCE_SVN(1, 6)
+#define INFO_SIZE size64
+#define WORKING_SIZE working_size64
+#else
+#define INFO_SIZE size
+#define WORKING_SIZE working_size
+#endif
+
 extern PyTypeObject Client_Type;
 extern PyTypeObject Config_Type;
 extern PyTypeObject ConfigItem_Type;
+extern PyTypeObject Info_Type;
+extern PyTypeObject WCInfo_Type;
 
 typedef struct {
     PyObject_HEAD
     svn_config_t *item;
     PyObject *parent;
 } ConfigItemObject;
+
+typedef struct {
+    PyObject_HEAD
+#if ONLY_SINCE_SVN(1, 7)
+    svn_wc_info_t info;
+#else
+    svn_info_t info;
+#endif
+    apr_pool_t *pool;
+} WCInfoObject;
+
+typedef struct {
+    PyObject_HEAD
+    svn_info_t info;
+    WCInfoObject *wc_info;
+    apr_pool_t *pool;
+} InfoObject;
 
 static int client_set_auth(PyObject *self, PyObject *auth, void *closure);
 static int client_set_config(PyObject *self, PyObject *auth, void *closure);
@@ -158,6 +186,60 @@ static svn_error_t *list_receiver(void *dict, const char *path,
     PyObject *value;
 
     value = py_dirent(dirent, SVN_DIRENT_ALL);
+    if (value == NULL) {
+        PyGILState_Release(state);
+        return py_svn_error();
+    }
+
+    if (PyDict_SetItemString(dict, path, value) != 0) {
+        Py_DECREF(value);
+        PyGILState_Release(state);
+        return py_svn_error();
+    }
+
+    Py_DECREF(value);
+
+    PyGILState_Release(state);
+
+    return NULL;
+}
+
+static PyObject *py_info(const svn_info_t *info)
+{
+    InfoObject *ret;
+
+    ret = PyObject_New(InfoObject, &Info_Type);
+    if (ret == NULL)
+        return NULL;
+
+    ret->wc_info = PyObject_New(WCInfoObject, &WCInfo_Type);
+    if (ret->wc_info == NULL)
+        return NULL;
+
+    ret->pool = ret->wc_info->pool = Pool(NULL);
+    if (ret->pool == NULL)
+        return NULL;
+#if ONLY_SINCE_SVN(1, 7)
+    ret->info = *svn_client_info2_dup(info, ret->pool);
+    ret->wc_info->info = *svn_wc_info_dup(info.wc_info, ret->pool);
+#else
+    ret->info = *svn_info_dup(info, ret->pool);
+    if (info->has_wc_info) {
+        ret->wc_info->info = *svn_info_dup(info, ret->pool);
+    }
+#endif
+
+    return (PyObject *)ret;
+}
+
+static svn_error_t *info_receiver(void *dict, const char *path,
+                                  const svn_info_t *info,
+                                  apr_pool_t *pool)
+{
+    PyGILState_STATE state = PyGILState_Ensure();
+    PyObject *value;
+
+    value = py_info(info);
     if (value == NULL) {
         PyGILState_Release(state);
         return py_svn_error();
@@ -1378,6 +1460,65 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
     Py_RETURN_NONE;
 }
 
+static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    char *kwnames[] = {
+        "path", "revision", "peg_revision", "depth",
+        NULL,
+    };
+    apr_pool_t *temp_pool;
+    ClientObject *client = (ClientObject *)self;
+
+    const char *path;
+    int depth;
+    PyObject *revision = Py_None, *peg_revision = Py_None;
+    svn_opt_revision_t c_peg_rev, c_rev;
+    PyObject *entry_dict;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOi", kwnames,
+                                     &path, &revision,
+                                     &peg_revision, &depth))
+        return NULL;
+
+    if (!to_opt_revision(revision, &c_rev))
+        return NULL;
+    if (!to_opt_revision(peg_revision, &c_peg_rev))
+        return NULL;
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+    entry_dict = PyDict_New();
+    if (entry_dict == NULL) {
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+#if ONLY_SINCE_SVN(1, 5)
+    /* FIXME: Support changelists */
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_info2(path, &c_peg_rev, &c_rev,
+                                                  info_receiver, entry_dict,
+                                                  depth, NULL,
+                                                  client->client, temp_pool));
+#else
+    if (depth != svn_depth_infinity && depth != svn_depth_empty) {
+        PyErr_SetString(PyExc_NotImplementedError, 
+                        "depth can only be infinity or empty when built against svn < 1.5");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_info(path, &c_peg_rev, &c_rev,
+                                                 info_receiver, entry_dict,
+                                                 (depth == svn_depth_infinity), 
+                                                 client->client, temp_pool));
+#endif
+
+    apr_pool_destroy(temp_pool);
+
+    return entry_dict;
+}
+
 static PyMethodDef client_methods[] = {
     { "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS, 
         "S.add(path, recursive=True, force=False, no_ignore=False)" },
@@ -1400,6 +1541,8 @@ static PyMethodDef client_methods[] = {
     { "mkdir", (PyCFunction)client_mkdir, METH_VARARGS|METH_KEYWORDS, "S.mkdir(paths, make_parents=False, revprops=None) -> (revnum, date, author)" },
     { "log", (PyCFunction)client_log, METH_VARARGS|METH_KEYWORDS,
         "S.log(callback, paths, start_rev=None, end_rev=None, limit=0, peg_revision=None, discover_changed_paths=False, strict_node_history=False, include_merged_revisions=False, revprops=None)" },
+    { "info", (PyCFunction)client_info, METH_VARARGS|METH_KEYWORDS,
+        "S.info(path, revision=None, peg_revision=None, depth=DEPTH_EMPTY) -> dict of info entries" },
     { NULL, }
 };
 
@@ -1536,6 +1679,199 @@ PyTypeObject ConfigItem_Type = {
     (destructor)configitem_dealloc, /*    destructor tp_dealloc;    */
 };
 
+static void info_dealloc(PyObject *self)
+{
+    apr_pool_t *pool = ((InfoObject *)self)->pool;
+    if (pool != NULL)
+        apr_pool_destroy(pool);
+    PyObject_Del(self);
+}
+
+static PyMemberDef info_members[] = {
+    { "url", T_STRING, offsetof(InfoObject, info.URL), READONLY, 
+        "Where the item lives in the repository." },
+    { "revision", T_LONG, offsetof(InfoObject, info.rev), READONLY, 
+        "The revision of the object.", },
+    { "kind", T_INT, offsetof(InfoObject, info.kind), READONLY, 
+        "The node's kind.", },
+    { "size", T_PYSSIZET, offsetof(InfoObject, info.INFO_SIZE), READONLY, 
+        "The size of the file in the repository.", },
+    { "repos_root_url", T_STRING, offsetof(InfoObject, info.repos_root_URL), READONLY, 
+        "The root URL of the repository." },
+    { "repos_uuid", T_STRING, offsetof(InfoObject, info.repos_UUID), READONLY, 
+        "The repository's UUID." },
+    { "last_changed_revision", T_LONG, offsetof(InfoObject, info.last_changed_rev), READONLY, 
+        "The last revision in which this object changed.", },
+    { "last_changed_date", T_LONG, offsetof(InfoObject, info.last_changed_date), READONLY, 
+        "The date of the last_changed_revision." },
+    { "last_changed_author", T_STRING, offsetof(InfoObject, info.last_changed_author), READONLY, 
+        "The author of the last_changed_revision." },
+    { "wc_info", T_OBJECT, offsetof(InfoObject, wc_info), READONLY, 
+        "Possible information about the working copy, None if not valid." },
+    { NULL, }
+};
+
+PyTypeObject Info_Type = {
+    PyObject_HEAD_INIT(NULL) 0,
+    "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
+    sizeof(InfoObject), 
+    0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+
+    /* Methods to implement standard operations */
+
+    info_dealloc, /*    destructor tp_dealloc;  */
+    NULL, /*    printfunc tp_print; */
+    NULL, /*    getattrfunc tp_getattr; */
+    NULL, /*    setattrfunc tp_setattr; */
+    NULL, /*    cmpfunc tp_compare; */
+    NULL, /*    reprfunc tp_repr;   */
+
+    /* Method suites for standard classes */
+
+    NULL, /*    PyNumberMethods *tp_as_number;  */
+    NULL, /*    PySequenceMethods *tp_as_sequence;  */
+    NULL, /*    PyMappingMethods *tp_as_mapping;    */
+
+    /* More standard operations (here for binary compatibility) */
+
+    NULL, /*    hashfunc tp_hash;   */
+    NULL, /*    ternaryfunc tp_call;    */
+    NULL, /*    reprfunc tp_str;    */
+    NULL, /*    getattrofunc tp_getattro;   */
+    NULL, /*    setattrofunc tp_setattro;   */
+
+    /* Functions to access object as input/output buffer */
+    NULL, /*    PyBufferProcs *tp_as_buffer;    */
+
+    /* Flags to define presence of optional/expanded features */
+    0, /*   long tp_flags;  */
+
+    NULL, /*    const char *tp_doc;  Documentation string */
+
+    /* Assigned meaning in release 2.0 */
+    /* call function for all accessible objects */
+    NULL, /*    traverseproc tp_traverse;   */
+
+    /* delete references to contained objects */
+    NULL, /*    inquiry tp_clear;   */
+
+    /* Assigned meaning in release 2.1 */
+    /* rich comparisons */
+    NULL, /*    richcmpfunc tp_richcompare; */
+
+    /* weak reference enabler */
+    0, /*   Py_ssize_t tp_weaklistoffset;   */
+
+    /* Added in release 2.2 */
+    /* Iterators */
+    NULL, /*    getiterfunc tp_iter;    */
+    NULL, /*    iternextfunc tp_iternext;   */
+
+    /* Attribute descriptor and subclassing stuff */
+    NULL, /*    struct PyMethodDef *tp_methods; */
+    info_members, /*    struct PyMemberDef *tp_members; */
+
+};
+
+static void wc_info_dealloc(PyObject *self)
+{
+    PyObject_Del(self);
+}
+
+static PyMemberDef wc_info_members[] = {
+    { "schedule", T_INT, offsetof(WCInfoObject, info.schedule), READONLY,
+        "" },
+    { "copyfrom_url", T_STRING, offsetof(WCInfoObject, info.copyfrom_url), READONLY,
+        "" },
+    { "copyfrom_rev", T_LONG, offsetof(WCInfoObject, info.copyfrom_rev), READONLY,
+        "" },
+    /* TODO add support for checksum */
+    /* TODO add support for conflicts */
+#if ONLY_SINCE_SVN(1, 7)
+    { "changelist", T_STRING, offsetof(WCInfoObject, info.changelist), READONLY,
+        "" },
+    { "recorded_size", T_PYSSIZET, offsetof(WCInfoObject, info.recorded_size), READONLY,
+        "" },
+    { "recorded_time", T_LONG, offsetof(WCInfoObject, info.recorded_time), READONLY,
+        "" },
+    { "wcroot_abspath", T_STRING, offsetof(WCInfoObject, info.recorded_time), READONLY,
+        "" },
+#else
+#if ONLY_SINCE_SVN(1, 5)
+    { "depth", T_INT, offsetof(WCInfoObject, info.depth), READONLY,
+        "" },
+#endif
+    { "recorded_size", T_PYSSIZET, offsetof(InfoObject, info.WORKING_SIZE), READONLY, 
+        "The size of the file in the repository.", },
+    { "text_time", T_LONG, offsetof(WCInfoObject, info.text_time), READONLY,
+        "" },
+    { "prop_time", T_LONG, offsetof(WCInfoObject, info.prop_time), READONLY,
+        "" },
+#endif
+    { NULL, }
+};
+
+PyTypeObject WCInfo_Type = {
+    PyObject_HEAD_INIT(NULL) 0,
+    "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
+    sizeof(WCInfoObject), 
+    0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+
+    /* Methods to implement standard operations */
+
+    wc_info_dealloc, /*    destructor tp_dealloc;  */
+    NULL, /*    printfunc tp_print; */
+    NULL, /*    getattrfunc tp_getattr; */
+    NULL, /*    setattrfunc tp_setattr; */
+    NULL, /*    cmpfunc tp_compare; */
+    NULL, /*    reprfunc tp_repr;   */
+
+    /* Method suites for standard classes */
+
+    NULL, /*    PyNumberMethods *tp_as_number;  */
+    NULL, /*    PySequenceMethods *tp_as_sequence;  */
+    NULL, /*    PyMappingMethods *tp_as_mapping;    */
+
+    /* More standard operations (here for binary compatibility) */
+
+    NULL, /*    hashfunc tp_hash;   */
+    NULL, /*    ternaryfunc tp_call;    */
+    NULL, /*    reprfunc tp_str;    */
+    NULL, /*    getattrofunc tp_getattro;   */
+    NULL, /*    setattrofunc tp_setattro;   */
+
+    /* Functions to access object as input/output buffer */
+    NULL, /*    PyBufferProcs *tp_as_buffer;    */
+
+    /* Flags to define presence of optional/expanded features */
+    0, /*   long tp_flags;  */
+
+    NULL, /*    const char *tp_doc;  Documentation string */
+
+    /* Assigned meaning in release 2.0 */
+    /* call function for all accessible objects */
+    NULL, /*    traverseproc tp_traverse;   */
+
+    /* delete references to contained objects */
+    NULL, /*    inquiry tp_clear;   */
+
+    /* Assigned meaning in release 2.1 */
+    /* rich comparisons */
+    NULL, /*    richcmpfunc tp_richcompare; */
+
+    /* weak reference enabler */
+    0, /*   Py_ssize_t tp_weaklistoffset;   */
+
+    /* Added in release 2.2 */
+    /* Iterators */
+    NULL, /*    getiterfunc tp_iter;    */
+    NULL, /*    iternextfunc tp_iternext;   */
+
+    /* Attribute descriptor and subclassing stuff */
+    NULL, /*    struct PyMethodDef *tp_methods; */
+    wc_info_members, /*    struct PyMemberDef *tp_members; */
+
+};
 
 PyTypeObject Client_Type = {
     PyObject_HEAD_INIT(NULL) 0,
@@ -1685,6 +2021,12 @@ void initclient(void)
         return;
 
     if (PyType_Ready(&ConfigItem_Type) < 0)
+        return;
+
+    if (PyType_Ready(&Info_Type) < 0)
+        return;
+
+    if (PyType_Ready(&WCInfo_Type) < 0)
         return;
 
     /* Make sure APR is initialized */

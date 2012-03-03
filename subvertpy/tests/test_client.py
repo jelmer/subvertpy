@@ -22,6 +22,7 @@ import shutil
 import tempfile
 
 from subvertpy import (
+    INFO_SIZE_UNKNOWN,
     NODE_DIR, NODE_FILE,
     client,
     ra,
@@ -224,3 +225,20 @@ class TestClient(SubversionTestCase):
         self.assertEquals(1, log_entries[1]["revision"])
         self.assertLogEntryMessageEquals(commit_msg_1, log_entries[1])
         self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[1], delta)
+
+    def test_info(self):
+        self.build_tree({"dc/foo": "bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        info = self.client.info("dc/foo")
+        self.assertEquals(["dc/foo"], info.keys())
+        self.assertEquals(1, info["dc/foo"].revision)
+        self.assertEquals(INFO_SIZE_UNKNOWN, info["dc/foo"].size)
+        self.assertEquals(wc.SCHEDULE_NORMAL, info["dc/foo"].wc_info.schedule)
+        self.build_tree({"dc/bar": "blablabla"})
+        self.client.add("dc/bar")
+        info = self.client.info("dc/bar")
+        self.assertEquals(["dc/bar"], info.keys())
+        self.assertEquals(0, info["dc/bar"].revision)
+        self.assertEquals(wc.SCHEDULE_ADD, info["dc/bar"].wc_info.schedule)
