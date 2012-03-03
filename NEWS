@@ -1,5 +1,17 @@
 0.8.11	UNRELEASED
 
+ IMPROVEMENTS
+
+  * Some fixes to help with porting to Python 3. (Yonggang Luo)
+
+ TESTS
+
+  * Remove readonly files properly in tests.  (Yonggang Luo, #943131)
+
+ DOCUMENTATION
+
+  * Update documentation for building on Windows. (Yonggang Luo)
+
 0.8.10	2012-01-23
 
  BUG FIXES

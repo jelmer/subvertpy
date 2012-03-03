@@ -7,4 +7,3 @@ typedef char bool;
 #define false 0
 
 #endif
-

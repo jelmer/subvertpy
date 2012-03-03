@@ -52,7 +52,8 @@ def config_value(command, arg):
     for cmd in cmds:
         try:
             return run_cmd(cmd, arg)
-        except CommandException, e:
+        except CommandException:
+            _, e, _ = sys.exc_info()
             if not e.not_found():
                 raise
     else:
@@ -135,7 +136,7 @@ class VersionQuery(object):
 
     def __init__(self, filename):
         self.filename = filename
-        f = file(filename, "rU")
+        f = open(filename, "rU")
         try:
             self.text = f.read()
         finally:
@@ -188,7 +189,7 @@ if os.name == "nt":
             raise Exception(
                 "Please set SVN_DEV to the location of the svn development "
                 "packages.\nThese can be downloaded from:\n"
-                "http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91")
+                "http://sourceforge.net/projects/win32svn/files/")
         svn_bdb_dir = os.environ.get("SVN_BDB")
         if not svn_bdb_dir or not os.path.isdir(svn_bdb_dir):
             raise Exception(
@@ -232,9 +233,13 @@ if os.name == "nt":
                   libsvn_repos-1 libsvn_wc-1 libsvn_delta-1 libsvn_diff-1
                   libsvn_fs-1 libsvn_repos-1 libsvn_fs_fs-1 libsvn_fs_base-1
                   intl3_svn
-                  libdb44 xml
+                  xml
                   advapi32 shell32 ws2_32 zlibstat
                """.split()
+        if svn_version >= (1,7,0):
+            libs += ["libdb48"]
+        else:
+            libs += ["libdb44"]
         if svn_version >= (1,5,0):
             # Since 1.5.0 libsvn_ra_dav-1 was removed
             libs.remove("libsvn_ra_dav-1")
@@ -284,7 +289,11 @@ class install_lib_with_dlls(install_lib):
             apr_bins += """libsvn_client-1.dll libsvn_delta-1.dll libsvn_diff-1.dll
                            libsvn_fs-1.dll libsvn_ra-1.dll libsvn_repos-1.dll
                            libsvn_subr-1.dll libsvn_wc-1.dll libsasl.dll""".split()
-        apr_bins += """intl3_svn.dll libdb44.dll libeay32.dll ssleay32.dll""".split()
+        if get_svn_version() >= (1,7,0):
+            apr_bins += ["libdb48.dll"]
+        else:
+            apr_bins += ["libdb44.dll"]
+        apr_bins += """intl3_svn.dll libeay32.dll ssleay32.dll""".split()
         look_dirs = os.environ.get("PATH","").split(os.pathsep)
         look_dirs.insert(0, os.path.join(os.environ["SVN_DEV"], "bin"))
     
@@ -303,17 +312,18 @@ class install_lib_with_dlls(install_lib):
     def run(self):
         install_lib.run(self)
         # the apr binaries.
-        if os.name == 'nt':
-            # On Windows we package up the apr dlls with the plugin.
-            for s, d in self._get_dlls():
-                self.copy_file(s, d)
+        # On Windows we package up the apr dlls with the plugin.
+        for s, d in self._get_dlls():
+            self.copy_file(s, d)
 
     def get_outputs(self):
         ret = install_lib.get_outputs(self)
-        if os.name == 'nt':
-            ret.extend([info[1] for info in self._get_dlls()])
+        ret.extend([info[1] for info in self._get_dlls()])
         return ret
 
+cmdclass = {}
+if os.name == 'nt':
+    cmdclass['install_lib'] = install_lib_with_dlls
 
 def source_path(filename):
     return os.path.join("subvertpy", filename)
@@ -355,5 +365,5 @@ if __name__ == "__main__":
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
           scripts=['bin/subvertpy-fast-export'],
-          cmdclass = { 'install_lib': install_lib_with_dlls },
+          cmdclass=cmdclass,
           )
