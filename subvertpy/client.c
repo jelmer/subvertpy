@@ -1394,16 +1394,16 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
     if (temp_pool == NULL)
         return NULL;
 
-#if ONLY_BEFORE_SVN(1, 4)
+#if ONLY_BEFORE_SVN(1, 5)
     if (include_merged_revisions) {
         PyErr_SetString(PyExc_NotImplementedError, 
-                        "include_merged_revisions not supported in svn <= 1.4");
+                        "include_merged_revisions not supported in svn < 1.5");
         apr_pool_destroy(temp_pool);
         return NULL;
     }
     if (revprops) {
         PyErr_SetString(PyExc_NotImplementedError, 
-                        "revprops not supported in svn <= 1.4");
+                        "revprops not supported in svn < 1.5");
         apr_pool_destroy(temp_pool);
         return NULL;
     }
