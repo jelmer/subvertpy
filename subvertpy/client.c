@@ -1772,11 +1772,6 @@ PyTypeObject Info_Type = {
 
 };
 
-static void wc_info_dealloc(PyObject *self)
-{
-    PyObject_Del(self);
-}
-
 static PyMemberDef wc_info_members[] = {
     { "schedule", T_INT, offsetof(WCInfoObject, info.schedule), READONLY,
         "" },
@@ -1818,7 +1813,7 @@ PyTypeObject WCInfo_Type = {
 
     /* Methods to implement standard operations */
 
-    wc_info_dealloc, /*    destructor tp_dealloc;  */
+    NULL, /*    destructor tp_dealloc;  */
     NULL, /*    printfunc tp_print; */
     NULL, /*    getattrfunc tp_getattr; */
     NULL, /*    setattrfunc tp_setattr; */
