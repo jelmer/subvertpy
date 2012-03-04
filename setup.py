@@ -108,7 +108,7 @@ def svn_build_data():
                 svn_prefix = basedir
                 break
     if svn_prefix is not None:
-        return ([os.path.join(svn_prefix, "include/subversion-1")], 
+        return ([os.path.join(svn_prefix, "include/subversion-1")],
                 [os.path.join(svn_prefix, "lib")], [], [])
     raise Exception("Subversion development files not found. "
                     "Please set SVN_PREFIX or (SVN_LIBRARY_PATH and SVN_HEADER_PATH) environment variable. ")
@@ -210,7 +210,7 @@ if os.name == "nt":
             os.path.join(svn_dev_dir, r"include\apr-util"),
             os.path.join(svn_dev_dir, r"include\apr-iconv"),
             # svn dirs.
-            os.path.join(svn_dev_dir, "include"), 
+            os.path.join(svn_dev_dir, "include"),
         ]
         lib_dirs = [
             os.path.join(svn_dev_dir, "lib"),
@@ -296,7 +296,7 @@ class install_lib_with_dlls(install_lib):
         apr_bins += """intl3_svn.dll libeay32.dll ssleay32.dll""".split()
         look_dirs = os.environ.get("PATH","").split(os.pathsep)
         look_dirs.insert(0, os.path.join(os.environ["SVN_DEV"], "bin"))
-    
+
         for bin in apr_bins:
             for look in look_dirs:
                 f = os.path.join(look, bin)
@@ -360,7 +360,7 @@ if __name__ == "__main__":
           author='Jelmer Vernooij',
           author_email='jelmer@samba.org',
           long_description="""
-          Alternative Python bindings for Subversion. The goal is to have complete, portable and "Pythonic" Python bindings. 
+          Alternative Python bindings for Subversion. The goal is to have complete, portable and "Pythonic" Python bindings.
           """,
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
