@@ -30,6 +30,10 @@ class TestProperties(TestCase):
 
     def test_time_from_cstring_independent_from_dst(self):
         old_tz = os.environ.get('TZ', None)
+        # On Windows, there is no tzset function, so skip this test.
+        if not hasattr(time, 'tzset'):
+            return
+
         try:
             # First specify a fixed timezone with known DST (late March to late October)
             os.environ['TZ'] = 'Europe/London'
