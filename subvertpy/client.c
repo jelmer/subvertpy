@@ -91,8 +91,8 @@ static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
         } else if (!strcmp(text, "BASE")) {
             ret->kind = svn_opt_revision_base;
             return true;
-        } 
-    } 
+        }
+    }
 
     PyErr_SetString(PyExc_ValueError, "Unable to parse revision");
     return false;
@@ -110,12 +110,12 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
     assert(commit_items->elt_size == sizeof(svn_client_commit_item2_t *));
 
     for (i = 0; i < commit_items->nelts; i++) {
-        svn_client_commit_item2_t *commit_item = 
+        svn_client_commit_item2_t *commit_item =
             APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
         PyObject *item, *copyfrom;
 
         if (commit_item->copyfrom_url != NULL) {
-            copyfrom = Py_BuildValue("(sl)", commit_item->copyfrom_url, 
+            copyfrom = Py_BuildValue("(sl)", commit_item->copyfrom_url,
                                      commit_item->copyfrom_rev);
             if (copyfrom == NULL) {
                 Py_DECREF(ret);
@@ -126,9 +126,9 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
             Py_INCREF(copyfrom);
         }
 
-        item = Py_BuildValue("(szlNi)", 
+        item = Py_BuildValue("(szlNi)",
                              /* commit_item->path */ "foo",
-                             commit_item->url, commit_item->revision, 
+                             commit_item->url, commit_item->revision,
                              copyfrom,
                              commit_item->state_flags);
         if (item == NULL) {
@@ -470,39 +470,39 @@ static int client_set_config(PyObject *self, PyObject *config, void *closure)
 
 static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    char *path; 
+    char *path;
     ClientObject *client = (ClientObject *)self;
     bool recursive=true, force=false, no_ignore=false;
     bool add_parents = false;
     apr_pool_t *temp_pool;
-    char *kwnames[] = { "path", "recursive", "force", "no_ignore", 
+    char *kwnames[] = { "path", "recursive", "force", "no_ignore",
                         "add_parents", NULL };
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|bbbb", kwnames, 
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|bbbb", kwnames,
                           &path, &recursive, &force, &no_ignore, &add_parents))
         return NULL;
 
 #if ONLY_BEFORE_SVN(1, 4)
     if (add_parents == false) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
             "Subversion < 1.4 does not support add_parents=false");
         return NULL;
     }
 #endif
-    
+
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
 
 #if ONLY_SINCE_SVN(1, 5)
-    RUN_SVN_WITH_POOL(temp_pool, 
-        svn_client_add4(path, recursive?svn_depth_infinity:svn_depth_empty, 
-                        force, no_ignore, add_parents, 
+    RUN_SVN_WITH_POOL(temp_pool,
+        svn_client_add4(path, recursive?svn_depth_infinity:svn_depth_empty,
+                        force, no_ignore, add_parents,
                         client->client, temp_pool)
         );
 #else
-    RUN_SVN_WITH_POOL(temp_pool, 
-        svn_client_add3(path, recursive, force, no_ignore, client->client, 
+    RUN_SVN_WITH_POOL(temp_pool,
+        svn_client_add3(path, recursive, force, no_ignore, client->client,
                         temp_pool)
         );
 #endif
@@ -516,7 +516,7 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     char *kwnames[] = { "url", "path", "rev", "peg_rev", "recurse", "ignore_externals", "allow_unver_obstructions", NULL };
     svn_revnum_t result_rev;
     svn_opt_revision_t c_peg_rev, c_rev;
-    char *url, *path; 
+    char *url, *path;
     apr_pool_t *temp_pool;
     PyObject *peg_rev=Py_None, *rev=Py_None;
     bool recurse=true, ignore_externals=false, allow_unver_obstructions=false;
@@ -533,13 +533,13 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     if (temp_pool == NULL)
         return NULL;
 #if ONLY_SINCE_SVN(1, 5)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, url, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, url,
         svn_path_canonicalize(path, temp_pool),
-        &c_peg_rev, &c_rev, recurse?svn_depth_infinity:svn_depth_files, 
+        &c_peg_rev, &c_rev, recurse?svn_depth_infinity:svn_depth_files,
         ignore_externals, allow_unver_obstructions, client->client, temp_pool));
 #else
     if (allow_unver_obstructions) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
             "allow_unver_obstructions not supported when built against svn<1.5");
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -547,7 +547,7 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
 
     RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout2(&result_rev, url,
         svn_path_canonicalize(path, temp_pool),
-        &c_peg_rev, &c_rev, recurse, 
+        &c_peg_rev, &c_rev, recurse,
         ignore_externals, client->client, temp_pool));
 #endif
     apr_pool_destroy(temp_pool);
@@ -556,7 +556,7 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
 
 static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    PyObject *targets; 
+    PyObject *targets;
     ClientObject *client = (ClientObject *)self;
     bool recurse=true, keep_locks=true;
     apr_pool_t *temp_pool;
@@ -597,18 +597,18 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
     /* FIXME: Support keep_changelist and changelists */
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_commit4(&commit_info, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_commit4(&commit_info,
                 apr_targets, recurse?svn_depth_infinity:svn_depth_files,
                keep_locks, false, NULL, hash_revprops,
                client->client, temp_pool));
 #else
     if (revprops != Py_None && PyDict_Size(revprops) > 0) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                 "Setting revision properties only supported on svn > 1.5");
         apr_pool_destroy(temp_pool);
         return NULL;
     }
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_commit3(&commit_info, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_commit3(&commit_info,
                 apr_targets,
                recurse, keep_locks, client->client, temp_pool));
 #endif
@@ -642,15 +642,15 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
     if (temp_pool == NULL)
         return NULL;
 #if ONLY_SINCE_SVN(1, 5)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_export4(&result_rev, from, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_export4(&result_rev, from,
         svn_path_canonicalize(to, temp_pool),
         &c_peg_rev, &c_rev, overwrite, ignore_externals,
-		recurse?svn_depth_infinity:svn_depth_files, 
+		recurse?svn_depth_infinity:svn_depth_files,
         native_eol, client->client, temp_pool));
 #else
     RUN_SVN_WITH_POOL(temp_pool, svn_client_export3(&result_rev, from,
         svn_path_canonicalize(to, temp_pool),
-        &c_peg_rev, &c_rev, overwrite, ignore_externals, recurse, 
+        &c_peg_rev, &c_rev, overwrite, ignore_externals, recurse,
         native_eol, client->client, temp_pool));
 #endif
     apr_pool_destroy(temp_pool);
@@ -691,7 +691,7 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
 
 static PyObject *client_delete(PyObject *self, PyObject *args)
 {
-    PyObject *paths; 
+    PyObject *paths;
     bool force=false, keep_local=false;
     apr_pool_t *temp_pool;
     svn_commit_info_t *commit_info = NULL;
@@ -711,17 +711,17 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
     }
 
 #if ONLY_SINCE_SVN(1, 5)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_delete3(&commit_info, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_delete3(&commit_info,
                                                     apr_paths,
                 force, keep_local, NULL, client->client, temp_pool));
 #else
     if (keep_local) {
-        PyErr_SetString(PyExc_ValueError, 
+        PyErr_SetString(PyExc_ValueError,
                         "keep_local not supported against svn 1.4");
         apr_pool_destroy(temp_pool);
         return NULL;
     }
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_delete2(&commit_info, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_delete2(&commit_info,
                                                     apr_paths,
                 force, client->client, temp_pool));
 #endif
@@ -789,7 +789,7 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_mkdir2(&commit_info, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_mkdir2(&commit_info,
                                                     apr_paths,
                 client->client, temp_pool));
 #endif
@@ -848,19 +848,19 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #if ONLY_BEFORE_SVN(1, 4)
     if (copy_as_child) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "copy_as_child not supported in svn < 1.4");
         apr_pool_destroy(temp_pool);
         return NULL;
     }
     if (make_parents) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "make_parents not supported in svn < 1.4");
         apr_pool_destroy(temp_pool);
         return NULL;
     }
     if (revprops) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "revprops not supported in svn < 1.4");
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -868,7 +868,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 #endif
 #if ONLY_BEFORE_SVN(1, 5)
     if (ignore_externals) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "ignore_externals not supported in svn < 1.5");
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -886,15 +886,15 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     APR_ARRAY_IDX(src_paths, 0, svn_client_copy_source_t *) = &src;
 #endif
 #if ONLY_SINCE_SVN(1, 6)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_copy5(&commit_info, src_paths, 
-                dst_path, copy_as_child, make_parents, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_copy5(&commit_info, src_paths,
+                dst_path, copy_as_child, make_parents,
                 ignore_externals, revprops, client->client, temp_pool));
 #elif ONLY_SINCE_SVN(1, 5)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_copy4(&commit_info, src_paths, 
-                dst_path, copy_as_child, make_parents, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_copy4(&commit_info, src_paths,
+                dst_path, copy_as_child, make_parents,
                 revprops, client->client, temp_pool));
 #else
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_copy2(&commit_info, src_path, 
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_copy2(&commit_info, src_path,
                 &c_src_rev, dst_path, client->client, temp_pool));
 #endif
     ret = py_commit_info_tuple(commit_info);
@@ -945,12 +945,12 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
     /* FIXME: Support depth */
     RUN_SVN_WITH_POOL(temp_pool, svn_client_propset3(&commit_info, propname,
                 &c_propval, target, recurse?svn_depth_infinity:svn_depth_files,
-                skip_checks, base_revision_for_url, 
+                skip_checks, base_revision_for_url,
                 NULL, revprops, client->client, temp_pool));
     ret = py_commit_info_tuple(commit_info);
 #else
     if (revprops) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "revprops not supported with svn < 1.5");
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -978,7 +978,7 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
     ClientObject *client = (ClientObject *)self;
     PyObject *ret;
 
-    if (!PyArg_ParseTuple(args, "ssO|Ob", &propname, &target, &peg_revision, 
+    if (!PyArg_ParseTuple(args, "ssO|Ob", &propname, &target, &peg_revision,
                           &revision, &recurse))
         return NULL;
     if (!to_opt_revision(peg_revision, &c_peg_rev))
@@ -992,12 +992,12 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
     /* FIXME: Support changelists */
     /* FIXME: Support actual_revnum */
     /* FIXME: Support depth properly */
-    RUN_SVN_WITH_POOL(temp_pool, 
+    RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_propget3(&hash_props, propname, target,
                 &c_peg_rev, &c_rev, NULL, recurse?svn_depth_infinity:svn_depth_files,
                 NULL, client->client, temp_pool));
 #else
-    RUN_SVN_WITH_POOL(temp_pool, 
+    RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_propget2(&hash_props, propname, target,
                 &c_peg_rev, &c_rev, recurse, client->client, temp_pool));
 #endif
@@ -1051,7 +1051,7 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
 
 
     if (depth != svn_depth_infinity && depth != svn_depth_empty) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "depth can only be infinity or empty when built against svn < 1.5");
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1060,7 +1060,7 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
 
 	RUN_SVN_WITH_POOL(temp_pool,
 					  svn_client_proplist2(&props, target, &c_peg_rev, &c_rev,
-										   (depth == svn_depth_infinity), 
+										   (depth == svn_depth_infinity),
 										   client->client, temp_pool));
 
 	for (i = 0; i < props->nelts; i++) {
@@ -1109,7 +1109,7 @@ static PyObject *client_resolve(PyObject *self, PyObject *args)
     ClientObject *client = (ClientObject *)self;
     apr_pool_t *temp_pool;
     char *path;
-    
+
     if (!PyArg_ParseTuple(args, "sii", &path, &depth, &choice))
         return NULL;
 
@@ -1123,7 +1123,7 @@ static PyObject *client_resolve(PyObject *self, PyObject *args)
 
     Py_RETURN_NONE;
 #else
-    PyErr_SetString(PyExc_NotImplementedError, 
+    PyErr_SetString(PyExc_NotImplementedError,
         "svn_client_resolve not available with Subversion < 1.5");
     return NULL;
 #endif
@@ -1144,7 +1144,7 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
     svn_boolean_t allow_unver_obstructions = FALSE,
                   depth_is_sticky = FALSE;
 	char *kwnames[] =
-		{ "path", "revision", "recurse", "ignore_externals", "depth_is_sticky", 
+		{ "path", "revision", "recurse", "ignore_externals", "depth_is_sticky",
 			"allow_unver_obstructions", NULL };
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|Obbbb", kwnames,
@@ -1162,13 +1162,13 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 #if ONLY_SINCE_SVN(1, 5)
-	RUN_SVN_WITH_POOL(temp_pool, svn_client_update3(&result_revs, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_update3(&result_revs,
 		apr_paths, &c_rev, recurse?svn_depth_infinity:svn_depth_files,
 		depth_is_sticky, ignore_externals, allow_unver_obstructions,
 		client->client, temp_pool));
 #else
-	RUN_SVN_WITH_POOL(temp_pool, svn_client_update2(&result_revs, 
-													apr_paths, &c_rev, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_update2(&result_revs,
+													apr_paths, &c_rev,
 													recurse, ignore_externals, client->client, temp_pool));
 #endif
 	ret = PyList_New(result_revs->nelts);
@@ -1227,7 +1227,7 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
                                        client->client, temp_pool));
 #else
     if (depth != svn_depth_infinity && depth != svn_depth_empty) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "depth can only be infinity or empty when built against svn < 1.5");
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1337,14 +1337,14 @@ static PyObject *client_diff(PyObject *self, PyObject *args, PyObject *kwargs)
                                        ignore_content_type, encoding,
                                        c_outfile, c_errfile, NULL,
                                        client->client, temp_pool));
-    
+
     offset = 0;
     apr_file_seek(c_outfile, APR_SET, &offset);
     offset = 0;
     apr_file_seek(c_errfile, APR_SET, &offset);
 
     apr_pool_destroy(temp_pool);
-    
+
     return Py_BuildValue("(NN)", outfile, errfile);
 #else
     PyErr_SetString(PyExc_NotImplementedError,
@@ -1396,13 +1396,13 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #if ONLY_BEFORE_SVN(1, 4)
     if (include_merged_revisions) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "include_merged_revisions not supported in svn < 1.4");
         apr_pool_destroy(temp_pool);
         return NULL;
     }
     if (revprops) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "revprops not supported in svn < 1.4");
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1487,7 +1487,7 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #if ONLY_BEFORE_SVN(1, 5)
     if (depth != svn_depth_infinity && depth != svn_depth_empty) {
-        PyErr_SetString(PyExc_NotImplementedError, 
+        PyErr_SetString(PyExc_NotImplementedError,
                         "depth can only be infinity or empty when built against svn < 1.5");
         return NULL;
     }
@@ -1531,9 +1531,9 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyMethodDef client_methods[] = {
-    { "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS, 
+    { "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS,
         "S.add(path, recursive=True, force=False, no_ignore=False)" },
-    { "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS, 
+    { "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS,
         "S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False, allow_unver_obstructions=False)" },
 	{ "export", (PyCFunction)client_export, METH_VARARGS|METH_KEYWORDS,
 		"S.export(from, to, rev=None, peg_rev=None, recurse=True, ignore_externals=False, overwrite=False, native_eol=None)" },
@@ -1616,57 +1616,57 @@ PyTypeObject Config_Type = {
     "client.Config", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ConfigObject),  /*  tp_basicsize    */
     0,  /*    tp_itemsize;  For allocation */
-    
+
     /* Methods to implement standard operations */
-    
+
     (destructor)config_dealloc, /*    destructor tp_dealloc;    */
     NULL, /*    printfunc tp_print;    */
     NULL, /*    getattrfunc tp_getattr;    */
     NULL, /*    setattrfunc tp_setattr;    */
     NULL, /*    cmpfunc tp_compare;    */
     NULL, /*    reprfunc tp_repr;    */
-    
+
     /* Method suites for standard classes */
-    
+
     NULL, /*    PyNumberMethods *tp_as_number;    */
     NULL, /*    PySequenceMethods *tp_as_sequence;    */
     NULL, /*    PyMappingMethods *tp_as_mapping;    */
-    
+
     /* More standard operations (here for binary compatibility) */
-    
+
     NULL, /*    hashfunc tp_hash;    */
     NULL, /*    ternaryfunc tp_call;    */
     NULL, /*    reprfunc tp_str;    */
     NULL, /*    getattrofunc tp_getattro;    */
     NULL, /*    setattrofunc tp_setattro;    */
-    
+
     /* Functions to access object as input/output buffer */
     NULL, /*    PyBufferProcs *tp_as_buffer;    */
-    
+
     /* Flags to define presence of optional/expanded features */
     0, /*    long tp_flags;    */
-    
+
     NULL, /*    const char *tp_doc;  Documentation string */
-    
+
     /* Assigned meaning in release 2.0 */
     /* call function for all accessible objects */
     NULL, /*    traverseproc tp_traverse;    */
-    
+
     /* delete references to contained objects */
     NULL, /*    inquiry tp_clear;    */
-    
+
     /* Assigned meaning in release 2.1 */
     /* rich comparisons */
     NULL, /*    richcmpfunc tp_richcompare;    */
-    
+
     /* weak reference enabler */
     0, /*    Py_ssize_t tp_weaklistoffset;    */
-    
+
     /* Added in release 2.2 */
     /* Iterators */
     NULL, /*    getiterfunc tp_iter;    */
     NULL, /*    iternextfunc tp_iternext;    */
-    
+
     /* Attribute descriptor and subclassing stuff */
     config_methods, /*    struct PyMethodDef *tp_methods;    */
 };
@@ -1682,11 +1682,11 @@ static void configitem_dealloc(PyObject *self)
 PyTypeObject ConfigItem_Type = {
     PyObject_HEAD_INIT(NULL) 0,
     "client.ConfigItem", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
-    sizeof(ConfigItemObject), 
+    sizeof(ConfigItemObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-    
+
     /* Methods to implement standard operations */
-    
+
     (destructor)configitem_dealloc, /*    destructor tp_dealloc;    */
 };
 
@@ -1699,23 +1699,23 @@ static void info_dealloc(PyObject *self)
 }
 
 static PyMemberDef info_members[] = {
-    { "url", T_STRING, offsetof(InfoObject, info.URL), READONLY, 
+    { "url", T_STRING, offsetof(InfoObject, info.URL), READONLY,
         "Where the item lives in the repository." },
-    { "revision", T_LONG, offsetof(InfoObject, info.rev), READONLY, 
+    { "revision", T_LONG, offsetof(InfoObject, info.rev), READONLY,
         "The revision of the object.", },
-    { "kind", T_INT, offsetof(InfoObject, info.kind), READONLY, 
+    { "kind", T_INT, offsetof(InfoObject, info.kind), READONLY,
         "The node's kind.", },
-    { "repos_root_url", T_STRING, offsetof(InfoObject, info.repos_root_URL), READONLY, 
+    { "repos_root_url", T_STRING, offsetof(InfoObject, info.repos_root_URL), READONLY,
         "The root URL of the repository." },
-    { "repos_uuid", T_STRING, offsetof(InfoObject, info.repos_UUID), READONLY, 
+    { "repos_uuid", T_STRING, offsetof(InfoObject, info.repos_UUID), READONLY,
         "The repository's UUID." },
-    { "last_changed_revision", T_LONG, offsetof(InfoObject, info.last_changed_rev), READONLY, 
+    { "last_changed_revision", T_LONG, offsetof(InfoObject, info.last_changed_rev), READONLY,
         "The last revision in which this object changed.", },
-    { "last_changed_date", T_LONG, offsetof(InfoObject, info.last_changed_date), READONLY, 
+    { "last_changed_date", T_LONG, offsetof(InfoObject, info.last_changed_date), READONLY,
         "The date of the last_changed_revision." },
-    { "last_changed_author", T_STRING, offsetof(InfoObject, info.last_changed_author), READONLY, 
+    { "last_changed_author", T_STRING, offsetof(InfoObject, info.last_changed_author), READONLY,
         "The author of the last_changed_revision." },
-    { "wc_info", T_OBJECT, offsetof(InfoObject, wc_info), READONLY, 
+    { "wc_info", T_OBJECT, offsetof(InfoObject, wc_info), READONLY,
         "Possible information about the working copy, None if not valid." },
     { NULL, }
 };
@@ -1736,7 +1736,7 @@ static PyGetSetDef info_getsetters[] = {
 PyTypeObject Info_Type = {
     PyObject_HEAD_INIT(NULL) 0,
     "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
-    sizeof(InfoObject), 
+    sizeof(InfoObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 
     /* Methods to implement standard operations */
@@ -1818,7 +1818,7 @@ static PyMemberDef wc_info_members[] = {
     { "depth", T_INT, offsetof(WCInfoObject, info.depth), READONLY,
         "" },
 #endif
-    { "recorded_size", T_PYSSIZET, offsetof(InfoObject, info.WORKING_SIZE), READONLY, 
+    { "recorded_size", T_PYSSIZET, offsetof(InfoObject, info.WORKING_SIZE), READONLY,
         "The size of the file in the repository.", },
     { "text_time", T_LONG, offsetof(WCInfoObject, info.text_time), READONLY,
         "" },
@@ -1831,7 +1831,7 @@ static PyMemberDef wc_info_members[] = {
 PyTypeObject WCInfo_Type = {
     PyObject_HEAD_INIT(NULL) 0,
     "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
-    sizeof(WCInfoObject), 
+    sizeof(WCInfoObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 
     /* Methods to implement standard operations */
@@ -1896,57 +1896,57 @@ PyTypeObject Client_Type = {
     "client.Client", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ClientObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-    
+
     /* Methods to implement standard operations */
-    
+
     client_dealloc, /*    destructor tp_dealloc;    */
     NULL, /*    printfunc tp_print;    */
     NULL, /*    getattrfunc tp_getattr;    */
     NULL, /*    setattrfunc tp_setattr;    */
     NULL, /*    cmpfunc tp_compare;    */
     NULL, /*    reprfunc tp_repr;    */
-    
+
     /* Method suites for standard classes */
-    
+
     NULL, /*    PyNumberMethods *tp_as_number;    */
     NULL, /*    PySequenceMethods *tp_as_sequence;    */
     NULL, /*    PyMappingMethods *tp_as_mapping;    */
-    
+
     /* More standard operations (here for binary compatibility) */
-    
+
     NULL, /*    hashfunc tp_hash;    */
     NULL, /*    ternaryfunc tp_call;    */
     NULL, /*    reprfunc tp_str;    */
     NULL, /*    getattrofunc tp_getattro;    */
     NULL, /*    setattrofunc tp_setattro;    */
-    
+
     /* Functions to access object as input/output buffer */
     NULL, /*    PyBufferProcs *tp_as_buffer;    */
-    
+
     /* Flags to define presence of optional/expanded features */
     0, /*    long tp_flags;    */
-    
+
     "Subversion client", /*    const char *tp_doc;  Documentation string */
-    
+
     /* Assigned meaning in release 2.0 */
     /* call function for all accessible objects */
     NULL, /*    traverseproc tp_traverse;    */
-    
+
     /* delete references to contained objects */
     NULL, /*    inquiry tp_clear;    */
-    
+
     /* Assigned meaning in release 2.1 */
     /* rich comparisons */
     NULL, /*    richcmpfunc tp_richcompare;    */
-    
+
     /* weak reference enabler */
     0, /*    Py_ssize_t tp_weaklistoffset;    */
-    
+
     /* Added in release 2.2 */
     /* Iterators */
     NULL, /*    getiterfunc tp_iter;    */
     NULL, /*    iternextfunc tp_iternext;    */
-    
+
     /* Attribute descriptor and subclassing stuff */
     client_methods, /*    struct PyMethodDef *tp_methods;    */
     NULL, /*    struct PyMemberDef *tp_members;    */
@@ -1980,7 +1980,7 @@ static PyObject *get_config(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    RUN_SVN_WITH_POOL(data->pool, 
+    RUN_SVN_WITH_POOL(data->pool,
                       svn_config_get_config(&data->config, config_dir, data->pool));
 
     return (PyObject *)data;
@@ -1994,7 +1994,7 @@ static PyObject *get_config(PyObject *self, PyObject *args)
 static PyObject *version(PyObject *self)
 {
 	const svn_version_t *ver = svn_client_version();
-	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+	return Py_BuildValue("(iiis)", ver->major, ver->minor,
 						 ver->patch, ver->tag);
 }
 
@@ -2008,7 +2008,7 @@ SVN_VERSION_DEFINE(svn_api_version);
 static PyObject *api_version(PyObject *self)
 {
 	const svn_version_t *ver = &svn_api_version;
-	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+	return Py_BuildValue("(iiis)", ver->major, ver->minor,
 						 ver->patch, ver->tag);
 }
 
