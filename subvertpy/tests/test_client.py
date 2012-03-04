@@ -225,6 +225,13 @@ class TestClient(SubversionTestCase):
         self.assertEquals(1, log_entries[1]["revision"])
         self.assertLogEntryMessageEquals(commit_msg_1, log_entries[1])
         self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[1], delta)
+        log_entries = []
+        self.client.log(cb, "dc/foo", start_rev=2, end_rev=2, discover_changed_paths=True)
+        self.assertEquals(1, len(log_entries))
+        self.assertLogEntryChangedPathsEquals(["/foo", "/bar"], log_entries[0])
+        self.assertEquals(2, log_entries[0]["revision"])
+        self.assertLogEntryMessageEquals(commit_msg_2, log_entries[0])
+        self.assertLogEntryDateAlmostEquals(commit_2_dt, log_entries[0], delta)
 
     def test_info(self):
         self.build_tree({"dc/foo": "bla"})

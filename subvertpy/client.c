@@ -1372,6 +1372,7 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
     apr_array_header_t *apr_paths, *apr_revprops = NULL;
     svn_opt_revision_t c_peg_rev, c_start_rev, c_end_rev;
 #if ONLY_SINCE_SVN(1, 6)
+    svn_opt_revision_range_t revision_range;
     apr_array_header_t *revision_ranges;
 #endif
 
@@ -1421,10 +1422,8 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
 #if ONLY_SINCE_SVN(1, 6)
-    svn_opt_revision_range_t revision_range = {
-        c_start_rev,
-        c_end_rev
-    };
+    revision_range.start = c_start_rev;
+    revision_range.end = c_end_rev;
 
     revision_ranges = apr_array_make(temp_pool, 1, sizeof(svn_opt_revision_range_t *));
     if (revision_ranges == NULL) {
