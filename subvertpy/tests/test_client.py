@@ -15,9 +15,14 @@
 
 """Subversion client library tests."""
 
+from datetime import datetime, timedelta
 import os
+from StringIO import StringIO
+import shutil
+import tempfile
 
 from subvertpy import (
+    SubversionException,
     NODE_DIR, NODE_FILE,
     client,
     ra,
@@ -101,6 +106,20 @@ class TestClient(SubversionTestCase):
 
     def test_get_config(self):
         self.assertIsInstance(client.get_config(), client.Config)
+        try:
+            base_dir = tempfile.mkdtemp()
+            base_dir_basename = os.path.basename(base_dir)
+            svn_cfg_dir = os.path.join(base_dir, '.subversion')
+            os.mkdir(svn_cfg_dir)
+            with open(os.path.join(svn_cfg_dir, 'config'), 'w') as svn_cfg:
+                svn_cfg.write('[miscellany]\n')
+                svn_cfg.write('global-ignores = %s' % base_dir_basename)
+            config = client.get_config(svn_cfg_dir)
+            self.assertIsInstance(config, client.Config)
+            ignores = config.get_default_ignores()
+            self.assertTrue(base_dir_basename in ignores)
+        finally:
+            shutil.rmtree(base_dir)
 
     def test_diff(self):
         r = ra.RemoteAccess(self.repos_url,
@@ -135,3 +154,98 @@ class TestClient(SubversionTestCase):
 """, outf.read())
         self.assertEquals("", errf.read())
 
+    def assertCatEquals(self, value, revision=None):
+        io = StringIO()
+        self.client.cat("dc/foo", io, revision)
+        self.assertEquals(value, io.getvalue())
+
+    def test_cat(self):
+        self.build_tree({"dc/foo": "bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.assertCatEquals("bla")
+        self.build_tree({"dc/foo": "blabla"})
+        self.client.commit(["dc"])
+        self.assertCatEquals("blabla")
+        self.assertCatEquals("bla", revision=1)
+        self.assertCatEquals("blabla", revision=2)
+
+    def assertLogEntryChangedPathsEquals(self, expected, entry):
+        changed_paths = entry["changed_paths"]
+        self.assertIsInstance(changed_paths, dict)
+        self.assertEquals(sorted(expected), sorted(changed_paths.keys()))
+
+    def assertLogEntryMessageEquals(self, expected, entry):
+        self.assertEquals(expected, entry["revprops"]["svn:log"])
+
+    def assertLogEntryDateAlmostEquals(self, expected, entry, delta):
+        actual = datetime.strptime(entry["revprops"]["svn:date"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        self.assertTrue((actual - expected) < delta)
+
+    def test_log(self):
+        log_entries = []
+        commit_msg_1 = "Commit"
+        commit_msg_2 = "Commit 2"
+        delta = timedelta(hours=1)
+        def cb(changed_paths, revision, revprops, has_children=False):
+            log_entries.append({
+                'changed_paths': changed_paths,
+                'revision': revision,
+                'revprops': revprops,
+                'has_children': has_children,
+            })
+        self.build_tree({"dc/foo": "bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: commit_msg_1
+        self.client.commit(["dc"])
+        commit_1_dt = datetime.utcnow()
+        self.client.log(cb, "dc/foo")
+        self.assertEquals(1, len(log_entries))
+        self.assertEquals(None, log_entries[0]["changed_paths"])
+        self.assertEquals(1, log_entries[0]["revision"])
+        self.assertLogEntryMessageEquals(commit_msg_1, log_entries[0])
+        self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[0], delta)
+        self.build_tree({
+            "dc/foo": "blabla",
+            "dc/bar": "blablabla",
+        })
+        self.client.add("dc/bar")
+        self.client.log_msg_func = lambda c: commit_msg_2
+        self.client.commit(["dc"])
+        commit_2_dt = datetime.utcnow()
+        log_entries = []
+        self.client.log(cb, "dc/foo", discover_changed_paths=True)
+        self.assertEquals(2, len(log_entries))
+        self.assertLogEntryChangedPathsEquals(["/foo", "/bar"], log_entries[0])
+        self.assertEquals(2, log_entries[0]["revision"])
+        self.assertLogEntryMessageEquals(commit_msg_2, log_entries[0])
+        self.assertLogEntryDateAlmostEquals(commit_2_dt, log_entries[0], delta)
+        self.assertLogEntryChangedPathsEquals(["/foo"], log_entries[1])
+        self.assertEquals(1, log_entries[1]["revision"])
+        self.assertLogEntryMessageEquals(commit_msg_1, log_entries[1])
+        self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[1], delta)
+
+    def test_info(self):
+        self.build_tree({"dc/foo": "bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        info = self.client.info("dc/foo")
+        self.assertEquals(["dc/foo"], info.keys())
+        self.assertEquals(1, info["dc/foo"].revision)
+        self.assertIs(None, info["dc/foo"].size)
+        self.assertEquals(wc.SCHEDULE_NORMAL, info["dc/foo"].wc_info.schedule)
+        self.build_tree({"dc/bar": "blablabla"})
+        self.client.add("dc/bar")
+        info = self.client.info("dc/bar")
+        self.assertEquals(["dc/bar"], info.keys())
+        self.assertEquals(0, info["dc/bar"].revision)
+        self.assertEquals(wc.SCHEDULE_ADD, info["dc/bar"].wc_info.schedule)
+
+    def test_info_nonexistant(self):
+        self.build_tree({"dc/foo": "bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.assertRaises(SubversionException, self.client.info, "dc/missing")

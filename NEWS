@@ -4,6 +4,9 @@
 
   * Some fixes to help with porting to Python 3. (Yonggang Luo)
 
+  * Add bindings for svn.client.Client.info(), svn.client.Client.log() and
+    svn.client.Client.cat(). (Mark Lee)
+
  TESTS
 
   * Remove readonly files properly in tests.  (Yonggang Luo, #943131)

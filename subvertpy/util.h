@@ -125,6 +125,12 @@ typedef enum svn_depth_t {
 #endif
 
 typedef struct {
+    PyObject_HEAD
+    apr_hash_t *config;
+    apr_pool_t *pool;
+} ConfigObject;
+
+typedef struct {
 	PyObject_HEAD
 	svn_stream_t *stream;
 	apr_pool_t *pool;
