@@ -15,6 +15,10 @@
 
   * Update documentation for building on Windows. (Yonggang Luo)
 
+ BUG FIXES
+
+  * Include *.c files in MANIFEST. (#951060, Shlomi Fish)
+
 0.8.10	2012-01-23
 
  BUG FIXES
