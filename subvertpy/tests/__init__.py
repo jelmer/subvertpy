@@ -88,7 +88,11 @@ class TestCaseInTempDir(TestCase):
     def setUp(self):
         TestCase.setUp(self)
         self._oldcwd = os.getcwd()
-        self.test_dir = tempfile.mkdtemp()
+        if os.name == 'nt':
+            self.test_dir = tempfile.mkdtemp(dir =
+                os.getenv("TEMP", None) or os.getenv("TMP", None))
+        else:
+            self.test_dir = tempfile.mkdtemp()
         os.chdir(self.test_dir)
 
     def tearDown(self):
