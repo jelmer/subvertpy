@@ -34,6 +34,7 @@ except ImportError:
     except ImportError:
         from testtools.testcase import TestSkipped as SkipTest
 import urllib2
+import urllib
 import urlparse
 
 from subvertpy import (
@@ -88,11 +89,7 @@ class TestCaseInTempDir(TestCase):
     def setUp(self):
         TestCase.setUp(self)
         self._oldcwd = os.getcwd()
-        if os.name == 'nt':
-            self.test_dir = tempfile.mkdtemp(dir =
-                os.getenv("TEMP", None) or os.getenv("TMP", None))
-        else:
-            self.test_dir = tempfile.mkdtemp()
+        self.test_dir = tempfile.mkdtemp()
         os.chdir(self.test_dir)
 
     def tearDown(self):
@@ -253,12 +250,7 @@ class SubversionTestCase(TestCaseInTempDir):
                 finally:
                     f.close()
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
-
-        if sys.platform == 'win32':
-            return "file:///%s" % abspath.replace("\\", "/")
-        else:
-            return "file://%s" % abspath
-
+        return 'file:%s' % urllib.pathname2url(abspath)
 
     def make_checkout(self, repos_url, relpath):
         """Create a new checkout."""
