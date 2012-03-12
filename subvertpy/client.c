@@ -61,7 +61,11 @@ typedef struct {
 
 typedef struct {
     PyObject_HEAD
+#if ONLY_SINCE_SVN(1, 7)
+    svn_client_info2_t info;
+#else
     svn_info_t info;
+#endif
     WCInfoObject *wc_info;
     apr_pool_t *pool;
 } InfoObject;
@@ -204,7 +208,11 @@ static svn_error_t *list_receiver(void *dict, const char *path,
     return NULL;
 }
 
+#if ONLY_SINCE_SVN(1, 7)
+static PyObject *py_info(const svn_client_info2_t *info)
+#else
 static PyObject *py_info(const svn_info_t *info)
+#endif
 {
     InfoObject *ret;
 
@@ -221,7 +229,7 @@ static PyObject *py_info(const svn_info_t *info)
         return NULL;
 #if ONLY_SINCE_SVN(1, 7)
     ret->info = *svn_client_info2_dup(info, ret->pool);
-    ret->wc_info->info = *svn_wc_info_dup(info.wc_info, ret->pool);
+    ret->wc_info->info = *svn_wc_info_dup(info->wc_info, ret->pool);
 #else
     ret->info = *svn_info_dup(info, ret->pool);
     if (info->has_wc_info) {
@@ -233,7 +241,11 @@ static PyObject *py_info(const svn_info_t *info)
 }
 
 static svn_error_t *info_receiver(void *dict, const char *path,
+#if ONLY_BEFORE_SVN(1, 7)
                                   const svn_info_t *info,
+#else
+                                  const svn_client_info2_t *info,
+#endif
                                   apr_pool_t *pool)
 {
     PyGILState_STATE state = PyGILState_Ensure();
@@ -1463,6 +1475,7 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     char *kwnames[] = {
         "path", "revision", "peg_revision", "depth",
+        "fetch_excluded", "fetch_actual_only",
         NULL,
     };
     apr_pool_t *temp_pool;
@@ -1470,14 +1483,16 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
 
     const char *path;
     int depth;
+    svn_boolean_t fetch_excluded = FALSE, fetch_actual_only = FALSE;
     PyObject *revision = Py_None, *peg_revision = Py_None;
     svn_opt_revision_t c_peg_rev, c_rev;
     PyObject *entry_dict;
     svn_error_t *err;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOi", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOibb", kwnames,
                                      &path, &revision,
-                                     &peg_revision, &depth))
+                                     &peg_revision, &depth,
+                                     &fetch_excluded, &fetch_actual_only))
         return NULL;
 
     if (!to_opt_revision(revision, &c_rev))
@@ -1504,7 +1519,14 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
     Py_BEGIN_ALLOW_THREADS;
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_SINCE_SVN(1, 7)
+    /* FIXME: Support changelists */
+	err = svn_client_info3(path, &c_peg_rev, &c_rev, depth, fetch_excluded,
+						   fetch_actual_only, NULL,
+						   info_receiver,
+						   entry_dict,
+						   client->client, temp_pool);
+#elif ONLY_SINCE_SVN(1, 5)
     /* FIXME: Support changelists */
     err = svn_client_info2(path, &c_peg_rev, &c_rev, info_receiver, entry_dict,
                                                   depth, NULL,
@@ -1828,6 +1850,11 @@ static PyMemberDef wc_info_members[] = {
     { NULL, }
 };
 
+static void wcinfo_dealloc(PyObject *self)
+{
+	PyObject_Del(self);
+}
+
 PyTypeObject WCInfo_Type = {
     PyObject_HEAD_INIT(NULL) 0,
     "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
@@ -1836,7 +1863,7 @@ PyTypeObject WCInfo_Type = {
 
     /* Methods to implement standard operations */
 
-    PyObject_Del, /*    destructor tp_dealloc;  */
+    wcinfo_dealloc, /*    destructor tp_dealloc;  */
     NULL, /*    printfunc tp_print; */
     NULL, /*    getattrfunc tp_getattr; */
     NULL, /*    setattrfunc tp_setattr; */
