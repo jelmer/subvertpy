@@ -34,6 +34,7 @@ except ImportError:
     except ImportError:
         from testtools.testcase import TestSkipped as SkipTest
 import urllib2
+import urllib
 import urlparse
 
 from subvertpy import (
@@ -251,7 +252,7 @@ class SubversionTestCase(TestCaseInTempDir):
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
         if sys.platform == 'win32':
-            return "file:///%s" % abspath.replace("\\", "/")
+            return 'file:%s' % urllib.pathname2url(abspath)
         else:
             return "file://%s" % abspath
 
