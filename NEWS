@@ -7,6 +7,8 @@
   * Add bindings for svn.client.Client.info(), svn.client.Client.log() and
     svn.client.Client.cat(). (Mark Lee)
 
+  * Add constant ERR_WC_UPGRADE_REQUIRED. (Jelmer Vernooij)
+
  TESTS
 
   * Remove readonly files properly in tests.  (Yonggang Luo, #943131)
