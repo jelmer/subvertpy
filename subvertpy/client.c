@@ -1500,6 +1500,9 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
     if (!to_opt_revision(peg_revision, &c_peg_rev))
         return NULL;
 
+    if (c_rev->kind == svn_opt_revision_unspecified)
+        c_rev->kind = svn_opt_revision_head;
+
 #if ONLY_BEFORE_SVN(1, 5)
     if (depth != svn_depth_infinity && depth != svn_depth_empty) {
         PyErr_SetString(PyExc_NotImplementedError,

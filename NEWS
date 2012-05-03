@@ -9,6 +9,8 @@
 
   * Add constant ERR_WC_UPGRADE_REQUIRED. (Jelmer Vernooij)
 
+  * In Client.checkout, default to HEAD revision. (Jelmer Vernooij)
+
  TESTS
 
   * Remove readonly files properly in tests.  (Yonggang Luo, #943131)
