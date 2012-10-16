@@ -1280,7 +1280,6 @@ static PyObject *client_diff(PyObject *self, PyObject *args, PyObject *kwargs)
     apr_array_header_t *c_diffopts;
     PyObject *outfile, *errfile;
     apr_file_t *c_outfile, *c_errfile;
-    apr_off_t offset;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|zzzOsbbb:diff", kwnames,
                                      &rev1, &rev2, &path1, &path2,
@@ -1313,31 +1312,15 @@ static PyObject *client_diff(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     Py_DECREF(diffopts);
 
-    outfile = PyOS_tmpfile();
+    outfile = PyOS_tmpfile(&c_outfile, temp_pool);
     if (outfile == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
     }
-    errfile = PyOS_tmpfile();
+    errfile = PyOS_tmpfile(&c_errfile, temp_pool);
     if (errfile == NULL) {
         apr_pool_destroy(temp_pool);
         Py_DECREF(outfile);
-        return NULL;
-    }
-
-    c_outfile = apr_file_from_object(outfile, temp_pool);
-    if (c_outfile == NULL) {
-        apr_pool_destroy(temp_pool);
-        Py_DECREF(outfile);
-        Py_DECREF(errfile);
-        return NULL;
-    }
-
-    c_errfile = apr_file_from_object(errfile, temp_pool);
-    if (c_errfile == NULL) {
-        apr_pool_destroy(temp_pool);
-        Py_DECREF(outfile);
-        Py_DECREF(errfile);
         return NULL;
     }
 
@@ -1350,10 +1333,6 @@ static PyObject *client_diff(PyObject *self, PyObject *args, PyObject *kwargs)
                                        c_outfile, c_errfile, NULL,
                                        client->client, temp_pool));
 
-    offset = 0;
-    apr_file_seek(c_outfile, APR_SET, &offset);
-    offset = 0;
-    apr_file_seek(c_errfile, APR_SET, &offset);
 
     apr_pool_destroy(temp_pool);
 

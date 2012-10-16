@@ -176,7 +176,7 @@ void PyErr_SetSubversionException(svn_error_t *error)
 	Py_DECREF(excobj);
 }
 
-PyObject *PyOS_tmpfile(void)
+PyObject *PyOS_tmpfile(apr_file_t** file, apr_pool_t* temp_pool)
 {
 	PyObject *tempfile, *tmpfile_fn, *ret;
 
@@ -192,6 +192,16 @@ PyObject *PyOS_tmpfile(void)
 
 	ret = PyObject_CallObject(tmpfile_fn, NULL);
 	Py_DECREF(tmpfile_fn);
+	if (file == NULL || temp_pool == NULL)
+	{
+		return ret;
+	}
+	*file = apr_file_from_object(ret, temp_pool);
+	if (*file == NULL)
+	{
+		Py_DECREF(ret);
+		return NULL;
+	}
 	return ret;
 }
 
