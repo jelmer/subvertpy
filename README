@@ -53,5 +53,5 @@ Build instructions for Windows
 * Install SVN libintl.
   http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=2627
   Download svn-win32-libintl.zip.
-  extrat it to the directory that you want.
+  extract it to the directory that you want.
 * Set SVN_LIBINTL to the extract dir.
