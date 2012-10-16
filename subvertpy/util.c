@@ -176,22 +176,37 @@ void PyErr_SetSubversionException(svn_error_t *error)
 	Py_DECREF(excobj);
 }
 
-PyObject *PyOS_tmpfile(void)
+PyObject *PyOS_tmpfile(apr_file_t** file, apr_pool_t* temp_pool)
 {
-	PyObject *osmodule, *tmpfile_fn, *ret;
+	PyObject *tempfile, *tmpfile_fn, *ret;
 
-	osmodule = PyImport_ImportModule("os");
-	if (osmodule == NULL)
+	if (temp_pool == NULL)
+	{
+		return NULL;
+	}
+
+	tempfile = PyImport_ImportModule("tempfile");
+	if (tempfile == NULL)
 		return NULL;
 
-	tmpfile_fn = PyObject_GetAttrString(osmodule, "tmpfile");
-	Py_DECREF(osmodule);
+	tmpfile_fn = PyObject_GetAttrString(tempfile, "TemporaryFile");
+	Py_DECREF(tempfile);
 
 	if (tmpfile_fn == NULL)
 		return NULL;
 
 	ret = PyObject_CallObject(tmpfile_fn, NULL);
 	Py_DECREF(tmpfile_fn);
+	if (file == NULL)
+	{
+		return ret;
+	}
+	*file = apr_file_from_object(ret, temp_pool);
+	if (*file == NULL)
+	{
+		Py_DECREF(ret);
+		return NULL;
+	}
 	return ret;
 }
 
