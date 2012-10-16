@@ -727,26 +727,50 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool)
 {
-    apr_status_t status;
-    FILE *file;
-    apr_file_t *fp;
-    apr_os_file_t osfile;
-  
-    file = PyFile_AsFile(object);
+	PyObject *filenameObject = NULL;
+	apr_file_t *fp = NULL;
+	apr_status_t status;
+	int fd = -1;
+	int is_filename = 0;
+	if (PyString_Check(object)) {
+		is_filename = 1;
+		filenameObject = object;
+	}
+	else if ((fd = PyObject_AsFileDescriptor(object)) >= 0) {
 #ifdef WIN32
-    osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
+		/* apr_os_file_put is not works under Win32, so we directly retrieve
+		 * filename and open it. It's also works for _ra.py_open_tmp_file
+		 * under win32.*/
+		is_filename = 1;
+		filenameObject = PyObject_GetAttrString(object, "name");
 #else
-    osfile = (apr_os_file_t)fileno(file);
+		is_filename = 0;
 #endif
+	}
+	else
+	{
+		PyErr_SetString(PyExc_TypeError, "Unknown type for file variable");
+		return NULL;
+	}
 
-    status = apr_os_file_put(&fp, &osfile,
-                             APR_FOPEN_WRITE | APR_FOPEN_CREATE, pool);
-    if (status) {
-        PyErr_SetAprStatus(status);
-        return NULL;
-    }
+	if (is_filename)
+	{
+		char *filename = PyString_AsString(filenameObject);
+		status = apr_file_open(&fp, filename, /* The filename is utf8 encoded */
+				APR_WRITE | APR_CREATE, APR_REG, pool);
+	}
+	else
+	{
+		apr_os_file_t osfile = (apr_os_file_t)fd;
+		status = apr_os_file_put(&fp, &osfile,
+				APR_FOPEN_WRITE | APR_FOPEN_CREATE, pool);
+	}
+	if (status) {
+		PyErr_SetAprStatus(status);
+		return NULL;
+	}
 
-    return fp;
+	return fp;
 }
 
 static void stream_dealloc(PyObject *self)
