@@ -151,7 +151,7 @@ class TestClient(SubversionTestCase):
 \\ No newline at end of file
 +foo2
 \\ No newline at end of file
-""", outf.read())
+""".splitlines(), outf.read().splitlines())
         self.assertEqual("", errf.read())
 
     def assertCatEquals(self, value, revision=None):
