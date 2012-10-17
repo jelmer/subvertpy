@@ -43,6 +43,13 @@ typedef int Py_ssize_t;
 #pragma GCC visibility push(hidden)
 #endif
 
+#if ONLY_BEFORE_SVN(1, 6)
+#define svn_dirent_internal_style svn_path_internal_style
+#defien svn_dirent_local_style svn_path_local_style
+#else
+#include <svn_dirent_uri.h>
+#endif
+
 svn_error_t *py_cancel_check(void *cancel_baton);
 __attribute__((warn_unused_result)) apr_pool_t *Pool(apr_pool_t *parent);
 void handle_svn_error(svn_error_t *error);
