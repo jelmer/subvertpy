@@ -121,7 +121,7 @@ def _check_mtime(m):
     return True
 
 try:
-    import client, _ra, repos, wc
+    from subvertpy import client, _ra, repos, wc
     for x in client, _ra, repos, wc:
         if not _check_mtime(x):
             from warnings import warn
