@@ -27,9 +27,8 @@ import sys
 import tempfile
 import unittest
 from unittest import SkipTest
-import urllib2
-import urllib
-import urlparse
+from urllib.request import pathname2url
+from urllib.parse import urljoin
 
 from subvertpy import (
     client,
@@ -104,7 +103,7 @@ class TestFileEditor(object):
 
     def modify(self, contents=None):
         if contents is None:
-            contents = urllib2.randombytes(100)
+            contents = os.urandom(100)
         txdelta = self.file.apply_textdelta()
         delta.send_stream(BytesIO(contents), txdelta)
 
@@ -154,7 +153,7 @@ class TestDirEditor(object):
     def add_dir(self, path, copyfrom_path=None, copyfrom_rev=-1):
         self.close_children()
         if copyfrom_path is not None:
-            copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
+            copyfrom_path = urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
         assert (copyfrom_path is None and copyfrom_rev == -1) or \
@@ -167,7 +166,7 @@ class TestDirEditor(object):
     def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
         self.close_children()
         if copyfrom_path is not None:
-            copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
+            copyfrom_path = urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
         child = TestFileEditor(self.dir.add_file(path, copyfrom_path,
@@ -246,7 +245,7 @@ class SubversionTestCase(TestCaseInTempDir):
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0o111)
 
         if sys.platform == 'win32':
-            return 'file:%s' % urllib.pathname2url(abspath)
+            return 'file:%s' % pathname2url(abspath)
         else:
             return "file://%s" % abspath
 
