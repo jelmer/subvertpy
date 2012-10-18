@@ -57,18 +57,18 @@ def marshall(x):
     :param x: Data item
     :return: encoded string
     """
-    if type(x) is int:
+    if isinstance(x, int):
         return "%d " % x
-    elif type(x) is list or type(x) is tuple:
+    elif isinstance(x, (list, tuple)):
         return "( " + "".join(map(marshall, x)) + ") "
     elif isinstance(x, literal):
         return "%s " % x
-    elif type(x) is str:
+    elif isinstance(x, bytes):
         return "%d:%s " % (len(x), x)
-    elif type(x) is unicode:
+    elif isinstance(x, str):
         x = x.encode("utf-8")
         return "%d:%s " % (len(x), x)
-    elif type(x) is bool:
+    elif isinstance(x, bool):
         if x == True:
             return "true "
         elif x == False:
