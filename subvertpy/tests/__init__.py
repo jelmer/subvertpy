@@ -19,7 +19,7 @@
 __author__ = 'Jelmer Vernooij <jelmer@jelmer.uk>'
 __docformat__ = 'restructuredText'
 
-from cStringIO import StringIO
+from io import BytesIO
 import os
 import shutil
 import stat
@@ -108,7 +108,7 @@ class TestFileEditor(object):
         if contents is None:
             contents = urllib2.randombytes(100)
         txdelta = self.file.apply_textdelta()
-        delta.send_stream(StringIO(contents), txdelta)
+        delta.send_stream(BytesIO(contents), txdelta)
 
     def close(self):
         assert not self.is_closed
