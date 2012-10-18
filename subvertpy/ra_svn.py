@@ -17,7 +17,7 @@
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 
-import SocketServer
+import socketserver
 import base64
 import os
 import socket
@@ -1063,11 +1063,11 @@ class SVNServer(SVNConnection):
             self._logf.write("%s\n" % text)
 
 
-class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
+class TCPSVNRequestHandler(socketserver.StreamRequestHandler):
 
     def __init__(self, request, client_address, server):
         self._server = server
-        SocketServer.StreamRequestHandler.__init__(self, request, 
+        socketserver.StreamRequestHandler.__init__(self, request, 
             client_address, server)
 
     def handle(self):
@@ -1081,13 +1081,13 @@ class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
             raise
 
 
-class TCPSVNServer(SocketServer.TCPServer):
+class TCPSVNServer(socketserver.TCPServer):
 
     allow_reuse_address = True
-    serve = SocketServer.TCPServer.serve_forever
+    serve = socketserver.TCPServer.serve_forever
 
     def __init__(self, backend, addr, logf=None):
         self._logf = logf
         self._backend = backend
-        SocketServer.TCPServer.__init__(self, addr, TCPSVNRequestHandler)
+        socketserver.TCPServer.__init__(self, addr, TCPSVNRequestHandler)
 
