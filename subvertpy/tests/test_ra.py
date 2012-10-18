@@ -405,39 +405,39 @@ class AuthTests(TestCase):
     def test_simple(self):
         auth = ra.Auth([ra.get_simple_prompt_provider(lambda realm, uname, may_save: ("foo", "geheim", False), 0)])
         creds = auth.credentials("svn.simple", "MyRealm")
-        self.assertEqual(("foo", "geheim", 0), creds.next())
-        self.assertRaises(StopIteration, creds.next)
+        self.assertEqual(("foo", "geheim", 0), next(creds))
+        self.assertRaises(StopIteration, next, creds)
 
     def test_username(self):
         auth = ra.Auth([ra.get_username_prompt_provider(lambda realm, may_save: ("somebody", False), 0)])
         creds = auth.credentials("svn.username", "MyRealm")
-        self.assertEqual(("somebody", 0), creds.next())
-        self.assertRaises(StopIteration, creds.next)
+        self.assertEqual(("somebody", 0), next(creds))
+        self.assertRaises(StopIteration, next, creds)
 
     def test_client_cert(self):
         auth = ra.Auth([ra.get_ssl_client_cert_prompt_provider(lambda realm, may_save: ("filename", False), 0)])
         creds = auth.credentials("svn.ssl.client-cert", "MyRealm")
-        self.assertEqual(("filename", False), creds.next())
-        self.assertRaises(StopIteration, creds.next)
+        self.assertEqual(("filename", False), next(creds))
+        self.assertRaises(StopIteration, next, creds)
 
     def test_client_cert_pw(self):
         auth = ra.Auth([ra.get_ssl_client_cert_pw_prompt_provider(lambda realm, may_save: ("supergeheim", False), 0)])
         creds = auth.credentials("svn.ssl.client-passphrase", "MyRealm")
-        self.assertEqual(("supergeheim", False), creds.next())
-        self.assertRaises(StopIteration, creds.next)
+        self.assertEqual(("supergeheim", False), next(creds))
+        self.assertRaises(StopIteration, next, creds)
 
     def test_server_trust(self):
         auth = ra.Auth([ra.get_ssl_server_trust_prompt_provider(lambda realm, failures, certinfo, may_save: (42, False))])
         auth.set_parameter("svn:auth:ssl:failures", 23)
         creds = auth.credentials("svn.ssl.server", "MyRealm")
-        self.assertEqual((42, 0), creds.next())
-        self.assertRaises(StopIteration, creds.next)
+        self.assertEqual((42, 0), next(creds))
+        self.assertRaises(StopIteration, next, creds)
 
     def test_server_untrust(self):
         auth = ra.Auth([ra.get_ssl_server_trust_prompt_provider(lambda realm, failures, certinfo, may_save: None)])
         auth.set_parameter("svn:auth:ssl:failures", 23)
         creds = auth.credentials("svn.ssl.server", "MyRealm")
-        self.assertRaises(StopIteration, creds.next)
+        self.assertRaises(StopIteration, next, creds)
 
     def test_retry(self):
         self.i = 0
@@ -446,10 +446,10 @@ class AuthTests(TestCase):
             return ("somebody%d" % self.i, False)
         auth = ra.Auth([ra.get_username_prompt_provider(inc_foo, 2)])
         creds = auth.credentials("svn.username", "MyRealm")
-        self.assertEqual(("somebody1", 0), creds.next())
-        self.assertEqual(("somebody2", 0), creds.next())
-        self.assertEqual(("somebody3", 0), creds.next())
-        self.assertRaises(StopIteration, creds.next)
+        self.assertEqual(("somebody1", 0), next(creds))
+        self.assertEqual(("somebody2", 0), next(creds))
+        self.assertEqual(("somebody3", 0), next(creds))
+        self.assertRaises(StopIteration, next, creds)
 
     def test_set_default_username(self):
         a = ra.Auth([])
