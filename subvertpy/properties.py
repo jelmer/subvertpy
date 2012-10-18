@@ -18,8 +18,8 @@
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 __docformat__ = "restructuredText"
 
-import bisect, calendar, time, urlparse
-
+import bisect, calendar, time
+from subvertpy.six.moves import urljoin
 
 class InvalidExternalsDescription(Exception):
     _fmt = """Unable to parse externals description."""
@@ -117,7 +117,7 @@ def parse_externals_description(base_url, val):
             raise NotImplementedError("Relative to the scheme externals not yet supported")
         if relurl.startswith("^/"):
             raise NotImplementedError("Relative to the repository root externals not yet supported")
-        ret[path] = (revno, urlparse.urljoin(base_url+"/", relurl))
+        ret[path] = (revno, urljoin(base_url+"/", relurl))
     return ret
 
 

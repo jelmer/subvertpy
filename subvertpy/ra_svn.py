@@ -22,8 +22,8 @@ import base64
 import os
 import socket
 import subprocess
-import urllib
 
+from subvertpy.six.moves import urllib_parse
 from subvertpy import (
     ERR_RA_SVN_UNKNOWN_CMD,
     ERR_UNSUPPORTED_FEATURE,
@@ -419,9 +419,9 @@ class SVNClient(SVNConnection):
     def __init__(self, url, progress_cb=None, auth=None, config=None, 
                  client_string_func=None, open_tmp_file_func=None):
         self.url = url
-        (type, opaque) = urllib.splittype(url)
+        (type, opaque) = urllib_parse.splittype(url)
         assert type in ("svn", "svn+ssh")
-        (host, path) = urllib.splithost(opaque)
+        (host, path) = urllib_parse.splithost(opaque)
         self._progress_cb = progress_cb
         self._auth = auth
         self._config = config
@@ -467,7 +467,7 @@ class SVNClient(SVNConnection):
     _recv_ack = _unpack
 
     def _connect(self, host):
-        (host, port) = urllib.splitnport(host, SVN_PORT)
+        (host, port) = urllib_parse.splitnport(host, SVN_PORT)
         sockaddrs = socket.getaddrinfo(host, port, socket.AF_UNSPEC,
                socket.SOCK_STREAM, 0, 0)
         self._socket = None
@@ -487,12 +487,12 @@ class SVNClient(SVNConnection):
         return (self._socket.recv, self._socket.send)
 
     def _connect_ssh(self, host):
-        (user, host) = urllib.splituser(host)
+        (user, host) = urllib_parse.splituser(host)
         if user is not None:
             (user, password) = urllib.splitpassword(user)
         else:
             password = None
-        (host, port) = urllib.splitnport(host, 22)
+        (host, port) = urllib_parse.splitnport(host, 22)
         self._tunnel = get_ssh_vendor().connect_ssh(user, password, host, port, ["svnserve", "-t"])
         return (self._tunnel.recv, self._tunnel.send)
 
@@ -915,7 +915,7 @@ class SVNServer(SVNConnection):
         self.send_success()
 
     def open_backend(self, url):
-        (rooturl, location) = urllib.splithost(url)
+        (rooturl, location) = urllib_parse.splithost(url)
         self.repo_backend, self.relpath = self.backend.open_repository(location)
 
     def reparent(self, parent):
