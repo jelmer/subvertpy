@@ -12,7 +12,7 @@ __version__ = "1.2.0"
 PY3 = sys.version_info[0] == 3
 
 if PY3:
-    string_types = str,
+    string_types = str,bytes
     integer_types = int,
     class_types = type,
     text_type = str
