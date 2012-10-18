@@ -15,6 +15,7 @@
 
 """Subversion ra library tests."""
 
+from subvertpy.six import iterkeys,itervalues,iteritems
 from subvertpy.six import BytesIO
 
 from subvertpy import (
@@ -159,7 +160,7 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props, has_children) = returned[0]
             self.assertEqual(None, paths)
             self.assertEqual(revnum, 0)
-            self.assertEqual(["svn:date"], props.keys())
+            self.assertEqual(["svn:date"], list(iterkeys(props)))
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
@@ -170,7 +171,7 @@ class TestRemoteAccess(SubversionTestCase):
                 self.assertEqual({'/foo': ('A', None, -1, NODE_DIR)}, paths)
             self.assertEqual(revnum, 1)
             self.assertEqual(set(["svn:date", "svn:author", "svn:log"]), 
-                              set(props.keys()))
+                              set(iterkeys(props)))
         returned = list(self.ra.iter_log([""], 0, 0,
             revprops=["svn:date", "svn:author", "svn:log"]))
         self.assertEqual(1, len(returned))
@@ -192,7 +193,7 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props, has_children) = returned[0]
             self.assertEqual(None, paths)
             self.assertEqual(revnum, 0)
-            self.assertEqual(["svn:date"], props.keys())
+            self.assertEqual(["svn:date"], list(iterkeys(props)))
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
@@ -200,7 +201,7 @@ class TestRemoteAccess(SubversionTestCase):
             self.assertEqual({'/foo': ('A', None, -1)}, paths)
             self.assertEqual(revnum, 1)
             self.assertEqual(set(["svn:date", "svn:author", "svn:log"]), 
-                             set(props.keys()))
+                              set(iterkeys(props)))
         self.ra.get_log(cb, [""], 0, 0, revprops=["svn:date", "svn:author", "svn:log"])
         self.assertEqual(1, len(returned))
         self.do_commit()
@@ -254,7 +255,8 @@ class TestRemoteAccess(SubversionTestCase):
         root.close()
         editor.close()
 
-        self.assertEqual(set(['bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date', 'svn:log']), set(self.ra.rev_proplist(1).keys()))
+        self.assertEqual(set(['bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date', 'svn:log']),
+             set(iterkeys(self.ra.rev_proplist(1))))
 
     def test_get_commit_editor_context_manager(self):
         def mycb(paths, rev, revprops):
@@ -361,7 +363,8 @@ class TestRemoteAccess(SubversionTestCase):
         cb.close()
 
         ret = self.ra.stat("bar", 1)
-        self.assertEqual(set(['last_author', 'kind', 'created_rev', 'has_props', 'time', 'size']), set(ret.keys()))
+        self.assertEqual(set(['last_author', 'kind', 'created_rev', 'has_props', 'time', 'size']),
+            set(iterkeys(ret)))
 
     def test_get_locations_dir(self):
         cb = self.commit_editor()

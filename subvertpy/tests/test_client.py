@@ -20,6 +20,7 @@ import os
 import shutil
 import tempfile
 
+from subvertpy.six import iterkeys,itervalues,iteritems
 from subvertpy.six import BytesIO
 from subvertpy import (
     SubversionException,
@@ -174,7 +175,7 @@ class TestClient(SubversionTestCase):
     def assertLogEntryChangedPathsEquals(self, expected, entry):
         changed_paths = entry["changed_paths"]
         self.assertIsInstance(changed_paths, dict)
-        self.assertEqual(sorted(expected), sorted(changed_paths.keys()))
+        self.assertEqual(sorted(expected), sorted(list(iterkeys(changed_paths))))
 
     def assertLogEntryMessageEquals(self, expected, entry):
         self.assertEqual(expected, entry["revprops"]["svn:log"])
@@ -239,7 +240,7 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         info = self.client.info("dc/foo")
-        self.assertEqual(["foo"], info.keys())
+        self.assertEqual(["foo"], list(iterkeys(info)))
         self.assertEqual(1, info["foo"].revision)
         self.assertEqual(3L, info["foo"].size)
         self.assertEqual(wc.SCHEDULE_NORMAL, info["foo"].wc_info.schedule)

@@ -33,6 +33,7 @@ except ImportError:
     except ImportError:
         from testtools.testcase import TestSkipped as SkipTest
 
+from subvertpy.six import iterkeys,itervalues,iteritems
 from subvertpy.six.moves import pathname2url,urljoin
 from subvertpy.six import BytesIO,b
 from subvertpy import (
@@ -275,7 +276,7 @@ class SubversionTestCase(TestCaseInTempDir):
         if recursive:
             return ret
         else:
-            return ret.values()[0]
+            return list(itervalues(ret))[0]
 
     def client_get_revprop(self, url, revnum, name):
         """Get the revision property.
@@ -377,7 +378,7 @@ class SubversionTestCase(TestCaseInTempDir):
         :param files: Dictionary with filenames as keys, contents as
             values. None as value indicates a directory.
         """
-        for name, content in files.iteritems():
+        for name, content in iteritems(files):
             if content is None:
                 try:
                     os.makedirs(name)

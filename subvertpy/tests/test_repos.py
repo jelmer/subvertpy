@@ -18,6 +18,7 @@
 import os
 import textwrap
 
+from subvertpy.six import iterkeys,itervalues,iteritems
 from subvertpy.six import BytesIO,b
 from subvertpy import repos, SubversionException
 from subvertpy.tests import TestCaseInTempDir, TestCase
@@ -102,7 +103,7 @@ class TestRepository(TestCaseInTempDir):
 
     def test_rev_props(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertEqual(["svn:date"], repos.Repository("foo").fs().revision_proplist(0).keys())
+        self.assertEqual(["svn:date"], list(iterkeys(repos.Repository("foo").fs().revision_proplist(0))))
 
     def test_rev_root_invalid(self):
         repos.create(os.path.join(self.test_dir, "foo"))

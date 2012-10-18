@@ -2,6 +2,7 @@
 
 import cmd
 import subvertpy
+from subvertpy.six import iterkeys,itervalues,iteritems
 from subvertpy.ra import RemoteAccess
 import sys
 
@@ -16,12 +17,12 @@ def log_printer(changed_paths, rev, revprops, has_children=None):
     print "=" * 79
     print "%d:" % rev
     print "Revision properties:"
-    for entry in revprops.items(): 
+    for entry in iteritems(revprops): 
         print "  %s: %s" % entry
     print ""
     
     print "Changed paths:"
-    for path, (action, from_path, from_rev) in changed_paths.iteritems():
+    for path, (action, from_path, from_rev) in iteritems(changed_paths):
         print "  %s (%s)" % (path, action)
 
 
@@ -69,7 +70,7 @@ class RaCmd(cmd.Cmd):
         print conn.has_capability(args)
 
     def do_revprops(self, args):
-        for item in conn.rev_proplist(int(args)).iteritems():
+        for item in iteritems(conn.rev_proplist(int(args))):
             print "%s: %s" % item
 
     def do_check_path(self, args):
