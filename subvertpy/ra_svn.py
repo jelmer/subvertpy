@@ -643,12 +643,12 @@ class SVNClient(SVNConnection):
                           keep_locks=False):
         args = [revprops[properties.PROP_REVISION_LOG]]
         if lock_tokens is not None:
-            args.append(lock_tokens.items())
+            args.append(list(lock_tokens.items()))
         else:
             args.append([])
         args.append(keep_locks)
         if len(revprops) > 1:
-            args.append(revprops.items())
+            args.append(list(revprops.items()))
         self.send_msg([literal("commit"), args])
         self._recv_ack()
         raise NotImplementedError(self.get_commit_editor)
@@ -894,7 +894,7 @@ class SVNServer(SVNConnection):
         def send_revision(revno, author, date, message, changed_paths=None):
             changes = []
             if changed_paths is not None:
-                for p, (action, cf, cr) in changed_paths.iteritems():
+                for p, (action, cf, cr) in changed_paths.items():
                     if cf is not None:
                         changes.append((p, literal(action), (cf, cr)))
                     else:
@@ -952,7 +952,7 @@ class SVNServer(SVNConnection):
     def rev_proplist(self, revnum):
         self.send_ack()
         revprops = self.repo_backend.rev_proplist(revnum)
-        self.send_success(revprops.items())
+        self.send_success(list(revprops.items()))
 
     def rev_prop(self, revnum, name):
         self.send_ack()
@@ -965,7 +965,7 @@ class SVNServer(SVNConnection):
     def get_locations(self, path, peg_revnum, revnums):
         self.send_ack()
         locations = self.repo_backend.get_locations(path, peg_revnum, revnums)
-        for rev, path in locations.iteritems():
+        for rev, path in locations.items():
             self.send_msg([rev, path])
         self.send_msg(literal("done"))
         self.send_success()

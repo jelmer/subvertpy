@@ -102,7 +102,7 @@ class TestRepository(TestCaseInTempDir):
 
     def test_rev_props(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertEqual(["svn:date"], repos.Repository("foo").fs().revision_proplist(0).keys())
+        self.assertEqual(["svn:date"], list(repos.Repository("foo").fs().revision_proplist(0).keys()))
 
     def test_rev_root_invalid(self):
         repos.create(os.path.join(self.test_dir, "foo"))

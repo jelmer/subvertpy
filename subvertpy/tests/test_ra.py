@@ -159,7 +159,7 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props, has_children) = returned[0]
             self.assertEqual(None, paths)
             self.assertEqual(revnum, 0)
-            self.assertEqual(["svn:date"], props.keys())
+            self.assertEqual(["svn:date"], list(props.keys()))
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
@@ -192,7 +192,7 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props, has_children) = returned[0]
             self.assertEqual(None, paths)
             self.assertEqual(revnum, 0)
-            self.assertEqual(["svn:date"], props.keys())
+            self.assertEqual(["svn:date"], list(props.keys()))
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
