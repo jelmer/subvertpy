@@ -19,7 +19,6 @@
 __author__ = 'Jelmer Vernooij <jelmer@samba.org>'
 __docformat__ = 'restructuredText'
 
-from cStringIO import StringIO
 import os
 import shutil
 import stat
@@ -37,6 +36,7 @@ import urllib2
 import urllib
 import urlparse
 
+from subvertpy.six import BytesIO,b
 from subvertpy import (
     client,
     delta,
@@ -110,9 +110,9 @@ class TestFileEditor(object):
 
     def modify(self, contents=None):
         if contents is None:
-            contents = urllib2.randombytes(100)
+            contents = os.urandom(100)
         txdelta = self.file.apply_textdelta()
-        delta.send_stream(StringIO(contents), txdelta)
+        delta.send_stream(BytesIO(b(contents)), txdelta)
 
     def close(self):
         assert not self.is_closed

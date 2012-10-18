@@ -2,7 +2,7 @@
 # Demonstrates how to do a new commit using Subvertpy
 
 import os
-from cStringIO import StringIO
+from subvertpy.six import BytesIO,b
 from subvertpy import delta, repos
 from subvertpy.ra import RemoteAccess, Auth, get_username_provider
 
@@ -28,7 +28,7 @@ file = root.add_file("somefile")
 file.change_prop("svn:executable", "*")
 # Obtain a textdelta handler and send the new file contents
 txdelta = file.apply_textdelta()
-delta.send_stream(StringIO("new file contents"), txdelta)
+delta.send_stream(BytesIO(b("new file contents")), txdelta)
 file.close()
 root.close()
 editor.close()

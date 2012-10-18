@@ -15,8 +15,7 @@
 
 """Tests for subvertpy.delta."""
 
-from cStringIO import StringIO
-
+from subvertpy.six import BytesIO,b
 from subvertpy.delta import (
     decode_length,
     encode_length,
@@ -36,7 +35,7 @@ class DeltaTests(TestCase):
         self.windows.append(window)
 
     def test_send_stream(self):
-        stream = StringIO("foo")
+        stream = BytesIO(b("foo"))
         send_stream(stream, self.storing_window_handler)
         self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], 'foo'), None], 
                           self.windows)

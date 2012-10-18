@@ -15,10 +15,10 @@
 
 """Subversion repository library tests."""
 
-from cStringIO import StringIO
 import os
 import textwrap
 
+from subvertpy.six import BytesIO,b
 from subvertpy import repos, SubversionException
 from subvertpy.tests import TestCaseInTempDir, TestCase
 
@@ -52,7 +52,7 @@ class TestRepository(TestCaseInTempDir):
 
     def test_verify_fs(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
-        f = StringIO()
+        f = BytesIO()
         r.verify_fs(f, 0, 0)
         self.assertEqual('* Verified revision 0.\n', f.getvalue())
 
@@ -75,8 +75,8 @@ class TestRepository(TestCaseInTempDir):
     def test_load_fs_invalid(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
         dumpfile = "Malformed"
-        feedback = StringIO()
-        self.assertRaises(SubversionException, r.load_fs, StringIO(dumpfile),
+        feedback = BytesIO()
+        self.assertRaises(SubversionException, r.load_fs, BytesIO(b(dumpfile)),
             feedback, repos.LOAD_UUID_DEFAULT)
 
     def test_load_fs(self):
@@ -96,8 +96,8 @@ class TestRepository(TestCaseInTempDir):
         2011-08-26T13:08:30.187858Z
         PROPS-END
         """)
-        feedback = StringIO()
-        r.load_fs(StringIO(dumpfile), feedback, repos.LOAD_UUID_DEFAULT)
+        feedback = BytesIO()
+        r.load_fs(BytesIO(b(dumpfile)), feedback, repos.LOAD_UUID_DEFAULT)
         self.assertEqual(r.fs().get_uuid(), "38f0a982-fd1f-4e00-aa6b-a20720f4b9ca")
 
     def test_rev_props(self):

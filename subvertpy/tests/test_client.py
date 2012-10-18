@@ -17,10 +17,10 @@
 
 from datetime import datetime, timedelta
 import os
-from StringIO import StringIO
 import shutil
 import tempfile
 
+from subvertpy.six import BytesIO
 from subvertpy import (
     SubversionException,
     NODE_DIR, NODE_FILE,
@@ -155,7 +155,7 @@ class TestClient(SubversionTestCase):
         self.assertEqual("", errf.read())
 
     def assertCatEquals(self, value, revision=None):
-        io = StringIO()
+        io = BytesIO()
         self.client.cat("dc/foo", io, revision)
         self.assertEqual(value, io.getvalue())
 
