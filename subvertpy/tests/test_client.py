@@ -243,7 +243,7 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         info = self.client.info("dc/foo")
-        self.assertEqual(["foo"], info.keys())
+        self.assertEqual(["foo"], list(info.keys()))
         self.assertEqual(1, info["foo"].revision)
         self.assertEqual(3, info["foo"].size)
         if client.api_version() < (1, 7):

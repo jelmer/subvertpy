@@ -23,7 +23,7 @@ def log_printer(changed_paths, rev, revprops, has_children=None):
     if changed_paths is None:
         return
     print "Changed paths:"
-    for path, (action, from_path, from_rev) in changed_paths.iteritems():
+    for path, (action, from_path, from_rev) in changed_paths.items():
         print "  %s (%s)" % (path, action)
 
 
@@ -71,7 +71,7 @@ class RaCmd(cmd.Cmd):
         print conn.has_capability(args)
 
     def do_revprops(self, args):
-        for item in conn.rev_proplist(int(args)).iteritems():
+        for item in conn.rev_proplist(int(args)).items():
             print "%s: %s" % item
 
     def do_check_path(self, args):

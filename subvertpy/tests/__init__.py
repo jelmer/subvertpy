@@ -270,7 +270,7 @@ class SubversionTestCase(TestCaseInTempDir):
         if recursive:
             return ret
         else:
-            return ret.values()[0]
+            return next(iter(ret.values()))
 
     def client_get_revprop(self, url, revnum, name):
         """Get the revision property.
@@ -372,7 +372,7 @@ class SubversionTestCase(TestCaseInTempDir):
         :param files: Dictionary with filenames as keys, contents as
             values. None as value indicates a directory.
         """
-        for name, content in files.iteritems():
+        for name, content in files.items():
             if content is None:
                 try:
                     os.makedirs(name)

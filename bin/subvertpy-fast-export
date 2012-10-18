@@ -102,7 +102,7 @@ def export_revision(rev, fs):
     marks = {}
     file_changes = []
 
-    for path, (node_id, change_type, text_changed, prop_changed) in changes.iteritems():
+    for path, (node_id, change_type, text_changed, prop_changed) in changes.items():
         if root.is_dir(path):
             continue
         if not MATCHER.matches(path):
