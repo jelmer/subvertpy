@@ -26,12 +26,14 @@ import stat
 import sys
 import tempfile
 import unittest
-import urllib2
-import urllib
 try:
     import urlparse
 except ImportError:
     import urllib.parse as urlparse
+try:
+    from urllib import pathname2url
+except ImportError:
+    from urllib.request import pathname2url
 
 from subvertpy import (
     client,
@@ -106,7 +108,7 @@ class TestFileEditor(object):
 
     def modify(self, contents=None):
         if contents is None:
-            contents = urllib2.randombytes(100)
+            contents = os.urandom(100)
         txdelta = self.file.apply_textdelta()
         delta.send_stream(BytesIO(contents), txdelta)
 
@@ -248,7 +250,7 @@ class SubversionTestCase(TestCaseInTempDir):
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0o111)
 
         if sys.platform == 'win32':
-            return 'file:%s' % urllib.pathname2url(abspath)
+            return 'file:%s' % pathname2url(abspath)
         else:
             return "file://%s" % abspath
 

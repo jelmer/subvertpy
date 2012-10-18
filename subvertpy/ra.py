@@ -23,7 +23,10 @@ from subvertpy import _ra
 from subvertpy._ra import *
 from subvertpy import ra_svn
 
-import urllib
+try:
+    from urllib2 import splittype
+except ImportError:
+    from urllib.parse import splittype
 
 url_handlers = {
         "svn": _ra.RemoteAccess,
@@ -43,7 +46,7 @@ def RemoteAccess(url, *args, **kwargs):
     """
     if isinstance(url, bytes):
         url = url.decode("utf-8")
-    (type, opaque) = urllib.splittype(url)
+    (type, opaque) = splittype(url)
     if not type in url_handlers:
         raise SubversionException("Unknown URL type '%s'" % type, ERR_BAD_URL)
     return url_handlers[type](url, *args, **kwargs)
