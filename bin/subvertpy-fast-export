@@ -15,7 +15,7 @@ branches_path = '/branches/'
 tags_path = '/tags/'
 address = 'localhost'
 
-from cStringIO import StringIO
+from io import BytesIO
 import sys, os.path
 from optparse import OptionParser
 import stat
@@ -120,7 +120,7 @@ def export_revision(rev, fs):
                         sys.stderr.write("special file '%s' is not a symlink, ignoring...\n" % path)
                         continue
                     mode = stat.S_IFLNK
-                    stream = StringIO(contents[len("link "):])
+                    stream = BytesIO(contents[len("link "):])
                     stream_length = len(stream.getvalue())
                 else:
                     if props.get("svn:executable", ""):

@@ -15,7 +15,7 @@
 
 """Subversion ra library tests."""
 
-from StringIO import StringIO
+from io import BytesIO
 import os
 
 import subvertpy
@@ -121,7 +121,7 @@ class AdmTests(SubversionTestCase):
     def test_add_repos_file(self):
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
-        adm.add_repos_file("checkout/bar", StringIO("basecontents"), StringIO("contents"), {}, {})
+        adm.add_repos_file("checkout/bar", BytesIO(b"basecontents"), BytesIO(b"contents"), {}, {})
         self.assertEqual(b"basecontents", wc.get_pristine_contents("checkout/bar").read())
 
     def test_mark_missing_deleted(self):

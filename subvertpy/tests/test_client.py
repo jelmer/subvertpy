@@ -17,7 +17,7 @@
 
 from datetime import datetime, timedelta
 import os
-from StringIO import StringIO
+from io import BytesIO
 import shutil
 import tempfile
 
@@ -130,12 +130,12 @@ class TestClient(SubversionTestCase):
                 auth=ra.Auth([ra.get_username_provider()]))
         dc = self.get_commit_editor(self.repos_url) 
         f = dc.add_file("foo")
-        f.modify("foo1")
+        f.modify(b"foo1")
         dc.close()
 
         dc = self.get_commit_editor(self.repos_url) 
         f = dc.open_file("foo")
-        f.modify("foo2")
+        f.modify(b"foo2")
         dc.close()
 
         if client.api_version() < (1, 5):
@@ -159,7 +159,7 @@ class TestClient(SubversionTestCase):
         self.assertEqual(b"", errf.read())
 
     def assertCatEquals(self, value, revision=None):
-        io = StringIO()
+        io = BytesIO()
         self.client.cat("dc/foo", io, revision)
         self.assertEqual(value, io.getvalue())
 
