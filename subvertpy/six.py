@@ -124,6 +124,8 @@ _moved_attributes = [
     MovedAttribute("StringIO", "StringIO", "io"),
     MovedAttribute("xrange", "__builtin__", "builtins", "xrange", "range"),
     MovedAttribute("zip", "itertools", "builtins", "izip", "zip"),
+    MovedAttribute("pathname2url", "urllib", "urllib.request"),
+    MovedAttribute("urljoin", "urlparse", "urllib.parse"),
 
     MovedModule("builtins", "__builtin__"),
     MovedModule("configparser", "ConfigParser"),
@@ -159,12 +161,13 @@ _moved_attributes = [
                 "tkinter.simpledialog"),
     MovedModule("urllib_robotparser", "robotparser", "urllib.robotparser"),
     MovedModule("winreg", "_winreg"),
+    MovedModule("urllib_parse", "urllib", "urllib.parse"),
 ]
 for attr in _moved_attributes:
     setattr(_MovedItems, attr.name, attr)
 del attr
 
-moves = sys.modules["six.moves"] = _MovedItems("moves")
+moves = sys.modules["subvertpy.six.moves"] = _MovedItems("moves")
 
 
 def add_move(move):
