@@ -255,7 +255,7 @@ class AdmTests(SubversionTestCase):
                 pass
         editor = Editor()
         (tmpfile, digest) = adm.transmit_text_deltas("bar", True, editor)
-        self.assertEqual(editor._windows, [(0L, 0, 5, 0, [(2, 0, 5)], b('blala')), None])
+        self.assertEqual(editor._windows, [(0, 0, 5, 0, [(2, 0, 5)], b('blala')), None])
         self.assertIsInstance(tmpfile, str)
         self.assertEqual(16, len(digest))
 

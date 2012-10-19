@@ -62,7 +62,7 @@ def time_from_cstring(text):
     assert usecstr[-1] == "Z"
     tm_usec = int(usecstr[:-1])
     tm = time.strptime(basestr, "%Y-%m-%dT%H:%M:%S")
-    return (long(calendar.timegm(tm)) * 1000000 + tm_usec)
+    return (int(calendar.timegm(tm)) * 1000000 + tm_usec)
 
 
 def parse_externals_description(base_url, val):
