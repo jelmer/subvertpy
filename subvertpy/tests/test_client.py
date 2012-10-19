@@ -252,7 +252,7 @@ class TestClient(SubversionTestCase):
         info = self.client.info("dc/foo")
         self.assertEqual(["foo"], info.keys())
         self.assertEqual(1, info["foo"].revision)
-        self.assertEqual(3L, info["foo"].size)
+        self.assertEqual(3, info["foo"].size)
         self.build_tree({"dc/bar": "blablabla"})
         self.client.add(os.path.abspath("dc/bar"))
 
