@@ -19,7 +19,7 @@ __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 __docformat__ = "restructuredText"
 
 import sys
-
+from subvertpy.six import moves,b,binary_type
 if sys.version_info < (2, 5):
     import md5 as _mod_md5
     md5 = _mod_md5.new
@@ -118,7 +118,9 @@ def send_stream(stream, handler, block_size=DELTA_WINDOW_SIZE):
     """
     hash = md5()
     text = stream.read(block_size)
-    while text != "":
+    if not isinstance(text,binary_type):
+        raise Exception("The stream should read out bytes")
+    while text != b(""):
         hash.update(text)
         window = (0, 0, len(text), 0, [(TXDELTA_NEW, 0, len(text))], text)
         handler(window)
