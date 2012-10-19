@@ -280,9 +280,9 @@ class SvnExtension(Extension):
 class TestCommand(Command):
     """Command for running unittests without install."""
 
-    user_options = [("args=", None, '''The command args string passed to
-                                    unittest framework, such as 
-                                     --args="-v -f"''')]
+    user_options = [("args=", None, 'The command args string passed to'
+                'unittest framework, such as:                        '
+                "setup.py test --args='--help -v -f'")]
 
     def initialize_options(self):
         self.args = ''
