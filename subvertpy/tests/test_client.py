@@ -140,8 +140,8 @@ class TestClient(SubversionTestCase):
             return # Skip test
 
         (outf, errf) = self.client.diff(1, 2, self.repos_url, self.repos_url)
-        outf.seek(0)
-        errf.seek(0)
+        self.addCleanup(outf.close)
+        self.addCleanup(errf.close)
         self.assertEqual("""Index: foo
 ===================================================================
 --- foo\t(revision 1)
