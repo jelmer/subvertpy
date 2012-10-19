@@ -207,14 +207,30 @@ else:
     _itervalues = "itervalues"
     _iteritems = "iteritems"
 
+if PY3:
+    next = next
+else:
+    class Throw(object): pass
+    throw = Throw() # easy sentinel hack
+    def next(iterator, default=throw):
+      """next(iterator[, default])
 
-try:
-    advance_iterator = next
-except NameError:
-    def advance_iterator(it):
-        return it.next()
-next = advance_iterator
-
+      Return the next item from the iterator. If default is given
+      and the iterator is exhausted, it is returned instead of
+      raising StopIteration.
+      """
+      try:
+        iternext = iterator.next.__call__
+        # this way an AttributeError while executing next() isn't hidden
+        # (2.6 does this too)
+      except AttributeError:
+        raise TypeError("%s object is not an iterator" % type(iterator).__name__)
+      try:
+        return iternext()
+      except StopIteration:
+        if default is throw:
+          raise
+        return default
 
 if PY3:
     def get_unbound_function(unbound):
