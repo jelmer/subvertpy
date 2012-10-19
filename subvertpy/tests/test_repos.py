@@ -26,10 +26,10 @@ from subvertpy.tests import TestCaseInTempDir, TestCase
 class VersionTest(TestCase):
 
     def test_version_length(self):
-        self.assertEquals(4, len(repos.version()))
+        self.assertEqual(4, len(repos.version()))
 
     def test_api_version_length(self):
-        self.assertEquals(4, len(repos.api_version()))
+        self.assertEqual(4, len(repos.api_version()))
 
     def test_api_version_later_same(self):
         self.assertTrue(repos.api_version() <= repos.version())
@@ -54,7 +54,7 @@ class TestRepository(TestCaseInTempDir):
         r = repos.create(os.path.join(self.test_dir, "foo"))
         f = StringIO()
         r.verify_fs(f, 0, 0)
-        self.assertEquals('* Verified revision 0.\n', f.getvalue())
+        self.assertEqual('* Verified revision 0.\n', f.getvalue())
 
     def test_open(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -66,7 +66,7 @@ class TestRepository(TestCaseInTempDir):
 
     def test_youngest_rev(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertEquals(0, repos.Repository("foo").fs().youngest_revision())
+        self.assertEqual(0, repos.Repository("foo").fs().youngest_revision())
 
     def test_rev_root(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -98,11 +98,11 @@ class TestRepository(TestCaseInTempDir):
         """)
         feedback = StringIO()
         r.load_fs(StringIO(dumpfile), feedback, repos.LOAD_UUID_DEFAULT)
-        self.assertEquals(r.fs().get_uuid(), "38f0a982-fd1f-4e00-aa6b-a20720f4b9ca")
+        self.assertEqual(r.fs().get_uuid(), "38f0a982-fd1f-4e00-aa6b-a20720f4b9ca")
 
     def test_rev_props(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertEquals(["svn:date"], repos.Repository("foo").fs().revision_proplist(0).keys())
+        self.assertEqual(["svn:date"], repos.Repository("foo").fs().revision_proplist(0).keys())
 
     def test_rev_root_invalid(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -115,19 +115,19 @@ class TestRepository(TestCaseInTempDir):
     def test_paths_changed(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         root = repos.Repository("foo").fs().revision_root(0)
-        self.assertEquals({}, root.paths_changed())
+        self.assertEqual({}, root.paths_changed())
 
     def test_is_dir(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         root = repos.Repository("foo").fs().revision_root(0)
-        self.assertEquals(True, root.is_dir(""))
-        self.assertEquals(False, root.is_dir("nonexistant"))
+        self.assertEqual(True, root.is_dir(""))
+        self.assertEqual(False, root.is_dir("nonexistant"))
 
     def test_is_file(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         root = repos.Repository("foo").fs().revision_root(0)
-        self.assertEquals(False, root.is_file(""))
-        self.assertEquals(False, root.is_file("nonexistant"))
+        self.assertEqual(False, root.is_file(""))
+        self.assertEqual(False, root.is_file("nonexistant"))
 
 
 class StreamTests(TestCase):
@@ -137,12 +137,12 @@ class StreamTests(TestCase):
         if repos.api_version() < (1, 6):
             self.assertRaises(NotImplementedError, s.read)
         else:
-            self.assertEquals("", s.read())
-            self.assertEquals("", s.read(15))
-            s.close()
+            self.assertEqual("", s.read())
+            self.assertEqual("", s.read(15))
+        s.close()
 
     def test_write(self):
         s = repos.Stream()
-        self.assertEquals(0, s.write(""))
-        self.assertEquals(2, s.write("ab"))
+        self.assertEqual(0, s.write(""))
+        self.assertEqual(2, s.write("ab"))
         s.close()

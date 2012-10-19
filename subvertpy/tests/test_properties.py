@@ -29,7 +29,7 @@ class TestProperties(TestCase):
         super(TestProperties, self).setUp()
 
     def test_time_from_cstring(self):
-        self.assertEquals(1225704780716938L, properties.time_from_cstring("2008-11-03T09:33:00.716938Z"))
+        self.assertEqual(1225704780716938L, properties.time_from_cstring("2008-11-03T09:33:00.716938Z"))
 
     def test_time_from_cstring_independent_from_dst(self):
         old_tz = os.environ.get('TZ', None)
@@ -42,7 +42,7 @@ class TestProperties(TestCase):
             os.environ['TZ'] = 'Europe/London'
             time.tzset()
             # Now test a time within that DST
-            self.assertEquals(1275295762430000L, properties.time_from_cstring("2010-05-31T08:49:22.430000Z"))
+            self.assertEqual(1275295762430000L, properties.time_from_cstring("2010-05-31T08:49:22.430000Z"))
         finally:
             if old_tz is None:
                 del os.environ['TZ']
@@ -51,7 +51,7 @@ class TestProperties(TestCase):
             time.tzset()
 
     def test_time_to_cstring(self):
-        self.assertEquals("2008-11-03T09:33:00.716938Z", properties.time_to_cstring(1225704780716938L))
+        self.assertEqual("2008-11-03T09:33:00.716938Z", properties.time_to_cstring(1225704780716938L))
 
 
 class TestExternalsParser(TestCase):
@@ -123,47 +123,47 @@ third-party/sounds             http://sounds.red-bean.com/repos
 
 class MergeInfoPropertyParserTests(TestCase):
     def test_simple_range(self):
-        self.assertEquals({"/trunk": [(1, 2, True)]}, properties.parse_mergeinfo_property("/trunk:1-2\n"))
+        self.assertEqual({"/trunk": [(1, 2, True)]}, properties.parse_mergeinfo_property("/trunk:1-2\n"))
 
     def test_simple_range_uninheritable(self):
-        self.assertEquals({"/trunk": [(1, 2, False)]}, properties.parse_mergeinfo_property("/trunk:1-2*\n"))
+        self.assertEqual({"/trunk": [(1, 2, False)]}, properties.parse_mergeinfo_property("/trunk:1-2*\n"))
 
     def test_simple_individual(self):
-        self.assertEquals({"/trunk": [(1, 1, True)]}, properties.parse_mergeinfo_property("/trunk:1\n"))
+        self.assertEqual({"/trunk": [(1, 1, True)]}, properties.parse_mergeinfo_property("/trunk:1\n"))
 
     def test_empty(self):
-        self.assertEquals({}, properties.parse_mergeinfo_property(""))
+        self.assertEqual({}, properties.parse_mergeinfo_property(""))
        
 
 class MergeInfoPropertyCreatorTests(TestCase):
     def test_simple_range(self):
-        self.assertEquals("/trunk:1-2\n", properties.generate_mergeinfo_property({"/trunk": [(1, 2, True)]}))
+        self.assertEqual("/trunk:1-2\n", properties.generate_mergeinfo_property({"/trunk": [(1, 2, True)]}))
 
     def test_simple_individual(self):
-        self.assertEquals("/trunk:1\n", properties.generate_mergeinfo_property({"/trunk": [(1, 1, True)]}))
+        self.assertEqual("/trunk:1\n", properties.generate_mergeinfo_property({"/trunk": [(1, 1, True)]}))
 
     def test_empty(self):
-        self.assertEquals("", properties.generate_mergeinfo_property({}))
+        self.assertEqual("", properties.generate_mergeinfo_property({}))
 
 
 class RevnumRangeTests(TestCase):
     def test_add_revnum_empty(self):
-        self.assertEquals([(1, 1, True)], properties.range_add_revnum([], 1))
+        self.assertEqual([(1, 1, True)], properties.range_add_revnum([], 1))
 
     def test_add_revnum_before(self):
-        self.assertEquals([(2, 2, True), (8, 8, True)], properties.range_add_revnum([(2, 2, True)], 8))
+        self.assertEqual([(2, 2, True), (8, 8, True)], properties.range_add_revnum([(2, 2, True)], 8))
 
     def test_add_revnum_included(self):
-        self.assertEquals([(1, 3, True)], properties.range_add_revnum([(1, 3, True)], 2))
+        self.assertEqual([(1, 3, True)], properties.range_add_revnum([(1, 3, True)], 2))
         
     def test_add_revnum_after(self):
-        self.assertEquals([(1, 3, True), (5, 5, True)], properties.range_add_revnum([(1, 3, True)], 5))
+        self.assertEqual([(1, 3, True), (5, 5, True)], properties.range_add_revnum([(1, 3, True)], 5))
 
     def test_add_revnum_extend_before(self):
-        self.assertEquals([(1, 3, True)], properties.range_add_revnum([(2, 3, True)], 1))
+        self.assertEqual([(1, 3, True)], properties.range_add_revnum([(2, 3, True)], 1))
 
     def test_add_revnum_extend_after(self):
-        self.assertEquals([(1, 3, True)], properties.range_add_revnum([(1, 2, True)], 3))
+        self.assertEqual([(1, 3, True)], properties.range_add_revnum([(1, 2, True)], 3))
 
     def test_revnum_includes_empty(self):
         self.assertFalse(properties.range_includes_revnum([], 2))
