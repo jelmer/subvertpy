@@ -38,8 +38,7 @@ MAX_ENCODED_INT_LEN = 10
 
 DELTA_WINDOW_SIZE = 102400
 
-def apply_txdelta_window(sbuf,
-            (sview_offset, sview_len, tview_len, src_ops, ops, new_data)):
+def apply_txdelta_window(sbuf, delta_params):
     """Apply a txdelta window to a buffer.
 
     :param sbuf: Source buffer (as bytestring)
@@ -51,6 +50,7 @@ def apply_txdelta_window(sbuf,
     :param new_data: Buffer with possible new data
     :return: Target buffer
     """
+    (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = delta_params
     sview = sbuf[sview_offset:sview_offset+sview_len]
     tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
     if len(tview) != tview_len:
@@ -176,7 +176,7 @@ def decode_length(text):
     return ret, text
 
 
-def pack_svndiff_instruction((action, offset, length)):
+def pack_svndiff_instruction(diff_params):
     """Pack a SVN diff instruction
 
     :param action: Action
@@ -184,6 +184,7 @@ def pack_svndiff_instruction((action, offset, length)):
     :param length: Length
     :return: encoded text
     """
+    (action, offset, length) = diff_params
     if length < 0x3f:
         text = chr((action << 6) + length)
     else:

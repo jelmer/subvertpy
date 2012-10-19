@@ -153,7 +153,8 @@ def generate_mergeinfo_property(merges):
     :param merges: dictionary mapping paths to lists of ranges
     :return: Property contents
     """
-    def formatrange((start, end, inheritable)):
+    def formatrange(range_params):
+        (start, end, inheritable) = range_params
         suffix = ""
         if not inheritable:
             suffix = "*"
