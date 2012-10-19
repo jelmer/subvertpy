@@ -114,7 +114,9 @@ def send_stream(stream, handler, block_size=DELTA_WINDOW_SIZE):
     """
     hash = md5()
     text = stream.read(block_size)
-    while text != "":
+    if not isinstance(text, bytes):
+        raise TypeError("The stream should read out bytes")
+    while text:
         hash.update(text)
         window = (0, 0, len(text), 0, [(TXDELTA_NEW, 0, len(text))], text)
         handler(window)
