@@ -249,7 +249,7 @@ class SubversionTestCase(TestCaseInTempDir):
                     f.write("#!/bin/sh\n")
                 finally:
                     f.close()
-                os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
+                os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0o111)
 
         if sys.platform == 'win32':
             return 'file:%s' % urllib.pathname2url(abspath)
