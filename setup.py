@@ -300,7 +300,10 @@ class TestCommand(Command):
         log.info("Running unittest without install.")
 
         import shlex
-        import unittest
+        try:
+            import unittest2 as unittest
+        except ImportError:
+            import unittest
         test_argv0 = [sys.argv[0] + ' test --args=']
         #For transfering args to unittest, we have to split args
         #by ourself, so that command like:

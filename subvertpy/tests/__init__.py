@@ -24,12 +24,15 @@ import shutil
 import stat
 import sys
 import tempfile
-import unittest
 try:
-    from unittest import SkipTest
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+try:
+    from unittest2 import SkipTest
 except ImportError:
     try:
-        from unittest2 import SkipTest
+        from unittest import SkipTest
     except ImportError:
         from testtools.testcase import TestSkipped as SkipTest
 
