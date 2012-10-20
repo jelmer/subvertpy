@@ -112,9 +112,12 @@ class TestClient(SubversionTestCase):
             base_dir_basename = os.path.basename(base_dir)
             svn_cfg_dir = os.path.join(base_dir, '.subversion')
             os.mkdir(svn_cfg_dir)
-            with open(os.path.join(svn_cfg_dir, 'config'), 'w') as svn_cfg:
+            svn_cfg = open(os.path.join(svn_cfg_dir, 'config'), 'w')
+            try:
                 svn_cfg.write('[miscellany]\n')
                 svn_cfg.write('global-ignores = %s' % base_dir_basename)
+            finally:
+                svn_cfg.close()
             config = client.get_config(svn_cfg_dir)
             self.assertIsInstance(config, client.Config)
             ignores = config.get_default_ignores()
