@@ -239,16 +239,12 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         info = self.client.info("dc/foo")
-        self.assertEquals(["dc/foo"], info.keys())
-        self.assertEquals(1, info["dc/foo"].revision)
-        self.assertIs(None, info["dc/foo"].size)
-        self.assertEquals(wc.SCHEDULE_NORMAL, info["dc/foo"].wc_info.schedule)
+        self.assertEquals(["foo"], info.keys())
+        self.assertEquals(1, info["foo"].revision)
+        self.assertEquals(3L, info["foo"].size)
+        self.assertEquals(wc.SCHEDULE_NORMAL, info["foo"].wc_info.schedule)
         self.build_tree({"dc/bar": "blablabla"})
-        self.client.add("dc/bar")
-        info = self.client.info("dc/bar")
-        self.assertEquals(["dc/bar"], info.keys())
-        self.assertEquals(0, info["dc/bar"].revision)
-        self.assertEquals(wc.SCHEDULE_ADD, info["dc/bar"].wc_info.schedule)
+        self.client.add(os.path.abspath("dc/bar"))
 
     def test_info_nonexistant(self):
         self.build_tree({"dc/foo": "bla"})

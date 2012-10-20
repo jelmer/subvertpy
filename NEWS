@@ -1,5 +1,9 @@
 0.9.1	UNRELEASED
 
+ TESTS
+
+  * Fix TestClient.test_info when run against Subversion 1.6. (Jelmer Vernooij)
+
 0.9.0	2012-07-08
 
  IMPROVEMENTS
