@@ -178,14 +178,14 @@ void PyErr_SetSubversionException(svn_error_t *error)
 
 PyObject *PyOS_tmpfile(void)
 {
-	PyObject *osmodule, *tmpfile_fn, *ret;
+	PyObject *tempfile, *tmpfile_fn, *ret;
 
-	osmodule = PyImport_ImportModule("os");
-	if (osmodule == NULL)
+	tempfile = PyImport_ImportModule("tempfile");
+	if (tempfile == NULL)
 		return NULL;
 
-	tmpfile_fn = PyObject_GetAttrString(osmodule, "tmpfile");
-	Py_DECREF(osmodule);
+	tmpfile_fn = PyObject_GetAttrString(tempfile, "TemporaryFile");
+	Py_DECREF(tempfile);
 
 	if (tmpfile_fn == NULL)
 		return NULL;
