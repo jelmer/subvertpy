@@ -114,7 +114,7 @@ static PyObject *py_iter_append(LogIteratorObject *iter, PyObject *tuple)
 }
 
 PyTypeObject LogIterator_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.LogIterator", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(LogIteratorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -146,7 +146,7 @@ PyTypeObject LogIterator_Type = {
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
 	
 	/* Flags to define presence of optional/expanded features */
-	Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
+	0, /*	long tp_flags;	*/
 	
 	NULL, /*	const char *tp_doc;  Documentation string */
 	

@@ -75,16 +75,16 @@ static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
 static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 {
-    if (PyInt_Check(arg) || PyLong_Check(arg)) {
+    if (arg && PyLong_Check(arg)) {
         ret->kind = svn_opt_revision_number;
-        ret->value.number = PyInt_AsLong(arg);
+        ret->value.number = PyLong_AsLong(arg);
         if (ret->value.number == -1 && PyErr_Occurred())
             return false;
         return true;
     } else if (arg == Py_None) {
         ret->kind = svn_opt_revision_unspecified;
         return true;
-    } else if (PyString_Check(arg)) {
+    } else if (PyUnicode_Check(arg)) {
         char *text = PyString_AsString(arg);
         if (!strcmp(text, "HEAD")) {
             ret->kind = svn_opt_revision_head;
@@ -1611,7 +1611,7 @@ static PyObject *get_default_ignores(PyObject *self)
 	RUN_SVN_WITH_POOL(pool, svn_wc_get_default_ignores(&patterns, configobj->config, pool));
 	ret = PyList_New(patterns->nelts);
 	for (i = 0; i < patterns->nelts; i++) {
-		PyObject *item = PyString_FromString(APR_ARRAY_IDX(patterns, i, char *));
+		PyObject *item = PyUnicode_FromString(APR_ARRAY_IDX(patterns, i, char *));
 		if (item == NULL) {
 			apr_pool_destroy(pool);
 			Py_DECREF(item);
@@ -1644,7 +1644,7 @@ static void config_dealloc(PyObject *obj)
 }
 
 PyTypeObject Config_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.Config", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ConfigObject),  /*  tp_basicsize    */
     0,  /*    tp_itemsize;  For allocation */
@@ -1712,7 +1712,7 @@ static void configitem_dealloc(PyObject *self)
 }
 
 PyTypeObject ConfigItem_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.ConfigItem", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ConfigItemObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1766,7 +1766,7 @@ static PyGetSetDef info_getsetters[] = {
 };
 
 PyTypeObject Info_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(InfoObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1866,7 +1866,7 @@ static void wcinfo_dealloc(PyObject *self)
 }
 
 PyTypeObject WCInfo_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(WCInfoObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1928,7 +1928,7 @@ PyTypeObject WCInfo_Type = {
 };
 
 PyTypeObject Client_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     /*    PyObject_VAR_HEAD    */
     "client.Client", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ClientObject),
