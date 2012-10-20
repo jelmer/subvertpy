@@ -114,7 +114,7 @@ static PyObject *py_iter_append(LogIteratorObject *iter, PyObject *tuple)
 }
 
 PyTypeObject LogIterator_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.LogIterator", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(LogIteratorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -243,17 +243,17 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 	}
 
 	if (message != NULL) {
-		obj = PyString_FromString(message);
+		obj = PyText_FromString(message);
 		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, obj);
 		Py_DECREF(obj);
 	}
 	if (author != NULL) {
-		obj = PyString_FromString(author);
+		obj = PyText_FromString(author);
 		PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, obj);
 		Py_DECREF(obj);
 	}
 	if (date != NULL) {
-		obj = PyString_FromString(date);
+		obj = PyText_FromString(date);
 		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, 
 							 obj);
 		Py_DECREF(obj);
@@ -369,7 +369,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	} else {
 		int i;
 		for (i = 0; i < PySequence_Size(revprops); i++) {
-			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
+			const char *n = PyText_AsString(PySequence_GetItem(revprops, i));
 			if (strcmp(SVN_PROP_REVISION_LOG, n) &&
 				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
 				strcmp(SVN_PROP_REVISION_DATE, n)) {

@@ -120,8 +120,11 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (py_new_data == Py_None) {
 		window.new_data = NULL;
 	} else {
-		new_data.data = PyString_AsString(py_new_data);
-		new_data.len = PyString_Size(py_new_data);
+		Py_ssize_t sz;
+		if (PyBytes_AsStringAndSize(py_new_data, (char**)&new_data.data, (Py_ssize_t *)&sz) < 0) {
+			return NULL;
+		}
+		new_data.len = sz;
 		window.new_data = &new_data;
 	}
 
@@ -164,7 +167,7 @@ static void py_txdelta_window_handler_dealloc(PyObject *self)
 }
 
 PyTypeObject TxDeltaWindowHandler_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.TxDeltaWindowHandler", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(TxDeltaWindowHandlerObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -301,8 +304,8 @@ static PyMethodDef py_file_editor_methods[] = {
 	{ NULL }
 };
 
-PyTypeObject FileEditor_Type = { 
-	PyObject_HEAD_INIT(NULL) 0, 
+PyTypeObject FileEditor_Type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.FileEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EditorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -676,8 +679,8 @@ static PyMethodDef py_dir_editor_methods[] = {
 	{ NULL, }
 };
 
-PyTypeObject DirectoryEditor_Type = { 
-	PyObject_HEAD_INIT(NULL) 0,
+PyTypeObject DirectoryEditor_Type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.DirEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EditorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -879,8 +882,8 @@ static PyMethodDef py_editor_methods[] = {
 	{ NULL }
 };
 
-PyTypeObject Editor_Type = { 
-	PyObject_HEAD_INIT(NULL) 0,
+PyTypeObject Editor_Type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.Editor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EditorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1106,7 +1109,7 @@ svn_error_t *py_txdelta_window_handler(svn_txdelta_window_t *window, void *baton
 			}
 		}
 		if (window->new_data != NULL && window->new_data->data != NULL) {
-			py_new_data = PyString_FromStringAndSize(window->new_data->data,
+			py_new_data = PyBytes_FromStringAndSize(window->new_data->data,
 													 window->new_data->len);
 		} else {
 			py_new_data = Py_None;

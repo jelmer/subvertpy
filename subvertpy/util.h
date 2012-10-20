@@ -20,6 +20,7 @@
 #ifndef _SUBVERTPY_UTIL_H_
 #define _SUBVERTPY_UTIL_H_
 
+#include "py_fixup.h"
 #include <svn_version.h>
 
 #if SVN_VER_MAJOR != 1
@@ -33,11 +34,6 @@
 #endif
 
 #define ONLY_BEFORE_SVN(maj, min) (!(ONLY_SINCE_SVN(maj, min)))
-
-/* There's no Py_ssize_t in 2.4, apparently */
-#if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION < 5
-typedef int Py_ssize_t;
-#endif
 
 #ifdef __GNUC__
 #pragma GCC visibility push(hidden)

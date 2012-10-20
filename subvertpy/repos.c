@@ -165,7 +165,7 @@ static PyObject *fs_get_uuid(PyObject *self)
 	if (temp_pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(temp_pool, svn_fs_get_uuid(fsobj->fs, &uuid, temp_pool));
-	ret = PyString_FromString(uuid);
+	ret = PyText_FromString(uuid);
 	apr_pool_destroy(temp_pool);
 
 	return ret;
@@ -252,7 +252,7 @@ static void fs_dealloc(PyObject *self)
 }
 
 PyTypeObject FileSystem_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.FileSystem", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(FileSystemObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -517,7 +517,7 @@ static PyMethodDef repos_methods[] = {
 };
 
 PyTypeObject Repository_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.Repository", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(RepositoryObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -607,7 +607,7 @@ static PyObject *py_string_from_svn_node_id(const svn_fs_id_t *id)
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
-	return PyString_FromStringAndSize(str->data, str->len);
+	return PyBytes_FromStringAndSize(str->data, str->len);
 }
 
 #if ONLY_BEFORE_SVN(1, 6)
@@ -812,7 +812,7 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 		ret = Py_None;
 		Py_INCREF(ret);
 	} else {
-		ret = PyString_FromString(cstr);
+		ret = PyBytes_FromString(cstr);
 	}
 #else
 	if (kind > 0)  {
@@ -823,7 +823,7 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_md5_checksum(checksum, 
 													  self->root, 
 											   path, temp_pool));
-	ret = PyString_FromStringAndSize((char *)checksum, APR_MD5_DIGESTSIZE);
+	ret = PyBytes_FromStringAndSize((char *)checksum, APR_MD5_DIGESTSIZE);
 #endif
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -868,7 +868,7 @@ static PyMethodDef fs_root_methods[] = {
 };
 
 PyTypeObject FileSystemRoot_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.FileSystemRoot", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(FileSystemRootObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -928,33 +928,33 @@ PyTypeObject FileSystemRoot_Type = {
 };
 
 
-void initrepos(void)
+PyModule_Init_DEFINE(repos)
 {
 	static apr_pool_t *pool;
-	PyObject *mod;
+	PyObject *mod = NULL;
 
 	if (PyType_Ready(&Repository_Type) < 0)
-		return;
+		PyModule_RETURN(mod);
 
 	if (PyType_Ready(&FileSystem_Type) < 0)
-		return;
+		PyModule_RETURN(mod);
 
 	if (PyType_Ready(&FileSystemRoot_Type) < 0)
-		return;
+		PyModule_RETURN(mod);
 
 	if (PyType_Ready(&Stream_Type) < 0)
-		return;
+		PyModule_RETURN(mod);
 
 	apr_initialize();
 	pool = Pool(NULL);
 	if (pool == NULL)
-		return;
+		PyModule_RETURN(mod);
 
 	svn_fs_initialize(pool);
 
-	mod = Py_InitModule3("repos", repos_module_methods, "Local repository management");
+	PyModule_DEFINE(mod, "repos", "Local repository management", repos_module_methods)
 	if (mod == NULL)
-		return;
+		PyModule_RETURN(mod);
 
 	PyModule_AddObject(mod, "LOAD_UUID_DEFAULT", PyLong_FromLong(svn_repos_load_uuid_default));
 	PyModule_AddObject(mod, "LOAD_UUID_IGNORE", PyLong_FromLong(svn_repos_load_uuid_ignore));
@@ -977,4 +977,5 @@ void initrepos(void)
 
 	PyModule_AddObject(mod, "Stream", (PyObject *)&Stream_Type);
 	Py_INCREF(&Stream_Type);
+	PyModule_RETURN(mod);
 }
