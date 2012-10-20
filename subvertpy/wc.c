@@ -39,9 +39,9 @@
 #define REPORTER_T svn_ra_reporter2_t
 #endif
 
-staticforward PyTypeObject Entry_Type;
-staticforward PyTypeObject Status_Type;
-staticforward PyTypeObject Adm_Type;
+static PyTypeObject Entry_Type;
+static PyTypeObject Status_Type;
+static PyTypeObject Adm_Type;
 
 static PyObject *py_entry(const svn_wc_entry_t *entry);
 static PyObject *py_status(const svn_wc_status2_t *status);
@@ -125,7 +125,7 @@ typedef struct {
 	apr_pool_t *pool;
 	svn_wc_committed_queue_t *queue;
 } CommittedQueueObject;
-staticforward PyTypeObject CommittedQueue_Type;
+static PyTypeObject CommittedQueue_Type;
 
 #if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_revnum_t revision, svn_depth_t depth, int start_empty, const char *lock_token, apr_pool_t *pool)
@@ -136,7 +136,7 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 		py_lock_token = Py_None;
 		Py_INCREF(py_lock_token);
 	} else {
-		py_lock_token = PyString_FromString(lock_token);
+		py_lock_token = PyBytes_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, depth);
 	Py_DECREF(py_lock_token);
@@ -154,7 +154,7 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 		py_lock_token = Py_None;
 		Py_INCREF(py_lock_token);
 	} else { 
-		py_lock_token = PyString_FromString(lock_token);
+		py_lock_token = PyBytes_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, depth);
 	Py_DECREF(py_lock_token);
@@ -174,7 +174,7 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 		py_lock_token = Py_None;
 		Py_INCREF(py_lock_token);
 	} else {
-		py_lock_token = PyString_FromString(lock_token);
+		py_lock_token = PyBytes_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, svn_depth_infinity);
 	CB_CHECK_PYRETVAL(ret);
@@ -191,7 +191,7 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 		py_lock_token = Py_None;
 		Py_INCREF(py_lock_token);
 	} else { 
-		py_lock_token = PyString_FromString(lock_token);
+		py_lock_token = PyBytes_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, svn_depth_infinity);
 	CB_CHECK_PYRETVAL(ret);
@@ -382,7 +382,7 @@ static PyMemberDef entry_members[] = {
 };
 
 static PyTypeObject Entry_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.Entry", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EntryObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -493,7 +493,7 @@ static PyMemberDef status_members[] = {
 };
 
 static PyTypeObject Status_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.Status", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(StatusObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -641,7 +641,7 @@ static PyObject *adm_access_path(PyObject *self)
 {
 	AdmObject *admobj = (AdmObject *)self;
 	ADM_CHECK_CLOSED(admobj);
-	return PyString_FromString(svn_wc_adm_access_path(admobj->adm));
+	return PyUnicode_FromString(svn_wc_adm_access_path(admobj->adm));
 }
 
 static PyObject *adm_locked(PyObject *self)
@@ -672,7 +672,7 @@ static PyObject *adm_prop_get(PyObject *self, PyObject *args)
 		ret = Py_None;
 		Py_INCREF(ret);
 	} else {
-		ret = PyString_FromStringAndSize(value->data, value->len);
+		ret = PyUnicode_DecodeUTF8(value->data, value->len, NULL);
 	}
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -1264,9 +1264,9 @@ static PyObject *adm_repr(PyObject *self)
 	AdmObject *admobj = (AdmObject *)self;
 
 	if (admobj->adm == NULL) {
-		return PyString_FromFormat("<wc.WorkingCopy (closed) at 0x%p>", admobj);
+		return PyUnicode_FromFormat("<wc.WorkingCopy (closed) at 0x%p>", admobj);
 	} else {
-		return PyString_FromFormat("<wc.WorkingCopy at '%s'>", 
+		return PyUnicode_FromFormat("<wc.WorkingCopy at '%s'>", 
 								   svn_wc_adm_access_path(admobj->adm));
 	}
 }
@@ -1742,7 +1742,7 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
 			svn_path_canonicalize(path, temp_pool), admobj->adm, fulltext,
 			&py_editor, editor_obj, temp_pool));
 
-	py_digest = PyString_FromStringAndSize((char *)digest, APR_MD5_DIGESTSIZE);
+	py_digest = PyBytes_FromStringAndSize((char *)digest, APR_MD5_DIGESTSIZE);
 	if (py_digest == NULL) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
@@ -2064,7 +2064,7 @@ static PyMethodDef adm_methods[] = {
 	{ "get_ancestry", (PyCFunction)get_ancestry, METH_VARARGS,
 		"S.get_ancestry(path) -> (url, rev)" },
 	{ "maybe_set_repos_root", (PyCFunction)maybe_set_repos_root, METH_VARARGS, "S.maybe_set_repos_root(path, repos)" },
-	{ "add_repos_file", (PyCFunction)add_repos_file, METH_KEYWORDS, 
+	{ "add_repos_file", (PyCFunction)add_repos_file, METH_VARARGS | METH_KEYWORDS, 
 		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url=None, copyfrom_rev=-1, notify_func=None)" },
 	{ "mark_missing_deleted", (PyCFunction)mark_missing_deleted, METH_VARARGS,
 		"S.mark_missing_deleted(path)" },
@@ -2097,7 +2097,7 @@ static PyMethodDef adm_methods[] = {
 };
 
 static PyTypeObject Adm_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.WorkingCopy", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AdmObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2176,7 +2176,7 @@ static PyObject *committed_queue_repr(PyObject *self)
 {
 	CommittedQueueObject *cqobj = (CommittedQueueObject *)self;
 
-	return PyString_FromFormat("<wc.CommittedQueue at 0x%p>", cqobj->queue);
+	return PyUnicode_FromFormat("<wc.CommittedQueue at 0x%p>", cqobj->queue);
 }
 
 static PyObject *committed_queue_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
@@ -2266,7 +2266,7 @@ static PyMethodDef committed_queue_methods[] = {
 };
 
 static PyTypeObject CommittedQueue_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.CommittedQueue", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(CommittedQueueObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2428,7 +2428,7 @@ static PyObject *get_adm_dir(PyObject *self)
 	if (pool == NULL)
 		return NULL;
 	dir = svn_wc_get_adm_dir(pool);
-	ret = PyString_FromString(dir);
+	ret = PyUnicode_FromString(dir);
 	apr_pool_destroy(pool);
 	return ret;
 }
@@ -2466,7 +2466,7 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(pool,
 		  svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool),
 										&pristine_path, pool));
-	ret = PyString_FromString(pristine_path);
+	ret = PyUnicode_FromString(pristine_path);
 	apr_pool_destroy(pool);
 	return ret;
 }
@@ -2669,42 +2669,46 @@ static PyMethodDef wc_methods[] = {
 	{ NULL, }
 };
 
-void initwc(void)
+static struct PyModuleDef wc_module = {
+	PyModuleDef_HEAD_INIT, "wc", "Working Copies", -1, wc_methods,
+};
+
+PyMODINIT_FUNC PyInit_wc(void)
 {
-	PyObject *mod;
+	PyObject *mod = NULL;
 
 	if (PyType_Ready(&Entry_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&Status_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&Adm_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&Editor_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&FileEditor_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&DirectoryEditor_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&TxDeltaWindowHandler_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&Stream_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&CommittedQueue_Type) < 0)
-		return;
+		return mod;
 
 	apr_initialize();
 
-	mod = Py_InitModule3("wc", wc_methods, "Working Copies");
+	mod = PyModule_Create(&wc_module);
 	if (mod == NULL)
-		return;
+		return mod;
 
 	PyModule_AddIntConstant(mod, "SCHEDULE_NORMAL", 0);
 	PyModule_AddIntConstant(mod, "SCHEDULE_ADD", 1);
@@ -2770,5 +2774,7 @@ void initwc(void)
 	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
 	Py_INCREF(&CommittedQueue_Type);
 #endif
+	
+	return mod;
 }
 

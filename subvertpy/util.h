@@ -34,6 +34,10 @@
 
 #define ONLY_BEFORE_SVN(maj, min) (!(ONLY_SINCE_SVN(maj, min)))
 
+#if PY_VERSION_HEX < 0x03010000
+#error Python 3.0 is not supported.  Please use 3.1 and higher.
+#endif
+
 #ifdef __GNUC__
 #pragma GCC visibility push(hidden)
 #endif
