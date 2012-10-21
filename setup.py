@@ -2,9 +2,9 @@
 # Setup file for subvertpy
 # Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@samba.org>
 
-from distutils.core import setup
+from distutils.core import setup, Command
 from distutils.extension import Extension
-from distutils.command.install_lib import install_lib
+from distutils.command.build import build
 from distutils import log
 import sys
 import os
@@ -277,11 +277,45 @@ class SvnExtension(Extension):
         Extension.__init__(self, name, *args, **kwargs)
 
 
-# On Windows, we install the apr binaries too.
-class install_lib_with_dlls(install_lib):
+class TestCommand(Command):
+    """Command for running unittests without install."""
+
+    user_options = [("args=", None, '''The command args string passed to
+                                    unittest framework, such as 
+                                     --args="-v -f"''')]
+
+    def initialize_options(self):
+        self.args = ''
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        self.run_command('build')
+        bld = self.distribution.get_command_obj('build')
+        #Add build_lib in to sys.path so that unittest can found DLLs and libs
+        sys.path = [os.path.abspath(bld.build_lib)] + sys.path
+        os.chdir(bld.build_lib)
+        log.info("Running unittest without install.")
+
+        import shlex
+        import unittest
+        test_argv0 = [sys.argv[0] + ' test --args=']
+        #For transfering args to unittest, we have to split args
+        #by ourself, so that command like:
+        #python setup.py test --args="-v -f"
+        #can be executed, and the parameter '-v -f' can be
+        #transfering to unittest properly.
+        test_argv = test_argv0 + shlex.split(self.args)
+        unittest.main(module=None, defaultTest='subvertpy.tests.test_suite', argv=test_argv)
+
+
+class BuildWithDLLs(build):
     def _get_dlls(self):
         # return a list of of (FQ-in-name, relative-out-name) tuples.
         ret = []
+        # the apr binaries.
         apr_bins = [libname + ".dll" for libname in extra_libs
                     if libname.startswith("libapr")]
         if get_svn_version() >= (1,5,0):
@@ -297,11 +331,11 @@ class install_lib_with_dlls(install_lib):
         look_dirs = os.environ.get("PATH","").split(os.pathsep)
         look_dirs.insert(0, os.path.join(os.environ["SVN_DEV"], "bin"))
 
+        target = os.path.abspath(os.path.join(self.build_lib, 'subvertpy'))
         for bin in apr_bins:
             for look in look_dirs:
                 f = os.path.join(look, bin)
                 if os.path.isfile(f):
-                    target = os.path.join(self.install_dir, "subvertpy", bin)
                     ret.append((f, target))
                     break
             else:
@@ -310,20 +344,21 @@ class install_lib_with_dlls(install_lib):
         return ret
 
     def run(self):
-        install_lib.run(self)
+        build.run(self)
         # the apr binaries.
         # On Windows we package up the apr dlls with the plugin.
         for s, d in self._get_dlls():
             self.copy_file(s, d)
 
     def get_outputs(self):
-        ret = install_lib.get_outputs(self)
+        ret = build.get_outputs(self)
         ret.extend([info[1] for info in self._get_dlls()])
         return ret
 
-cmdclass = {}
+cmdclass = {'test': TestCommand}
 if os.name == 'nt':
-    cmdclass['install_lib'] = install_lib_with_dlls
+    # BuildWithDLLs can copy external DLLs into source directory.
+    cmdclass['build'] = BuildWithDLLs
 
 def source_path(filename):
     return os.path.join("subvertpy", filename)

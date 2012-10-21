@@ -43,6 +43,13 @@ typedef int Py_ssize_t;
 #pragma GCC visibility push(hidden)
 #endif
 
+#if ONLY_BEFORE_SVN(1, 6)
+#define svn_dirent_internal_style svn_path_internal_style
+#defien svn_dirent_local_style svn_path_local_style
+#else
+#include <svn_dirent_uri.h>
+#endif
+
 svn_error_t *py_cancel_check(void *cancel_baton);
 __attribute__((warn_unused_result)) apr_pool_t *Pool(apr_pool_t *parent);
 void handle_svn_error(svn_error_t *error);
@@ -92,7 +99,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error);
 apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool);
 void PyErr_SetAprStatus(apr_status_t status);
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
-PyObject *PyOS_tmpfile(void);
+PyObject *PyOS_tmpfile(apr_file_t** file, apr_pool_t* temp_pool);
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool);
 #if ONLY_SINCE_SVN(1, 6)
 PyObject *pyify_changed_paths2(apr_hash_t *changed_paths2, apr_pool_t *pool);
