@@ -505,6 +505,7 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
+    path = svn_dirent_internal_style(path, temp_pool);
 
 #if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool,
