@@ -505,6 +505,7 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
+    path = svn_dirent_internal_style(path, temp_pool);
 
 #if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool,
@@ -546,7 +547,7 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
         return NULL;
 #if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, url,
-        svn_path_canonicalize(path, temp_pool),
+        svn_dirent_internal_style(path, temp_pool),
         &c_peg_rev, &c_rev, recurse?svn_depth_infinity:svn_depth_files,
         ignore_externals, allow_unver_obstructions, client->client, temp_pool));
 #else
@@ -558,7 +559,7 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     }
 
     RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout2(&result_rev, url,
-        svn_path_canonicalize(path, temp_pool),
+        svn_dirent_internal_style(path, temp_pool),
         &c_peg_rev, &c_rev, recurse,
         ignore_externals, client->client, temp_pool));
 #endif
@@ -655,13 +656,13 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
 #if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_export4(&result_rev, from,
-        svn_path_canonicalize(to, temp_pool),
+        svn_dirent_internal_style(to, temp_pool),
         &c_peg_rev, &c_rev, overwrite, ignore_externals,
 		recurse?svn_depth_infinity:svn_depth_files,
         native_eol, client->client, temp_pool));
 #else
     RUN_SVN_WITH_POOL(temp_pool, svn_client_export3(&result_rev, from,
-        svn_path_canonicalize(to, temp_pool),
+        svn_dirent_internal_style(to, temp_pool),
         &c_peg_rev, &c_rev, overwrite, ignore_externals, recurse,
         native_eol, client->client, temp_pool));
 #endif
