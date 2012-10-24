@@ -329,12 +329,12 @@ class TestRemoteAccess(SubversionTestCase):
         stream = StringIO()
         self.ra.get_file("bar", stream, 1)
         stream.seek(0)
-        self.assertEqual("a", stream.read())
+        self.assertEqual(b"a", stream.read())
 
         stream = StringIO()
         self.ra.get_file("/bar", stream, 1)
         stream.seek(0)
-        self.assertEqual("a", stream.read())
+        self.assertEqual(b"a", stream.read())
 
     def test_get_locations_root(self):
         self.assertEqual({0: "/"}, self.ra.get_locations("", 0, [0]))
