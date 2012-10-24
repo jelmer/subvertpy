@@ -146,7 +146,7 @@ class TestClient(SubversionTestCase):
         (outf, errf) = self.client.diff(1, 2, self.repos_url, self.repos_url)
         self.addCleanup(outf.close)
         self.addCleanup(errf.close)
-        self.assertEqual("""Index: foo
+        self.assertEqual(b"""Index: foo
 ===================================================================
 --- foo\t(revision 1)
 +++ foo\t(revision 2)
@@ -156,7 +156,7 @@ class TestClient(SubversionTestCase):
 +foo2
 \\ No newline at end of file
 """, outf.read())
-        self.assertEqual("", errf.read())
+        self.assertEqual(b"", errf.read())
 
     def assertCatEquals(self, value, revision=None):
         io = StringIO()
@@ -168,12 +168,12 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/foo")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        self.assertCatEquals("bla")
+        self.assertCatEquals(b"bla")
         self.build_tree({"dc/foo": "blabla"})
         self.client.commit(["dc"])
-        self.assertCatEquals("blabla")
-        self.assertCatEquals("bla", revision=1)
-        self.assertCatEquals("blabla", revision=2)
+        self.assertCatEquals(b"blabla")
+        self.assertCatEquals(b"bla", revision=1)
+        self.assertCatEquals(b"blabla", revision=2)
 
     def assertLogEntryChangedPathsEquals(self, expected, entry):
         changed_paths = entry["changed_paths"]
