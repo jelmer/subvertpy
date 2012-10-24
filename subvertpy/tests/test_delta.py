@@ -37,7 +37,7 @@ class DeltaTests(TestCase):
     def test_send_stream(self):
         stream = BytesIO(b("foo"))
         send_stream(stream, self.storing_window_handler)
-        self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], 'foo'), None], 
+        self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], b('foo')), None], 
                           self.windows)
 
 
