@@ -294,7 +294,9 @@ class AdmTests(SubversionTestCase):
         adm = wc.WorkingCopy(None, "checkout", True)
         try:
             self.assertIs(None, adm.probe_try(self.test_dir))
-        except subvertpy.SubversionException, (msg, num):
+        except subvertpy.SubversionException:
+            _, e, _ = sys.exc_info()
+            (msg, num) = e
             if num != subvertpy.ERR_WC_NOT_WORKING_COPY:
                 raise
         self.assertEqual("checkout", adm.probe_try(os.path.join("checkout", "bar")).access_path())
