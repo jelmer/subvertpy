@@ -7,3 +7,6 @@ tags
 .testrepository
 .noseids
 apidocs
+*.pyc
+*.so
+*~
