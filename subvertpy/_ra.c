@@ -518,8 +518,8 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 
 	CB_CHECK_PYRETVAL(ret);
 
-	if (PyString_Check(ret)) {
-		char* fname = PyString_AsString(ret);
+	if (PyBytes_Check(ret)) {
+		char* fname = PyBytes_AsString(ret);
 		status = apr_file_open(fp, fname, APR_CREATE | APR_READ | APR_WRITE, APR_OS_DEFAULT, 
 								pool);
 		if (status) {
@@ -527,17 +527,12 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 			goto fail_file;
 		}
 		Py_DECREF(ret);
-	} else if (PyFile_Check(ret)) {
+	} else {
 		*fp = apr_file_from_object(ret, pool);
 		Py_DECREF(ret);
 		if (!*fp) {
 			goto fail;
 		}
-	} else {
-		PyErr_SetString(PyExc_TypeError, "Unknown type for file variable");
-		Py_DECREF(ret);
-		PyGILState_Release(state);
-		return py_svn_error();
 	}
 
 	PyGILState_Release(state);
