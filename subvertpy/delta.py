@@ -19,7 +19,7 @@ __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 __docformat__ = "restructuredText"
 
 import sys
-
+from subvertpy.six import moves,b,binary_type
 if sys.version_info < (2, 5):
     import md5 as _mod_md5
     md5 = _mod_md5.new
@@ -38,8 +38,7 @@ MAX_ENCODED_INT_LEN = 10
 
 DELTA_WINDOW_SIZE = 102400
 
-def apply_txdelta_window(sbuf,
-            (sview_offset, sview_len, tview_len, src_ops, ops, new_data)):
+def apply_txdelta_window(sbuf, delta_params):
     """Apply a txdelta window to a buffer.
 
     :param sbuf: Source buffer (as bytestring)
@@ -51,6 +50,7 @@ def apply_txdelta_window(sbuf,
     :param new_data: Buffer with possible new data
     :return: Target buffer
     """
+    (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = delta_params
     sview = sbuf[sview_offset:sview_offset+sview_len]
     tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
     if len(tview) != tview_len:
@@ -100,7 +100,7 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
             # Copy from source area.
             tview += sview[offset:offset+length]
         elif action == TXDELTA_TARGET:
-            for i in xrange(length):
+            for i in moves.xrange(length):
                 tview += tview[offset+i]
         elif action == TXDELTA_NEW:
             tview += new_data[offset:offset+length]
@@ -118,7 +118,9 @@ def send_stream(stream, handler, block_size=DELTA_WINDOW_SIZE):
     """
     hash = md5()
     text = stream.read(block_size)
-    while text != "":
+    if not isinstance(text,binary_type):
+        raise Exception("The stream should read out bytes")
+    while text != b(""):
         hash.update(text)
         window = (0, 0, len(text), 0, [(TXDELTA_NEW, 0, len(text))], text)
         handler(window)
@@ -174,7 +176,7 @@ def decode_length(text):
     return ret, text
 
 
-def pack_svndiff_instruction((action, offset, length)):
+def pack_svndiff_instruction(diff_params):
     """Pack a SVN diff instruction
 
     :param action: Action
@@ -182,6 +184,7 @@ def pack_svndiff_instruction((action, offset, length)):
     :param length: Length
     :return: encoded text
     """
+    (action, offset, length) = diff_params
     if length < 0x3f:
         text = chr((action << 6) + length)
     else:

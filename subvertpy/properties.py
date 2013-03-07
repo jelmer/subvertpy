@@ -18,8 +18,9 @@
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 __docformat__ = "restructuredText"
 
-import bisect, calendar, time, urlparse
-
+import bisect, calendar, time
+from subvertpy.six import iterkeys,itervalues,iteritems
+from subvertpy.six.moves import urljoin
 
 class InvalidExternalsDescription(Exception):
     _fmt = """Unable to parse externals description."""
@@ -61,7 +62,7 @@ def time_from_cstring(text):
     assert usecstr[-1] == "Z"
     tm_usec = int(usecstr[:-1])
     tm = time.strptime(basestr, "%Y-%m-%dT%H:%M:%S")
-    return (long(calendar.timegm(tm)) * 1000000 + tm_usec)
+    return (int(calendar.timegm(tm)) * 1000000 + tm_usec)
 
 
 def parse_externals_description(base_url, val):
@@ -117,7 +118,7 @@ def parse_externals_description(base_url, val):
             raise NotImplementedError("Relative to the scheme externals not yet supported")
         if relurl.startswith("^/"):
             raise NotImplementedError("Relative to the repository root externals not yet supported")
-        ret[path] = (revno, urlparse.urljoin(base_url+"/", relurl))
+        ret[path] = (revno, urljoin(base_url+"/", relurl))
     return ret
 
 
@@ -152,7 +153,8 @@ def generate_mergeinfo_property(merges):
     :param merges: dictionary mapping paths to lists of ranges
     :return: Property contents
     """
-    def formatrange((start, end, inheritable)):
+    def formatrange(range_params):
+        (start, end, inheritable) = range_params
         suffix = ""
         if not inheritable:
             suffix = "*"
@@ -161,7 +163,7 @@ def generate_mergeinfo_property(merges):
         else:
             return "%d-%d%s" % (start, end, suffix)
     text = ""
-    for (path, ranges) in merges.iteritems():
+    for (path, ranges) in iteritems(merges):
         assert path.startswith("/")
         text += "%s:%s\n" % (path, ",".join(map(formatrange, ranges)))
     return text
@@ -279,7 +281,7 @@ def diff(current, previous):
              with the old and the new property value.
     """
     ret = {}
-    for key, newval in current.iteritems():
+    for key, newval in iteritems(current):
         oldval = previous.get(key)
         if oldval != newval:
             ret[key] = (oldval, newval)

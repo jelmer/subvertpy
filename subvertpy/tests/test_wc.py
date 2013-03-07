@@ -15,9 +15,9 @@
 
 """Subversion ra library tests."""
 
-from StringIO import StringIO
 import os
 
+from subvertpy.six import BytesIO,b
 import subvertpy
 from subvertpy import (
     NODE_FILE,
@@ -115,8 +115,8 @@ class AdmTests(SubversionTestCase):
     def test_add_repos_file(self):
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
-        adm.add_repos_file("checkout/bar", StringIO("basecontents"), StringIO("contents"), {}, {})
-        self.assertEqual("basecontents", wc.get_pristine_contents("checkout/bar").read())
+        adm.add_repos_file("checkout/bar", BytesIO(b("basecontents")), BytesIO(b("contents")), {}, {})
+        self.assertEqual(b("basecontents"), wc.get_pristine_contents("checkout/bar").read())
 
     def test_mark_missing_deleted(self):
         repos_url = self.make_client("repos", "checkout")
@@ -149,7 +149,7 @@ class AdmTests(SubversionTestCase):
         adm = wc.WorkingCopy(None, "checkout", True)
         path = os.path.join(self.test_dir, "checkout/bar")
         stream = adm.translated_stream(path, path, wc.TRANSLATE_TO_NF)
-        self.assertTrue(stream.read().startswith("My id: $Id: "))
+        self.assertTrue(stream.read().startswith(b("My id: $Id: ")))
 
     def test_text_modified(self):
         repos_url = self.make_client("repos", "checkout")
@@ -255,7 +255,7 @@ class AdmTests(SubversionTestCase):
                 pass
         editor = Editor()
         (tmpfile, digest) = adm.transmit_text_deltas("bar", True, editor)
-        self.assertEqual(editor._windows, [(0L, 0, 5, 0, [(2, 0, 5)], 'blala'), None])
+        self.assertEqual(editor._windows, [(0, 0, 5, 0, [(2, 0, 5)], b('blala')), None])
         self.assertIsInstance(tmpfile, str)
         self.assertEqual(16, len(digest))
 
@@ -294,7 +294,9 @@ class AdmTests(SubversionTestCase):
         adm = wc.WorkingCopy(None, "checkout", True)
         try:
             self.assertIs(None, adm.probe_try(self.test_dir))
-        except subvertpy.SubversionException, (msg, num):
+        except subvertpy.SubversionException:
+            _, e, _ = sys.exc_info()
+            (msg, num) = e
             if num != subvertpy.ERR_WC_NOT_WORKING_COPY:
                 raise
         self.assertEqual("checkout", adm.probe_try(os.path.join("checkout", "bar")).access_path())

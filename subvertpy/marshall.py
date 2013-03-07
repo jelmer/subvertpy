@@ -16,6 +16,8 @@
 
 """Marshalling for the svn_ra protocol."""
 
+from subvertpy import six
+
 class literal:
     """A protocol literal."""
 
@@ -57,16 +59,20 @@ def marshall(x):
     :param x: Data item
     :return: encoded string
     """
-    if type(x) is int:
+    if isinstance(x, six.integer_types):
         return "%d " % x
     elif type(x) is list or type(x) is tuple:
         return "( " + "".join(map(marshall, x)) + ") "
     elif isinstance(x, literal):
         return "%s " % x
-    elif type(x) is str:
+    elif isinstance(x, six.string_types):
+        if six.PY3:
+            if isinstance(x, six.binary_type):
+                x = x.decode()
+        else: #Python 2
+            if isinstance(x, six.text_type):
+                x = x.encode("utf-8")
         return "%d:%s " % (len(x), x)
-    elif type(x) is unicode:
-        return "%d:%s " % (len(x), x.encode("utf-8"))
     elif type(x) is bool:
         if x == True:
             return "true "

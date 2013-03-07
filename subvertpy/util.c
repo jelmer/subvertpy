@@ -241,11 +241,11 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 	}
 	for (i = 0; i < PyList_GET_SIZE(l); i++) {
 		PyObject *item = PyList_GET_ITEM(l, i);
-		if (!PyString_Check(item)) {
+		if (!PyText_Check(item)) {
 			PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
 			return false;
 		}
-		APR_ARRAY_PUSH(*ret, char *) = apr_pstrdup(pool, PyString_AsString(item));
+		APR_ARRAY_PUSH(*ret, char *) = apr_pstrdup(pool, PyText_AsString(item));
 	}
 	return true;
 }
@@ -257,18 +257,18 @@ bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **
 		*ret = NULL;
 		return true;
 	}
-	if (PyString_Check(l)) {
+	if (PyText_Check(l)) {
 		*ret = apr_array_make(pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(l), pool);
+		APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyText_AsString(l), pool);
 	} else if (PyList_Check(l)) {
 		*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
 		for (i = 0; i < PyList_GET_SIZE(l); i++) {
 			PyObject *item = PyList_GET_ITEM(l, i);
-			if (!PyString_Check(item)) {
+			if (!PyText_Check(item)) {
 				PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
 				return false;
 			}
-			APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(item), pool);
+			APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyText_AsString(item), pool);
 		}
 	} else {
 		PyErr_Format(PyExc_TypeError, "Expected list of strings, got: %s",
@@ -305,7 +305,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 			py_val = Py_None;
 			Py_INCREF(py_val);
 		} else {
-			py_val = PyString_FromStringAndSize(val->data, val->len);
+			py_val = PyText_FromStringAndSize(val->data, val->len);
 		}
 		if (py_val == NULL) {
 			Py_DECREF(py_props);
@@ -316,7 +316,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 			py_key = Py_None;
 			Py_INCREF(py_key);
 		} else {
-			py_key = PyString_FromString(key);
+			py_key = PyText_FromString(key);
 		}
 		if (PyDict_SetItem(py_props, py_key, py_val) != 0) {
 			Py_DECREF(py_key);
@@ -351,22 +351,22 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	}
 
 	while (PyDict_Next(py_props, &idx, &k, &v)) {
-
-		if (!PyString_Check(k)) {
+		char *data = NULL;
+		Py_ssize_t sz = 0;
+		if (!PyText_Check(k)) {
 			PyErr_SetString(PyExc_TypeError, 
 							"property name should be string");
 			return NULL;
 		}
-		if (!PyString_Check(v)) {
+		if (!PyText_Check(v)) {
 			PyErr_SetString(PyExc_TypeError, 
 							"property value should be string");
 			return NULL;
 		}
-
-		val_string = svn_string_ncreate(PyString_AsString(v), 
-										PyString_Size(v), pool);
-		apr_hash_set(hash_props, PyString_AsString(k), 
-					 PyString_Size(k), val_string);
+		PyText_AsStringAndSize(v, &data, &sz);
+		val_string = svn_string_ncreate(data, sz, pool);
+		PyText_AsStringAndSize(k, &data, &sz);
+		apr_hash_set(hash_props, data, sz, val_string);
 	}
 
 	return hash_props;
@@ -507,17 +507,17 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revn
 	}
 	CB_CHECK_PYRETVAL(revprops);
 	if (message != NULL) {
-		obj = PyString_FromString(message);
+		obj = PyText_FromString(message);
 		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, obj);
 		Py_DECREF(obj);
 	}
 	if (author != NULL) {
-		obj = PyString_FromString(author);
+		obj = PyText_FromString(author);
 		PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, obj);
 		Py_DECREF(obj);
 	}
 	if (date != NULL) {
-		obj = PyString_FromString(date);
+		obj = PyText_FromString(date);
 		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, obj);
 		Py_DECREF(obj);
 	}
@@ -574,19 +574,22 @@ apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l)
 
 static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length)
 {
+	char *data = NULL;
+	Py_ssize_t sz = 0;
 	PyObject *self = (PyObject *)baton, *ret;
 	PyGILState_STATE state = PyGILState_Ensure();
 
 	ret = PyObject_CallMethod(self, "read", "i", *length);
 	CB_CHECK_PYRETVAL(ret);
 
-	if (!PyString_Check(ret)) {
-		PyErr_SetString(PyExc_TypeError, "Expected stream read function to return string");
+	if (!PyBytes_Check(ret)) {
+		PyErr_SetString(PyExc_TypeError, "Expected stream read function to return Byte Array");
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
-	*length = PyString_Size(ret);
-	memcpy(buffer, PyString_AS_STRING(ret), *length);
+	PyBytes_AsStringAndSize(ret, &data, &sz);
+	memcpy(buffer, data, sz);
+	*length = sz;
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
@@ -596,8 +599,11 @@ static svn_error_t *py_stream_write(void *baton, const char *data, apr_size_t *l
 {
 	PyObject *self = (PyObject *)baton, *ret;
 	PyGILState_STATE state = PyGILState_Ensure();
-
+#if PY_MAJOR_VERSION < 3
 	ret = PyObject_CallMethod(self, "write", "s#", data, len[0]);
+#else
+	ret = PyObject_CallMethod(self, "write", "y#", data, len[0]);
+#endif
 	CB_CHECK_PYRETVAL(ret);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
@@ -704,7 +710,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	}
 	if (dirent_fields & SVN_DIRENT_LAST_AUTHOR) {
 		if (dirent->last_author != NULL) {
-			obj = PyString_FromString(dirent->last_author);
+			obj = PyText_FromString(dirent->last_author);
 		} else {
 			obj = Py_None;
 			Py_INCREF(obj);
@@ -717,26 +723,32 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool)
 {
-    apr_status_t status;
-    FILE *file;
-    apr_file_t *fp;
-    apr_os_file_t osfile;
-  
-    file = PyFile_AsFile(object);
+	apr_status_t status;
+	int fd = -1;
+	apr_file_t *fp = NULL;
+	apr_os_file_t osfile;
+	if ((fd = PyObject_AsFileDescriptor(object)) >= 0)
+	{
 #ifdef WIN32
-    osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
+		osfile = (apr_os_file_t)_get_osfhandle(fd);
 #else
-    osfile = (apr_os_file_t)fileno(file);
+		osfile = (apr_os_file_t)fd;
 #endif
+	}
+	else
+	{
+		PyErr_SetString(PyExc_TypeError, "Unknown type for file variable");
+		return NULL;
+	}
 
-    status = apr_os_file_put(&fp, &osfile,
-                             APR_FOPEN_WRITE | APR_FOPEN_CREATE, pool);
-    if (status) {
-        PyErr_SetAprStatus(status);
-        return NULL;
-    }
+	status = apr_os_file_put(&fp, &osfile,
+			APR_FOPEN_WRITE | APR_FOPEN_CREATE, pool);
+	if (status) {
+		PyErr_SetAprStatus(status);
+		return NULL;
+	}
 
-    return fp;
+	return fp;
 }
 
 static void stream_dealloc(PyObject *self)
@@ -807,7 +819,7 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 		return NULL;
 
 	if (self->closed) {
-		return PyString_FromString("");
+		return PyBytes_FromString("");
 	}
 
 	temp_pool = Pool(NULL);
@@ -823,7 +835,7 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 			return NULL;
 		}
 		RUN_SVN_WITH_POOL(temp_pool, svn_stream_read(self->stream, buffer, &size));
-		ret = PyString_FromStringAndSize(buffer, size);
+		ret = PyBytes_FromStringAndSize(buffer, size);
 		apr_pool_destroy(temp_pool);
 		return ret;
 	} else {
@@ -834,7 +846,7 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 							   temp_pool,
 							   temp_pool));
 		self->closed = TRUE;
-		ret = PyString_FromStringAndSize(result->data, result->len);
+		ret = PyBytes_FromStringAndSize(result->data, result->len);
 		apr_pool_destroy(temp_pool);
 		return ret;
 #else
@@ -853,7 +865,7 @@ static PyMethodDef stream_methods[] = {
 };
 
 PyTypeObject Stream_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.Stream", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(StreamObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */

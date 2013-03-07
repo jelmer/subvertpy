@@ -127,7 +127,8 @@ try:
             from warnings import warn
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
-except ImportError, e:
+except ImportError:
+    _, e, _ = sys.exc_info()
     raise ImportError("Unable to load subvertpy extensions: %s" % e)
 
 

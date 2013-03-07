@@ -20,6 +20,7 @@
 #ifndef _SUBVERTPY_UTIL_H_
 #define _SUBVERTPY_UTIL_H_
 
+#include "py_fixup.h"
 #include <svn_version.h>
 
 #if SVN_VER_MAJOR != 1
@@ -34,13 +35,20 @@
 
 #define ONLY_BEFORE_SVN(maj, min) (!(ONLY_SINCE_SVN(maj, min)))
 
-/* There's no Py_ssize_t in 2.4, apparently */
-#if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION < 5
-typedef int Py_ssize_t;
-#endif
-
 #ifdef __GNUC__
 #pragma GCC visibility push(hidden)
+#endif
+
+#ifdef _WIN32
+#if ONLY_BEFORE_SVN(1, 6)
+#define svn_dirent_internal_style svn_path_internal_style
+#defien svn_dirent_local_style svn_path_local_style
+#else
+#include <svn_dirent_uri.h>
+#endif
+#else
+#define svn_dirent_internal_style svn_path_canonicalize
+#defien svn_dirent_local_style svn_path_canonicalize
 #endif
 
 svn_error_t *py_cancel_check(void *cancel_baton);

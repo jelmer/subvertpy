@@ -19,24 +19,26 @@
 __author__ = 'Jelmer Vernooij <jelmer@samba.org>'
 __docformat__ = 'restructuredText'
 
-from cStringIO import StringIO
 import os
 import shutil
 import stat
 import sys
 import tempfile
-import unittest
 try:
-    from unittest import SkipTest
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+try:
+    from unittest2 import SkipTest
 except ImportError:
     try:
-        from unittest2 import SkipTest
+        from unittest import SkipTest
     except ImportError:
         from testtools.testcase import TestSkipped as SkipTest
-import urllib2
-import urllib
-import urlparse
 
+from subvertpy.six import iterkeys,itervalues,iteritems
+from subvertpy.six.moves import pathname2url,urljoin
+from subvertpy.six import BytesIO,b
 from subvertpy import (
     client,
     delta,
@@ -110,9 +112,9 @@ class TestFileEditor(object):
 
     def modify(self, contents=None):
         if contents is None:
-            contents = urllib2.randombytes(100)
+            contents = os.urandom(100)
         txdelta = self.file.apply_textdelta()
-        delta.send_stream(StringIO(contents), txdelta)
+        delta.send_stream(BytesIO(b(contents)), txdelta)
 
     def close(self):
         assert not self.is_closed
@@ -160,7 +162,7 @@ class TestDirEditor(object):
     def add_dir(self, path, copyfrom_path=None, copyfrom_rev=-1):
         self.close_children()
         if copyfrom_path is not None:
-            copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
+            copyfrom_path = urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
         assert (copyfrom_path is None and copyfrom_rev == -1) or \
@@ -173,7 +175,7 @@ class TestDirEditor(object):
     def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
         self.close_children()
         if copyfrom_path is not None:
-            copyfrom_path = urlparse.urljoin(self.baseurl+"/", copyfrom_path)
+            copyfrom_path = urljoin(self.baseurl+"/", copyfrom_path)
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
         child = TestFileEditor(self.dir.add_file(path, copyfrom_path,
@@ -249,10 +251,10 @@ class SubversionTestCase(TestCaseInTempDir):
                     f.write("#!/bin/sh\n")
                 finally:
                     f.close()
-                os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
+                os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 73) #0o111
 
         if sys.platform == 'win32':
-            return 'file:%s' % urllib.pathname2url(abspath)
+            return 'file:%s' % pathname2url(abspath)
         else:
             return "file://%s" % abspath
 
@@ -277,7 +279,7 @@ class SubversionTestCase(TestCaseInTempDir):
         if recursive:
             return ret
         else:
-            return ret.values()[0]
+            return list(itervalues(ret))[0]
 
     def client_get_revprop(self, url, revnum, name):
         """Get the revision property.
@@ -379,7 +381,7 @@ class SubversionTestCase(TestCaseInTempDir):
         :param files: Dictionary with filenames as keys, contents as
             values. None as value indicates a directory.
         """
-        for name, content in files.iteritems():
+        for name, content in iteritems(files):
             if content is None:
                 try:
                     os.makedirs(name)

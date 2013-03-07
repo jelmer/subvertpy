@@ -22,8 +22,8 @@ from subvertpy import SubversionException, ERR_BAD_URL
 from subvertpy import _ra
 from subvertpy._ra import *
 from subvertpy import ra_svn
-
-import urllib
+from subvertpy.six.moves import urllib_parse
+from subvertpy import six
 
 url_handlers = {
         "svn": _ra.RemoteAccess,
@@ -41,7 +41,9 @@ def RemoteAccess(url, *args, **kwargs):
     :param url: URL to connect to
     :return: RemoteAccess object
     """
-    (type, opaque) = urllib.splittype(url)
+    if six.PY3 and isinstance(url, six.binary_type):
+        url = url.decode("utf-8")
+    (type, opaque) = urllib_parse.splittype(url)
     if not type in url_handlers:
         raise SubversionException("Unknown URL type '%s'" % type, ERR_BAD_URL)
     return url_handlers[type](url, *args, **kwargs)

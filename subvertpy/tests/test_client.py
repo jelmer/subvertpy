@@ -17,10 +17,11 @@
 
 from datetime import datetime, timedelta
 import os
-from StringIO import StringIO
 import shutil
 import tempfile
 
+from subvertpy.six import iterkeys,itervalues,iteritems
+from subvertpy.six import BytesIO,b
 from subvertpy import (
     SubversionException,
     NODE_DIR, NODE_FILE,
@@ -111,9 +112,12 @@ class TestClient(SubversionTestCase):
             base_dir_basename = os.path.basename(base_dir)
             svn_cfg_dir = os.path.join(base_dir, '.subversion')
             os.mkdir(svn_cfg_dir)
-            with open(os.path.join(svn_cfg_dir, 'config'), 'w') as svn_cfg:
+            svn_cfg = open(os.path.join(svn_cfg_dir, 'config'), 'w')
+            try:
                 svn_cfg.write('[miscellany]\n')
                 svn_cfg.write('global-ignores = %s' % base_dir_basename)
+            finally:
+                svn_cfg.close()
             config = client.get_config(svn_cfg_dir)
             self.assertIsInstance(config, client.Config)
             ignores = config.get_default_ignores()
@@ -142,7 +146,7 @@ class TestClient(SubversionTestCase):
         (outf, errf) = self.client.diff(1, 2, self.repos_url, self.repos_url)
         self.addCleanup(outf.close)
         self.addCleanup(errf.close)
-        self.assertEqual("""Index: foo
+        self.assertEqual(b("""Index: foo
 ===================================================================
 --- foo\t(revision 1)
 +++ foo\t(revision 2)
@@ -151,13 +155,13 @@ class TestClient(SubversionTestCase):
 \\ No newline at end of file
 +foo2
 \\ No newline at end of file
-""", outf.read())
-        self.assertEqual("", errf.read())
+""").splitlines(), outf.read().splitlines())
+        self.assertEqual(b(""), errf.read())
 
     def assertCatEquals(self, value, revision=None):
-        io = StringIO()
+        io = BytesIO()
         self.client.cat("dc/foo", io, revision)
-        self.assertEqual(value, io.getvalue())
+        self.assertEqual(b(value), io.getvalue())
 
     def test_cat(self):
         self.build_tree({"dc/foo": "bla"})
@@ -174,7 +178,7 @@ class TestClient(SubversionTestCase):
     def assertLogEntryChangedPathsEquals(self, expected, entry):
         changed_paths = entry["changed_paths"]
         self.assertIsInstance(changed_paths, dict)
-        self.assertEqual(sorted(expected), sorted(changed_paths.keys()))
+        self.assertEqual(sorted(expected), sorted(list(iterkeys(changed_paths))))
 
     def assertLogEntryMessageEquals(self, expected, entry):
         self.assertEqual(expected, entry["revprops"]["svn:log"])
@@ -239,9 +243,9 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         info = self.client.info("dc/foo")
-        self.assertEqual(["foo"], info.keys())
+        self.assertEqual(["foo"], list(iterkeys(info)))
         self.assertEqual(1, info["foo"].revision)
-        self.assertEqual(3L, info["foo"].size)
+        self.assertEqual(3, info["foo"].size)
         self.assertEqual(wc.SCHEDULE_NORMAL, info["foo"].wc_info.schedule)
         self.build_tree({"dc/bar": "blablabla"})
         self.client.add(os.path.abspath("dc/bar"))
