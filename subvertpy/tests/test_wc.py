@@ -88,6 +88,12 @@ class WcTests(SubversionTestCase):
 
 class AdmTests(SubversionTestCase):
 
+    def setUp(self):
+        super(AdmTests, self).setUp()
+        if getattr(wc, "WorkingCopy", None) is None:
+            raise SkipTest(
+                "Subversion 1.7 API for WorkingCopy not yet supported")
+
     def test_has_binary_prop(self):
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "\x00\x01"})

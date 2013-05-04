@@ -229,7 +229,8 @@ static PyObject *py_info(const svn_info_t *info)
         return NULL;
 #if ONLY_SINCE_SVN(1, 7)
     ret->info = *svn_client_info2_dup(info, ret->pool);
-    ret->wc_info->info = *svn_wc_info_dup(info->wc_info, ret->pool);
+    if (info->wc_info != NULL)
+        ret->wc_info->info = *svn_wc_info_dup(info->wc_info, ret->pool);
 #else
     ret->info = *svn_info_dup(info, ret->pool);
     if (info->has_wc_info) {

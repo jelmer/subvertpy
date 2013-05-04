@@ -1,5 +1,18 @@
 0.9.1	UNRELEASED
 
+ CHANGES
+
+  * For the moment, disable subvertpy.wc.WorkingCopy when used with Subversion 1.7.
+    Subversion 1.7 has some significant changes in the behaviour of
+    the working copy API because of the WC-NG rewrite.
+
+    Support for the WC API in newer versions of Subversion will be re-added later
+    (help welcome), but since most users (bzr-svn is the only I'm aware of)
+    don't seem to actually rely on it, it seemed better to disable it and
+    support 1.7 than to prevent use of newer svn versions altogether.
+
+    (Jelmer Vernooij)
+
  TESTS
 
   * Fix TestClient.test_info when run against Subversion 1.6. (Jelmer Vernooij)
