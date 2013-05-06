@@ -17,6 +17,11 @@
 
   * Fix TestClient.test_info when run against Subversion 1.6. (Jelmer Vernooij)
 
+ BUG FIXES
+
+  * Use PyObject_AsFileDescriptor instead of PyFile_AsFile so
+    apr_file_from_object works under Win32. (Yonggang Luo)
+
 0.9.0	2012-07-08
 
  IMPROVEMENTS
