@@ -433,6 +433,12 @@ class AuthTests(TestCase):
         self.assertEqual((42, 0), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
+    def test_server_untrust(self):
+        auth = ra.Auth([ra.get_ssl_server_trust_prompt_provider(lambda realm, failures, certinfo, may_save: None)])
+        auth.set_parameter("svn:auth:ssl:failures", 23)
+        creds = auth.credentials("svn.ssl.server", "MyRealm")
+        self.assertRaises(StopIteration, creds.next)
+
     def test_retry(self):
         self.i = 0
         def inc_foo(realm, may_save):

@@ -2715,6 +2715,11 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 	Py_DECREF(py_cert);
 	CB_CHECK_PYRETVAL(ret);
 
+	if (ret == Py_None) {
+		Py_DECREF(ret);
+		PyGILState_Release(state);
+		return NULL;
+	}
 	if (!PyTuple_Check(ret)) {
 		Py_DECREF(ret);
 		PyErr_SetString(PyExc_TypeError, "expected tuple with server trust credentials");
