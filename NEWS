@@ -1,12 +1,51 @@
-0.8.11	UNRELEASED
+0.9.1	2013-05-06
+
+ CHANGES
+
+  * For the moment, disable subvertpy.wc.WorkingCopy when used with Subversion 1.7.
+    Subversion 1.7 has some significant changes in the behaviour of
+    the working copy API because of the WC-NG rewrite.
+
+    Support for the WC API in newer versions of Subversion will be re-added later
+    (help welcome), but since most users (bzr-svn is the only I'm aware of)
+    don't seem to actually rely on it, it seemed better to disable it and
+    support 1.7 than to prevent use of newer svn versions altogether.
+
+    (Jelmer Vernooij)
+
+ TESTS
+
+  * Fix TestClient.test_info when run against Subversion 1.6. (Jelmer Vernooij)
+
+ BUG FIXES
+
+  * Use PyObject_AsFileDescriptor instead of PyFile_AsFile so
+    apr_file_from_object works under Win32. (Yonggang Luo)
+
+0.9.0	2012-07-08
 
  IMPROVEMENTS
 
   * Some fixes to help with porting to Python 3. (Yonggang Luo)
 
+  * Add bindings for svn.client.Client.info(), svn.client.Client.log() and
+    svn.client.Client.cat(). (Mark Lee)
+
+  * Add constant ERR_WC_UPGRADE_REQUIRED. (Jelmer Vernooij)
+
+  * In Client.checkout, default to HEAD revision. (Jelmer Vernooij)
+
+ TESTS
+
+  * Remove readonly files properly in tests.  (Yonggang Luo, #943131)
+
  DOCUMENTATION
 
   * Update documentation for building on Windows. (Yonggang Luo)
+
+ BUG FIXES
+
+  * Include *.c files in MANIFEST. (#951060, Shlomi Fish)
 
 0.8.10	2012-01-23
 

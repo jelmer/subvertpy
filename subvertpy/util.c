@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
 #include <stdbool.h>
 #include <Python.h>
@@ -178,14 +178,14 @@ void PyErr_SetSubversionException(svn_error_t *error)
 
 PyObject *PyOS_tmpfile(void)
 {
-	PyObject *osmodule, *tmpfile_fn, *ret;
+	PyObject *tempfile, *tmpfile_fn, *ret;
 
-	osmodule = PyImport_ImportModule("os");
-	if (osmodule == NULL)
+	tempfile = PyImport_ImportModule("tempfile");
+	if (tempfile == NULL)
 		return NULL;
 
-	tmpfile_fn = PyObject_GetAttrString(osmodule, "tmpfile");
-	Py_DECREF(osmodule);
+	tmpfile_fn = PyObject_GetAttrString(tempfile, "TemporaryFile");
+	Py_DECREF(tempfile);
 
 	if (tmpfile_fn == NULL)
 		return NULL;
@@ -666,10 +666,9 @@ apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool)
 {
 	if (config == Py_None) {
 		return get_default_config();
-	}
-
-	PyErr_SetString(PyExc_TypeError, "Only the system config is supported at the moment");
-	return NULL;
+	} else {
+        return ((ConfigObject *)config)->config;
+    }
 }
 
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
@@ -718,26 +717,32 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool)
 {
-    apr_status_t status;
-    FILE *file;
-    apr_file_t *fp;
-    apr_os_file_t osfile;
-  
-    file = PyFile_AsFile(object);
+	apr_status_t status;
+	int fd = -1;
+	apr_file_t *fp = NULL;
+	apr_os_file_t osfile;
+	if ((fd = PyObject_AsFileDescriptor(object)) >= 0)
+	{
 #ifdef WIN32
-    osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
+		osfile = (apr_os_file_t)_get_osfhandle(fd);
 #else
-    osfile = (apr_os_file_t)fileno(file);
+		osfile = (apr_os_file_t)fd;
 #endif
+	}
+	else
+	{
+		PyErr_SetString(PyExc_TypeError, "Unknown type for file variable");
+		return NULL;
+	}
 
-    status = apr_os_file_put(&fp, &osfile,
-                             APR_FOPEN_WRITE | APR_FOPEN_CREATE, pool);
-    if (status) {
-        PyErr_SetAprStatus(status);
-        return NULL;
-    }
+	status = apr_os_file_put(&fp, &osfile,
+			APR_FOPEN_WRITE | APR_FOPEN_CREATE, pool);
+	if (status != 0) {
+		PyErr_SetAprStatus(status);
+		return NULL;
+	}
 
-    return fp;
+	return fp;
 }
 
 static void stream_dealloc(PyObject *self)

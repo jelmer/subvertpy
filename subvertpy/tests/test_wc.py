@@ -32,10 +32,10 @@ from subvertpy.tests import (
 class VersionTest(TestCase):
 
     def test_version_length(self):
-        self.assertEquals(4, len(wc.version()))
+        self.assertEqual(4, len(wc.version()))
 
     def test_api_version_length(self):
-        self.assertEquals(4, len(wc.api_version()))
+        self.assertEqual(4, len(wc.api_version()))
 
     def test_api_version_later_same(self):
         self.assertTrue(wc.api_version() <= wc.version())
@@ -44,13 +44,13 @@ class VersionTest(TestCase):
 class WorkingCopyTests(TestCase):
 
     def test_get_adm_dir(self):
-        self.assertEquals(".svn", wc.get_adm_dir())
+        self.assertEqual(".svn", wc.get_adm_dir())
 
     def test_set_adm_dir(self):
         old_dir_name = wc.get_adm_dir()
         try:
             wc.set_adm_dir("_svn")
-            self.assertEquals("_svn", wc.get_adm_dir())
+            self.assertEqual("_svn", wc.get_adm_dir())
         finally:
             wc.set_adm_dir(old_dir_name)
 
@@ -78,15 +78,21 @@ class WcTests(SubversionTestCase):
     def test_revision_status(self):
         repos_url = self.make_client("repos", "checkout")
         ret = wc.revision_status("checkout")
-        self.assertEquals((0, 0, 0, 0), ret)
+        self.assertEqual((0, 0, 0, 0), ret)
 
     def test_revision_status_trailing(self):
         repos_url = self.make_client("repos", "checkout")
         ret = wc.revision_status("checkout/")
-        self.assertEquals((0, 0, 0, 0), ret)
+        self.assertEqual((0, 0, 0, 0), ret)
 
 
 class AdmTests(SubversionTestCase):
+
+    def setUp(self):
+        super(AdmTests, self).setUp()
+        if getattr(wc, "WorkingCopy", None) is None:
+            raise SkipTest(
+                "Subversion 1.7 API for WorkingCopy not yet supported")
 
     def test_has_binary_prop(self):
         repos_url = self.make_client("repos", "checkout")
@@ -103,7 +109,7 @@ class AdmTests(SubversionTestCase):
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout")
         path = os.path.join(self.test_dir, "checkout/bar")
-        self.assertEquals(("%s/bar" % repos_url, 0), adm.get_ancestry("checkout/bar"))
+        self.assertEqual(("%s/bar" % repos_url, 0), adm.get_ancestry("checkout/bar"))
         adm.close()
 
     def test_maybe_set_repos_root(self):
@@ -116,7 +122,7 @@ class AdmTests(SubversionTestCase):
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
         adm.add_repos_file("checkout/bar", StringIO("basecontents"), StringIO("contents"), {}, {})
-        self.assertEquals("basecontents", wc.get_pristine_contents("checkout/bar").read())
+        self.assertEqual("basecontents", wc.get_pristine_contents("checkout/bar").read())
 
     def test_mark_missing_deleted(self):
         repos_url = self.make_client("repos", "checkout")
@@ -179,9 +185,9 @@ class AdmTests(SubversionTestCase):
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout", True)
         adm.prop_set("aprop", "avalue", "checkout/bar")
-        self.assertEquals(adm.prop_get("aprop", "checkout/bar"), "avalue")
+        self.assertEqual(adm.prop_get("aprop", "checkout/bar"), "avalue")
         adm.prop_set("aprop", None, "checkout/bar")
-        self.assertEquals(adm.prop_get("aprop", "checkout/bar"), None)
+        self.assertEqual(adm.prop_get("aprop", "checkout/bar"), None)
 
     def test_committed_queue(self):
         if getattr(wc, "CommittedQueue", None) is None:
@@ -202,19 +208,19 @@ class AdmTests(SubversionTestCase):
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout")
         entry = adm.entry("checkout/bar")
-        self.assertEquals("bar", entry.name)
-        self.assertEquals(NODE_FILE, entry.kind)
-        self.assertEquals(0, entry.revision)
+        self.assertEqual("bar", entry.name)
+        self.assertEqual(NODE_FILE, entry.kind)
+        self.assertEqual(0, entry.revision)
         self.client_commit("checkout", "msg")
         adm = wc.WorkingCopy(None, "checkout")
         entry = adm.entry("checkout/bar")
-        self.assertEquals("bar", entry.name)
-        self.assertEquals(NODE_FILE, entry.kind)
-        self.assertEquals(1, entry.revision)
+        self.assertEqual("bar", entry.name)
+        self.assertEqual(NODE_FILE, entry.kind)
+        self.assertEqual(1, entry.revision)
 
     def test_get_actual_target(self):
         repos_url = self.make_client("repos", ".")
-        self.assertEquals((self.test_dir, "bla"),
+        self.assertEqual((self.test_dir, "bla"),
             wc.get_actual_target("%s/bla" % self.test_dir))
 
     def test_is_wc_root(self):
@@ -230,10 +236,10 @@ class AdmTests(SubversionTestCase):
         self.build_tree({"checkout/bar": "text"})
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout")
-        self.assertEquals(wc.STATUS_ADDED, adm.status('bar').status)
+        self.assertEqual(wc.STATUS_ADDED, adm.status('bar').status)
         self.client_commit("checkout", "foo")
         adm = wc.WorkingCopy(None, "checkout")
-        self.assertEquals(wc.STATUS_NORMAL, adm.status('bar').status)
+        self.assertEqual(wc.STATUS_NORMAL, adm.status('bar').status)
 
     def test_transmit_text_deltas(self):
         repos_url = self.make_client("repos", ".")
@@ -255,24 +261,24 @@ class AdmTests(SubversionTestCase):
                 pass
         editor = Editor()
         (tmpfile, digest) = adm.transmit_text_deltas("bar", True, editor)
-        self.assertEquals(editor._windows, [(0L, 0, 5, 0, [(2, 0, 5)], 'blala'), None])
+        self.assertEqual(editor._windows, [(0L, 0, 5, 0, [(2, 0, 5)], 'blala'), None])
         self.assertIsInstance(tmpfile, str)
-        self.assertEquals(16, len(digest))
+        self.assertEqual(16, len(digest))
 
         bar = adm.entry("bar")
-        self.assertEquals(-1, bar.cmt_rev)
-        self.assertEquals(0, bar.revision)
+        self.assertEqual(-1, bar.cmt_rev)
+        self.assertEqual(0, bar.revision)
 
         cq = wc.CommittedQueue()
         cq.queue("bar", adm)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
         bar = adm.entry("bar")
-        self.assertEquals("bar", bar.name)
-        self.assertEquals(NODE_FILE, bar.kind)
-        self.assertEquals(wc.SCHEDULE_NORMAL, bar.schedule)
+        self.assertEqual("bar", bar.name)
+        self.assertEqual(NODE_FILE, bar.kind)
+        self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
         self.assertIs(None, bar.checksum)
-        self.assertEquals(1, bar.cmt_rev)
-        self.assertEquals(1, bar.revision)
+        self.assertEqual(1, bar.cmt_rev)
+        self.assertEqual(1, bar.revision)
 
     def test_process_committed_queue(self):
         repos_url = self.make_client("repos", "checkout")
@@ -283,9 +289,9 @@ class AdmTests(SubversionTestCase):
         cq.queue(os.path.join(self.test_dir, "checkout/bar"), adm)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
         bar = adm.entry("checkout/bar")
-        self.assertEquals("bar", bar.name)
-        self.assertEquals(NODE_FILE, bar.kind)
-        self.assertEquals(wc.SCHEDULE_ADD, bar.schedule)
+        self.assertEqual("bar", bar.name)
+        self.assertEqual(NODE_FILE, bar.kind)
+        self.assertEqual(wc.SCHEDULE_ADD, bar.schedule)
 
     def test_probe_try(self):
         repos_url = self.make_client("repos", "checkout")
@@ -297,4 +303,4 @@ class AdmTests(SubversionTestCase):
         except subvertpy.SubversionException, (msg, num):
             if num != subvertpy.ERR_WC_NOT_WORKING_COPY:
                 raise
-        self.assertEquals("checkout", adm.probe_try(os.path.join("checkout", "bar")).access_path())
+        self.assertEqual("checkout", adm.probe_try(os.path.join("checkout", "bar")).access_path())

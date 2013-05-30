@@ -12,12 +12,12 @@
 
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 8, 11)
+__version__ = (0, 9, 1)
 
 NODE_DIR = 2
 NODE_FILE = 1
@@ -76,6 +76,7 @@ ERR_ENTRY_NOT_FOUND = 150000
 ERR_BAD_PROPERTY_VALUE = 125005
 ERR_FS_ROOT_DIR = 160021
 ERR_WC_NODE_KIND_CHANGE = 155018
+ERR_WC_UPGRADE_REQUIRED = 155036
 
 ERR_APR_OS_START_EAIERR = 670000
 ERR_APR_OS_ERRSPACE_SIZE = 50000
@@ -120,7 +121,7 @@ def _check_mtime(m):
     return True
 
 try:
-    import client, _ra, repos, wc
+    from subvertpy import client, _ra, repos, wc
     for x in client, _ra, repos, wc:
         if not _check_mtime(x):
             from warnings import warn

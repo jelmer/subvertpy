@@ -30,10 +30,10 @@ from subvertpy.tests import (
 class VersionTest(TestCase):
 
     def test_version_length(self):
-        self.assertEquals(4, len(ra.version()))
+        self.assertEqual(4, len(ra.version()))
 
     def test_api_version_length(self):
-        self.assertEquals(4, len(ra.api_version()))
+        self.assertEqual(4, len(ra.api_version()))
 
     def test_api_version_later_same(self):
         self.assertTrue(ra.api_version() <= ra.version())
@@ -66,15 +66,15 @@ class TestRemoteAccess(SubversionTestCase):
         dc.close()
 
     def test_repr(self):
-        self.assertEquals("RemoteAccess(\"%s\")" % self.repos_url,
+        self.assertEqual("RemoteAccess(\"%s\")" % self.repos_url,
                           repr(self.ra))
 
     def test_latest_revnum(self):
-        self.assertEquals(0, self.ra.get_latest_revnum())
+        self.assertEqual(0, self.ra.get_latest_revnum())
 
     def test_latest_revnum_one(self):
         self.do_commit()
-        self.assertEquals(1, self.ra.get_latest_revnum())
+        self.assertEqual(1, self.ra.get_latest_revnum())
 
     def test_get_uuid(self):
         self.assertIsInstance(self.ra.get_uuid(), str)
@@ -109,8 +109,8 @@ class TestRemoteAccess(SubversionTestCase):
         self.do_commit()
         (dirents, fetch_rev, props) = self.ra.get_dir("/", 1, fields=ra.DIRENT_KIND)
         self.assertIsInstance(props, dict)
-        self.assertEquals(1, fetch_rev)
-        self.assertEquals(NODE_DIR, dirents["foo"]["kind"])
+        self.assertEqual(1, fetch_rev)
+        self.assertEqual(NODE_DIR, dirents["foo"]["kind"])
 
     def test_change_rev_prop(self):
         self.do_commit()
@@ -151,29 +151,29 @@ class TestRemoteAccess(SubversionTestCase):
 
     def test_iter_log(self):
         def check_results(returned):
-            self.assertEquals(2, len(returned))
-            self.assert_(len(returned[0]) in (3,4))
+            self.assertEqual(2, len(returned))
+            self.assertTrue(len(returned[0]) in (3,4))
             if len(returned[0]) == 3:
                 (paths, revnum, props) = returned[0]
             else:
                 (paths, revnum, props, has_children) = returned[0]
-            self.assertEquals(None, paths)
-            self.assertEquals(revnum, 0)
-            self.assertEquals(["svn:date"], props.keys())
+            self.assertEqual(None, paths)
+            self.assertEqual(revnum, 0)
+            self.assertEqual(["svn:date"], props.keys())
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
                 (paths, revnum, props, has_children) = returned[1]
             if ra.api_version() < (1, 6):
-                self.assertEquals({'/foo': ('A', None, -1, NODE_UNKNOWN)}, paths)
+                self.assertEqual({'/foo': ('A', None, -1, NODE_UNKNOWN)}, paths)
             else:
-                self.assertEquals({'/foo': ('A', None, -1, NODE_DIR)}, paths)
-            self.assertEquals(revnum, 1)
-            self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
+                self.assertEqual({'/foo': ('A', None, -1, NODE_DIR)}, paths)
+            self.assertEqual(revnum, 1)
+            self.assertEqual(set(["svn:date", "svn:author", "svn:log"]), 
                               set(props.keys()))
         returned = list(self.ra.iter_log([""], 0, 0,
             revprops=["svn:date", "svn:author", "svn:log"]))
-        self.assertEquals(1, len(returned))
+        self.assertEqual(1, len(returned))
         self.do_commit()
         returned = list(self.ra.iter_log(None, 0, 1, discover_changed_paths=True, 
             strict_node_history=False, revprops=["svn:date", "svn:author", "svn:log"]))
@@ -184,25 +184,25 @@ class TestRemoteAccess(SubversionTestCase):
         def cb(*args):
             returned.append(args)
         def check_results(returned):
-            self.assertEquals(2, len(returned))
-            self.assert_(len(returned[0]) in (3,4))
+            self.assertEqual(2, len(returned))
+            self.assertTrue(len(returned[0]) in (3,4))
             if len(returned[0]) == 3:
                 (paths, revnum, props) = returned[0]
             else:
                 (paths, revnum, props, has_children) = returned[0]
-            self.assertEquals(None, paths)
-            self.assertEquals(revnum, 0)
-            self.assertEquals(["svn:date"], props.keys())
+            self.assertEqual(None, paths)
+            self.assertEqual(revnum, 0)
+            self.assertEqual(["svn:date"], props.keys())
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
                 (paths, revnum, props, has_children) = returned[1]
-            self.assertEquals({'/foo': ('A', None, -1)}, paths)
-            self.assertEquals(revnum, 1)
-            self.assertEquals(set(["svn:date", "svn:author", "svn:log"]), 
-                              set(props.keys()))
+            self.assertEqual({'/foo': ('A', None, -1)}, paths)
+            self.assertEqual(revnum, 1)
+            self.assertEqual(set(["svn:date", "svn:author", "svn:log"]), 
+                             set(props.keys()))
         self.ra.get_log(cb, [""], 0, 0, revprops=["svn:date", "svn:author", "svn:log"])
-        self.assertEquals(1, len(returned))
+        self.assertEqual(1, len(returned))
         self.do_commit()
         returned = []
         self.ra.get_log(cb, None, 0, 1, discover_changed_paths=True, 
@@ -254,7 +254,7 @@ class TestRemoteAccess(SubversionTestCase):
         root.close()
         editor.close()
 
-        self.assertEquals(set(['bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date', 'svn:log']), set(self.ra.rev_proplist(1).keys()))
+        self.assertEqual(set(['bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date', 'svn:log']), set(self.ra.rev_proplist(1).keys()))
 
     def test_get_commit_editor_context_manager(self):
         def mycb(paths, rev, revprops):
@@ -292,7 +292,7 @@ class TestRemoteAccess(SubversionTestCase):
 
         stream = StringIO()
         props = self.ra.get_file("bar", stream, 1)[1]
-        self.assertEquals("blie", props.get("bla:bar"))
+        self.assertEqual("blie", props.get("bla:bar"))
         stream = StringIO()
         props = self.ra.get_file("bar", stream, 2)[1]
         self.assertIs(None, props.get("bla:bar"))
@@ -315,11 +315,11 @@ class TestRemoteAccess(SubversionTestCase):
 
         self.ra.get_file_revs("bar", 1, 2, handle)
 
-        self.assertEquals(2, len(rets))
-        self.assertEquals(1, rets[0][1])
-        self.assertEquals(2, rets[1][1])
-        self.assertEquals("/bar", rets[0][0])
-        self.assertEquals("/bar", rets[1][0])
+        self.assertEqual(2, len(rets))
+        self.assertEqual(1, rets[0][1])
+        self.assertEqual(2, rets[1][1])
+        self.assertEqual("/bar", rets[0][0])
+        self.assertEqual("/bar", rets[1][0])
 
     def test_get_file(self):
         cb = self.commit_editor()
@@ -329,24 +329,24 @@ class TestRemoteAccess(SubversionTestCase):
         stream = StringIO()
         self.ra.get_file("bar", stream, 1)
         stream.seek(0)
-        self.assertEquals("a", stream.read())
+        self.assertEqual("a", stream.read())
 
         stream = StringIO()
         self.ra.get_file("/bar", stream, 1)
         stream.seek(0)
-        self.assertEquals("a", stream.read())
+        self.assertEqual("a", stream.read())
 
     def test_get_locations_root(self):
-        self.assertEquals({0: "/"}, self.ra.get_locations("", 0, [0]))
+        self.assertEqual({0: "/"}, self.ra.get_locations("", 0, [0]))
 
     def test_check_path(self):
         cb = self.commit_editor()
         cb.add_dir("bar")
         cb.close()
 
-        self.assertEquals(NODE_DIR, self.ra.check_path("bar", 1))
-        self.assertEquals(NODE_DIR, self.ra.check_path("bar/", 1))
-        self.assertEquals(NODE_NONE, self.ra.check_path("blaaaa", 1))
+        self.assertEqual(NODE_DIR, self.ra.check_path("bar", 1))
+        self.assertEqual(NODE_DIR, self.ra.check_path("bar/", 1))
+        self.assertEqual(NODE_NONE, self.ra.check_path("blaaaa", 1))
 
     def test_check_path_with_unsafe_path(self):
         # The SVN code asserts that paths do not have a leading '/'... And if
@@ -361,7 +361,7 @@ class TestRemoteAccess(SubversionTestCase):
         cb.close()
 
         ret = self.ra.stat("bar", 1)
-        self.assertEquals(set(['last_author', 'kind', 'created_rev', 'has_props', 'time', 'size']), set(ret.keys()))
+        self.assertEqual(set(['last_author', 'kind', 'created_rev', 'has_props', 'time', 'size']), set(ret.keys()))
 
     def test_get_locations_dir(self):
         cb = self.commit_editor()
@@ -376,16 +376,16 @@ class TestRemoteAccess(SubversionTestCase):
         cb.delete("bar")
         cb.close()
 
-        self.assertEquals({1: "/bar", 2: "/bla"}, 
+        self.assertEqual({1: "/bar", 2: "/bla"}, 
                           self.ra.get_locations("bla", 2, [1,2]))
 
-        self.assertEquals({1: "/bar", 2: "/bar"}, 
+        self.assertEqual({1: "/bar", 2: "/bar"}, 
                           self.ra.get_locations("bar", 1, [1,2]))
 
-        self.assertEquals({1: "/bar", 2: "/bar"}, 
+        self.assertEqual({1: "/bar", 2: "/bar"}, 
                           self.ra.get_locations("bar", 2, [1,2]))
 
-        self.assertEquals({1: "/bar", 2: "/bla", 3: "/bla"}, 
+        self.assertEqual({1: "/bar", 2: "/bla", 3: "/bla"}, 
                           self.ra.get_locations("bla", 3, [1,2,3]))
 
     def test_get_locations_dir_with_unsafe_path(self):
@@ -405,32 +405,32 @@ class AuthTests(TestCase):
     def test_simple(self):
         auth = ra.Auth([ra.get_simple_prompt_provider(lambda realm, uname, may_save: ("foo", "geheim", False), 0)])
         creds = auth.credentials("svn.simple", "MyRealm")
-        self.assertEquals(("foo", "geheim", 0), creds.next())
+        self.assertEqual(("foo", "geheim", 0), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_username(self):
         auth = ra.Auth([ra.get_username_prompt_provider(lambda realm, may_save: ("somebody", False), 0)])
         creds = auth.credentials("svn.username", "MyRealm")
-        self.assertEquals(("somebody", 0), creds.next())
+        self.assertEqual(("somebody", 0), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_client_cert(self):
         auth = ra.Auth([ra.get_ssl_client_cert_prompt_provider(lambda realm, may_save: ("filename", False), 0)])
         creds = auth.credentials("svn.ssl.client-cert", "MyRealm")
-        self.assertEquals(("filename", False), creds.next())
+        self.assertEqual(("filename", False), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_client_cert_pw(self):
         auth = ra.Auth([ra.get_ssl_client_cert_pw_prompt_provider(lambda realm, may_save: ("supergeheim", False), 0)])
         creds = auth.credentials("svn.ssl.client-passphrase", "MyRealm")
-        self.assertEquals(("supergeheim", False), creds.next())
+        self.assertEqual(("supergeheim", False), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_server_trust(self):
         auth = ra.Auth([ra.get_ssl_server_trust_prompt_provider(lambda realm, failures, certinfo, may_save: (42, False))])
         auth.set_parameter("svn:auth:ssl:failures", 23)
         creds = auth.credentials("svn.ssl.server", "MyRealm")
-        self.assertEquals((42, 0), creds.next())
+        self.assertEqual((42, 0), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_retry(self):
@@ -440,20 +440,20 @@ class AuthTests(TestCase):
             return ("somebody%d" % self.i, False)
         auth = ra.Auth([ra.get_username_prompt_provider(inc_foo, 2)])
         creds = auth.credentials("svn.username", "MyRealm")
-        self.assertEquals(("somebody1", 0), creds.next())
-        self.assertEquals(("somebody2", 0), creds.next())
-        self.assertEquals(("somebody3", 0), creds.next())
+        self.assertEqual(("somebody1", 0), creds.next())
+        self.assertEqual(("somebody2", 0), creds.next())
+        self.assertEqual(("somebody3", 0), creds.next())
         self.assertRaises(StopIteration, creds.next)
 
     def test_set_default_username(self):
         a = ra.Auth([])
         a.set_parameter("svn:auth:username", "foo")
-        self.assertEquals("foo", a.get_parameter("svn:auth:username"))
+        self.assertEqual("foo", a.get_parameter("svn:auth:username"))
 
     def test_set_default_password(self):
         a = ra.Auth([])
         a.set_parameter("svn:auth:password", "bar")
-        self.assertEquals("bar", a.get_parameter("svn:auth:password"))
+        self.assertEqual("bar", a.get_parameter("svn:auth:password"))
 
     def test_platform_auth_providers(self):
         ra.Auth(ra.get_platform_specific_client_providers())

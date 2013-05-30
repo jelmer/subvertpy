@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
 #include <stdbool.h>
 #include <Python.h>
@@ -3274,6 +3274,15 @@ void init_ra(void)
 
 	busy_exc = PyErr_NewException("_ra.BusyException", NULL, NULL);
 	PyModule_AddObject(mod, "BusyException", busy_exc);
+
+#if ONLY_SINCE_SVN(1, 5)
+    PyModule_AddIntConstant(mod, "DEPTH_UNKNOWN", svn_depth_unknown);
+    PyModule_AddIntConstant(mod, "DEPTH_EXCLUDE", svn_depth_exclude);
+    PyModule_AddIntConstant(mod, "DEPTH_EMPTY", svn_depth_empty);
+    PyModule_AddIntConstant(mod, "DEPTH_FILES", svn_depth_files);
+    PyModule_AddIntConstant(mod, "DEPTH_IMMEDIATES", svn_depth_immediates);
+    PyModule_AddIntConstant(mod, "DEPTH_INFINITY", svn_depth_infinity);
+#endif
 
 	PyModule_AddIntConstant(mod, "DIRENT_KIND", SVN_DIRENT_KIND);
 	PyModule_AddIntConstant(mod, "DIRENT_SIZE", SVN_DIRENT_SIZE);

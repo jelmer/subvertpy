@@ -12,16 +12,16 @@
 
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 
 from subvertpy import SubversionException, ERR_BAD_URL 
 
-import _ra
-from _ra import *
-import ra_svn
+from subvertpy import _ra
+from subvertpy._ra import *
+from subvertpy import ra_svn
 
 import urllib
 

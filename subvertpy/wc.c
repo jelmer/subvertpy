@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
 #include <Python.h>
 #include <apr_general.h>
@@ -527,7 +527,7 @@ static PyTypeObject Status_Type = {
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
 	
-	NULL, /*	const char *tp_doc;  Documentation string */
+	"Working copy status object", /*	const char *tp_doc;  Documentation string */
 	
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
@@ -2768,9 +2768,15 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED", svn_wc_conflict_choose_merged);
 #endif
 
+#if ONLY_BEFORE_SVN(1, 7)
+	/* Subversion 1.7 has a couple of significant behaviour changes that break subvertpy.
+	 * We haven't updated the code to deal with these changes in behaviour yet.
+	 * */
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
 
 	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
 	Py_INCREF(&CommittedQueue_Type);
+#endif
 }
+

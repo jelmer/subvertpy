@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
 
 #ifndef _SUBVERTPY_UTIL_H_
@@ -123,6 +123,12 @@ typedef enum svn_depth_t {
 	svn_depth_infinity = 3
 } svn_depth_t;
 #endif
+
+typedef struct {
+    PyObject_HEAD
+    apr_hash_t *config;
+    apr_pool_t *pool;
+} ConfigObject;
 
 typedef struct {
 	PyObject_HEAD

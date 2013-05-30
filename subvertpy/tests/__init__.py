@@ -12,7 +12,7 @@
 
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 
 """Tests for subvertpy."""
 
@@ -22,6 +22,7 @@ __docformat__ = 'restructuredText'
 from cStringIO import StringIO
 import os
 import shutil
+import stat
 import sys
 import tempfile
 import unittest
@@ -33,6 +34,7 @@ except ImportError:
     except ImportError:
         from testtools.testcase import TestSkipped as SkipTest
 import urllib2
+import urllib
 import urlparse
 
 from subvertpy import (
@@ -46,6 +48,18 @@ from subvertpy.ra import (
     Auth,
     RemoteAccess,
     )
+
+
+def rmtree_with_readonly(path):
+    """Simple wrapper for shutil.rmtree that can remove read-only files.
+
+    In Windows a read-only file cannot be removed, and shutil.rmtree fails.
+    """
+    def force_rm_handle(remove_path, path, excinfo):
+        os.chmod(path, os.stat(path).st_mode | stat.S_IWUSR | stat.S_IWGRP |
+            stat.S_IWOTH)
+        remove_path(path)
+    shutil.rmtree(path, onerror=force_rm_handle)
 
 
 class TestCase(unittest.TestCase):
@@ -81,7 +95,7 @@ class TestCaseInTempDir(TestCase):
     def tearDown(self):
         TestCase.tearDown(self)
         os.chdir(self._oldcwd)
-        shutil.rmtree(self.test_dir)
+        rmtree_with_readonly(self.test_dir)
 
 
 class TestFileEditor(object):
@@ -238,7 +252,7 @@ class SubversionTestCase(TestCaseInTempDir):
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0111)
 
         if sys.platform == 'win32':
-            return "file://%s" % abspath.replace("\\", "/")
+            return 'file:%s' % urllib.pathname2url(abspath)
         else:
             return "file://%s" % abspath
 
@@ -365,18 +379,22 @@ class SubversionTestCase(TestCaseInTempDir):
         :param files: Dictionary with filenames as keys, contents as
             values. None as value indicates a directory.
         """
-        for f in files:
-            if files[f] is None:
+        for name, content in files.iteritems():
+            if content is None:
                 try:
-                    os.makedirs(f)
+                    os.makedirs(name)
                 except OSError:
                     pass
             else:
                 try:
-                    os.makedirs(os.path.dirname(f))
+                    os.makedirs(os.path.dirname(name))
                 except OSError:
                     pass
-                open(f, 'w').write(files[f])
+                f = open(name, 'w')
+                try:
+                    f.write(content)
+                finally:
+                    f.close()
 
     def make_client(self, repospath, clientpath, allow_revprop_changes=True):
         """Create a repository and a checkout. Return the checkout.

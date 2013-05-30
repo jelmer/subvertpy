@@ -38,19 +38,19 @@ class DeltaTests(TestCase):
     def test_send_stream(self):
         stream = StringIO("foo")
         send_stream(stream, self.storing_window_handler)
-        self.assertEquals([(0, 0, 3, 0, [(2, 0, 3)], 'foo'), None], 
+        self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], 'foo'), None], 
                           self.windows)
 
 
 class MarshallTests(TestCase):
 
     def test_encode_length(self):
-        self.assertEquals("\x81\x02", encode_length(130))
+        self.assertEqual("\x81\x02", encode_length(130))
 
     def test_roundtrip_length(self):
-        self.assertEquals((42, ""), decode_length(encode_length(42)))
+        self.assertEqual((42, ""), decode_length(encode_length(42)))
 
 
     def test_roundtrip_window(self):
         mywindow = (0, 0, 3, 1, [(2, 0, 3)], 'foo')
-        self.assertEquals([mywindow], list(unpack_svndiff0(pack_svndiff0([mywindow]))))
+        self.assertEqual([mywindow], list(unpack_svndiff0(pack_svndiff0([mywindow]))))
