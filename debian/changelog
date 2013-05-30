@@ -1,6 +1,9 @@
-subvertpy (0.8.10+bzr2435-1) UNRELEASED; urgency=low
+subvertpy (0.9.1-1) unstable; urgency=low
 
-  * New upstream snapshot.
+  * New upstream release.
+   + Fixes compatibility with newer versions of Subversion 1.7,
+     disabling subvertpy.wc which is broken by svn 1.7.
+     Fixes FTBFS. Closes: #680792, #680800, LP: #887749
 
  -- Jelmer Vernooij <jelmer@debian.org>  Thu, 01 Mar 2012 03:20:02 +0100
 
