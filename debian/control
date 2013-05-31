@@ -11,7 +11,7 @@ Build-Depends: debhelper (>= 8.1.0),
                python-docutils,
                python-pydoctor (>= 0.3+bzr567),
                python-testtools
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 X-Python-Version: >= 2.4
 Vcs-Bzr: http://bzr.debian.org/users/jelmer/subvertpy/unstable
 
