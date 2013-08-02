@@ -196,7 +196,7 @@ static PyObject *reporter_link_path(PyObject *self, PyObject *args)
 	ReporterObject *reporter = (ReporterObject *)self;
 	svn_depth_t depth = svn_depth_infinity;
 
-	if (!PyArg_ParseTuple(args, "sslb|zi:kink_path", &path, &url, &revision,
+	if (!PyArg_ParseTuple(args, "sslb|zi:link_path", &path, &url, &revision,
 			&start_empty, &lock_token, &depth))
 		return NULL;
 
