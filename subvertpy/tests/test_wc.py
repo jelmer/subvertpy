@@ -328,6 +328,15 @@ class AdmTests(SubversionTestCase):
         self.assertEqual(1, bar.cmt_rev)
         self.assertEqual(1, bar.revision)
 
+    def test_queue_must_report_digest_or_exist(self):
+        repos_url = self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": "la"})
+        self.client_add('checkout/bar')
+        adm = wc.WorkingCopy(None, "checkout", True)
+        cq = wc.CommittedQueue()
+        self.assertRaises(TypeError, cq.queue,
+            os.path.join(self.test_dir, "checkout/bar"), adm)
+
     def test_process_committed_queue(self):
         if getattr(wc, "WorkingCopy", None) is None:
             raise SkipTest(
@@ -345,9 +354,6 @@ class AdmTests(SubversionTestCase):
         self.assertEqual(wc.SCHEDULE_ADD, bar.schedule)
 
     def test_probe_try(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "la"})
         self.client_add('checkout/bar')

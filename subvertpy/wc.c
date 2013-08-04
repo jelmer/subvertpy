@@ -2238,7 +2238,7 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		return NULL;
 	}
 
-	path = apr_pstrdup(self->pool, path);
+	path = svn_path_canonicalize(path, temp_pool);
 	if (path == NULL) {
 		PyErr_NoMemory();
 		return NULL;
@@ -2253,11 +2253,26 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		digest = apr_pstrdup(self->pool, digest);
 		if (digest == NULL) {
 			PyErr_NoMemory();
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+	} else {
+		/* Make sure there is an existing entry that does have a digest. */
+		const svn_wc_entry_t *entry;
+		/* PERFORMANCE: This lookup makes sure we raise an exception rather than
+		 * having SVN_ERR_ASSERT(copied_checksum != NULL); in process_committed_leaf trigger
+		 * later on. It adds one unnecessary (for correctly written code)
+		 * svn_wc_entry call for each .queue call.
+		 */
+		RUN_SVN_WITH_POOL(temp_pool, svn_wc_entry(&entry, path, admobj->adm, TRUE, temp_pool));
+		if (entry->kind != svn_node_dir && entry->checksum == NULL) {
+			PyErr_SetString(PyExc_TypeError, "Digest must be specified if entry is new.");
+			apr_pool_destroy(temp_pool);
 			return NULL;
 		}
 	}
 
-	RUN_SVN_WITH_POOL(temp_pool, 
+	RUN_SVN_WITH_POOL(temp_pool,
 		svn_wc_queue_committed(&self->queue, path, admobj->adm, recurse,
 							   wcprop_changes, remove_lock, remove_changelist,
 							   (unsigned char *)digest, temp_pool));
