@@ -2034,10 +2034,11 @@ static PyMethodDef ra_methods[] = {
 	{ "unlock", ra_unlock, METH_VARARGS, 
 		"S.unlock(path_tokens, break_lock, lock_func)\n" },
 	{ "mergeinfo", ra_mergeinfo, METH_VARARGS, 
-		"S.mergeinfo(&paths, revision, inherit, include_descendants)\n" },
+		"S.mergeinfo(paths, revision, inherit, include_descendants)\n" },
 	{ "get_location_segments", ra_get_location_segments, METH_VARARGS, 
 		"S.get_location_segments(path, peg_revision, start_revision, "
-			"end_revision, rcvr)" 
+			"end_revision, rcvr)\n"
+		"The receiver is called as rcvr(range_start, range_end, path)\n"
 	},
 	{ "has_capability", ra_has_capability, METH_VARARGS, 
 		"S.has_capability(name) -> bool\n"
@@ -2080,7 +2081,7 @@ static PyMethodDef ra_methods[] = {
 	{ "do_update", ra_do_update, METH_VARARGS, 
 		"S.do_update(revision_to_update_to, update_target, recurse, update_editor)\n" },
 	{ "do_diff", ra_do_diff, METH_VARARGS, 
-		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse, ignore_ancestry, text_deltas)\n"
+		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse, ignore_ancestry, text_deltas) -> Reporter object\n"
 	},
 	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_NOARGS, 
 		"S.get_repos_root() -> url\n"
@@ -2091,10 +2092,18 @@ static PyMethodDef ra_methods[] = {
 	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, 
 		"S.get_log(callback, paths, start, end, limit, discover_changed_paths, "
 		"strict_node_history, include_merged_revisions, revprops)\n"
+		"The callback is passed three or four arguments:\n"
+		"callback(changed_paths, revision, revprops, [has_children])\n"
 	},
 	{ "iter_log", (PyCFunction)ra_iter_log, METH_VARARGS|METH_KEYWORDS, 
-		"S.get_log(paths, start, end, limit, discover_changed_paths, "
+		"S.iter_log(paths, start, end, limit, discover_changed_paths, "
 		"strict_node_history, include_merged_revisions, revprops)\n"
+		"Yields tuples of three or four elements:\n"
+		"(changed_paths, revision, revprops, [has_children])\n"
+		"This method collects the log entries in another thread. Before calling\n"
+		"any further methods, make sure the thread has completed by running the\n"
+		"iterator to exhaustion (i.e. until StopIteration is raised, the \"for\"\n"
+		"loop finishes, etc).\n"
 	},
 	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, 
 		"S.get_latest_revnum() -> int\n"
