@@ -24,6 +24,7 @@
 #include <structmember.h>
 #include <stdbool.h>
 #include <apr_md5.h>
+#include <assert.h>
 
 #include "util.h"
 #include "editor.h"
@@ -1216,6 +1217,8 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 		return NULL;
 	}
 
+	assert(digest != NULL);
+
 #if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed4(
 		svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
@@ -2208,7 +2211,7 @@ static PyObject *committed_queue_init(PyTypeObject *self, PyObject *args, PyObje
 	return (PyObject *)ret;
 }
 
-static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *args)
+static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *args, PyObject *kwargs)
 {
 	char *path;
 	AdmObject *admobj;
@@ -2219,8 +2222,9 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	apr_pool_t *temp_pool;
 	apr_array_header_t *wcprop_changes;
 	int digest_len;
+	char *kwnames[] = { "path", "adm", "recurse", "wcprop_changes", "remove_lock", "remove_changelist", "digest", NULL };
 
-	if (!PyArg_ParseTuple(args, "sO!|bObbz#", &path, &Adm_Type, &admobj,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO!|bObbz#", kwnames, &path, &Adm_Type, &admobj,
 						  &recurse, &py_wcprop_changes, &remove_lock,
 						  &remove_changelist, &digest, &digest_len))
 		return NULL;
@@ -2264,8 +2268,8 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 }
 
 static PyMethodDef committed_queue_methods[] = {
-	{ "queue", (PyCFunction)committed_queue_queue, METH_VARARGS,
-		"S.queue(path, adm, recurse, wcprop_changes, remove_lock, remove_changelist, digest)" },
+	{ "queue", (PyCFunction)committed_queue_queue, METH_VARARGS|METH_KEYWORDS,
+		"S.queue(path, adm[, recurse[, wcprop_changes[, remove_lock[, remove_changelist[, digest]]]]])" },
 	{ NULL }
 };
 
@@ -2768,7 +2772,6 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED", svn_wc_conflict_choose_merged);
 #endif
 
-#if ONLY_BEFORE_SVN(1, 7)
 	/* Subversion 1.7 has a couple of significant behaviour changes that break subvertpy.
 	 * We haven't updated the code to deal with these changes in behaviour yet.
 	 * */
@@ -2777,6 +2780,5 @@ void initwc(void)
 
 	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
 	Py_INCREF(&CommittedQueue_Type);
-#endif
 }
 
