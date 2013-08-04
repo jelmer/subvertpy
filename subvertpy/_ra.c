@@ -2034,7 +2034,7 @@ static PyMethodDef ra_methods[] = {
 	{ "unlock", ra_unlock, METH_VARARGS, 
 		"S.unlock(path_tokens, break_lock, lock_func)\n" },
 	{ "mergeinfo", ra_mergeinfo, METH_VARARGS, 
-		"S.mergeinfo(&paths, revision, inherit, include_descendants)\n" },
+		"S.mergeinfo(paths, revision, inherit, include_descendants)\n" },
 	{ "get_location_segments", ra_get_location_segments, METH_VARARGS, 
 		"S.get_location_segments(path, peg_revision, start_revision, "
 			"end_revision, rcvr)" 
@@ -2093,7 +2093,7 @@ static PyMethodDef ra_methods[] = {
 		"strict_node_history, include_merged_revisions, revprops)\n"
 	},
 	{ "iter_log", (PyCFunction)ra_iter_log, METH_VARARGS|METH_KEYWORDS, 
-		"S.get_log(paths, start, end, limit, discover_changed_paths, "
+		"S.iter_log(paths, start, end, limit, discover_changed_paths, "
 		"strict_node_history, include_merged_revisions, revprops)\n"
 	},
 	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, 
