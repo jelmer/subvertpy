@@ -89,9 +89,6 @@ class WcTests(SubversionTestCase):
 class AdmTests(SubversionTestCase):
 
     def test_has_binary_prop(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "\x00\x01"})
         self.client_add('checkout/bar')
@@ -101,9 +98,6 @@ class AdmTests(SubversionTestCase):
         adm.close()
 
     def test_get_ancestry(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "\x00\x01"})
         self.client_add('checkout/bar')
@@ -113,27 +107,18 @@ class AdmTests(SubversionTestCase):
         adm.close()
 
     def test_maybe_set_repos_root(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout")
         adm.maybe_set_repos_root(os.path.join(self.test_dir, "checkout"), repos_url)
         adm.close()
 
     def test_add_repos_file(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
         adm.add_repos_file("checkout/bar", StringIO("basecontents"), StringIO("contents"), {}, {})
         self.assertEqual("basecontents", wc.get_pristine_contents("checkout/bar").read())
 
     def test_mark_missing_deleted(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "\x00\x01"})
         self.client_add('checkout/bar')
@@ -143,9 +128,6 @@ class AdmTests(SubversionTestCase):
         self.assertFalse(os.path.exists("checkout/bar"))
 
     def test_remove_from_revision_control(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "\x00\x01"})
         self.client_add('checkout/bar')
@@ -154,17 +136,11 @@ class AdmTests(SubversionTestCase):
         self.assertTrue(os.path.exists("checkout/bar"))
 
     def test_relocate(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
         adm.relocate("checkout", "file://", "http://")
 
     def test_translated_stream(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "My id: $Id$"})
         self.client_add('checkout/bar')
@@ -176,9 +152,6 @@ class AdmTests(SubversionTestCase):
         self.assertTrue(stream.read().startswith("My id: $Id: "))
 
     def test_text_modified(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "My id: $Id$"})
         self.client_add('checkout/bar')
@@ -190,9 +163,6 @@ class AdmTests(SubversionTestCase):
         self.assertTrue(adm.text_modified("checkout/bar", True))
 
     def test_props_modified(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "My id: $Id$"})
         self.client_add('checkout/bar')
@@ -204,9 +174,6 @@ class AdmTests(SubversionTestCase):
         self.assertTrue(adm.props_modified("checkout/bar"))
 
     def test_prop_set(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "file"})
         self.client_add('checkout/bar')
@@ -219,26 +186,17 @@ class AdmTests(SubversionTestCase):
     def test_committed_queue(self):
         if getattr(wc, "CommittedQueue", None) is None:
             raise SkipTest("CommittedQueue not available")
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         cq = wc.CommittedQueue()
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
 
     def test_entry_not_found(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout")
         self.assertRaises(KeyError, adm.entry, "bar")
 
     def test_entry(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "\x00\x01"})
         self.client_add('checkout/bar')
@@ -255,17 +213,11 @@ class AdmTests(SubversionTestCase):
         self.assertEqual(1, entry.revision)
 
     def test_get_actual_target(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", ".")
         self.assertEqual((self.test_dir, "bla"),
             wc.get_actual_target("%s/bla" % self.test_dir))
 
     def test_is_wc_root(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", ".")
         self.build_tree({"bar": None})
         self.client_add('bar')
@@ -274,9 +226,6 @@ class AdmTests(SubversionTestCase):
         self.assertFalse(adm.is_wc_root(os.path.join(self.test_dir, "bar")))
 
     def test_status(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "text"})
         self.client_add('checkout/bar')
@@ -287,9 +236,6 @@ class AdmTests(SubversionTestCase):
         self.assertEqual(wc.STATUS_NORMAL, adm.status('bar').status)
 
     def test_transmit_text_deltas(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", ".")
         self.build_tree({"bar": "blala"})
         self.client_add('bar')
@@ -338,9 +284,6 @@ class AdmTests(SubversionTestCase):
             os.path.join(self.test_dir, "checkout/bar"), adm)
 
     def test_process_committed_queue(self):
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "la"})
         self.client_add('checkout/bar')
