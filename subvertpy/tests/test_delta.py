@@ -52,12 +52,12 @@ class DeltaTests(TestCase):
 class MarshallTests(TestCase):
 
     def test_encode_length(self):
-        self.assertEqual("\x81\x02", encode_length(130))
+        self.assertEqual(bytes.fromhex("81 02"), encode_length(130))
 
     def test_roundtrip_length(self):
-        self.assertEqual((42, ""), decode_length(encode_length(42)))
+        self.assertEqual((42, bytes()), decode_length(encode_length(42)))
 
 
     def test_roundtrip_window(self):
-        mywindow = (0, 0, 3, 1, [(2, 0, 3)], 'foo')
+        mywindow = (0, 0, 3, 1, [(2, 0, 3)], b'foo')
         self.assertEqual([mywindow], list(unpack_svndiff0(pack_svndiff0([mywindow]))))
