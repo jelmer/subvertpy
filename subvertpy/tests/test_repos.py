@@ -143,6 +143,6 @@ class StreamTests(TestCase):
 
     def test_write(self):
         s = repos.Stream()
-        self.assertEqual(0, s.write(""))
-        self.assertEqual(2, s.write("ab"))
+        self.assertEqual(0, s.write(b""))
+        self.assertEqual(2, s.write(b"ab"))
         s.close()

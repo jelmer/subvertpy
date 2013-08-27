@@ -88,14 +88,14 @@ class TestClient(SubversionTestCase):
         self.client.mkdir("dc/bla", revprops={"svn:log": "foo"})
 
     def test_export(self):
-        self.build_tree({"dc/foo": "bla"})
+        self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
         self.client.commit(["dc"])
         self.client.export(self.repos_url, "de")
         self.assertEqual(["foo"], os.listdir("de"))
 
     def test_add_recursive(self):
-        self.build_tree({"dc/trunk/foo": 'bla', "dc/trunk": None})
+        self.build_tree({"dc/trunk/foo": b'bla', "dc/trunk": None})
         self.client.add("dc/trunk")
         if getattr(wc, "WorkingCopy", None) is None:
             raise SkipTest(
@@ -164,12 +164,12 @@ class TestClient(SubversionTestCase):
         self.assertEqual(value, io.getvalue())
 
     def test_cat(self):
-        self.build_tree({"dc/foo": "bla"})
+        self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.assertCatEquals(b"bla")
-        self.build_tree({"dc/foo": "blabla"})
+        self.build_tree({"dc/foo": b"blabla"})
         self.client.commit(["dc"])
         self.assertCatEquals(b"blabla")
         self.assertCatEquals(b"bla", revision=1)
@@ -199,7 +199,7 @@ class TestClient(SubversionTestCase):
                 'revprops': revprops,
                 'has_children': has_children,
             })
-        self.build_tree({"dc/foo": "bla"})
+        self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
         self.client.log_msg_func = lambda c: commit_msg_1
         self.client.commit(["dc"])
@@ -211,8 +211,8 @@ class TestClient(SubversionTestCase):
         self.assertLogEntryMessageEquals(commit_msg_1, log_entries[0])
         self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[0], delta)
         self.build_tree({
-            "dc/foo": "blabla",
-            "dc/bar": "blablabla",
+            "dc/foo": b"blabla",
+            "dc/bar": b"blablabla",
         })
         self.client.add("dc/bar")
         self.client.log_msg_func = lambda c: commit_msg_2
@@ -238,7 +238,7 @@ class TestClient(SubversionTestCase):
         self.assertLogEntryDateAlmostEquals(commit_2_dt, log_entries[0], delta)
 
     def test_info(self):
-        self.build_tree({"dc/foo": "bla"})
+        self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
@@ -249,11 +249,11 @@ class TestClient(SubversionTestCase):
         if client.api_version() < (1, 7):
             # TODO: Why is this failing on 1.7?
             self.assertEqual(wc.SCHEDULE_NORMAL, info["foo"].wc_info.schedule)
-        self.build_tree({"dc/bar": "blablabla"})
+        self.build_tree({"dc/bar": b"blablabla"})
         self.client.add(os.path.abspath("dc/bar"))
 
     def test_info_nonexistant(self):
-        self.build_tree({"dc/foo": "bla"})
+        self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
