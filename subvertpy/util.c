@@ -376,6 +376,14 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	return hash_props;
 }
 
+#if PY_MAJOR_VERSION >= 3
+#define SOURCEPATH_FORMAT3 "(Czl)"
+#define SOURCEPATH_FORMAT4 "(Czli)"
+#else
+#define SOURCEPATH_FORMAT3 "(czl)"
+#define SOURCEPATH_FORMAT4 "(czli)"
+#endif
+
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)
 {
 	PyObject *py_changed_paths, *pyval;
@@ -396,11 +404,11 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 			 idx = apr_hash_next(idx)) {
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
 			if (node_kind) {
-				pyval = Py_BuildValue("(czli)", val->action, val->copyfrom_path, 
+				pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, val->copyfrom_path,
 											 val->copyfrom_rev,
 											 svn_node_unknown);
 			} else {
-				pyval = Py_BuildValue("(czl)", val->action, val->copyfrom_path, 
+				pyval = Py_BuildValue(SOURCEPATH_FORMAT3, val->action, val->copyfrom_path,
 											 val->copyfrom_rev);
 			}
 			if (pyval == NULL) {
@@ -445,7 +453,7 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-			pyval = Py_BuildValue("(czli)", val->action, val->copyfrom_path, 
+			pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, val->copyfrom_path,
 										 val->copyfrom_rev, val->node_kind);
 			if (pyval == NULL) {
 				Py_DECREF(py_changed_paths);
@@ -522,7 +530,7 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 	revprops = prop_hash_to_dict(log_entry->revprops);
 	CB_CHECK_PYRETVAL(revprops);
 
-	ret = PyObject_CallFunction((PyObject *)baton, "OlOb", py_changed_paths, 
+	ret = PyObject_CallFunction((PyObject *)baton, "OlOb", py_changed_paths,
 								 log_entry->revision, revprops, log_entry->has_children);
 	Py_DECREF(py_changed_paths);
 	Py_DECREF(revprops);
@@ -545,7 +553,7 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revn
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
-	ret = PyObject_CallFunction((PyObject *)baton, "OlO", py_changed_paths, 
+	ret = PyObject_CallFunction((PyObject *)baton, "OlO", py_changed_paths,
 								 revision, revprops);
 	Py_DECREF(py_changed_paths);
 	Py_DECREF(revprops);
