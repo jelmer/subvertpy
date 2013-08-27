@@ -218,7 +218,7 @@ if __name__ == '__main__':
 
     # Canonicalize (enough for Subversion, at least) the repository path.
     repos_path = os.path.normpath(args[0])
-    if repos_path == '.': 
+    if repos_path == '.':
         repos_path = ''
 
     try:

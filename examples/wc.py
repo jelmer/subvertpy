@@ -12,7 +12,7 @@ c = client.Client(auth=Auth([get_username_provider()]))
 c.checkout("file://" + os.getcwd() + "/tmprepo", "tmpco", "HEAD")
 
 w = wc.WorkingCopy(None, "tmpco")
-print w
+print(w)
 entry = w.entry("tmpco")
-print entry.revision
-print entry.url
+print(entry.revision)
+print(entry.url)
