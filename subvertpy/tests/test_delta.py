@@ -23,6 +23,7 @@ from subvertpy.delta import (
     pack_svndiff0,
     send_stream,
     unpack_svndiff0,
+    apply_txdelta_handler,
     )
 from subvertpy.tests import TestCase
 
@@ -40,6 +41,12 @@ class DeltaTests(TestCase):
         send_stream(stream, self.storing_window_handler)
         self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], b'foo'), None], 
                           self.windows)
+    
+    def test_apply_delta(self):
+        stream = BytesIO()
+        handler = apply_txdelta_handler(bytes(), stream)
+        send_stream(BytesIO(b"content\n"), handler)
+        self.assertEqual(b"content\n", stream.getvalue())
 
 
 class MarshallTests(TestCase):
