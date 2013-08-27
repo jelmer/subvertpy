@@ -475,7 +475,7 @@ class SVNClient(SVNConnection):
             try:
                 self._socket = socket.socket(family, socktype, proto)
                 self._socket.connect(sockaddr)
-            except socket.error, err:
+            except socket.error:
                 if self._socket is not None:
                     self._socket.close()
                 self._socket = None
@@ -1074,8 +1074,8 @@ class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
             self.wfile.write, self._server._logf)
         try:
             server.serve()
-        except socket.error, e:
-            if e.args[0] == 32:# EPIPE
+        except socket.error as e:
+            if e.errno == 32:# EPIPE
                 return
             raise
 
