@@ -15,7 +15,7 @@
 
 """Tests for subvertpy.delta."""
 
-from cStringIO import StringIO
+from io import BytesIO
 
 from subvertpy.delta import (
     decode_length,
@@ -38,28 +38,28 @@ class DeltaTests(TestCase):
         self.windows.append(window)
 
     def test_send_stream(self):
-        stream = StringIO("foo")
+        stream = BytesIO("foo")
         send_stream(stream, self.storing_window_handler)
         self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], b'foo'), None], 
                           self.windows)
-    
+
     def test_apply_delta(self):
-        stream = StringIO()
-        source = "(source)"
+        stream = BytesIO()
+        source = b"(source)"
         handler = apply_txdelta_handler(source, stream)
-        
-        new = "(new)"
+
+        new = b"(new)"
         ops = (  # (action, offset, length)
             (TXDELTA_NEW, 0, len(new)),
             (TXDELTA_SOURCE, 0, len(source)),
             (TXDELTA_TARGET, len(new), len("(s")),  # Copy "(s"
             (TXDELTA_TARGET, len("(n"), len("ew)")),  # Copy "ew)"
-            
+
             # Copy as target is generated
             (TXDELTA_TARGET, len(new + source), len("(sew)") * 2),
         )
         result = "(new)(source)(sew)(sew)(sew)"
-        
+
         # (source offset, source length, result length, src_ops, ops, new)
         handler((0, len(source), len(result), 0, ops, new))
         handler(None)
