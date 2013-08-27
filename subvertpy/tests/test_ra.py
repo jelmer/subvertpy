@@ -281,7 +281,7 @@ class TestRemoteAccess(SubversionTestCase):
     def test_commit_file_props(self):
         cb = self.commit_editor()
         f = cb.add_file("bar")
-        f.modify("a")
+        f.modify(b"a")
         f.change_prop("bla:bar", "blie")
         cb.close()
 
@@ -299,12 +299,12 @@ class TestRemoteAccess(SubversionTestCase):
 
     def test_get_file_revs(self):
         cb = self.commit_editor()
-        cb.add_file("bar").modify("a")
+        cb.add_file("bar").modify(b"a")
         cb.close()
 
         cb = self.commit_editor()
         f = cb.open_file("bar")
-        f.modify("b")
+        f.modify(b"b")
         f.change_prop("bla", "bloe")
         cb.close()
 
@@ -323,7 +323,7 @@ class TestRemoteAccess(SubversionTestCase):
 
     def test_get_file(self):
         cb = self.commit_editor()
-        cb.add_file("bar").modify("a")
+        cb.add_file("bar").modify(b"a")
         cb.close()
 
         stream = StringIO()

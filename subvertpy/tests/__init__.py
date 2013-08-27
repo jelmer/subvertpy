@@ -392,7 +392,7 @@ class SubversionTestCase(TestCaseInTempDir):
                     os.makedirs(os.path.dirname(name))
                 except OSError:
                     pass
-                f = open(name, 'w')
+                f = open(name, 'wb')
                 try:
                     f.write(content)
                 finally:
