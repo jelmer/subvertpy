@@ -66,7 +66,8 @@ def marshall(x):
     elif type(x) is str:
         return "%d:%s " % (len(x), x)
     elif type(x) is unicode:
-        return "%d:%s " % (len(x), x.encode("utf-8"))
+        x = x.encode("utf-8")
+        return "%d:%s " % (len(x), x)
     elif type(x) is bool:
         if x == True:
             return "true "
