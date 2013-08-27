@@ -1198,11 +1198,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 									 &remove_lock, &digest, &digest_len, &remove_changelist))
 		return NULL;
 
-#if PY_VERSION_HEX < 0x02050000
-	PyErr_Warn(PyExc_DeprecationWarning, "process_committed is deprecated. Use process_committed_queue instead.");
-#else
 	PyErr_WarnEx(PyExc_DeprecationWarning, "process_committed is deprecated. Use process_committed_queue instead.", 2);
-#endif
 
 
 	ADM_CHECK_CLOSED(admobj);
@@ -2466,11 +2462,7 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-#if PY_VERSION_HEX < 0x02050000
-	PyErr_Warn(PyExc_DeprecationWarning, "get_pristine_copy_path is deprecated. Use get_pristine_contents instead.");
-#else
 	PyErr_WarnEx(PyExc_DeprecationWarning, "get_pristine_copy_path is deprecated. Use get_pristine_contents instead.", 2);
-#endif
 	RUN_SVN_WITH_POOL(pool,
 		  svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool),
 										&pristine_path, pool));

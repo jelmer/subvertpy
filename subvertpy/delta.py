@@ -20,13 +20,9 @@ __docformat__ = "restructuredText"
 
 import sys
 
-if sys.version_info < (2, 5):
-    import md5 as _mod_md5
-    md5 = _mod_md5.new
-else:
-    from hashlib import (
-        md5,
-        )
+from hashlib import (
+    md5,
+    )
 
 
 TXDELTA_SOURCE = 0
