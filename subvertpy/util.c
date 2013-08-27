@@ -400,11 +400,11 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 			 idx = apr_hash_next(idx)) {
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
 			if (node_kind) {
-				pyval = Py_BuildValue("(czli)", val->action, val->copyfrom_path, 
+				pyval = Py_BuildValue("(Czli)", val->action, val->copyfrom_path, 
 											 val->copyfrom_rev,
 											 svn_node_unknown);
 			} else {
-				pyval = Py_BuildValue("(czl)", val->action, val->copyfrom_path, 
+				pyval = Py_BuildValue("(Czl)", val->action, val->copyfrom_path, 
 											 val->copyfrom_rev);
 			}
 			if (pyval == NULL) {
@@ -449,7 +449,7 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-			pyval = Py_BuildValue("(czli)", val->action, val->copyfrom_path, 
+			pyval = Py_BuildValue("(Czli)", val->action, val->copyfrom_path, 
 										 val->copyfrom_rev, val->node_kind);
 			if (pyval == NULL) {
 				Py_DECREF(py_changed_paths);
