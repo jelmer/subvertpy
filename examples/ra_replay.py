@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Demonstrates how to use the replay function to fetch the 
 # changes made in a revision.
 

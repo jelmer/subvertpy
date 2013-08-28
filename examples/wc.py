@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Demonstrates how to do access the working tree using subvertpy
 
 import os
