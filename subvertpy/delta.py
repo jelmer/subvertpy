@@ -97,7 +97,7 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
             # Copy from source area.
             tview += sview[offset:offset+length]
         elif action == TXDELTA_TARGET:
-            for i in xrange(length):
+            for i in range(length):
                 tview += tview[offset+i]
         elif action == TXDELTA_NEW:
             tview += new_data[offset:offset+length]
