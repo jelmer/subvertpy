@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Setup file for subvertpy
 # Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@samba.org>
 

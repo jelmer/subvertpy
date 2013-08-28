@@ -1,4 +1,4 @@
-PYTHON = python
+PYTHON = python3
 PYDOCTOR = pydoctor
 SETUP = $(PYTHON) setup.py
 TESTRUNNER = unittest
