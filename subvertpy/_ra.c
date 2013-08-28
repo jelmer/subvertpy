@@ -2094,12 +2094,18 @@ static PyMethodDef ra_methods[] = {
 		"strict_node_history, include_merged_revisions, revprops)\n"
 		"The callback is passed three or four arguments:\n"
 		"callback(changed_paths, revision, revprops[, has_children])\n"
+		"The changed_paths argument may be None, or a dictionary mapping each\n"
+		"path to a tuple:\n"
+		"(action, from_path, from_rev)\n"
 	},
 	{ "iter_log", (PyCFunction)ra_iter_log, METH_VARARGS|METH_KEYWORDS, 
 		"S.iter_log(paths, start, end, limit, discover_changed_paths, "
 		"strict_node_history, include_merged_revisions, revprops)\n"
 		"Yields tuples of three or four elements:\n"
 		"(changed_paths, revision, revprops[, has_children])\n"
+		"The changed_paths element may be None, or a dictionary mapping each\n"
+		"path to a tuple:\n"
+		"(action, from_path, from_rev, node_kind)\n"
 		"This method collects the log entries in another thread. Before calling\n"
 		"any further methods, make sure the thread has completed by running the\n"
 		"iterator to exhaustion (i.e. until StopIteration is raised, the \"for\"\n"

@@ -20,6 +20,8 @@ def log_printer(changed_paths, rev, revprops, has_children=None):
         print "  %s: %s" % entry
     print ""
     
+    if changed_paths is None:
+        return
     print "Changed paths:"
     for path, (action, from_path, from_rev) in changed_paths.iteritems():
         print "  %s (%s)" % (path, action)
