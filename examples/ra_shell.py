@@ -58,7 +58,8 @@ class RaCmd(cmd.Cmd):
 
     def do_cat(self, args):
         path, revnum = self.parse_path_revnum(args)
-        (fetched_rev, props) = conn.get_file(path, sys.stdout, revnum)
+        outf = getattr(sys.stdout, 'buffer', sys.stdout)
+        (fetched_rev, props) = conn.get_file(path, outf, revnum)
 
     def do_reparent(self, args):
         conn.reparent(args)
