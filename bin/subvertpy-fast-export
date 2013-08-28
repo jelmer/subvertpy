@@ -135,7 +135,7 @@ def export_revision(rev, fs):
     props = fs.revision_proplist(rev)
 
     # Do the recursive crawl.
-    if props.has_key('svn:author'):
+    if 'svn:author' in props:
         author = "%s <%s@%s>" % (props['svn:author'], props['svn:author'], address)
     else:
         author = 'nobody <nobody@localhost>'

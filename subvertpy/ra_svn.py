@@ -1047,7 +1047,7 @@ class SVNServer(SVNConnection):
         # Expect:
         while not self._stop:
             ( cmd, args ) = self.recv_msg()
-            if not self.commands.has_key(cmd):
+            if cmd not in self.commands:
                 self.mutter("client used unknown command %r" % cmd)
                 self.send_unknown(cmd)
                 return
