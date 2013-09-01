@@ -380,6 +380,15 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	return hash_props;
 }
 
+char *string_pstrdup(apr_pool_t *pool, PyObject *str)
+{
+	char *result = PyString_AsString(str);
+	if (result == NULL) {
+		return NULL;
+	}
+	return apr_pstrdup(pool, result);
+}
+
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)
 {
 	PyObject *py_changed_paths, *pyval;
