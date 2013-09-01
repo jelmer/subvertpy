@@ -85,14 +85,13 @@ static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
         ret->kind = svn_opt_revision_unspecified;
         return true;
     } else if (PyUnicode_Check(arg)) {
-        char *text = PyString_AsString(arg);
-        if (!strcmp(text, "HEAD")) {
+        if (!PyUnicode_CompareWithASCIIString(arg, "HEAD")) {
             ret->kind = svn_opt_revision_head;
             return true;
-        } else if (!strcmp(text, "WORKING")) {
+        } else if (!PyUnicode_CompareWithASCIIString(arg, "WORKING")) {
             ret->kind = svn_opt_revision_working;
             return true;
-        } else if (!strcmp(text, "BASE")) {
+        } else if (!PyUnicode_CompareWithASCIIString(arg, "BASE")) {
             ret->kind = svn_opt_revision_base;
             return true;
         }
