@@ -1142,7 +1142,10 @@ static bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_arra
 
 	while (PyDict_Next(dict, &idx, &key, &val)) {
 		   svn_prop_t *prop = apr_palloc(pool, sizeof(svn_prop_t));
-		   prop->name = PyString_AsString(key);
+		   prop->name = string_pstrdup(pool, key);
+		   if (prop->name == NULL) {
+			   return false;
+		   }
 		   if (val == Py_None) {
 			   prop->value = NULL;
 		   } else {
