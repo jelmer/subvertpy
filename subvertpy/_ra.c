@@ -765,10 +765,15 @@ apr_array_header_t **apr_paths, apr_array_header_t **apr_revprops)
 	} else {
 		int i;
 		for (i = 0; i < PySequence_Size(revprops); i++) {
-			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
-			if (strcmp(SVN_PROP_REVISION_LOG, n) && 
-				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
-				strcmp(SVN_PROP_REVISION_DATE, n)) {
+			PyObject *n = PySequence_GetItem(revprops, i);
+			if (!PyUnicode_Check(n)) {
+				PyErr_SetString(PyExc_TypeError,
+					"revprops items should be strings");
+				goto fail_prep;
+			}
+			if (PyUnicode_CompareWithASCIIString(n, SVN_PROP_REVISION_LOG) && 
+				PyUnicode_CompareWithASCIIString(n, SVN_PROP_REVISION_AUTHOR) &&
+				PyUnicode_CompareWithASCIIString(n, SVN_PROP_REVISION_DATE)) {
 				PyErr_SetString(PyExc_NotImplementedError, 
 								"fetching custom revision properties not supported");
 				goto fail_prep;
