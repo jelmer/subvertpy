@@ -518,15 +518,22 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 
 	CB_CHECK_PYRETVAL(ret);
 
-	if (PyBytes_Check(ret)) {
-		char* fname = PyBytes_AsString(ret);
+	if (PyUnicode_Check(ret) || PyBytes_Check(ret)) {
+		char* fname;
+		PyObject *bytes;
+		int converted = PyUnicode_FSConverter(ret, &bytes);
+		Py_DECREF(ret);
+		if (!converted) {
+			goto fail;
+		}
+		fname = PyBytes_AS_STRING(bytes);
 		status = apr_file_open(fp, fname, APR_CREATE | APR_READ | APR_WRITE, APR_OS_DEFAULT, 
 								pool);
+		Py_DECREF(bytes);
 		if (status) {
 			PyErr_SetAprStatus(status);
-			goto fail_file;
+			goto fail;
 		}
-		Py_DECREF(ret);
 	} else {
 		*fp = apr_file_from_object(ret, pool);
 		Py_DECREF(ret);
@@ -538,8 +545,6 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 	PyGILState_Release(state);
 	return NULL;
 	
-fail_file:
-	Py_DECREF(ret);
 fail:
 	PyGILState_Release(state);
 	return py_svn_error();
