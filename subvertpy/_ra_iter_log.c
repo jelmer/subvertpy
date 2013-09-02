@@ -231,23 +231,18 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 
 	if (!pyify_log_message(changed_paths, author, date, message, true,
 	pool, &py_changed_paths, &revprops)) {
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 	tuple = Py_BuildValue("NlN", py_changed_paths, revision, revprops);
 	if (tuple == NULL) {
-		Py_DECREF(py_changed_paths);
-		Py_DECREF(revprops);
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail_tuple;
 	}
 
 	ret = py_iter_append(iter, tuple);
 
 	if (ret == NULL) {
 		Py_DECREF(tuple);
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	Py_DECREF(ret);
@@ -255,6 +250,13 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 	PyGILState_Release(state);
 
 	return NULL;
+	
+fail_tuple:
+	Py_DECREF(revprops);
+	Py_DECREF(py_changed_paths);
+fail:
+	PyGILState_Release(state);
+	return py_svn_error();
 }
 #endif
 
