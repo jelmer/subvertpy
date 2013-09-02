@@ -291,11 +291,10 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 	}
 	pool = Pool(NULL);
 	if (pool == NULL)
-		return NULL;
+		goto fail_pool;
 	py_props = PyDict_New();
 	if (py_props == NULL) {
-		apr_pool_destroy(pool);
-		return NULL;
+		goto fail_props;
 	}
 	for (idx = apr_hash_first(pool, props); idx != NULL; 
 		 idx = apr_hash_next(idx)) {
@@ -308,9 +307,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 			py_val = PyString_FromStringAndSize(val->data, val->len);
 		}
 		if (py_val == NULL) {
-			Py_DECREF(py_props);
-			apr_pool_destroy(pool);
-			return NULL;
+			goto fail_item;
 		}
 		if (key == NULL) {
 			py_key = Py_None;
@@ -330,6 +327,13 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 	}
 	apr_pool_destroy(pool);
 	return py_props;
+	
+fail_item:
+	Py_DECREF(py_props);
+fail_props:
+	apr_pool_destroy(pool);
+fail_pool:
+	return NULL;
 }
 
 apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
@@ -475,13 +479,12 @@ PyObject **py_changed_paths, PyObject **revprops)
 	*py_changed_paths = pyify_changed_paths(changed_paths, node_kind,
 		pool);
 	if (*py_changed_paths == NULL) {
-		return false;
+		goto fail;
 	}
 
 	*revprops = PyDict_New();
 	if (*revprops == NULL) {
-		Py_DECREF(*py_changed_paths);
-		return false;
+		goto fail_dict;
 	}
 	if (message != NULL) {
 		obj = PyString_FromString(message);
@@ -499,6 +502,11 @@ PyObject **py_changed_paths, PyObject **revprops)
 		Py_DECREF(obj);
 	}
 	return true;
+	
+fail_dict:
+	Py_DECREF(*py_changed_paths);
+fail:
+	return false;
 }
 
 #if ONLY_SINCE_SVN(1, 5)
