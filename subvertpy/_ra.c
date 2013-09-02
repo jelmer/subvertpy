@@ -1263,12 +1263,11 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (lock_tokens == Py_None) {
 		hash_lock_tokens = NULL;
 	} else {
-		Py_ssize_t idx = 0;
-		PyObject *k, *v;
-		hash_lock_tokens = apr_hash_make(pool);
-		while (PyDict_Next(lock_tokens, &idx, &k, &v)) {
-			apr_hash_set(hash_lock_tokens, PyString_AsString(k), 
-						 PyString_Size(k), PyString_AsString(v));
+		/* Convert lock_tokens dict() to APR hash. Must keep strings
+		alive for the whole commit operation. */
+		hash_lock_tokens = string_dict_to_hash(pool, lock_tokens);
+		if (hash_lock_tokens == NULL) {
+			goto fail_prep;
 		}
 	}
 
@@ -1607,9 +1606,8 @@ static PyObject *ra_has_capability(PyObject *self, PyObject *args)
 static PyObject *ra_unlock(PyObject *self, PyObject *args)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	PyObject *path_tokens, *lock_func, *k, *v;
+	PyObject *path_tokens, *lock_func;
 	bool break_lock;
-	Py_ssize_t idx;
 	apr_pool_t *temp_pool;
 	apr_hash_t *hash_path_tokens;
 
@@ -1622,16 +1620,20 @@ static PyObject *ra_unlock(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		goto fail_pool;
-	hash_path_tokens = apr_hash_make(temp_pool);
-	while (PyDict_Next(path_tokens, &idx, &k, &v)) {
-		apr_hash_set(hash_path_tokens, PyString_AsString(k), PyString_Size(k), (char *)PyString_AsString(v));
+	
+	hash_path_tokens = string_dict_to_hash(temp_pool, path_tokens);
+	if (hash_path_tokens == NULL) {
+		goto fail_prep;
 	}
+	
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_unlock(ra->ra, hash_path_tokens, break_lock,
 					 py_lock_func, lock_func, temp_pool));
 
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 	
+fail_prep:
+	apr_pool_destroy(temp_pool);
 fail_pool:
 	ra->busy = false;
 fail_busy:
