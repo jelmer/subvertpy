@@ -385,6 +385,31 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	return hash_props;
 }
 
+/* Takes a Python dict() object mapping strings to strings, and builds an APR
+hash from them. The strings are saved in "pool" so that the original Python
+objects may be freed. */
+apr_hash_t *string_dict_to_hash(apr_pool_t *pool, PyObject *dict)
+{
+	Py_ssize_t idx = 0;
+	PyObject *k, *v;
+	apr_ssize_t ksize;
+	char *kbuffer, *vbuffer;
+	apr_hash_t *hash = apr_hash_make(pool);
+	
+	while (PyDict_Next(dict, &idx, &k, &v)) {
+		if (!string_pmemdup(pool, k, &kbuffer, &ksize)) {
+			return NULL;
+		}
+		vbuffer = string_pstrdup(pool, v);
+		if (vbuffer == NULL) {
+			return NULL;
+		}
+		apr_hash_set(hash, kbuffer, ksize, vbuffer);
+	}
+	
+	return hash;
+}
+
 char *string_pstrdup(apr_pool_t *pool, PyObject *str)
 {
 	char *result = PyString_AsString(str);
