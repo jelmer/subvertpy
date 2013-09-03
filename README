@@ -53,3 +53,10 @@ Build instructions for Windows
   Download svn-win32-libintl.zip.
   extract it to the directory that you want.
 * Set SVN_LIBINTL to the extract dir.
+
+Development
+-----------
+If using GCC it might be useful to disable the deprecation warnings when
+compiling to see if there are any more serious warnings:
+
+make CFLAGS="-Wno-deprecated-declarations"
