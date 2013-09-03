@@ -273,7 +273,7 @@ static svn_error_t *info_receiver(void *dict, const char *path,
 static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const apr_array_header_t *commit_items, void *baton, apr_pool_t *pool)
 {
     PyObject *py_commit_items, *ret, *py_log_msg, *py_tmp_file;
-    PyObject *bfile = NULL;
+    PyObject *blog = NULL, *bfile = NULL;
     PyGILState_STATE state;
 
     if (baton == Py_None)
@@ -294,25 +294,33 @@ static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file
         py_log_msg = ret;
     }
     
+    if (py_log_msg != Py_None) {
+        blog = PyUnicode_AsUTF8String(py_log_msg);
+        if (blog == NULL) {
+            goto fail;
+        }
+    }
     if (py_tmp_file != Py_None) {
         if (!PyUnicode_FSConverter(py_tmp_file, &bfile)) {
             goto fail;
         }
     }
     
-    if (py_log_msg != Py_None) {
-        *log_msg = PyString_AsString(py_log_msg);
+    if (blog != NULL) {
+        *log_msg = apr_pstrdup(pool, PyBytes_AS_STRING(blog));
     }
     if (bfile != NULL) {
         *tmp_file = apr_pstrdup(pool, PyBytes_AS_STRING(bfile));
     }
     Py_XDECREF(bfile);
+    Py_XDECREF(blog);
     Py_DECREF(ret);
     PyGILState_Release(state);
     return NULL;
     
 fail:
     Py_XDECREF(bfile);
+    Py_XDECREF(blog);
     Py_DECREF(ret);
     PyGILState_Release(state);
     return py_svn_error();
