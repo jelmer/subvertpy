@@ -2737,22 +2737,37 @@ static svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton,
 		PyErr_SetString(PyExc_TypeError, "username should be string");
 		goto fail;
 	}
-
-	py_password = PyTuple_GetItem(ret, 1);
-	CB_CHECK_PYRETVAL(py_password);
-	if (!PyUnicode_Check(py_password)) {
-		PyErr_SetString(PyExc_TypeError, "password should be string");
+	py_username = PyUnicode_AsUTF8String(py_username);
+	if (py_username == NULL) {
 		goto fail;
 	}
 
+	py_password = PyTuple_GetItem(ret, 1);
+	if (py_password == NULL) {
+		goto fail_password;
+	}
+	if (!PyUnicode_Check(py_password)) {
+		PyErr_SetString(PyExc_TypeError, "password should be string");
+		goto fail_password;
+	}
+	py_password = PyUnicode_AsUTF8String(py_password);
+	if (py_password == NULL) {
+		goto fail_password;
+	}
+
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->username = apr_pstrdup(pool, PyString_AsString(py_username));
-	(*cred)->password = apr_pstrdup(pool, PyString_AsString(py_password));
+	(*cred)->username = apr_pstrdup(pool, PyBytes_AS_STRING(py_username));
+	(*cred)->password = apr_pstrdup(pool, PyBytes_AS_STRING(py_password));
 	(*cred)->may_save = (py_may_save == Py_True);
+	
+	Py_DECREF(py_password);
+	Py_DECREF(py_username);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 	
+fail_password:
+	Py_DECREF(py_username);
 fail:
 	Py_DECREF(ret);
 	PyGILState_Release(state);
