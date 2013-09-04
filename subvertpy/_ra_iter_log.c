@@ -316,57 +316,8 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 						 &include_merged_revisions, &revprops))
 		return NULL;
 
-	if (ra_check_busy(ra))
-		return NULL;
-
-	pool = Pool(ra->pool);
-	if (pool == NULL)
-		return NULL;
-	if (paths == Py_None) {
-		/* The subversion libraries don't behave as expected, 
-		 * so tweak our own parameters a bit. */
-		apr_paths = apr_array_make(pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(pool, "");
-	} else if (!path_list_to_apr_array(pool, paths, &apr_paths)) {
-		apr_pool_destroy(pool);
-		return NULL;
-	}
-
-#if ONLY_BEFORE_SVN(1, 5)
-	if (revprops == Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError,
-		"fetching all revision properties not supported");
-		apr_pool_destroy(pool);
-		return NULL;
-	} else if (!PySequence_Check(revprops)) {
-		PyErr_SetString(PyExc_TypeError, "revprops should be a sequence");
-		apr_pool_destroy(pool);
-		return NULL;
-	} else {
-		int i;
-		for (i = 0; i < PySequence_Size(revprops); i++) {
-			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
-			if (strcmp(SVN_PROP_REVISION_LOG, n) &&
-				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
-				strcmp(SVN_PROP_REVISION_DATE, n)) {
-				PyErr_SetString(PyExc_NotImplementedError,
-								"fetching custom revision properties not supported");
-				apr_pool_destroy(pool);
-				return NULL;
-			}
-		}
-	}
-
-	if (include_merged_revisions) {
-		PyErr_SetString(PyExc_NotImplementedError, 
-			"include_merged_revisions not supported in Subversion 1.4");
-		apr_pool_destroy(pool);
-		return NULL;
-	}
-#endif
-
-	if (!string_list_to_apr_array(pool, revprops, &apr_revprops)) {
-		apr_pool_destroy(pool);
+	if (!ra_get_log_prepare(ra, paths, include_merged_revisions,
+	revprops, &pool, &apr_paths, &apr_revprops)) {
 		return NULL;
 	}
 
