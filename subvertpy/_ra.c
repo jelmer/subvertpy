@@ -1416,6 +1416,10 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 				Py_INCREF(pykey);
 			} else {
 				pykey = PyString_FromString((char *)key);
+				if (pykey == NULL) {
+					Py_DECREF(item);
+					goto fail_dirents;
+				}
 			}
 			if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
 				Py_DECREF(item);
@@ -1738,6 +1742,7 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 	PyObject *ret;
 	apr_ssize_t klen;
 	char *val;
+	PyObject *py_val;
 
 	if (!PyArg_ParseTuple(args, "slO:get_locations", &path, &peg_revision, &location_revisions))
 		goto fail_busy;
@@ -1764,7 +1769,13 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 	for (idx = apr_hash_first(temp_pool, hash_locations); idx != NULL;
 		idx = apr_hash_next(idx)) {
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-		if (PyDict_SetItem(ret, PyInt_FromLong(*key), PyString_FromString(val)) != 0) {
+		
+		py_val = PyString_FromString(val);
+		if (py_val == NULL) {
+			goto fail_conv;
+		}
+		
+		if (PyDict_SetItem(ret, PyLong_FromLong(*key), py_val) != 0) {
 			goto fail_conv;
 		}
 	}

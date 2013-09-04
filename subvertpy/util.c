@@ -314,6 +314,10 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 			Py_INCREF(py_key);
 		} else {
 			py_key = PyString_FromString(key);
+			if (py_key == NULL) {
+				Py_DECREF(py_val);
+				goto fail_item;
+			}
 		}
 		if (PyDict_SetItem(py_props, py_key, py_val) != 0) {
 			Py_DECREF(py_key);
@@ -496,21 +500,32 @@ PyObject **py_changed_paths, PyObject **revprops)
 	}
 	if (message != NULL) {
 		obj = PyString_FromString(message);
+		if (obj == NULL) {
+			goto fail_props;
+		}
 		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_LOG, obj);
 		Py_DECREF(obj);
 	}
 	if (author != NULL) {
 		obj = PyString_FromString(author);
+		if (obj == NULL) {
+			goto fail_props;
+		}
 		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_AUTHOR, obj);
 		Py_DECREF(obj);
 	}
 	if (date != NULL) {
 		obj = PyString_FromString(date);
+		if (obj == NULL) {
+			goto fail_props;
+		}
 		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_DATE, obj);
 		Py_DECREF(obj);
 	}
 	return true;
 	
+fail_props:
+	Py_DECREF(*revprops);
 fail_dict:
 	Py_DECREF(*py_changed_paths);
 fail:
@@ -708,7 +723,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	PyObject *ret, *obj;
 	ret = PyDict_New();
 	if (ret == NULL)
-		return NULL;
+		goto fail;
 	if (dirent_fields & SVN_DIRENT_KIND) {
 		obj = PyInt_FromLong(dirent->kind);
 		PyDict_SetItemString(ret, "kind", obj);
@@ -737,6 +752,9 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	if (dirent_fields & SVN_DIRENT_LAST_AUTHOR) {
 		if (dirent->last_author != NULL) {
 			obj = PyString_FromString(dirent->last_author);
+			if (obj == NULL) {
+				goto fail_fields;
+			}
 		} else {
 			obj = Py_None;
 			Py_INCREF(obj);
@@ -745,6 +763,11 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 		Py_DECREF(obj);
 	}
 	return ret;
+	
+fail_fields:
+	Py_DECREF(ret);
+fail:
+	return NULL;
 }
 
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool)
