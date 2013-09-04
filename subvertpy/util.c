@@ -422,35 +422,42 @@ apr_hash_t *string_dict_to_hash(apr_pool_t *pool, PyObject *dict)
 
 char *string_pstrdup(apr_pool_t *pool, PyObject *str)
 {
-	char *result = PyString_AsString(str);
-	if (result == NULL) {
+	char *result;
+	str = PyUnicode_AsUTF8String(str);
+	if (str == NULL) {
 		return NULL;
 	}
-	return apr_pstrdup(pool, result);
+	result = apr_pstrdup(pool, PyBytes_AS_STRING(str));
+	Py_DECREF(str);
+	return result;
 }
 
-/* Allocate and copy it to an APR pool, making sure it is null terminated.
-This way there are no issues with the original object being freed by Python.
-*/
+/* Encode a str() object to UTF-8, allocate and copy it to an APR pool,
+making sure it is null terminated. */
 bool string_pmemdup(apr_pool_t *pool, PyObject *str,
 char **buffer, apr_ssize_t *size)
 {
-	*buffer = PyString_AsString(str);
-	if (*buffer == NULL) {
+	str = PyUnicode_AsUTF8String(str);
+	if (str == NULL) {
 		return false;
 	}
-	*size = PyString_GET_SIZE(str);
-	*buffer = apr_pmemdup(pool, *buffer, *size + 1);
+	*size = PyBytes_GET_SIZE(str);
+	*buffer = apr_pmemdup(pool, PyBytes_AS_STRING(str), *size + 1);
+	Py_DECREF(str);
 	return true;
 }
 
 svn_string_t *py_to_svn_string(PyObject *obj, apr_pool_t *pool)
 {
-	char *buffer = PyString_AsString(obj);
-	if (buffer == NULL) {
+	svn_string_t *result;
+	obj = PyUnicode_AsUTF8String(obj);
+	if (obj == NULL) {
 		return NULL;
 	}
-	return svn_string_ncreate(buffer, PyString_GET_SIZE(obj), pool);
+	result = svn_string_ncreate(PyBytes_AS_STRING(obj),
+		PyBytes_GET_SIZE(obj), pool);
+	Py_DECREF(obj);
+	return result;
 }
 
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)
