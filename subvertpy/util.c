@@ -733,15 +733,21 @@ static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length
 
 	if (!PyBytes_Check(ret)) {
 		PyErr_SetString(PyExc_TypeError, "Expected stream read function to return Byte Array");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
-	PyBytes_AsStringAndSize(ret, &data, &sz);
+	if (PyBytes_AsStringAndSize(ret, &data, &sz) < 0) {
+		goto fail;
+	}
 	memcpy(buffer, data, sz);
 	*length = sz;
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
+	
+fail:
+	Py_DECREF(ret);
+	PyGILState_Release(state);
+	return py_svn_error();
 }
 
 static svn_error_t *py_stream_write(void *baton, const char *data, apr_size_t *len)
