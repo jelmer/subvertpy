@@ -222,56 +222,27 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 #else
 static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
-	PyObject *revprops, *py_changed_paths, *ret, *obj, *tuple;
+	PyObject *revprops, *py_changed_paths, *ret, *tuple;
 	LogIteratorObject *iter = (LogIteratorObject *)baton;
 
 	PyGILState_STATE state;
 
 	state = PyGILState_Ensure();
 
-	py_changed_paths = pyify_changed_paths(changed_paths, true, pool);
-	if (py_changed_paths == NULL) {
-		PyGILState_Release(state);
-		return py_svn_error();
-	}
-
-	revprops = PyDict_New();
-	if (revprops == NULL) {
-		Py_DECREF(py_changed_paths);
-		PyGILState_Release(state);
-		return py_svn_error();
-	}
-
-	if (message != NULL) {
-		obj = PyString_FromString(message);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, obj);
-		Py_DECREF(obj);
-	}
-	if (author != NULL) {
-		obj = PyString_FromString(author);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, obj);
-		Py_DECREF(obj);
-	}
-	if (date != NULL) {
-		obj = PyString_FromString(date);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, 
-							 obj);
-		Py_DECREF(obj);
+	if (!pyify_log_message(changed_paths, author, date, message, true,
+	pool, &py_changed_paths, &revprops)) {
+		goto fail;
 	}
 	tuple = Py_BuildValue("NlN", py_changed_paths, revision, revprops);
 	if (tuple == NULL) {
-		Py_DECREF(py_changed_paths);
-		Py_DECREF(revprops);
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail_tuple;
 	}
 
 	ret = py_iter_append(iter, tuple);
 
 	if (ret == NULL) {
 		Py_DECREF(tuple);
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	Py_DECREF(ret);
@@ -279,6 +250,13 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 	PyGILState_Release(state);
 
 	return NULL;
+	
+fail_tuple:
+	Py_DECREF(revprops);
+	Py_DECREF(py_changed_paths);
+fail:
+	PyGILState_Release(state);
+	return py_svn_error();
 }
 #endif
 
@@ -340,57 +318,8 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 						 &include_merged_revisions, &revprops))
 		return NULL;
 
-	if (ra_check_busy(ra))
-		return NULL;
-
-	pool = Pool(ra->pool);
-	if (pool == NULL)
-		return NULL;
-	if (paths == Py_None) {
-		/* The subversion libraries don't behave as expected, 
-		 * so tweak our own parameters a bit. */
-		apr_paths = apr_array_make(pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(pool, "");
-	} else if (!path_list_to_apr_array(pool, paths, &apr_paths)) {
-		apr_pool_destroy(pool);
-		return NULL;
-	}
-
-#if ONLY_BEFORE_SVN(1, 5)
-	if (revprops == Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError,
-		"fetching all revision properties not supported");
-		apr_pool_destroy(pool);
-		return NULL;
-	} else if (!PySequence_Check(revprops)) {
-		PyErr_SetString(PyExc_TypeError, "revprops should be a sequence");
-		apr_pool_destroy(pool);
-		return NULL;
-	} else {
-		int i;
-		for (i = 0; i < PySequence_Size(revprops); i++) {
-			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
-			if (strcmp(SVN_PROP_REVISION_LOG, n) &&
-				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
-				strcmp(SVN_PROP_REVISION_DATE, n)) {
-				PyErr_SetString(PyExc_NotImplementedError,
-								"fetching custom revision properties not supported");
-				apr_pool_destroy(pool);
-				return NULL;
-			}
-		}
-	}
-
-	if (include_merged_revisions) {
-		PyErr_SetString(PyExc_NotImplementedError, 
-			"include_merged_revisions not supported in Subversion 1.4");
-		apr_pool_destroy(pool);
-		return NULL;
-	}
-#endif
-
-	if (!string_list_to_apr_array(pool, revprops, &apr_revprops)) {
-		apr_pool_destroy(pool);
+	if (!ra_get_log_prepare(ra, paths, include_merged_revisions,
+	revprops, &pool, &apr_paths, &apr_revprops)) {
 		return NULL;
 	}
 

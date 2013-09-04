@@ -291,11 +291,10 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 	}
 	pool = Pool(NULL);
 	if (pool == NULL)
-		return NULL;
+		goto fail_pool;
 	py_props = PyDict_New();
 	if (py_props == NULL) {
-		apr_pool_destroy(pool);
-		return NULL;
+		goto fail_props;
 	}
 	for (idx = apr_hash_first(pool, props); idx != NULL; 
 		 idx = apr_hash_next(idx)) {
@@ -308,15 +307,17 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 			py_val = PyString_FromStringAndSize(val->data, val->len);
 		}
 		if (py_val == NULL) {
-			Py_DECREF(py_props);
-			apr_pool_destroy(pool);
-			return NULL;
+			goto fail_item;
 		}
 		if (key == NULL) {
 			py_key = Py_None;
 			Py_INCREF(py_key);
 		} else {
 			py_key = PyString_FromString(key);
+			if (py_key == NULL) {
+				Py_DECREF(py_val);
+				goto fail_item;
+			}
 		}
 		if (PyDict_SetItem(py_props, py_key, py_val) != 0) {
 			Py_DECREF(py_key);
@@ -330,6 +331,13 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 	}
 	apr_pool_destroy(pool);
 	return py_props;
+	
+fail_item:
+	Py_DECREF(py_props);
+fail_props:
+	apr_pool_destroy(pool);
+fail_pool:
+	return NULL;
 }
 
 apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
@@ -466,6 +474,56 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 }
 #endif
 
+bool pyify_log_message(apr_hash_t *changed_paths, const char *author,
+const char *date, const char *message, bool node_kind, apr_pool_t *pool,
+PyObject **py_changed_paths, PyObject **revprops)
+{
+	PyObject *obj;
+
+	*py_changed_paths = pyify_changed_paths(changed_paths, node_kind,
+		pool);
+	if (*py_changed_paths == NULL) {
+		goto fail;
+	}
+
+	*revprops = PyDict_New();
+	if (*revprops == NULL) {
+		goto fail_dict;
+	}
+	if (message != NULL) {
+		obj = PyString_FromString(message);
+		if (obj == NULL) {
+			goto fail_props;
+		}
+		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_LOG, obj);
+		Py_DECREF(obj);
+	}
+	if (author != NULL) {
+		obj = PyString_FromString(author);
+		if (obj == NULL) {
+			goto fail_props;
+		}
+		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_AUTHOR, obj);
+		Py_DECREF(obj);
+	}
+	if (date != NULL) {
+		obj = PyString_FromString(date);
+		if (obj == NULL) {
+			goto fail_props;
+		}
+		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_DATE, obj);
+		Py_DECREF(obj);
+	}
+	return true;
+	
+fail_props:
+	Py_DECREF(*revprops);
+fail_dict:
+	Py_DECREF(*py_changed_paths);
+fail:
+	return false;
+}
+
 #if ONLY_SINCE_SVN(1, 5)
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
@@ -493,33 +551,14 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 
 svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
-	PyObject *revprops, *py_changed_paths, *ret, *obj;
+	PyObject *revprops, *py_changed_paths, *ret;
 	PyGILState_STATE state = PyGILState_Ensure();
 
 	/*  FIXME: Support including node kind */
-	py_changed_paths = pyify_changed_paths(changed_paths, false, pool);
-	CB_CHECK_PYRETVAL(py_changed_paths);
-
-	revprops = PyDict_New();
-	if (revprops == NULL) {
-		Py_DECREF(py_changed_paths);
-		return NULL;
-	}
-	CB_CHECK_PYRETVAL(revprops);
-	if (message != NULL) {
-		obj = PyString_FromString(message);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, obj);
-		Py_DECREF(obj);
-	}
-	if (author != NULL) {
-		obj = PyString_FromString(author);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, obj);
-		Py_DECREF(obj);
-	}
-	if (date != NULL) {
-		obj = PyString_FromString(date);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, obj);
-		Py_DECREF(obj);
+	if (!pyify_log_message(changed_paths, author, date, message, false,
+	pool, &py_changed_paths, &revprops)) {
+		PyGILState_Release(state);
+		return py_svn_error();
 	}
 	ret = PyObject_CallFunction((PyObject *)baton, "OlO", py_changed_paths, 
 								 revision, revprops);
@@ -676,7 +715,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	PyObject *ret, *obj;
 	ret = PyDict_New();
 	if (ret == NULL)
-		return NULL;
+		goto fail;
 	if (dirent_fields & SVN_DIRENT_KIND) {
 		obj = PyInt_FromLong(dirent->kind);
 		PyDict_SetItemString(ret, "kind", obj);
@@ -705,6 +744,9 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	if (dirent_fields & SVN_DIRENT_LAST_AUTHOR) {
 		if (dirent->last_author != NULL) {
 			obj = PyString_FromString(dirent->last_author);
+			if (obj == NULL) {
+				goto fail_fields;
+			}
 		} else {
 			obj = Py_None;
 			Py_INCREF(obj);
@@ -713,6 +755,11 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 		Py_DECREF(obj);
 	}
 	return ret;
+	
+fail_fields:
+	Py_DECREF(ret);
+fail:
+	return NULL;
 }
 
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool)
