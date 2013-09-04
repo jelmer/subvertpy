@@ -240,12 +240,17 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 		return false;
 	}
 	for (i = 0; i < PyList_GET_SIZE(l); i++) {
+		char *buffer;
 		PyObject *item = PyList_GET_ITEM(l, i);
 		if (!PyUnicode_Check(item)) {
 			PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
 			return false;
 		}
-		APR_ARRAY_PUSH(*ret, char *) = apr_pstrdup(pool, PyString_AsString(item));
+		buffer = string_pstrdup(pool, item);
+		if (buffer == NULL) {
+			return false;
+		}
+		APR_ARRAY_PUSH(*ret, char *) = buffer;
 	}
 	return true;
 }
@@ -253,22 +258,32 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **ret)
 {
 	int i;
+	const char *buffer;
 	if (l == Py_None) {
 		*ret = NULL;
 		return true;
 	}
 	if (PyUnicode_Check(l)) {
 		*ret = apr_array_make(pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(l), pool);
+		buffer = string_path_canonicalize(l, pool);
+		if (buffer == NULL) {
+			return false;
+		}
+		APR_ARRAY_PUSH(*ret, const char *) = buffer;
 	} else if (PyList_Check(l)) {
 		*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
 		for (i = 0; i < PyList_GET_SIZE(l); i++) {
+			const char *buffer;
 			PyObject *item = PyList_GET_ITEM(l, i);
 			if (!PyUnicode_Check(item)) {
 				PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
 				return false;
 			}
-			APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(item), pool);
+			buffer = string_path_canonicalize(item, pool);
+			if (buffer == NULL) {
+				return false;
+			}
+			APR_ARRAY_PUSH(*ret, const char *) = buffer;
 		}
 	} else {
 		PyErr_Format(PyExc_TypeError, "Expected list of strings, got: %s",
@@ -276,6 +291,21 @@ bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **
 		return false;
 	}
 	return true;
+}
+
+const char *string_path_canonicalize(PyObject *str, apr_pool_t *pool)
+{
+	const char *buffer;
+	str = PyUnicode_AsUTF8String(str);
+	if (str == NULL) {
+		return NULL;
+	}
+	buffer = svn_path_canonicalize(PyBytes_AS_STRING(str), pool);
+	if (buffer == PyBytes_AS_STRING(str)) {
+		buffer = apr_pstrdup(pool, buffer);
+	}
+	Py_DECREF(str);
+	return buffer;
 }
 
 PyObject *prop_hash_to_dict(apr_hash_t *props)
