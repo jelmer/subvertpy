@@ -89,6 +89,9 @@ void PyErr_SetAprStatus(apr_status_t status);
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
 PyObject *PyOS_tmpfile(void);
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool);
+bool pyify_log_message(apr_hash_t *changed_paths, const char *author,
+	const char *date, const char *message, bool node_kind,
+	apr_pool_t *pool, PyObject **py_changed_paths, PyObject **revprops);
 #if ONLY_SINCE_SVN(1, 6)
 PyObject *pyify_changed_paths2(apr_hash_t *changed_paths2, apr_pool_t *pool);
 #endif
