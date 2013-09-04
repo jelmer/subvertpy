@@ -376,8 +376,10 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 		if (!string_pmemdup(pool, k, &kbuffer, &ksize)) {
 			return NULL;
 		}
-		val_string = svn_string_ncreate(PyString_AsString(v), 
-										PyString_Size(v), pool);
+		val_string = py_to_svn_string(v, pool);
+		if (val_string == NULL) {
+			return NULL;
+		}
 		
 		apr_hash_set(hash_props, kbuffer, ksize, val_string);
 	}
@@ -432,6 +434,15 @@ char **buffer, apr_ssize_t *size)
 	*size = PyString_GET_SIZE(str);
 	*buffer = apr_pmemdup(pool, *buffer, *size + 1);
 	return true;
+}
+
+svn_string_t *py_to_svn_string(PyObject *obj, apr_pool_t *pool)
+{
+	char *buffer = PyString_AsString(obj);
+	if (buffer == NULL) {
+		return NULL;
+	}
+	return svn_string_ncreate(buffer, PyString_GET_SIZE(obj), pool);
 }
 
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)

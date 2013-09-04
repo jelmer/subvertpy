@@ -53,6 +53,7 @@ apr_hash_t *string_dict_to_hash(apr_pool_t *pool, PyObject *dict);
 char *string_pstrdup(apr_pool_t *pool, PyObject *str);
 bool string_pmemdup(apr_pool_t *pool, PyObject *str,
 	char **buffer, apr_ssize_t *size);
+svn_string_t *py_to_svn_string(PyObject *obj, apr_pool_t *pool);
 
 svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, 
 								long revision, const char *author, 
