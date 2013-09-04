@@ -466,6 +466,41 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 }
 #endif
 
+bool pyify_log_message(apr_hash_t *changed_paths, const char *author,
+const char *date, const char *message, bool node_kind, apr_pool_t *pool,
+PyObject **py_changed_paths, PyObject **revprops)
+{
+	PyObject *obj;
+
+	*py_changed_paths = pyify_changed_paths(changed_paths, node_kind,
+		pool);
+	if (*py_changed_paths == NULL) {
+		return false;
+	}
+
+	*revprops = PyDict_New();
+	if (*revprops == NULL) {
+		Py_DECREF(*py_changed_paths);
+		return false;
+	}
+	if (message != NULL) {
+		obj = PyString_FromString(message);
+		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_LOG, obj);
+		Py_DECREF(obj);
+	}
+	if (author != NULL) {
+		obj = PyString_FromString(author);
+		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_AUTHOR, obj);
+		Py_DECREF(obj);
+	}
+	if (date != NULL) {
+		obj = PyString_FromString(date);
+		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_DATE, obj);
+		Py_DECREF(obj);
+	}
+	return true;
+}
+
 #if ONLY_SINCE_SVN(1, 5)
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
@@ -493,33 +528,14 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 
 svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
-	PyObject *revprops, *py_changed_paths, *ret, *obj;
+	PyObject *revprops, *py_changed_paths, *ret;
 	PyGILState_STATE state = PyGILState_Ensure();
 
 	/*  FIXME: Support including node kind */
-	py_changed_paths = pyify_changed_paths(changed_paths, false, pool);
-	CB_CHECK_PYRETVAL(py_changed_paths);
-
-	revprops = PyDict_New();
-	if (revprops == NULL) {
-		Py_DECREF(py_changed_paths);
-		return NULL;
-	}
-	CB_CHECK_PYRETVAL(revprops);
-	if (message != NULL) {
-		obj = PyString_FromString(message);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, obj);
-		Py_DECREF(obj);
-	}
-	if (author != NULL) {
-		obj = PyString_FromString(author);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, obj);
-		Py_DECREF(obj);
-	}
-	if (date != NULL) {
-		obj = PyString_FromString(date);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, obj);
-		Py_DECREF(obj);
+	if (!pyify_log_message(changed_paths, author, date, message, false,
+	pool, &py_changed_paths, &revprops)) {
+		PyGILState_Release(state);
+		return py_svn_error();
 	}
 	ret = PyObject_CallFunction((PyObject *)baton, "OlO", py_changed_paths, 
 								 revision, revprops);
