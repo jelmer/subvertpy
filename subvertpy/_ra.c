@@ -1648,6 +1648,8 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	apr_hash_t *hash_path_revs;
 	svn_revnum_t *rev;
+	apr_ssize_t ksize;
+	char *kbuffer;
 	Py_ssize_t idx = 0;
 
 	if (!PyArg_ParseTuple(args, "OsbO:lock", &path_revs, &comment, &steal_lock,
@@ -1672,8 +1674,10 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 		if (*rev == -1 && PyErr_Occurred()) {
 			goto fail_prep;
 		}
-		apr_hash_set(hash_path_revs, PyString_AsString(k), PyString_Size(k), 
-					 rev);
+		if (!string_pmemdup(temp_pool, k, &kbuffer, &ksize)) {
+			goto fail_prep;
+		}
+		apr_hash_set(hash_path_revs, kbuffer, ksize, rev);
 	}
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_lock(ra->ra, hash_path_revs, comment, steal_lock,
 					 py_lock_func, lock_func, temp_pool));
