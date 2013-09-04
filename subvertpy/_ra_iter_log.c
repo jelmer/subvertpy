@@ -222,41 +222,17 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 #else
 static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
-	PyObject *revprops, *py_changed_paths, *ret, *obj, *tuple;
+	PyObject *revprops, *py_changed_paths, *ret, *tuple;
 	LogIteratorObject *iter = (LogIteratorObject *)baton;
 
 	PyGILState_STATE state;
 
 	state = PyGILState_Ensure();
 
-	py_changed_paths = pyify_changed_paths(changed_paths, true, pool);
-	if (py_changed_paths == NULL) {
+	if (!pyify_log_message(changed_paths, author, date, message, true,
+	pool, &py_changed_paths, &revprops)) {
 		PyGILState_Release(state);
 		return py_svn_error();
-	}
-
-	revprops = PyDict_New();
-	if (revprops == NULL) {
-		Py_DECREF(py_changed_paths);
-		PyGILState_Release(state);
-		return py_svn_error();
-	}
-
-	if (message != NULL) {
-		obj = PyString_FromString(message);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, obj);
-		Py_DECREF(obj);
-	}
-	if (author != NULL) {
-		obj = PyString_FromString(author);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, obj);
-		Py_DECREF(obj);
-	}
-	if (date != NULL) {
-		obj = PyString_FromString(date);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, 
-							 obj);
-		Py_DECREF(obj);
 	}
 	tuple = Py_BuildValue("NlN", py_changed_paths, revision, revprops);
 	if (tuple == NULL) {
