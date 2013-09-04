@@ -344,6 +344,8 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 {
 	Py_ssize_t idx = 0;
 	PyObject *k, *v;
+	apr_ssize_t ksize;
+	char *kbuffer;
 	apr_hash_t *hash_props;
 	svn_string_t *val_string;
 
@@ -371,10 +373,13 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 			return NULL;
 		}
 
+		if (!string_pmemdup(pool, k, &kbuffer, &ksize)) {
+			return NULL;
+		}
 		val_string = svn_string_ncreate(PyString_AsString(v), 
 										PyString_Size(v), pool);
-		apr_hash_set(hash_props, PyString_AsString(k), 
-					 PyString_Size(k), val_string);
+		
+		apr_hash_set(hash_props, kbuffer, ksize, val_string);
 	}
 
 	return hash_props;
@@ -395,6 +400,21 @@ char *string_pstrdup(apr_pool_t *pool, PyObject *str)
 		return NULL;
 	}
 	return apr_pstrdup(pool, result);
+}
+
+/* Allocate and copy it to an APR pool, making sure it is null terminated.
+This way there are no issues with the original object being freed by Python.
+*/
+bool string_pmemdup(apr_pool_t *pool, PyObject *str,
+char **buffer, apr_ssize_t *size)
+{
+	*buffer = PyString_AsString(str);
+	if (*buffer == NULL) {
+		return false;
+	}
+	*size = PyString_GET_SIZE(str);
+	*buffer = apr_pmemdup(pool, *buffer, *size + 1);
+	return true;
 }
 
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)
