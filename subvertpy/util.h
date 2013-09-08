@@ -47,12 +47,12 @@ __attribute__((warn_unused_result)) apr_pool_t *Pool(apr_pool_t *parent);
 void handle_svn_error(svn_error_t *error);
 bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
 bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
-const char *string_path_canonicalize(PyObject *str, apr_pool_t *pool);
+const char *string_to_canonical_path(PyObject *str, apr_pool_t *pool);
 PyObject *prop_hash_to_dict(apr_hash_t *props);
 apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props);
 apr_hash_t *string_dict_to_hash(apr_pool_t *pool, PyObject *dict);
-char *string_pstrdup(apr_pool_t *pool, PyObject *str);
-bool string_pmemdup(apr_pool_t *pool, PyObject *str,
+char *string_to_utf8(apr_pool_t *pool, PyObject *str);
+bool string_to_utf8_and_size(apr_pool_t *pool, PyObject *str,
 	char **buffer, apr_ssize_t *size);
 svn_string_t *py_to_svn_string(PyObject *obj, apr_pool_t *pool);
 
