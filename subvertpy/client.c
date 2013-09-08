@@ -75,7 +75,7 @@ static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
 static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 {
-    if (arg && PyLong_Check(arg)) {
+    if (PyLong_Check(arg)) {
         ret->kind = svn_opt_revision_number;
         ret->value.number = PyLong_AsLong(arg);
         if (ret->value.number == -1 && PyErr_Occurred())
