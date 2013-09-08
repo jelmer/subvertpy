@@ -246,7 +246,7 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 			PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
 			return false;
 		}
-		buffer = string_pstrdup(pool, item);
+		buffer = string_to_utf8(pool, item);
 		if (buffer == NULL) {
 			return false;
 		}
@@ -265,7 +265,7 @@ bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **
 	}
 	if (PyUnicode_Check(l)) {
 		*ret = apr_array_make(pool, 1, sizeof(char *));
-		buffer = string_path_canonicalize(l, pool);
+		buffer = string_to_canonical_path(l, pool);
 		if (buffer == NULL) {
 			return false;
 		}
@@ -279,7 +279,7 @@ bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **
 				PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
 				return false;
 			}
-			buffer = string_path_canonicalize(item, pool);
+			buffer = string_to_canonical_path(item, pool);
 			if (buffer == NULL) {
 				return false;
 			}
@@ -293,7 +293,10 @@ bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **
 	return true;
 }
 
-const char *string_path_canonicalize(PyObject *str, apr_pool_t *pool)
+/* Encodes a Python string to null terminated UTF-8 and converts it to
+canonical path form. The result is always allocated in the APR pool or
+statically, even if the path was originally in canonical form. */
+const char *string_to_canonical_path(PyObject *str, apr_pool_t *pool)
 {
 	const char *buffer;
 	str = PyUnicode_AsUTF8String(str);
@@ -403,7 +406,7 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 			return NULL;
 		}
 
-		if (!string_pmemdup(pool, k, &kbuffer, &ksize)) {
+		if (!string_to_utf8_and_size(pool, k, &kbuffer, &ksize)) {
 			return NULL;
 		}
 		val_string = py_to_svn_string(v, pool);
@@ -418,8 +421,8 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 }
 
 /* Takes a Python dict() object mapping strings to strings, and builds an APR
-hash from them. The strings are saved in "pool" so that the original Python
-objects may be freed. */
+hash from them. The strings are encoded to UTF-8 and saved in "pool", so that
+the original Python objects may be freed. */
 apr_hash_t *string_dict_to_hash(apr_pool_t *pool, PyObject *dict)
 {
 	Py_ssize_t idx = 0;
@@ -429,10 +432,10 @@ apr_hash_t *string_dict_to_hash(apr_pool_t *pool, PyObject *dict)
 	apr_hash_t *hash = apr_hash_make(pool);
 	
 	while (PyDict_Next(dict, &idx, &k, &v)) {
-		if (!string_pmemdup(pool, k, &kbuffer, &ksize)) {
+		if (!string_to_utf8_and_size(pool, k, &kbuffer, &ksize)) {
 			return NULL;
 		}
-		vbuffer = string_pstrdup(pool, v);
+		vbuffer = string_to_utf8(pool, v);
 		if (vbuffer == NULL) {
 			return NULL;
 		}
@@ -442,7 +445,9 @@ apr_hash_t *string_dict_to_hash(apr_pool_t *pool, PyObject *dict)
 	return hash;
 }
 
-char *string_pstrdup(apr_pool_t *pool, PyObject *str)
+/* Encodes a Python string to null terminated UTF-8, allocated in the APR
+pool */
+char *string_to_utf8(apr_pool_t *pool, PyObject *str)
 {
 	char *result;
 	str = PyUnicode_AsUTF8String(str);
@@ -454,9 +459,11 @@ char *string_pstrdup(apr_pool_t *pool, PyObject *str)
 	return result;
 }
 
-/* Encode a str() object to UTF-8, allocate and copy it to an APR pool,
-making sure it is null terminated. */
-bool string_pmemdup(apr_pool_t *pool, PyObject *str,
+/* Encodes a Python string object to UTF-8, and returns the result in a
+buffer allocated from the APR pool. Also includes a null terminator appended
+to the buffer, but returns the size of the encoded string without the added
+terminator. */
+bool string_to_utf8_and_size(apr_pool_t *pool, PyObject *str,
 char **buffer, apr_ssize_t *size)
 {
 	str = PyUnicode_AsUTF8String(str);
