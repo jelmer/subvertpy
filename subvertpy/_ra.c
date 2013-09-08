@@ -481,7 +481,7 @@ static svn_error_t *py_get_client_string(void *baton, const char **name, apr_poo
 
 	CB_CHECK_PYRETVAL(ret);
 
-	*name = string_pstrdup(pool, ret);
+	*name = string_to_utf8(pool, ret);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	if (*name == NULL) {
@@ -1318,7 +1318,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	
 	/* Copy in case the original string object gets deallocated before
 	the commit is finished. */
-	log_msg = string_pstrdup(pool, py_log_msg);
+	log_msg = string_to_utf8(pool, py_log_msg);
 	if (log_msg == NULL) {
 		goto fail_prep2;
 	}
@@ -1683,7 +1683,7 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 		if (*rev == -1 && PyErr_Occurred()) {
 			goto fail_prep;
 		}
-		if (!string_pmemdup(temp_pool, k, &kbuffer, &ksize)) {
+		if (!string_to_utf8_and_size(temp_pool, k, &kbuffer, &ksize)) {
 			goto fail_prep;
 		}
 		apr_hash_set(hash_path_revs, kbuffer, ksize, rev);
@@ -2363,7 +2363,7 @@ static PyObject *auth_set_parameter(PyObject *self, PyObject *args)
 		*((apr_uint32_t *)vvalue) = ret;
 	} else if (!strcmp(name, SVN_AUTH_PARAM_DEFAULT_USERNAME) ||
 			   !strcmp(name, SVN_AUTH_PARAM_DEFAULT_PASSWORD)) {
-		vvalue = string_pstrdup(auth->pool, value);
+		vvalue = string_to_utf8(auth->pool, value);
 		if (vvalue == NULL) {
 			return NULL;
 		}
@@ -2668,7 +2668,7 @@ static svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *ba
 		goto fail;
 	}
 	
-	username = string_pstrdup(pool, py_username);
+	username = string_to_utf8(pool, py_username);
 	if (username == NULL) {
 		goto fail;
 	}
@@ -2912,7 +2912,7 @@ static svn_error_t *py_ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_p
 		goto fail;
 	}
 	
-	password = string_pstrdup(pool, py_password);
+	password = string_to_utf8(pool, py_password);
 	if (password == NULL) {
 		goto fail;
 	}
@@ -2958,7 +2958,7 @@ static svn_error_t *py_ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **
 		PyErr_SetString(PyExc_TypeError, "cert_file should be string");
 		goto fail;
 	}
-	file = string_pstrdup(pool, py_cert_file);
+	file = string_to_utf8(pool, py_cert_file);
 	if (file == NULL) {
 		goto fail;
 	}
