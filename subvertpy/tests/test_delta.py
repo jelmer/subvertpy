@@ -52,13 +52,13 @@ class DeltaTests(TestCase):
         ops = (  # (action, offset, length)
             (TXDELTA_NEW, 0, len(new)),
             (TXDELTA_SOURCE, 0, len(source)),
-            (TXDELTA_TARGET, len(new), len("(s")),  # Copy "(s"
-            (TXDELTA_TARGET, len("(n"), len("ew)")),  # Copy "ew)"
+            (TXDELTA_TARGET, len(new), len(b"(s")),  # Copy "(s"
+            (TXDELTA_TARGET, len(b"(n"), len(b"ew)")),  # Copy "ew)"
 
             # Copy as target is generated
-            (TXDELTA_TARGET, len(new + source), len("(sew)") * 2),
+            (TXDELTA_TARGET, len(new + source), len(b"(sew)") * 2),
         )
-        result = "(new)(source)(sew)(sew)(sew)"
+        result = b"(new)(source)(sew)(sew)(sew)"
 
         # (source offset, source length, result length, src_ops, ops, new)
         handler((0, len(source), len(result), 0, ops, new))
