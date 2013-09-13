@@ -24,6 +24,7 @@ from subvertpy.delta import (
     send_stream,
     unpack_svndiff0,
     apply_txdelta_handler,
+    TXDELTA_NEW, TXDELTA_SOURCE, TXDELTA_TARGET,
     )
 from subvertpy.tests import TestCase
 
@@ -44,9 +45,25 @@ class DeltaTests(TestCase):
     
     def test_apply_delta(self):
         stream = BytesIO()
-        handler = apply_txdelta_handler(bytes(), stream)
-        send_stream(BytesIO(b"content\n"), handler)
-        self.assertEqual(b"content\n", stream.getvalue())
+        source = b"(source)"
+        handler = apply_txdelta_handler(source, stream)
+        
+        new = b"(new)"
+        ops = (  # (action, offset, length)
+            (TXDELTA_NEW, 0, len(new)),
+            (TXDELTA_SOURCE, 0, len(source)),
+            (TXDELTA_TARGET, len(new), len(b"(s")),  # Copy "(s"
+            (TXDELTA_TARGET, len(b"(n"), len(b"ew)")),  # Copy "ew)"
+            
+            # Copy as target is generated
+            (TXDELTA_TARGET, len(new + source), len(b"(sew)") * 2),
+        )
+        result = b"(new)(source)(sew)(sew)(sew)"
+        
+        # (source offset, source length, result length, src_ops, ops, new)
+        handler((0, len(source), len(result), 0, ops, new))
+        handler(None)
+        self.assertEqual(result, stream.getvalue())
 
 
 class MarshallTests(TestCase):
