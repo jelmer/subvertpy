@@ -665,7 +665,7 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revn
 
 	/*  FIXME: Support including node kind */
 	if (!pyify_log_message(changed_paths, author, date, message, false,
-	pool, &py_changed_paths, &revprops)) {
+			pool, &py_changed_paths, &revprops)) {
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
