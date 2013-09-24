@@ -75,24 +75,23 @@ static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
 static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 {
-    if (PyInt_Check(arg) || PyLong_Check(arg)) {
+    if (PyLong_Check(arg)) {
         ret->kind = svn_opt_revision_number;
-        ret->value.number = PyInt_AsLong(arg);
+        ret->value.number = PyLong_AsLong(arg);
         if (ret->value.number == -1 && PyErr_Occurred())
             return false;
         return true;
     } else if (arg == Py_None) {
         ret->kind = svn_opt_revision_unspecified;
         return true;
-    } else if (PyString_Check(arg)) {
-        char *text = PyString_AsString(arg);
-        if (!strcmp(text, "HEAD")) {
+    } else if (PyUnicode_Check(arg)) {
+        if (!PyUnicode_CompareWithASCIIString(arg, "HEAD")) {
             ret->kind = svn_opt_revision_head;
             return true;
-        } else if (!strcmp(text, "WORKING")) {
+        } else if (!PyUnicode_CompareWithASCIIString(arg, "WORKING")) {
             ret->kind = svn_opt_revision_working;
             return true;
-        } else if (!strcmp(text, "BASE")) {
+        } else if (!PyUnicode_CompareWithASCIIString(arg, "BASE")) {
             ret->kind = svn_opt_revision_base;
             return true;
         }
@@ -274,6 +273,7 @@ static svn_error_t *info_receiver(void *dict, const char *path,
 static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file, const apr_array_header_t *commit_items, void *baton, apr_pool_t *pool)
 {
     PyObject *py_commit_items, *ret, *py_log_msg, *py_tmp_file;
+    PyObject *blog = NULL, *bfile = NULL;
     PyGILState_STATE state;
 
     if (baton == Py_None)
@@ -293,15 +293,37 @@ static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file
         py_tmp_file = Py_None;
         py_log_msg = ret;
     }
+    
     if (py_log_msg != Py_None) {
-        *log_msg = PyString_AsString(py_log_msg);
+        blog = PyUnicode_AsUTF8String(py_log_msg);
+        if (blog == NULL) {
+            goto fail;
+        }
     }
     if (py_tmp_file != Py_None) {
-        *tmp_file = PyString_AsString(py_tmp_file);
+        if (!PyUnicode_FSConverter(py_tmp_file, &bfile)) {
+            goto fail;
+        }
     }
+    
+    if (blog != NULL) {
+        *log_msg = apr_pstrdup(pool, PyBytes_AS_STRING(blog));
+    }
+    if (bfile != NULL) {
+        *tmp_file = apr_pstrdup(pool, PyBytes_AS_STRING(bfile));
+    }
+    Py_XDECREF(bfile);
+    Py_XDECREF(blog);
     Py_DECREF(ret);
     PyGILState_Release(state);
     return NULL;
+    
+fail:
+    Py_XDECREF(bfile);
+    Py_XDECREF(blog);
+    Py_DECREF(ret);
+    PyGILState_Release(state);
+    return py_svn_error();
 }
 
 static PyObject *py_commit_info_tuple(svn_commit_info_t *ci)
@@ -1605,7 +1627,7 @@ static PyObject *get_default_ignores(PyObject *self)
 	RUN_SVN_WITH_POOL(pool, svn_wc_get_default_ignores(&patterns, configobj->config, pool));
 	ret = PyList_New(patterns->nelts);
 	for (i = 0; i < patterns->nelts; i++) {
-		PyObject *item = PyString_FromString(APR_ARRAY_IDX(patterns, i, char *));
+		PyObject *item = PyUnicode_FromString(APR_ARRAY_IDX(patterns, i, char *));
 		if (item == NULL) {
 			apr_pool_destroy(pool);
 			Py_DECREF(item);
@@ -1638,7 +1660,7 @@ static void config_dealloc(PyObject *obj)
 }
 
 PyTypeObject Config_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.Config", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ConfigObject),  /*  tp_basicsize    */
     0,  /*    tp_itemsize;  For allocation */
@@ -1706,7 +1728,7 @@ static void configitem_dealloc(PyObject *self)
 }
 
 PyTypeObject ConfigItem_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.ConfigItem", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ConfigItemObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1760,7 +1782,7 @@ static PyGetSetDef info_getsetters[] = {
 };
 
 PyTypeObject Info_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(InfoObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1860,7 +1882,7 @@ static void wcinfo_dealloc(PyObject *self)
 }
 
 PyTypeObject WCInfo_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(WCInfoObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1922,7 +1944,7 @@ PyTypeObject WCInfo_Type = {
 };
 
 PyTypeObject Client_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     /*    PyObject_VAR_HEAD    */
     "client.Client", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ClientObject),
@@ -2058,31 +2080,36 @@ static PyMethodDef client_mod_methods[] = {
 	{ NULL }
 };
 
-void initclient(void)
+static struct PyModuleDef client_mod = {
+	PyModuleDef_HEAD_INIT, "client", "Client methods", -1,
+	client_mod_methods,
+};
+
+PyMODINIT_FUNC PyInit_client(void)
 {
-    PyObject *mod;
+    PyObject *mod = NULL;
 
     if (PyType_Ready(&Client_Type) < 0)
-        return;
+        return mod;
 
     if (PyType_Ready(&Config_Type) < 0)
-        return;
+        return mod;
 
     if (PyType_Ready(&ConfigItem_Type) < 0)
-        return;
+        return mod;
 
     if (PyType_Ready(&Info_Type) < 0)
-        return;
+        return mod;
 
     if (PyType_Ready(&WCInfo_Type) < 0)
-        return;
+        return mod;
 
     /* Make sure APR is initialized */
     apr_initialize();
 
-    mod = Py_InitModule3("client", client_mod_methods, "Client methods");
+    mod = PyModule_Create(&client_mod);
     if (mod == NULL)
-        return;
+        return mod;
 
     Py_INCREF(&Client_Type);
     PyModule_AddObject(mod, "Client", (PyObject *)&Client_Type);
@@ -2098,4 +2125,5 @@ void initclient(void)
 
 	Py_INCREF(&Config_Type);
 	PyModule_AddObject(mod, "Config", (PyObject *)&Config_Type);
+	return mod;
 }

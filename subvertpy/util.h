@@ -34,9 +34,8 @@
 
 #define ONLY_BEFORE_SVN(maj, min) (!(ONLY_SINCE_SVN(maj, min)))
 
-/* There's no Py_ssize_t in 2.4, apparently */
-#if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION < 5
-typedef int Py_ssize_t;
+#if PY_VERSION_HEX < 0x03010000
+#error Python 3.0 is not supported.  Please use 3.1 and higher.
 #endif
 
 #ifdef __GNUC__
@@ -48,8 +47,15 @@ __attribute__((warn_unused_result)) apr_pool_t *Pool(apr_pool_t *parent);
 void handle_svn_error(svn_error_t *error);
 bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
 bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
+const char *string_to_canonical_path(PyObject *str, apr_pool_t *pool);
 PyObject *prop_hash_to_dict(apr_hash_t *props);
 apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props);
+apr_hash_t *string_dict_to_hash(apr_pool_t *pool, PyObject *dict);
+char *string_to_utf8(apr_pool_t *pool, PyObject *str);
+bool string_to_utf8_and_size(apr_pool_t *pool, PyObject *str,
+	char **buffer, apr_ssize_t *size);
+svn_string_t *py_to_svn_string(PyObject *obj, apr_pool_t *pool);
+
 svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, 
 								long revision, const char *author, 
 								const char *date, const char *message, 
@@ -94,6 +100,9 @@ void PyErr_SetAprStatus(apr_status_t status);
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
 PyObject *PyOS_tmpfile(void);
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool);
+bool pyify_log_message(apr_hash_t *changed_paths, const char *author,
+	const char *date, const char *message, bool node_kind,
+	apr_pool_t *pool, PyObject **py_changed_paths, PyObject **revprops);
 #if ONLY_SINCE_SVN(1, 6)
 PyObject *pyify_changed_paths2(apr_hash_t *changed_paths2, apr_pool_t *pool);
 #endif

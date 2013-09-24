@@ -29,7 +29,7 @@ class TestProperties(TestCase):
         super(TestProperties, self).setUp()
 
     def test_time_from_cstring(self):
-        self.assertEqual(1225704780716938L, properties.time_from_cstring("2008-11-03T09:33:00.716938Z"))
+        self.assertEqual(1225704780716938, properties.time_from_cstring("2008-11-03T09:33:00.716938Z"))
 
     def test_time_from_cstring_independent_from_dst(self):
         old_tz = os.environ.get('TZ', None)
@@ -42,7 +42,7 @@ class TestProperties(TestCase):
             os.environ['TZ'] = 'Europe/London'
             time.tzset()
             # Now test a time within that DST
-            self.assertEqual(1275295762430000L, properties.time_from_cstring("2010-05-31T08:49:22.430000Z"))
+            self.assertEqual(1275295762430000, properties.time_from_cstring("2010-05-31T08:49:22.430000Z"))
         finally:
             if old_tz is None:
                 del os.environ['TZ']
@@ -51,7 +51,7 @@ class TestProperties(TestCase):
             time.tzset()
 
     def test_time_to_cstring(self):
-        self.assertEqual("2008-11-03T09:33:00.716938Z", properties.time_to_cstring(1225704780716938L))
+        self.assertEqual("2008-11-03T09:33:00.716938Z", properties.time_to_cstring(1225704780716938))
 
 
 class TestExternalsParser(TestCase):

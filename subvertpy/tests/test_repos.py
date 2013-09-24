@@ -15,7 +15,7 @@
 
 """Subversion repository library tests."""
 
-from cStringIO import StringIO
+from io import BytesIO
 import os
 import textwrap
 
@@ -52,9 +52,9 @@ class TestRepository(TestCaseInTempDir):
 
     def test_verify_fs(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
-        f = StringIO()
+        f = BytesIO()
         r.verify_fs(f, 0, 0)
-        self.assertEqual('* Verified revision 0.\n', f.getvalue())
+        self.assertEqual(b'* Verified revision 0.\n', f.getvalue())
 
     def test_open(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -74,9 +74,9 @@ class TestRepository(TestCaseInTempDir):
 
     def test_load_fs_invalid(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
-        dumpfile = "Malformed"
-        feedback = StringIO()
-        self.assertRaises(SubversionException, r.load_fs, StringIO(dumpfile),
+        dumpfile = b"Malformed"
+        feedback = BytesIO()
+        self.assertRaises(SubversionException, r.load_fs, BytesIO(dumpfile),
             feedback, repos.LOAD_UUID_DEFAULT)
 
     def test_load_fs(self):
@@ -95,14 +95,14 @@ class TestRepository(TestCaseInTempDir):
         V 27
         2011-08-26T13:08:30.187858Z
         PROPS-END
-        """)
-        feedback = StringIO()
-        r.load_fs(StringIO(dumpfile), feedback, repos.LOAD_UUID_DEFAULT)
+        """).encode("ascii")
+        feedback = BytesIO()
+        r.load_fs(BytesIO(dumpfile), feedback, repos.LOAD_UUID_DEFAULT)
         self.assertEqual(r.fs().get_uuid(), "38f0a982-fd1f-4e00-aa6b-a20720f4b9ca")
 
     def test_rev_props(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertEqual(["svn:date"], repos.Repository("foo").fs().revision_proplist(0).keys())
+        self.assertEqual(["svn:date"], list(repos.Repository("foo").fs().revision_proplist(0).keys()))
 
     def test_rev_root_invalid(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -137,12 +137,12 @@ class StreamTests(TestCase):
         if repos.api_version() < (1, 6):
             self.assertRaises(NotImplementedError, s.read)
         else:
-            self.assertEqual("", s.read())
-            self.assertEqual("", s.read(15))
+            self.assertEqual(b"", s.read())
+            self.assertEqual(b"", s.read(15))
         s.close()
 
     def test_write(self):
         s = repos.Stream()
-        self.assertEqual(0, s.write(""))
-        self.assertEqual(2, s.write("ab"))
+        self.assertEqual(0, s.write(b""))
+        self.assertEqual(2, s.write(b"ab"))
         s.close()

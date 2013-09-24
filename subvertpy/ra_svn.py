@@ -17,12 +17,12 @@
 
 __author__ = "Jelmer Vernooij <jelmer@samba.org>"
 
-import SocketServer
+import socketserver
 import base64
 import os
 import socket
 import subprocess
-import urllib
+import urllib.parse
 
 from subvertpy import (
     ERR_RA_SVN_UNKNOWN_CMD,
@@ -419,9 +419,9 @@ class SVNClient(SVNConnection):
     def __init__(self, url, progress_cb=None, auth=None, config=None, 
                  client_string_func=None, open_tmp_file_func=None):
         self.url = url
-        (type, opaque) = urllib.splittype(url)
+        (type, opaque) = urllib.parse.splittype(url)
         assert type in ("svn", "svn+ssh")
-        (host, path) = urllib.splithost(opaque)
+        (host, path) = urllib.parse.splithost(opaque)
         self._progress_cb = progress_cb
         self._auth = auth
         self._config = config
@@ -467,7 +467,7 @@ class SVNClient(SVNConnection):
     _recv_ack = _unpack
 
     def _connect(self, host):
-        (host, port) = urllib.splitnport(host, SVN_PORT)
+        (host, port) = urllib.parse.splitnport(host, SVN_PORT)
         sockaddrs = socket.getaddrinfo(host, port, socket.AF_UNSPEC,
                socket.SOCK_STREAM, 0, 0)
         self._socket = None
@@ -475,7 +475,7 @@ class SVNClient(SVNConnection):
             try:
                 self._socket = socket.socket(family, socktype, proto)
                 self._socket.connect(sockaddr)
-            except socket.error, err:
+            except socket.error:
                 if self._socket is not None:
                     self._socket.close()
                 self._socket = None
@@ -487,12 +487,12 @@ class SVNClient(SVNConnection):
         return (self._socket.recv, self._socket.send)
 
     def _connect_ssh(self, host):
-        (user, host) = urllib.splituser(host)
+        (user, host) = urllib.parse.splituser(host)
         if user is not None:
             (user, password) = urllib.splitpassword(user)
         else:
             password = None
-        (host, port) = urllib.splitnport(host, 22)
+        (host, port) = urllib.parse.splitnport(host, 22)
         self._tunnel = get_ssh_vendor().connect_ssh(user, password, host, port, ["svnserve", "-t"])
         return (self._tunnel.recv, self._tunnel.send)
 
@@ -643,12 +643,12 @@ class SVNClient(SVNConnection):
                           keep_locks=False):
         args = [revprops[properties.PROP_REVISION_LOG]]
         if lock_tokens is not None:
-            args.append(lock_tokens.items())
+            args.append(list(lock_tokens.items()))
         else:
             args.append([])
         args.append(keep_locks)
         if len(revprops) > 1:
-            args.append(revprops.items())
+            args.append(list(revprops.items()))
         self.send_msg([literal("commit"), args])
         self._recv_ack()
         raise NotImplementedError(self.get_commit_editor)
@@ -894,7 +894,7 @@ class SVNServer(SVNConnection):
         def send_revision(revno, author, date, message, changed_paths=None):
             changes = []
             if changed_paths is not None:
-                for p, (action, cf, cr) in changed_paths.iteritems():
+                for p, (action, cf, cr) in changed_paths.items():
                     if cf is not None:
                         changes.append((p, literal(action), (cf, cr)))
                     else:
@@ -915,7 +915,7 @@ class SVNServer(SVNConnection):
         self.send_success()
 
     def open_backend(self, url):
-        (rooturl, location) = urllib.splithost(url)
+        (rooturl, location) = urllib.parse.splithost(url)
         self.repo_backend, self.relpath = self.backend.open_repository(location)
 
     def reparent(self, parent):
@@ -952,7 +952,7 @@ class SVNServer(SVNConnection):
     def rev_proplist(self, revnum):
         self.send_ack()
         revprops = self.repo_backend.rev_proplist(revnum)
-        self.send_success(revprops.items())
+        self.send_success(list(revprops.items()))
 
     def rev_prop(self, revnum, name):
         self.send_ack()
@@ -965,7 +965,7 @@ class SVNServer(SVNConnection):
     def get_locations(self, path, peg_revnum, revnums):
         self.send_ack()
         locations = self.repo_backend.get_locations(path, peg_revnum, revnums)
-        for rev, path in locations.iteritems():
+        for rev, path in locations.items():
             self.send_msg([rev, path])
         self.send_msg(literal("done"))
         self.send_success()
@@ -1062,11 +1062,11 @@ class SVNServer(SVNConnection):
             self._logf.write("%s\n" % text)
 
 
-class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
+class TCPSVNRequestHandler(socketserver.StreamRequestHandler):
 
     def __init__(self, request, client_address, server):
         self._server = server
-        SocketServer.StreamRequestHandler.__init__(self, request, 
+        socketserver.StreamRequestHandler.__init__(self, request, 
             client_address, server)
 
     def handle(self):
@@ -1074,19 +1074,19 @@ class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
             self.wfile.write, self._server._logf)
         try:
             server.serve()
-        except socket.error, e:
-            if e.args[0] == 32:# EPIPE
+        except socket.error as e:
+            if e.errno == 32:# EPIPE
                 return
             raise
 
 
-class TCPSVNServer(SocketServer.TCPServer):
+class TCPSVNServer(socketserver.TCPServer):
 
     allow_reuse_address = True
-    serve = SocketServer.TCPServer.serve_forever
+    serve = socketserver.TCPServer.serve_forever
 
     def __init__(self, backend, addr, logf=None):
         self._logf = logf
         self._backend = backend
-        SocketServer.TCPServer.__init__(self, addr, TCPSVNRequestHandler)
+        socketserver.TCPServer.__init__(self, addr, TCPSVNRequestHandler)
 

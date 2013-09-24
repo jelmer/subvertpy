@@ -40,11 +40,11 @@
 
 static PyObject *busy_exc;
 
-staticforward PyTypeObject Reporter_Type;
-staticforward PyTypeObject RemoteAccess_Type;
-staticforward PyTypeObject AuthProvider_Type;
-staticforward PyTypeObject CredentialsIter_Type;
-staticforward PyTypeObject Auth_Type;
+static PyTypeObject Reporter_Type;
+static PyTypeObject RemoteAccess_Type;
+static PyTypeObject AuthProvider_Type;
+static PyTypeObject CredentialsIter_Type;
+static PyTypeObject Auth_Type;
 
 static bool ra_check_svn_path(char *path)
 {
@@ -294,7 +294,7 @@ static void reporter_dealloc(PyObject *self)
 }
 
 static PyTypeObject Reporter_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.Reporter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(ReporterObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -481,11 +481,14 @@ static svn_error_t *py_get_client_string(void *baton, const char **name, apr_poo
 
 	CB_CHECK_PYRETVAL(ret);
 
-	*name = apr_pstrdup(pool, PyString_AsString(ret));
+	*name = string_to_utf8(pool, ret);
 	Py_DECREF(ret);
-
 	PyGILState_Release(state);
-	return NULL;
+	if (*name == NULL) {
+		return py_svn_error();
+	} else {
+		return NULL;
+	}
 }
 #endif
 
@@ -518,33 +521,36 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 
 	CB_CHECK_PYRETVAL(ret);
 
-	if (PyString_Check(ret)) {
-		char* fname = PyString_AsString(ret);
+	if (PyUnicode_Check(ret) || PyBytes_Check(ret)) {
+		char* fname;
+		PyObject *bytes;
+		int converted = PyUnicode_FSConverter(ret, &bytes);
+		Py_DECREF(ret);
+		if (!converted) {
+			goto fail;
+		}
+		fname = PyBytes_AS_STRING(bytes);
 		status = apr_file_open(fp, fname, APR_CREATE | APR_READ | APR_WRITE, APR_OS_DEFAULT, 
 								pool);
+		Py_DECREF(bytes);
 		if (status) {
 			PyErr_SetAprStatus(status);
-			Py_DECREF(ret);
-			PyGILState_Release(state);
-			return py_svn_error();
+			goto fail;
 		}
-		Py_DECREF(ret);
-	} else if (PyFile_Check(ret)) {
+	} else {
 		*fp = apr_file_from_object(ret, pool);
 		Py_DECREF(ret);
 		if (!*fp) {
-			PyGILState_Release(state);
-			return py_svn_error();
+			goto fail;
 		}
-	} else {
-		PyErr_SetString(PyExc_TypeError, "Unknown type for file variable");
-		Py_DECREF(ret);
-		PyGILState_Release(state);
-		return py_svn_error();
 	}
 
 	PyGILState_Release(state);
 	return NULL;
+	
+fail:
+	PyGILState_Release(state);
+	return py_svn_error();
 }
 
 static void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, apr_pool_t *pool)
@@ -683,7 +689,7 @@ static PyObject *ra_get_uuid(PyObject *self)
 #else
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid(ra->ra, &uuid, temp_pool));
 #endif
-	ret = PyString_FromString(uuid);
+	ret = PyUnicode_FromString(uuid);
 	apr_pool_destroy(temp_pool);
 	return ret;
 }
@@ -728,7 +734,75 @@ static PyObject *ra_get_latest_revnum(PyObject *self)
 	RUN_RA_WITH_POOL(temp_pool, ra,
 				  svn_ra_get_latest_revnum(ra->ra, &latest_revnum, temp_pool));
 	apr_pool_destroy(temp_pool);
-	return PyInt_FromLong(latest_revnum);
+	return PyLong_FromLong(latest_revnum);
+}
+
+
+static bool ra_get_log_prepare(RemoteAccessObject *ra, PyObject *paths,
+bool include_merged_revisions, PyObject *revprops, apr_pool_t **pool,
+apr_array_header_t **apr_paths, apr_array_header_t **apr_revprops)
+{
+	if (ra_check_busy(ra))
+		goto fail_busy;
+
+	*pool = Pool(NULL);
+	if (*pool == NULL)
+		goto fail_pool;
+	if (paths == Py_None) {
+		/* The subversion libraries don't behave as expected, 
+		 * so tweak our own parameters a bit. */
+		*apr_paths = apr_array_make(*pool, 1, sizeof(char *));
+		APR_ARRAY_PUSH(*apr_paths, char *) = apr_pstrdup(*pool, "");
+	} else if (!path_list_to_apr_array(*pool, paths, apr_paths)) {
+		goto fail_prep;
+	}
+
+#if ONLY_BEFORE_SVN(1, 5)
+	if (revprops == Py_None) {
+		PyErr_SetString(PyExc_NotImplementedError,
+			"fetching all revision properties not supported");
+		goto fail_prep;
+	} else if (!PySequence_Check(revprops)) {
+		PyErr_SetString(PyExc_TypeError, "revprops should be a sequence");
+		goto fail_prep;
+	} else {
+		int i;
+		for (i = 0; i < PySequence_Size(revprops); i++) {
+			PyObject *n = PySequence_GetItem(revprops, i);
+			if (!PyUnicode_Check(n)) {
+				PyErr_SetString(PyExc_TypeError,
+					"revprops items should be strings");
+				goto fail_prep;
+			}
+			if (PyUnicode_CompareWithASCIIString(n, SVN_PROP_REVISION_LOG) && 
+				PyUnicode_CompareWithASCIIString(n, SVN_PROP_REVISION_AUTHOR) &&
+				PyUnicode_CompareWithASCIIString(n, SVN_PROP_REVISION_DATE)) {
+				PyErr_SetString(PyExc_NotImplementedError, 
+								"fetching custom revision properties not supported");
+				goto fail_prep;
+			}
+		}
+	}
+
+	if (include_merged_revisions) {
+		PyErr_SetString(PyExc_NotImplementedError, 
+			"include_merged_revisions not supported in Subversion 1.4");
+		goto fail_prep;
+	}
+#endif
+
+	if (!string_list_to_apr_array(*pool, revprops, apr_revprops)) {
+		goto fail_prep;
+	}
+	
+	return true;
+	
+fail_prep:
+	apr_pool_destroy(*pool);
+fail_pool:
+	ra->busy = false;
+fail_busy:
+	return false;
 }
 
 static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -737,8 +811,9 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		"discover_changed_paths", "strict_node_history", "include_merged_revisions", "revprops", NULL };
 	PyObject *callback, *paths;
 	svn_revnum_t start = 0, end = 0;
-	int limit=0; 
-	bool discover_changed_paths=false, strict_node_history=true,include_merged_revisions=false;
+	int limit = 0; 
+	bool discover_changed_paths = false, strict_node_history = true;
+	bool include_merged_revisions = false;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	PyObject *revprops = Py_None;
 	apr_pool_t *temp_pool;
@@ -751,57 +826,8 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 						 &include_merged_revisions, &revprops))
 		return NULL;
 
-	if (ra_check_busy(ra))
-		return NULL;
-
-	temp_pool = Pool(NULL);
-	if (temp_pool == NULL)
-		return NULL;
-	if (paths == Py_None) {
-		/* The subversion libraries don't behave as expected, 
-		 * so tweak our own parameters a bit. */
-		apr_paths = apr_array_make(temp_pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(temp_pool, "");
-	} else if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
-		apr_pool_destroy(temp_pool);
-		return NULL;
-	}
-
-#if ONLY_BEFORE_SVN(1, 5)
-	if (revprops == Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError,
-			"fetching all revision properties not supported");
-		apr_pool_destroy(temp_pool);
-		return NULL;
-	} else if (!PySequence_Check(revprops)) {
-		PyErr_SetString(PyExc_TypeError, "revprops should be a sequence");
-		apr_pool_destroy(temp_pool);
-		return NULL;
-	} else {
-		int i;
-		for (i = 0; i < PySequence_Size(revprops); i++) {
-			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
-			if (strcmp(SVN_PROP_REVISION_LOG, n) && 
-				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
-				strcmp(SVN_PROP_REVISION_DATE, n)) {
-				PyErr_SetString(PyExc_NotImplementedError, 
-								"fetching custom revision properties not supported");
-				apr_pool_destroy(temp_pool);
-				return NULL;
-			}
-		}
-	}
-
-	if (include_merged_revisions) {
-		PyErr_SetString(PyExc_NotImplementedError, 
-			"include_merged_revisions not supported in Subversion 1.4");
-		apr_pool_destroy(temp_pool);
-		return NULL;
-	}
-#endif
-
-	if (!string_list_to_apr_array(temp_pool, revprops, &apr_revprops)) {
-		apr_pool_destroy(temp_pool);
+	if (!ra_get_log_prepare(ra, paths, include_merged_revisions,
+			revprops, &temp_pool, &apr_paths, &apr_revprops)) {
 		return NULL;
 	}
 
@@ -850,7 +876,7 @@ static PyObject *ra_get_repos_root(PyObject *self)
 		apr_pool_destroy(temp_pool);
 	}
 
-	return PyString_FromString(ra->root);
+	return PyUnicode_FromString(ra->root);
 }
 
 /**
@@ -872,7 +898,7 @@ static PyObject *ra_get_url(PyObject *self, void *closure)
 	RUN_RA_WITH_POOL(temp_pool, ra,
 						svn_ra_get_session_url(ra->ra, &url, temp_pool));
 
-	r = PyString_FromString(url);
+	r = PyUnicode_FromString(url);
 
 	apr_pool_destroy(temp_pool);
 
@@ -1231,6 +1257,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	apr_hash_t *hash_revprops;
 #else
 	PyObject *py_log_msg;
+	char *log_msg;
 #endif
 	svn_error_t *err;
 
@@ -1240,37 +1267,32 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 
 	pool = Pool(NULL);
 	if (pool == NULL)
-		return NULL;
+		goto fail_pool;
 	if (lock_tokens == Py_None) {
 		hash_lock_tokens = NULL;
 	} else {
-		Py_ssize_t idx = 0;
-		PyObject *k, *v;
-		hash_lock_tokens = apr_hash_make(pool);
-		while (PyDict_Next(lock_tokens, &idx, &k, &v)) {
-			apr_hash_set(hash_lock_tokens, PyString_AsString(k), 
-						 PyString_Size(k), PyString_AsString(v));
+		/* Convert lock_tokens dict() to APR hash. Must keep strings
+		alive for the whole commit operation. */
+		hash_lock_tokens = string_dict_to_hash(pool, lock_tokens);
+		if (hash_lock_tokens == NULL) {
+			goto fail_prep;
 		}
 	}
 
 	if (!PyDict_Check(revprops)) {
-		apr_pool_destroy(pool);
 		PyErr_SetString(PyExc_TypeError, "Expected dictionary with revision properties");
-		return NULL;
+		goto fail_prep;
 	}
 
 	if (ra_check_busy(ra))
-		return NULL;
+		goto fail_prep;
 
 	Py_INCREF(commit_callback);
 
 #if ONLY_SINCE_SVN(1, 5)
 	hash_revprops = prop_dict_to_hash(pool, revprops);
 	if (hash_revprops == NULL) {
-		apr_pool_destroy(pool);
-		ra->busy = false;
-		Py_DECREF(commit_callback);
-		return NULL;
+		goto fail_prep2;
 	}
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_ra_get_commit_editor3(ra->ra, &editor, 
@@ -1281,33 +1303,31 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	/* Check that revprops has only one member named SVN_PROP_REVISION_LOG */
 	if (PyDict_Size(revprops) != 1) {
 		PyErr_SetString(PyExc_ValueError, "Only svn:log can be set with Subversion 1.4");
-		apr_pool_destroy(pool);
-		Py_DECREF(commit_callback);
-		ra->busy = false;
-		return NULL;
+		goto fail_prep2;
 	}
 
 	py_log_msg = PyDict_GetItemString(revprops, SVN_PROP_REVISION_LOG);
 	if (py_log_msg == NULL) {
 		PyErr_SetString(PyExc_ValueError, "Only svn:log can be set with Subversion 1.4.");
-		apr_pool_destroy(pool);
-		Py_DECREF(commit_callback);
-		ra->busy = false;
-		return NULL;
+		goto fail_prep2;
 	}
 
-	if (!PyString_Check(py_log_msg)) {
+	if (!PyUnicode_Check(py_log_msg)) {
 		PyErr_SetString(PyExc_ValueError, "svn:log property should be set to string.");
-		apr_pool_destroy(pool);
-		Py_DECREF(commit_callback);
-		ra->busy = false;
-		return NULL;
+		goto fail_prep2;
+	}
+	
+	/* Copy in case the original string object gets deallocated before
+	the commit is finished. */
+	log_msg = string_to_utf8(pool, py_log_msg);
+	if (log_msg == NULL) {
+		goto fail_prep2;
 	}
 
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_ra_get_commit_editor2(ra->ra, &editor, 
 		&edit_baton, 
-		PyString_AsString(py_log_msg), py_commit_callback, 
+		log_msg, py_commit_callback, 
 		commit_callback, hash_lock_tokens, keep_locks, pool);
 #endif
 	Py_END_ALLOW_THREADS
@@ -1315,15 +1335,20 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (err != NULL) {
 		handle_svn_error(err);
 		svn_error_clear(err);
-		Py_DECREF(commit_callback);
-		apr_pool_destroy(pool);
-		ra->busy = false;
-		return NULL;
+		goto fail_prep2;
 	}
 
 	Py_INCREF(ra);
 	return new_editor_object(NULL, editor, edit_baton, pool, 
 			  &Editor_Type, ra_done_handler, ra, commit_callback);
+	
+fail_prep2:
+	Py_DECREF(commit_callback);
+	ra->busy = false;
+fail_prep:
+	apr_pool_destroy(pool);
+fail_pool:
+	return NULL;
 }
 
 static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
@@ -1397,8 +1422,7 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 	} else {
 		py_dirents = PyDict_New();
 		if (py_dirents == NULL) {
-			apr_pool_destroy(temp_pool);
-			return NULL;
+			goto fail;
 		}
 		idx = apr_hash_first(temp_pool, dirents);
 		while (idx != NULL) {
@@ -1406,22 +1430,22 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
 			item = py_dirent(dirent, dirent_fields);
 			if (item == NULL) {
-				apr_pool_destroy(temp_pool);
-				Py_DECREF(py_dirents);
-				return NULL;
+				goto fail_dirents;
 			}
 			if (key == NULL) {
 				pykey = Py_None;
 				Py_INCREF(pykey);
 			} else {
-				pykey = PyString_FromString((char *)key);
+				pykey = PyUnicode_FromString((char *)key);
+				if (pykey == NULL) {
+					Py_DECREF(item);
+					goto fail_dirents;
+				}
 			}
 			if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
-				Py_DECREF(py_dirents);
 				Py_DECREF(item);
 				Py_DECREF(pykey);
-				apr_pool_destroy(temp_pool);
-				return NULL;
+				goto fail_dirents;
 			}
 			Py_DECREF(pykey);
 			Py_DECREF(item);
@@ -1431,12 +1455,16 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 
 	py_props = prop_hash_to_dict(props);
 	if (py_props == NULL) {
-		Py_DECREF(py_dirents);
-		apr_pool_destroy(temp_pool);
-		return NULL;
+		goto fail_dirents;
 	}
 	apr_pool_destroy(temp_pool);
 	return Py_BuildValue("(NlN)", py_dirents, fetch_rev, py_props);
+	
+fail_dirents:
+	Py_DECREF(py_dirents);
+fail:
+	apr_pool_destroy(temp_pool);
+	return NULL;
 }
 
 static PyObject *ra_get_file(PyObject *self, PyObject *args)
@@ -1525,7 +1553,7 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 					  svn_ra_check_path(ra->ra, svn_path_canonicalize(path, temp_pool), revision, &kind, 
 					 temp_pool));
 	apr_pool_destroy(temp_pool);
-	return PyInt_FromLong(kind);
+	return PyLong_FromLong(kind);
 }
 
 static PyObject *ra_stat(PyObject *self, PyObject *args)
@@ -1586,30 +1614,38 @@ static PyObject *ra_has_capability(PyObject *self, PyObject *args)
 static PyObject *ra_unlock(PyObject *self, PyObject *args)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	PyObject *path_tokens, *lock_func, *k, *v;
+	PyObject *path_tokens, *lock_func;
 	bool break_lock;
-	Py_ssize_t idx;
 	apr_pool_t *temp_pool;
 	apr_hash_t *hash_path_tokens;
 
 	if (!PyArg_ParseTuple(args, "ObO:unlock", &path_tokens, &break_lock, &lock_func))
-		return NULL;
+		goto fail_busy;
 
 	if (ra_check_busy(ra))
-		return NULL;
+		goto fail_busy;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
-		return NULL;
-	hash_path_tokens = apr_hash_make(temp_pool);
-	while (PyDict_Next(path_tokens, &idx, &k, &v)) {
-		apr_hash_set(hash_path_tokens, PyString_AsString(k), PyString_Size(k), (char *)PyString_AsString(v));
+		goto fail_pool;
+	
+	hash_path_tokens = string_dict_to_hash(temp_pool, path_tokens);
+	if (hash_path_tokens == NULL) {
+		goto fail_prep;
 	}
+	
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_unlock(ra->ra, hash_path_tokens, break_lock,
 					 py_lock_func, lock_func, temp_pool));
 
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
+	
+fail_prep:
+	apr_pool_destroy(temp_pool);
+fail_pool:
+	ra->busy = false;
+fail_busy:
+	return NULL;
 }
 
 static PyObject *ra_lock(PyObject *self, PyObject *args)
@@ -1622,18 +1658,20 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	apr_hash_t *hash_path_revs;
 	svn_revnum_t *rev;
+	apr_ssize_t ksize;
+	char *kbuffer;
 	Py_ssize_t idx = 0;
 
 	if (!PyArg_ParseTuple(args, "OsbO:lock", &path_revs, &comment, &steal_lock,
 						  &lock_func))
-		return NULL;
+		goto fail_busy;
 
 	if (ra_check_busy(ra))
-		return NULL;
+		goto fail_busy;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
-		return NULL;
+		goto fail_pool;
 	if (path_revs == Py_None) {
 		hash_path_revs = NULL;
 	} else {
@@ -1642,18 +1680,26 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 
 	while (PyDict_Next(path_revs, &idx, &k, &v)) {
 		rev = (svn_revnum_t *)apr_palloc(temp_pool, sizeof(svn_revnum_t));
-		*rev = PyInt_AsLong(v);
+		*rev = PyLong_AsLong(v);
 		if (*rev == -1 && PyErr_Occurred()) {
-			apr_pool_destroy(temp_pool);
-			return NULL;
+			goto fail_prep;
 		}
-		apr_hash_set(hash_path_revs, PyString_AsString(k), PyString_Size(k), 
-					 rev);
+		if (!string_to_utf8_and_size(temp_pool, k, &kbuffer, &ksize)) {
+			goto fail_prep;
+		}
+		apr_hash_set(hash_path_revs, kbuffer, ksize, rev);
 	}
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_lock(ra->ra, hash_path_revs, comment, steal_lock,
 					 py_lock_func, lock_func, temp_pool));
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
+	
+fail_prep:
+	apr_pool_destroy(temp_pool);
+fail_pool:
+	ra->busy = false;
+fail_busy:
+	return NULL;
 }
 
 static PyObject *ra_get_locks(PyObject *self, PyObject *args)
@@ -1724,19 +1770,20 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 	PyObject *ret;
 	apr_ssize_t klen;
 	char *val;
+	PyObject *py_val;
 
 	if (!PyArg_ParseTuple(args, "slO:get_locations", &path, &peg_revision, &location_revisions))
-		return NULL;
+		goto fail_busy;
 
 	if (ra_check_svn_path(path))
-		return NULL;
+		goto fail_busy;
 
 	if (ra_check_busy(ra))
-		return NULL;
+		goto fail_busy;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
-		return NULL;
+		goto fail_pool;
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locations(ra->ra, &hash_locations,
 					svn_path_canonicalize(path, temp_pool), peg_revision, 
@@ -1744,21 +1791,33 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 					temp_pool));
 	ret = PyDict_New();
 	if (ret == NULL) {
-		apr_pool_destroy(temp_pool);
-		return NULL;
+		goto fail_dict;
 	}
 
 	for (idx = apr_hash_first(temp_pool, hash_locations); idx != NULL;
 		idx = apr_hash_next(idx)) {
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-		if (PyDict_SetItem(ret, PyInt_FromLong(*key), PyString_FromString(val)) != 0) {
-			Py_DECREF(ret);
-			apr_pool_destroy(temp_pool);
-			return NULL;
+		
+		py_val = PyUnicode_FromString(val);
+		if (py_val == NULL) {
+			goto fail_conv;
+		}
+		
+		if (PyDict_SetItem(ret, PyLong_FromLong(*key), py_val) != 0) {
+			goto fail_conv;
 		}
 	}
 	apr_pool_destroy(temp_pool);
 	return ret;
+	
+fail_conv:
+	Py_DECREF(ret);
+fail_dict:
+	apr_pool_destroy(temp_pool);
+fail_pool:
+	ra->busy = false;
+fail_busy:
+	return NULL;
 }
 
 #if ONLY_SINCE_SVN(1, 5)
@@ -2003,7 +2062,7 @@ static void ra_dealloc(PyObject *self)
 static PyObject *ra_repr(PyObject *self)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	return PyString_FromFormat("RemoteAccess(\"%s\")", ra->url);
+	return PyUnicode_FromFormat("RemoteAccess(\"%s\")", ra->url);
 }
 
 static int ra_set_progress_func(PyObject *self, PyObject *value, void *closure)
@@ -2132,7 +2191,7 @@ static PyMemberDef ra_members[] = {
 };
 
 static PyTypeObject RemoteAccess_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.RemoteAccess", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(RemoteAccessObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2219,7 +2278,7 @@ static void auth_provider_dealloc(PyObject *self)
 }
 
 static PyTypeObject AuthProvider_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.AuthProvider", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthProviderObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2296,14 +2355,17 @@ static PyObject *auth_set_parameter(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!strcmp(name, SVN_AUTH_PARAM_SSL_SERVER_FAILURES)) {
-		long ret = PyInt_AsLong(value);
+		long ret = PyLong_AsLong(value);
 		if (ret == -1 && PyErr_Occurred())
 			return NULL;
 		vvalue = apr_pcalloc(auth->pool, sizeof(apr_uint32_t));
 		*((apr_uint32_t *)vvalue) = ret;
 	} else if (!strcmp(name, SVN_AUTH_PARAM_DEFAULT_USERNAME) ||
 			   !strcmp(name, SVN_AUTH_PARAM_DEFAULT_PASSWORD)) {
-		vvalue = apr_pstrdup(auth->pool, PyString_AsString(value));
+		vvalue = string_to_utf8(auth->pool, value);
+		if (vvalue == NULL) {
+			return NULL;
+		}
 	} else {
 		PyErr_Format(PyExc_TypeError, "Unsupported auth parameter %s", name);
 		return NULL;
@@ -2326,10 +2388,10 @@ static PyObject *auth_get_parameter(PyObject *self, PyObject *args)
 	value = svn_auth_get_parameter(auth->auth_baton, name);
 
 	if (!strcmp(name, SVN_AUTH_PARAM_SSL_SERVER_FAILURES)) {
-		return PyInt_FromLong(*((apr_uint32_t *)value));
+		return PyLong_FromLong(*((apr_uint32_t *)value));
 	} else if (!strcmp(name, SVN_AUTH_PARAM_DEFAULT_USERNAME) ||
 			   !strcmp(name, SVN_AUTH_PARAM_DEFAULT_PASSWORD)) {
-		return PyString_FromString((const char *)value);
+		return PyUnicode_FromString((const char *)value);
 	} else {
 		PyErr_Format(PyExc_TypeError, "Unsupported auth parameter %s", name);
 		return NULL;
@@ -2419,7 +2481,7 @@ static PyObject *credentials_iter_next(CredentialsIterObject *iterator)
 }
 
 static PyTypeObject CredentialsIter_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.CredentialsIter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(CredentialsIterObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2497,7 +2559,7 @@ static void auth_dealloc(PyObject *self)
 }
 
 static PyTypeObject Auth_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.Auth", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2571,48 +2633,56 @@ static svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *ba
 {
 	PyObject *fn = (PyObject *)baton, *ret;
 	PyObject *py_username, *py_may_save;
+	char *username;
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
 	CB_CHECK_PYRETVAL(ret);
 
 	if (ret == Py_None) {
+		Py_DECREF(ret);
 		PyGILState_Release(state);
 		return NULL;
 	}
 
 	if (!PyTuple_Check(ret)) {
 		PyErr_SetString(PyExc_TypeError, "expected tuple with username credentials");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	if (PyTuple_Size(ret) != 2) {
 		PyErr_SetString(PyExc_TypeError, "expected tuple with username credentials to be size 2");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	py_may_save = PyTuple_GetItem(ret, 1);
 	CB_CHECK_PYRETVAL(py_may_save);
 	if (!PyBool_Check(py_may_save)) {
 		PyErr_SetString(PyExc_TypeError, "may_save should be boolean");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 	py_username = PyTuple_GetItem(ret, 0);
 	CB_CHECK_PYRETVAL(py_username);
-	if (!PyString_Check(py_username)) {
+	if (!PyUnicode_Check(py_username)) {
 		PyErr_SetString(PyExc_TypeError, "username should be string");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
+	}
+	
+	username = string_to_utf8(pool, py_username);
+	if (username == NULL) {
+		goto fail;
 	}
 
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->username = apr_pstrdup(pool, PyString_AsString(py_username));
+	(*cred)->username = username;
 	(*cred)->may_save = (py_may_save == Py_True);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
+	
+fail:
+	Py_DECREF(ret);
+	PyGILState_Release(state);
+	return py_svn_error();
 }
 
 static PyObject *get_username_prompt_provider(PyObject *self, PyObject *args)
@@ -2645,13 +2715,11 @@ static svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton,
 	CB_CHECK_PYRETVAL(ret);
 	if (!PyTuple_Check(ret)) {
 		PyErr_SetString(PyExc_TypeError, "expected tuple with simple credentials");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 	if (PyTuple_Size(ret) != 3) {
 		PyErr_SetString(PyExc_TypeError, "expected tuple of size 3");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	py_may_save = PyTuple_GetItem(ret, 2);
@@ -2659,33 +2727,50 @@ static svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton,
 
 	if (!PyBool_Check(py_may_save)) {
 		PyErr_SetString(PyExc_TypeError, "may_save should be boolean");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	py_username = PyTuple_GetItem(ret, 0);
 	CB_CHECK_PYRETVAL(py_username);
-	if (!PyString_Check(py_username)) {
+	if (!PyUnicode_Check(py_username)) {
 		PyErr_SetString(PyExc_TypeError, "username should be string");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
+	}
+	py_username = PyUnicode_AsUTF8String(py_username);
+	if (py_username == NULL) {
+		goto fail;
 	}
 
 	py_password = PyTuple_GetItem(ret, 1);
-	CB_CHECK_PYRETVAL(py_password);
-	if (!PyString_Check(py_password)) {
+	if (py_password == NULL) {
+		goto fail_password;
+	}
+	if (!PyUnicode_Check(py_password)) {
 		PyErr_SetString(PyExc_TypeError, "password should be string");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail_password;
+	}
+	py_password = PyUnicode_AsUTF8String(py_password);
+	if (py_password == NULL) {
+		goto fail_password;
 	}
 
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->username = apr_pstrdup(pool, PyString_AsString(py_username));
-	(*cred)->password = apr_pstrdup(pool, PyString_AsString(py_password));
+	(*cred)->username = apr_pstrdup(pool, PyBytes_AS_STRING(py_username));
+	(*cred)->password = apr_pstrdup(pool, PyBytes_AS_STRING(py_password));
 	(*cred)->may_save = (py_may_save == Py_True);
+	
+	Py_DECREF(py_password);
+	Py_DECREF(py_username);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
+	
+fail_password:
+	Py_DECREF(py_username);
+fail:
+	Py_DECREF(ret);
+	PyGILState_Release(state);
+	return py_svn_error();
 }
 
 static PyObject *get_simple_prompt_provider(PyObject *self, PyObject *args)
@@ -2749,7 +2834,7 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 	}
 
 	py_accepted_failures = PyTuple_GetItem(ret, 0);
-	if (!PyInt_Check(py_accepted_failures)) {
+	if (!PyLong_Check(py_accepted_failures)) {
 		Py_DECREF(ret);
 		PyErr_SetString(PyExc_TypeError, "accepted_failures should be integer");
 		PyGILState_Release(state);
@@ -2764,7 +2849,7 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 		return py_svn_error();
 	}
 
-	accepted_failures = PyInt_AsLong(py_accepted_failures);
+	accepted_failures = PyLong_AsLong(py_accepted_failures);
 	if (accepted_failures == -1 && PyErr_Occurred()) {
 		Py_DECREF(ret);
 		PyGILState_Release(state);
@@ -2802,78 +2887,92 @@ static PyObject *get_ssl_server_trust_prompt_provider(PyObject *self, PyObject *
 static svn_error_t *py_ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred, void *baton, const char *realm, svn_boolean_t may_save, apr_pool_t *pool)
 {
 	PyObject *fn = (PyObject *)baton, *ret, *py_may_save, *py_password;
+	char *password;
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
 	CB_CHECK_PYRETVAL(ret);
 	if (!PyTuple_Check(ret)) {
 		PyErr_SetString(PyExc_TypeError, "expected tuple with client cert pw credentials");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	if (PyTuple_Size(ret) != 2) {
 		PyErr_SetString(PyExc_TypeError, "expected tuple of size 2");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 	py_may_save = PyTuple_GetItem(ret, 1);
 	if (!PyBool_Check(py_may_save)) {
 		PyErr_SetString(PyExc_TypeError, "may_save should be boolean");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 	py_password = PyTuple_GetItem(ret, 0);
-	if (!PyString_Check(py_password)) {
+	if (!PyUnicode_Check(py_password)) {
 		PyErr_SetString(PyExc_TypeError, "password should be string");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
+	
+	password = string_to_utf8(pool, py_password);
+	if (password == NULL) {
+		goto fail;
+	}
+	
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->password = apr_pstrdup(pool, PyString_AsString(py_password));
+	(*cred)->password = password;
 	(*cred)->may_save = (py_may_save == Py_True);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
+	
+fail:
+	Py_DECREF(ret);
+	PyGILState_Release(state);
+	return py_svn_error();
 }
 
 static svn_error_t *py_ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred, void *baton, const char *realm, svn_boolean_t may_save, apr_pool_t *pool)
 {
 	PyObject *fn = (PyObject *)baton, *ret, *py_may_save, *py_cert_file;
+	char *file;
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
 	CB_CHECK_PYRETVAL(ret);
 
 	if (!PyTuple_Check(ret)) {
 		PyErr_SetString(PyExc_TypeError, "expected tuple with client cert credentials");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	if (PyTuple_Size(ret) != 2) {
 		PyErr_SetString(PyExc_TypeError, "expected tuple of size 2");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 	py_may_save = PyTuple_GetItem(ret, 1);
 	if (!PyBool_Check(py_may_save)) {
 		PyErr_SetString(PyExc_TypeError, "may_save should be boolean");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	py_cert_file = PyTuple_GetItem(ret, 0);
-	if (!PyString_Check(py_cert_file)) {
+	if (!PyUnicode_Check(py_cert_file)) {
 		PyErr_SetString(PyExc_TypeError, "cert_file should be string");
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
+	}
+	file = string_to_utf8(pool, py_cert_file);
+	if (file == NULL) {
+		goto fail;
 	}
 
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->cert_file = apr_pstrdup(pool, PyString_AsString(py_cert_file));
+	(*cred)->cert_file = file;
 	(*cred)->may_save = (py_may_save == Py_True);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
+	
+fail:
+	Py_DECREF(ret);
+	PyGILState_Release(state);
+	return py_svn_error();
 }
 
 
@@ -3062,7 +3161,7 @@ static PyObject *print_modules(PyObject *self)
 		apr_pool_destroy(pool);
 		return NULL;
 	}
-	ret = PyString_FromStringAndSize(string->data, string->len);
+	ret = PyUnicode_DecodeUTF8(string->data, string->len, NULL);
 	apr_pool_destroy(pool);
 	return ret;
 }
@@ -3237,51 +3336,55 @@ static PyMethodDef ra_module_methods[] = {
 	{ NULL, }
 };
 
-void init_ra(void)
+static struct PyModuleDef ra_module = {
+	PyModuleDef_HEAD_INIT, "_ra", "Remote Access", -1, ra_module_methods,
+};
+
+PyMODINIT_FUNC PyInit__ra(void)
 {
 	static apr_pool_t *pool;
-	PyObject *mod;
+	PyObject *mod = NULL;
 
 	if (PyType_Ready(&RemoteAccess_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&Editor_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&FileEditor_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&DirectoryEditor_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&Reporter_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&TxDeltaWindowHandler_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&Auth_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&CredentialsIter_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&AuthProvider_Type) < 0)
-		return;
+		return mod;
 
 	if (PyType_Ready(&LogIterator_Type) < 0)
-		return;
+		return mod;
 
 	apr_initialize();
 	pool = Pool(NULL);
 	if (pool == NULL)
-		return;
+		return mod;
 	svn_ra_initialize(pool);
 	PyEval_InitThreads();
 
-	mod = Py_InitModule3("_ra", ra_module_methods, "Remote Access");
+	mod = PyModule_Create(&ra_module);
 	if (mod == NULL)
-		return;
+		return mod;
 
 	PyModule_AddObject(mod, "RemoteAccess", (PyObject *)&RemoteAccess_Type);
 	Py_INCREF(&RemoteAccess_Type);
@@ -3321,4 +3424,5 @@ void init_ra(void)
 #ifdef SVN_VER_REVISION
 	PyModule_AddIntConstant(mod, "SVN_REVISION", SVN_VER_REVISION);
 #endif
+	return mod;
 }
