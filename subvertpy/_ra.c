@@ -811,8 +811,9 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		"discover_changed_paths", "strict_node_history", "include_merged_revisions", "revprops", NULL };
 	PyObject *callback, *paths;
 	svn_revnum_t start = 0, end = 0;
-	int limit=0; 
-	bool discover_changed_paths=false, strict_node_history=true,include_merged_revisions=false;
+	int limit = 0; 
+	bool discover_changed_paths = false, strict_node_history = true;
+	bool include_merged_revisions = false;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	PyObject *revprops = Py_None;
 	apr_pool_t *temp_pool;
@@ -826,7 +827,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 	if (!ra_get_log_prepare(ra, paths, include_merged_revisions,
-	revprops, &temp_pool, &apr_paths, &apr_revprops)) {
+			revprops, &temp_pool, &apr_paths, &apr_revprops)) {
 		return NULL;
 	}
 

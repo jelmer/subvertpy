@@ -230,7 +230,7 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 	state = PyGILState_Ensure();
 
 	if (!pyify_log_message(changed_paths, author, date, message, true,
-	pool, &py_changed_paths, &revprops)) {
+			pool, &py_changed_paths, &revprops)) {
 		goto fail;
 	}
 	tuple = Py_BuildValue("NlN", py_changed_paths, revision, revprops);
@@ -319,7 +319,7 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 	if (!ra_get_log_prepare(ra, paths, include_merged_revisions,
-	revprops, &pool, &apr_paths, &apr_revprops)) {
+			revprops, &pool, &apr_paths, &apr_revprops)) {
 		return NULL;
 	}
 
