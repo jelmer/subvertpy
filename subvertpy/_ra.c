@@ -2090,8 +2090,9 @@ static PyMethodDef ra_methods[] = {
 		"S.get_url() -> url\n"
 		"Return the URL of the repository." },
 	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, 
-		"S.get_log(callback, paths, start, end, limit, discover_changed_paths, "
-		"strict_node_history, include_merged_revisions, revprops)\n"
+		"S.get_log(callback, paths, start, end, limit=0, "
+		"discover_changed_paths=False, strict_node_history=True, "
+		"include_merged_revisions=False, revprops=None)\n"
 		"The callback is passed three or four arguments:\n"
 		"callback(changed_paths, revision, revprops[, has_children])\n"
 		"The changed_paths argument may be None, or a dictionary mapping each\n"
@@ -2099,8 +2100,9 @@ static PyMethodDef ra_methods[] = {
 		"(action, from_path, from_rev)\n"
 	},
 	{ "iter_log", (PyCFunction)ra_iter_log, METH_VARARGS|METH_KEYWORDS, 
-		"S.iter_log(paths, start, end, limit, discover_changed_paths, "
-		"strict_node_history, include_merged_revisions, revprops)\n"
+		"S.iter_log(paths, start, end, limit=0, "
+		"discover_changed_paths=False, strict_node_history=True, "
+		"include_merged_revisions=False, revprops=None)\n"
 		"Yields tuples of three or four elements:\n"
 		"(changed_paths, revision, revprops[, has_children])\n"
 		"The changed_paths element may be None, or a dictionary mapping each\n"
