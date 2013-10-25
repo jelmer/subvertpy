@@ -194,7 +194,7 @@ if __name__ == '__main__':
 
     if options.version:
         import subvertpy
-        print ".".join([str(x) for x in subvertpy.__version__])
+        print ".".join(str(x) for x in subvertpy.__version__)
         sys.exit(0)
     if options.trunk_path != None:
         trunk_path = options.trunk_path
