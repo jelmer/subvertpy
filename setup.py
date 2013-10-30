@@ -352,7 +352,7 @@ class BuildWithDLLs(build):
 
     def get_outputs(self):
         ret = build.get_outputs(self)
-        ret.extend([info[1] for info in self._get_dlls()])
+        ret.extend(info[1] for info in self._get_dlls())
         return ret
 
 cmdclass = {'test': TestCommand}

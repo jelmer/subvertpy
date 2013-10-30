@@ -57,8 +57,13 @@ class StaticStringMatcher(Matcher):
 
     branch = "master"
 
+    def __init__(self, trunk_path):
+        if not trunk_path.startswith("/"):
+            raise ValueError("Trunk path does not start with a slash (/)")
+        Matcher.__init__(self, trunk_path)
+
     def matches(self, path):
-        return path.startswith(trunk_path)
+        return path.startswith(self.trunk_path)
 
     def replace(self, path):
         return path.replace(self.trunk_path, '')
