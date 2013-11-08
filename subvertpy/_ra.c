@@ -2514,7 +2514,7 @@ static PyTypeObject CredentialsIter_Type = {
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
 
 	/* Flags to define presence of optional/expanded features */
-	Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
+	0, /*	long tp_flags;	*/
 
 	NULL, /*	const char *tp_doc;  Documentation string */
 
