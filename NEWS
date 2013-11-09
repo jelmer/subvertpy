@@ -4,6 +4,10 @@
 
    * Support failing server certification check. (Mitsuhiro Koga, #1059821)
 
+  IMPROVEMENTS
+
+   * Add Python3 support (Martin Panter, Yonggang Luo).
+
 0.9.1	2013-05-06
 
  CHANGES
