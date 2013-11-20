@@ -46,7 +46,7 @@ from subvertpy.marshall import (
     marshall,
     unmarshall,
     )
-from subvertpy.ra import (
+from subvertpy._ra import (
     DIRENT_CREATED_REV,
     DIRENT_HAS_PROPS,
     DIRENT_KIND,
@@ -471,19 +471,25 @@ class SVNClient(SVNConnection):
         (host, port) = urllib.parse.splitnport(host, SVN_PORT)
         sockaddrs = socket.getaddrinfo(host, port, socket.AF_UNSPEC,
                socket.SOCK_STREAM, 0, 0)
-        self._socket = None
-        for (family, socktype, proto, canonname, sockaddr) in sockaddrs:
-            try:
-                self._socket = socket.socket(family, socktype, proto)
-                self._socket.connect(sockaddr)
-            except socket.error as err:
-                if self._socket is not None:
-                    self._socket.close()
-                self._socket = None
-                continue
-            break
-        if self._socket is None:
-            raise err
+        
+        try:
+            self._socket = None
+            for (family, socktype, proto, canonname, sockaddr) in sockaddrs:
+                try:
+                    self._socket = socket.socket(family, socktype, proto)
+                    self._socket.connect(sockaddr)
+                except socket.error as err:
+                    if self._socket is not None:
+                        self._socket.close()
+                    self._socket = None
+                    sockerr = err
+                    continue
+                break
+            if self._socket is None:
+                raise sockerr
+        finally:
+            del sockerr  # Avoid reference cycle via traceback
+        
         self._socket.setblocking(True)
         return (self._socket.recv, self._socket.send)
 
