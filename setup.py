@@ -52,8 +52,7 @@ def config_value(command, arg):
     for cmd in cmds:
         try:
             return run_cmd(cmd, arg)
-        except CommandException:
-            _, e, _ = sys.exc_info()
+        except CommandException as e:
             if not e.not_found():
                 raise
     else:
