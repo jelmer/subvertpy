@@ -9,6 +9,7 @@ from distutils import log
 import sys
 import os
 import re
+import subprocess
 
 class CommandException(Exception):
     """Encapsulate exit status of command execution"""
@@ -119,16 +120,16 @@ def is_keychain_provider_available():
     abd = apr_build_data()
     sbd = svn_build_data()
     gcc_command_args = ['gcc'] + ['-I' + inc for inc in sbd[0]] + ['-L' + lib for lib in sbd[1]] + ['-I' + abd[0], '-lsvn_subr-1', '-x', 'c', '-']
-    (gcc_in, gcc_out, gcc_err) = os.popen3(gcc_command_args)
-    gcc_in.write("""
+    gcc = subprocess.Popen(gcc_command_args,
+        stdin=subprocess.PIPE, universal_newlines=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gcc.communicate("""
 #include <svn_auth.h>
 int main(int argc, const char* arv[]) {
     svn_auth_get_keychain_simple_provider(NULL, NULL);
 }
 """)
-    gcc_in.close()
-    gcc_out.read()
-    return (gcc_out.close() is None)
+    return (gcc.returncode == 0)
 
 
 class VersionQuery(object):
