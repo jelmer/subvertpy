@@ -1,8 +1,14 @@
-Original author and maintainer:
+Original Author:
 Jelmer Vernooij <jelmer@samba.org>
 
+Contributors:
 Dan Villiom Podlaski Christiansen <danchr@gmail.com>
 Mark Lee <subvertpy@lazymalevolence.com>
+Martin Panter
+Ronny Pfannschmidt
+Shlomi Fish
+Max Bowsher
+Ronald Blaschke
 
 Windows support:
 Alexey Borzenkov
