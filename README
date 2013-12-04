@@ -4,7 +4,7 @@ Subvertpy
 Python bindings for the Subversion version control system that are aimed to be
 complete, fast and feel native to Python programmers.
 
-Homepage: http://samba.org/~jelmer/subvertpy/
+Homepage: https://samba.org/~jelmer/subvertpy/
 Author: Jelmer Vernooij <jelmer@samba.org>
 
 Bindings are provided for the working copy, client, delta, remote access and
