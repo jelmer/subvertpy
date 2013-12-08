@@ -1,0 +1,7 @@
+language: python
+python:
+  - "2.7"
+  - "2.6"
+script: make check
+install:
+    - apt-get install -qq libsvn-dev
