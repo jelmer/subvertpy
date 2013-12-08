@@ -25,14 +25,16 @@ import shutil
 import stat
 import sys
 import tempfile
-import unittest
 try:
     from unittest import SkipTest
 except ImportError:
     try:
         from unittest2 import SkipTest
+        import unittest2 as unittest
     except ImportError:
         from testtools.testcase import TestSkipped as SkipTest
+else:
+    import unittest
 import urllib2
 import urllib
 import urlparse
