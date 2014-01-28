@@ -4,6 +4,10 @@
 
    * Support failing server certification check. (Mitsuhiro Koga, #1059821)
 
+  CHANGES
+
+   * Drop support for Python versions before 2.6. (Jelmer Vernooij)
+
 0.9.1	2013-05-06
 
  CHANGES
