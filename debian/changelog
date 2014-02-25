@@ -1,4 +1,4 @@
-subvertpy (0.9.1-3) UNRELEASED; urgency=medium
+subvertpy (0.9.1-3) unstable; urgency=medium
 
   * Add autopkgtest support.
   * Bump standards version to 3.9.5 (no changes).
