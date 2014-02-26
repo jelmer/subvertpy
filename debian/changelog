@@ -1,4 +1,4 @@
-subvertpy (0.9.1-4) UNRELEASED; urgency=medium
+subvertpy (0.9.1-4) unstable; urgency=medium
 
   * Allow output on stderr during autopkgtest test runs.
 
