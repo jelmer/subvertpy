@@ -1,4 +1,4 @@
-subvertpy (0.9.1-5) UNRELEASED; urgency=medium
+subvertpy (0.9.1-5) unstable; urgency=medium
 
   * Move autopkgtest restrictions to restrictions field.
 
