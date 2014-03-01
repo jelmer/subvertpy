@@ -1,3 +1,9 @@
+subvertpy (0.9.1-5) UNRELEASED; urgency=medium
+
+  * Move autopkgtest restrictions to restrictions field.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sat, 01 Mar 2014 14:25:12 +0000
+
 subvertpy (0.9.1-4) unstable; urgency=medium
 
   * Allow output on stderr during autopkgtest test runs.
