@@ -1,3 +1,9 @@
+subvertpy (0.9.1-7) UNRELEASED; urgency=medium
+
+  * Set Vcs-Git header rather than Vcs-Bzr; package has migrated to git.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sat, 05 Jul 2014 23:39:12 +0200
+
 subvertpy (0.9.1-6) unstable; urgency=medium
 
   [ Martin Pitt ]
