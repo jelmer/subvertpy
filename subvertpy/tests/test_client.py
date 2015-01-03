@@ -246,6 +246,9 @@ class TestClient(SubversionTestCase):
         self.assertEqual(["foo"], info.keys())
         self.assertEqual(1, info["foo"].revision)
         self.assertEqual(3L, info["foo"].size)
+        if hasattr(info["foo"].wc_info, 'wcroot_abspath'):
+            self.assertEqual(os.path.abspath("foo"),
+                info["foo"].wc_info.wcroot_abspath)
         self.build_tree({"dc/bar": "blablabla"})
         self.client.add(os.path.abspath("dc/bar"))
 
