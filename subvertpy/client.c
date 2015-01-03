@@ -1837,7 +1837,7 @@ static PyMemberDef wc_info_members[] = {
         "" },
     { "recorded_time", T_LONG, offsetof(WCInfoObject, info.recorded_time), READONLY,
         "" },
-    { "wcroot_abspath", T_STRING, offsetof(WCInfoObject, info.recorded_time), READONLY,
+    { "wcroot_abspath", T_STRING, offsetof(WCInfoObject, info.wcroot_abspath), READONLY,
         "" },
 #else
 #if ONLY_SINCE_SVN(1, 5)
