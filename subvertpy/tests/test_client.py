@@ -243,12 +243,12 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         info = self.client.info("dc/foo")
-        self.assertEqual(["foo"], info.keys())
-        self.assertEqual(1, info["foo"].revision)
-        self.assertEqual(3L, info["foo"].size)
-        if hasattr(info["foo"].wc_info, 'wcroot_abspath'):
-            self.assertEqual(os.path.abspath("foo"),
-                info["foo"].wc_info.wcroot_abspath)
+        self.assertEqual(["dc/foo"], info.keys())
+        self.assertEqual(1, info["dc/foo"].revision)
+        self.assertEqual(3L, info["dc/foo"].wc_info.recorded_size)
+        if hasattr(info["dc/foo"].wc_info, 'wcroot_abspath'):
+            self.assertEqual(os.path.abspath("dc"),
+                info["dc/foo"].wc_info.wcroot_abspath)
         self.build_tree({"dc/bar": "blablabla"})
         self.client.add(os.path.abspath("dc/bar"))
 

@@ -70,6 +70,13 @@ typedef struct {
     apr_pool_t *pool;
 } InfoObject;
 
+typedef struct {
+    PyObject *entry_dict;
+#if ONLY_SINCE_SVN(1, 7)
+    const char *path_prefix;
+#endif
+} InfoData;
+
 static int client_set_auth(PyObject *self, PyObject *auth, void *closure);
 static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
@@ -101,6 +108,18 @@ static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
     PyErr_SetString(PyExc_ValueError, "Unable to parse revision");
     return false;
 }
+
+#if ONLY_SINCE_SVN(1, 7)
+static const char *local_style_skip_ancestor(const char *parent_path, const char *path, apr_pool_t *pool)
+{
+  const char *relpath = NULL;
+
+  if (parent_path)
+    relpath = svn_dirent_skip_ancestor(parent_path, path);
+
+  return svn_dirent_local_style(relpath ? relpath : path, pool);
+}
+#endif
 
 static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
 {
@@ -241,7 +260,7 @@ static PyObject *py_info(const svn_info_t *info)
     return (PyObject *)ret;
 }
 
-static svn_error_t *info_receiver(void *dict, const char *path,
+static svn_error_t *info_receiver(void *data, const char *path,
 #if ONLY_BEFORE_SVN(1, 7)
                                   const svn_info_t *info,
 #else
@@ -251,6 +270,12 @@ static svn_error_t *info_receiver(void *dict, const char *path,
 {
     PyGILState_STATE state = PyGILState_Ensure();
     PyObject *value;
+    void *dict = (void*)((InfoData *) data)->entry_dict;
+#if ONLY_SINCE_SVN(1, 7)
+    const char *path_prefix = ((InfoData *) data)->path_prefix;
+
+    path = local_style_skip_ancestor(path_prefix, path, pool);
+#endif
 
     value = py_info(info);
     if (value == NULL) {
@@ -1489,6 +1514,9 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
     svn_opt_revision_t c_peg_rev, c_rev;
     PyObject *entry_dict;
     svn_error_t *err;
+#if ONLY_SINCE_SVN(1, 7)
+    const char *path_prefix;
+#endif
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOibb", kwnames,
                                      &path, &revision,
@@ -1519,22 +1547,42 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
+#if ONLY_SINCE_SVN(1, 7)
+    err = svn_dirent_get_absolute(&path_prefix, "", temp_pool);
+    if (err == NULL)
+        err = svn_dirent_get_absolute(&path, path, temp_pool);
+
+    if (err != NULL) {
+        handle_svn_error(err);
+        svn_error_clear(err);
+        apr_pool_destroy(temp_pool);
+        Py_DECREF(entry_dict);
+        return NULL;
+    }
+#endif
+
+    InfoData info_data;
+    info_data.entry_dict = entry_dict;
+#if ONLY_SINCE_SVN(1, 7)
+    info_data.path_prefix = path_prefix;
+#endif
+
     Py_BEGIN_ALLOW_THREADS;
 #if ONLY_SINCE_SVN(1, 7)
     /* FIXME: Support changelists */
 	err = svn_client_info3(path, &c_peg_rev, &c_rev, depth, fetch_excluded,
 						   fetch_actual_only, NULL,
 						   info_receiver,
-						   entry_dict,
+						   (void*) &info_data,
 						   client->client, temp_pool);
 #elif ONLY_SINCE_SVN(1, 5)
     /* FIXME: Support changelists */
-    err = svn_client_info2(path, &c_peg_rev, &c_rev, info_receiver, entry_dict,
+    err = svn_client_info2(path, &c_peg_rev, &c_rev, info_receiver, (void *) &info_data,
                                                   depth, NULL,
                                                   client->client, temp_pool);
 #else
     err = svn_client_info(path, &c_peg_rev, &c_rev,
-                                                 info_receiver, entry_dict,
+                                                 info_receiver, (void *) &info_data,
                                                  (depth == svn_depth_infinity),
                                                  client->client, temp_pool);
 #endif
