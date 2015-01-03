@@ -2768,15 +2768,10 @@ void initwc(void)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED", svn_wc_conflict_choose_merged);
 #endif
 
-#if ONLY_BEFORE_SVN(1, 7)
-	/* Subversion 1.7 has a couple of significant behaviour changes that break subvertpy.
-	 * We haven't updated the code to deal with these changes in behaviour yet.
-	 * */
 	PyModule_AddObject(mod, "WorkingCopy", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
 
 	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
 	Py_INCREF(&CommittedQueue_Type);
-#endif
 }
 
