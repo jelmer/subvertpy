@@ -1483,7 +1483,7 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
     ClientObject *client = (ClientObject *)self;
 
     const char *path;
-    int depth;
+    int depth = svn_depth_empty;
     svn_boolean_t fetch_excluded = FALSE, fetch_actual_only = FALSE;
     PyObject *revision = Py_None, *peg_revision = Py_None;
     svn_opt_revision_t c_peg_rev, c_rev;
