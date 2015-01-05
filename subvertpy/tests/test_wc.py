@@ -119,7 +119,8 @@ class AdmTests(SubversionTestCase):
         adm.close()
 
     def test_add_repos_file(self):
-        raise SkipTest("test may not be valid for 1.7+")
+        if wc.version() >= (1, 7):
+            raise SkipTest("test may not be valid for 1.7+")
         # TODO: make a valid test
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
@@ -127,6 +128,8 @@ class AdmTests(SubversionTestCase):
         self.assertEqual("basecontents", wc.get_pristine_contents("checkout/bar").read())
 
     def test_mark_missing_deleted(self):
+        if wc.version() >= (1, 7):
+            raise SkipTest("Method is not useful in svn 1.7 api")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "\x00\x01"})
         self.client_add('checkout/bar')
