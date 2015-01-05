@@ -119,6 +119,8 @@ class AdmTests(SubversionTestCase):
         adm.close()
 
     def test_add_repos_file(self):
+        raise SkipTest("test may not be valid for 1.7+")
+        # TODO: make a valid test
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
         adm.add_repos_file("checkout/bar", StringIO("basecontents"), StringIO("contents"), {}, {})
