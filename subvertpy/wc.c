@@ -2217,8 +2217,8 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	char *digest = NULL;
 	svn_boolean_t recurse = FALSE;
 	apr_pool_t *temp_pool;
-	apr_array_header_t *wcprop_changes;
-	int digest_len;
+	apr_array_header_t *wcprop_changes = NULL;
+	int digest_len = 0;
 
 	if (!PyArg_ParseTuple(args, "sO!|bObbz#", &path, &Adm_Type, &admobj,
 						  &recurse, &py_wcprop_changes, &remove_lock,
