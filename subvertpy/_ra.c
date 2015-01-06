@@ -2929,6 +2929,7 @@ static PyObject *get_username_provider(PyObject *self)
 	if (auth == NULL)
 		return NULL;
 	auth->pool = Pool(NULL);
+	auth->callback = NULL;
 	if (auth->pool == NULL) {
 		PyObject_Del(auth);
 		return NULL;
