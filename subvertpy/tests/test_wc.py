@@ -252,6 +252,7 @@ class AdmTests(SubversionTestCase):
         repos_url = self.make_client("repos", ".")
         self.build_tree({"bar": "blala"})
         self.client_add('bar')
+        self.client_commit('.', 'bar')
         adm = wc.WorkingCopy(None, ".", True)
         class Editor(object):
             """Editor"""
@@ -273,8 +274,8 @@ class AdmTests(SubversionTestCase):
         self.assertEqual(16, len(digest))
 
         bar = adm.entry("bar")
-        self.assertEqual(-1, bar.cmt_rev)
-        self.assertEqual(0, bar.revision)
+        self.assertEqual(1, bar.cmt_rev)
+        self.assertEqual(1, bar.revision)
 
         cq = wc.CommittedQueue()
         cq.queue("bar", adm)
@@ -283,24 +284,22 @@ class AdmTests(SubversionTestCase):
         self.assertEqual("bar", bar.name)
         self.assertEqual(NODE_FILE, bar.kind)
         self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
-        self.assertIs(None, bar.checksum)
         self.assertEqual(1, bar.cmt_rev)
         self.assertEqual(1, bar.revision)
 
     def test_process_committed_queue(self):
-        if wc.version() >= (1, 7):
-            raise SkipTest("TODO: no idea why this does not work")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "la"})
         self.client_add('checkout/bar')
+        self.client_commit('checkout', 'bar')
         adm = wc.WorkingCopy(None, "checkout", True)
         cq = wc.CommittedQueue()
         cq.queue(os.path.join(self.test_dir, "checkout/bar"), adm)
-        adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
+        adm.process_committed_queue(cq, 2, "2010-05-31T08:49:22.430000Z", "jelmer")
         bar = adm.entry("checkout/bar")
         self.assertEqual("bar", bar.name)
         self.assertEqual(NODE_FILE, bar.kind)
-        self.assertEqual(wc.SCHEDULE_ADD, bar.schedule)
+        self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
 
     def test_probe_try(self):
         repos_url = self.make_client("repos", "checkout")
