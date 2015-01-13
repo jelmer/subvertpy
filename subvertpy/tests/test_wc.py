@@ -98,9 +98,9 @@ class AdmTests(SubversionTestCase):
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "\x00\x01"})
         self.client_add('checkout/bar')
-        adm = wc.WorkingCopy(None, "checkout")
+        adm = wc.WorkingCopy(None, os.path.join(self.test_dir, "checkout"))
         path = os.path.join(self.test_dir, "checkout/bar")
-        self.assertFalse(adm.has_binary_prop(path))
+        self.assertTrue(adm.has_binary_prop(path))
         adm.close()
 
     def test_get_ancestry(self):
@@ -119,12 +119,17 @@ class AdmTests(SubversionTestCase):
         adm.close()
 
     def test_add_repos_file(self):
+        if wc.version() >= (1, 7):
+            raise SkipTest("test may not be valid for 1.7+")
+        # TODO: make a valid test
         repos_url = self.make_client("repos", "checkout")
         adm = wc.WorkingCopy(None, "checkout", True)
         adm.add_repos_file("checkout/bar", StringIO("basecontents"), StringIO("contents"), {}, {})
         self.assertEqual("basecontents", wc.get_pristine_contents("checkout/bar").read())
 
     def test_mark_missing_deleted(self):
+        if wc.version() >= (1, 7):
+            raise SkipTest("Method is not useful in svn 1.7 api")
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "\x00\x01"})
         self.client_add('checkout/bar')
@@ -147,15 +152,17 @@ class AdmTests(SubversionTestCase):
         adm.relocate("checkout", "file://", "http://")
 
     def test_translated_stream(self):
+        if wc.version() < (1, 7):
+            raise SkipTest("API does not work before 1.7")
         repos_url = self.make_client("repos", "checkout")
-        self.build_tree({"checkout/bar": "My id: $Id$"})
+        self.build_tree({"checkout/bar": "My id: $Id: junk $"})
         self.client_add('checkout/bar')
         self.client_set_prop("checkout/bar", "svn:keywords", "Id\n")
         self.client_commit("checkout", "foo")
         adm = wc.WorkingCopy(None, "checkout", True)
         path = os.path.join(self.test_dir, "checkout/bar")
         stream = adm.translated_stream(path, path, wc.TRANSLATE_TO_NF)
-        self.assertTrue(stream.read().startswith("My id: $Id: "))
+        self.assertTrue(stream.read().startswith("My id: $Id$"))
 
     def test_text_modified(self):
         repos_url = self.make_client("repos", "checkout")
@@ -245,6 +252,7 @@ class AdmTests(SubversionTestCase):
         repos_url = self.make_client("repos", ".")
         self.build_tree({"bar": "blala"})
         self.client_add('bar')
+        self.client_commit('.', 'bar')
         adm = wc.WorkingCopy(None, ".", True)
         class Editor(object):
             """Editor"""
@@ -266,8 +274,8 @@ class AdmTests(SubversionTestCase):
         self.assertEqual(16, len(digest))
 
         bar = adm.entry("bar")
-        self.assertEqual(-1, bar.cmt_rev)
-        self.assertEqual(0, bar.revision)
+        self.assertEqual(1, bar.cmt_rev)
+        self.assertEqual(1, bar.revision)
 
         cq = wc.CommittedQueue()
         cq.queue("bar", adm)
@@ -276,7 +284,6 @@ class AdmTests(SubversionTestCase):
         self.assertEqual("bar", bar.name)
         self.assertEqual(NODE_FILE, bar.kind)
         self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
-        self.assertIs(None, bar.checksum)
         self.assertEqual(1, bar.cmt_rev)
         self.assertEqual(1, bar.revision)
 
@@ -284,14 +291,15 @@ class AdmTests(SubversionTestCase):
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": "la"})
         self.client_add('checkout/bar')
+        self.client_commit('checkout', 'bar')
         adm = wc.WorkingCopy(None, "checkout", True)
         cq = wc.CommittedQueue()
         cq.queue(os.path.join(self.test_dir, "checkout/bar"), adm)
-        adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
+        adm.process_committed_queue(cq, 2, "2010-05-31T08:49:22.430000Z", "jelmer")
         bar = adm.entry("checkout/bar")
         self.assertEqual("bar", bar.name)
         self.assertEqual(NODE_FILE, bar.kind)
-        self.assertEqual(wc.SCHEDULE_ADD, bar.schedule)
+        self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
 
     def test_probe_try(self):
         repos_url = self.make_client("repos", "checkout")
