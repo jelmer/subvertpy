@@ -1,7 +1,8 @@
 Source: subvertpy
 Section: python
 Priority: optional
-Maintainer: Jelmer Vernooij <jelmer@debian.org>
+Maintainer: Debian Python Modules Team <python-modules-team@lists.alioth.debian.org>
+Uploaders: Jelmer Vernooij <jelmer@debian.org>
 Homepage: http://samba.org/~jelmer/subvertpy
 Build-Depends: debhelper (>= 8.1.0),
                libsvn-dev,
@@ -13,7 +14,7 @@ Build-Depends: debhelper (>= 8.1.0),
                python-testtools
 Standards-Version: 3.9.5
 X-Python-Version: >= 2.4
-Vcs-Git: git://anonscm.debian.org/users/jelmer/subvertpy.git -b unstable
+Vcs-Git: git://anonscm.debian.org/python-modules/packages/subvertpy.git -b unstable
 XS-Testsuite: autopkgtest
 
 Package: python-subvertpy
