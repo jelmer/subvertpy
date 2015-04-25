@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+
 CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
 CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
 CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS)

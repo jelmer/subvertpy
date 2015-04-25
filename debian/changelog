@@ -4,6 +4,7 @@ subvertpy (0.9.1-8) UNRELEASED; urgency=medium
     dulwich package is now maintained by the Debian Python Modules
     packaging team.
   * Bump standards version to 3.9.6 (no changes).
+  * Build with -Wl,--as-needed.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sat, 07 Feb 2015 17:51:51 +0100
 
