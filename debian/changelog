@@ -3,6 +3,7 @@ subvertpy (0.9.1-8) UNRELEASED; urgency=medium
   * Update Vcs-Git, Vcs-Browser and Maintainer fields to reflect the
     dulwich package is now maintained by the Debian Python Modules
     packaging team.
+  * Bump standards version to 3.9.6 (no changes).
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sat, 07 Feb 2015 17:51:51 +0100
 
