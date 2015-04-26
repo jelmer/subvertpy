@@ -8,6 +8,10 @@
 
    * Drop support for Python versions before 2.6. (Jelmer Vernooij)
 
+  IMPROVEMENTS
+
+   * Support PYDOCTOR_OPTIONS in Makefile. (Jelmer Vernooij)
+
 0.9.1	2013-05-06
 
  CHANGES
