@@ -1,3 +1,17 @@
+0.9.2	2015-04-25
+
+  BUG FIXES
+
+   * Support failing server certification check. (Mitsuhiro Koga, #1059821)
+
+  CHANGES
+
+   * Drop support for Python versions before 2.6. (Jelmer Vernooij)
+
+  IMPROVEMENTS
+
+   * Support PYDOCTOR_OPTIONS in Makefile. (Jelmer Vernooij)
+
 0.9.1	2013-05-06
 
  CHANGES

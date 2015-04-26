@@ -66,7 +66,8 @@ def marshall(x):
     elif type(x) is str:
         return "%d:%s " % (len(x), x)
     elif type(x) is unicode:
-        return "%d:%s " % (len(x), x.encode("utf-8"))
+        x = x.encode("utf-8")
+        return "%d:%s " % (len(x), x)
     elif type(x) is bool:
         if x == True:
             return "true "
@@ -102,7 +103,7 @@ def unmarshall(x):
             raise NeedMoreData("Missing whitespace")
         
         if not x[1] in whitespace:
-            raise MarshallError("Expected space, got %c" % x[1])
+            raise MarshallError("Expected space, got '%c'" % x[1])
 
         return (x[2:], ret)
     elif x[0].isdigit():
@@ -120,7 +121,7 @@ def unmarshall(x):
                 raise NeedMoreData("Expected string of length %r" % num)
             return (x[num+2:], x[1:num+1])
         else:
-            raise MarshallError("Expected whitespace or ':', got '%c" % x[0])
+            raise MarshallError("Expected whitespace or ':', got '%c'" % x[0])
     elif x[0].isalpha():
         ret = ""
         # Parse literal
@@ -132,7 +133,7 @@ def unmarshall(x):
             raise NeedMoreData("Expected literal")
 
         if not x[0] in whitespace:
-            raise MarshallError("Expected whitespace, got %c" % x[0])
+            raise MarshallError("Expected whitespace, got '%c'" % x[0])
 
         return (x[1:], ret)
     else:

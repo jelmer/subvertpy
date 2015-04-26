@@ -57,8 +57,13 @@ class StaticStringMatcher(Matcher):
 
     branch = "master"
 
+    def __init__(self, trunk_path):
+        if not trunk_path.startswith("/"):
+            raise ValueError("Trunk path does not start with a slash (/)")
+        Matcher.__init__(self, trunk_path)
+
     def matches(self, path):
-        return path.startswith(trunk_path)
+        return path.startswith(self.trunk_path)
 
     def replace(self, path):
         return path.replace(self.trunk_path, '')
@@ -135,7 +140,7 @@ def export_revision(rev, fs):
     props = fs.revision_proplist(rev)
 
     # Do the recursive crawl.
-    if props.has_key('svn:author'):
+    if 'svn:author' in props:
         author = "%s <%s@%s>" % (props['svn:author'], props['svn:author'], address)
     else:
         author = 'nobody <nobody@localhost>'
@@ -194,7 +199,7 @@ if __name__ == '__main__':
 
     if options.version:
         import subvertpy
-        print ".".join([str(x) for x in subvertpy.__version__])
+        print ".".join(str(x) for x in subvertpy.__version__)
         sys.exit(0)
     if options.trunk_path != None:
         trunk_path = options.trunk_path

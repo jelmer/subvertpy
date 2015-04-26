@@ -1483,7 +1483,7 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
     ClientObject *client = (ClientObject *)self;
 
     const char *path;
-    int depth;
+    int depth = svn_depth_empty;
     svn_boolean_t fetch_excluded = FALSE, fetch_actual_only = FALSE;
     PyObject *revision = Py_None, *peg_revision = Py_None;
     svn_opt_revision_t c_peg_rev, c_rev;
@@ -1837,7 +1837,7 @@ static PyMemberDef wc_info_members[] = {
         "" },
     { "recorded_time", T_LONG, offsetof(WCInfoObject, info.recorded_time), READONLY,
         "" },
-    { "wcroot_abspath", T_STRING, offsetof(WCInfoObject, info.recorded_time), READONLY,
+    { "wcroot_abspath", T_STRING, offsetof(WCInfoObject, info.wcroot_abspath), READONLY,
         "" },
 #else
 #if ONLY_SINCE_SVN(1, 5)

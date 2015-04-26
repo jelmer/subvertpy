@@ -246,9 +246,6 @@ class TestClient(SubversionTestCase):
         self.assertEqual(["foo"], info.keys())
         self.assertEqual(1, info["foo"].revision)
         self.assertEqual(3L, info["foo"].size)
-        if client.api_version() < (1, 7):
-            # TODO: Why is this failing on 1.7?
-            self.assertEqual(wc.SCHEDULE_NORMAL, info["foo"].wc_info.schedule)
         self.build_tree({"dc/bar": "blablabla"})
         self.client.add(os.path.abspath("dc/bar"))
 

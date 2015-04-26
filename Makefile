@@ -1,5 +1,6 @@
 PYTHON = python
 PYDOCTOR = pydoctor
+PYDOCTOR_OPTIONS ?=
 SETUP = $(PYTHON) setup.py
 ifeq ($(shell $(PYTHON) -c "import sys; print sys.version_info >= (2, 7)"),True)
 TESTRUNNER = unittest
@@ -34,4 +35,4 @@ clean::
 	rm -f subvertpy/*.so subvertpy/*.o subvertpy/*.pyc
 
 pydoctor:
-	$(PYDOCTOR) --introspect-c-modules -c subvertpy.cfg --make-html
+	$(PYDOCTOR) $(PYDOCTOR_OPTIONS) --introspect-c-modules -c subvertpy.cfg --make-html

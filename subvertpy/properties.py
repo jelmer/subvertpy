@@ -42,7 +42,7 @@ def is_valid_property_name(prop):
 def time_to_cstring(timestamp):
     """Determine string representation of a time.
 
-    :param timestamp: Timestamp
+    :param timestamp: Number of microseconds since the start of 1970
     :return: string with date
     """
     tm_usec = timestamp % 1000000
@@ -55,7 +55,7 @@ def time_from_cstring(text):
     """Parse a time from a cstring.
     
     :param text: Parse text
-    :return: timestamp
+    :return: number of microseconds since the start of 1970
     """
     (basestr, usecstr) = text.split(".", 1)
     assert usecstr[-1] == "Z"
