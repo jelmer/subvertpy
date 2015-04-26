@@ -1,5 +1,6 @@
-subvertpy (0.9.1-8) unstable; urgency=medium
+subvertpy (0.9.2-1) UNRELEASED; urgency=medium
 
+  * New upstream release.
   * Update Vcs-Git, Vcs-Browser and Maintainer fields to reflect the
     dulwich package is now maintained by the Debian Python Modules
     packaging team.
