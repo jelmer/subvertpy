@@ -394,7 +394,7 @@ if __name__ == "__main__":
               subvertpy_version_string, ),
           license='LGPLv2.1 or later',
           author='Jelmer Vernooij',
-          author_email='jelmer@samba.org',
+          author_email='jelmer@jelmer.uk',
           long_description="""
           Alternative Python bindings for Subversion. The goal is to have complete, portable and "Pythonic" Python bindings.
           """,
