@@ -1,7 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: subvertpy
 Upstream-Contact: Jelmer Vernooij <jelmer@jelmer.uk>
-Source: http://samba.org/~jelmer/subvertpy
+Source: https://samba.org/~jelmer/subvertpy
 Debianized-By: Jelmer Vernooij <jelmer@debian.org>
 Debianized-Date: Wed Nov 12 12:50:24 CET 2008
 

@@ -1,7 +1,7 @@
 Subvertpy
 =========
 
-Homepage: http://samba.org/~jelmer/subvertpy/
+Homepage: https://samba.org/~jelmer/subvertpy/
 
 Python bindings for the Subversion version control system that are aimed to be
 complete, fast and feel native to Python programmers.
