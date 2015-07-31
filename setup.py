@@ -389,8 +389,8 @@ if __name__ == "__main__":
           description='Alternative Python bindings for Subversion',
           keywords='svn subvertpy subversion bindings',
           version=subvertpy_version_string,
-          url='http://samba.org/~jelmer/subvertpy',
-          download_url="http://samba.org/~jelmer/subvertpy/subvertpy-%s.tar.gz" % (
+          url='https://jelmer.uk/subvertpy',
+          download_url="https://jelmer.uk/subvertpy/subvertpy-%s.tar.gz" % (
               subvertpy_version_string, ),
           license='LGPLv2.1 or later',
           author='Jelmer Vernooij',
