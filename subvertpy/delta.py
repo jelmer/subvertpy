@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2006 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2005-2006 Jelmer Vernooij <jelmer@jelmer.uk>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 """Subversion delta operations."""
 
-__author__ = "Jelmer Vernooij <jelmer@samba.org>"
+__author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 __docformat__ = "restructuredText"
 
 from hashlib import (
