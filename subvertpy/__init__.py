@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
-__version__ = (0, 9, 2)
+__version__ = (0, 9, 3)
 
 NODE_DIR = 2
 NODE_FILE = 1

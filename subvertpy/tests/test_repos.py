@@ -121,13 +121,15 @@ class TestRepository(TestCaseInTempDir):
         repos.create(os.path.join(self.test_dir, "foo"))
         root = repos.Repository("foo").fs().revision_root(0)
         self.assertEqual(True, root.is_dir(""))
-        self.assertEqual(False, root.is_dir("nonexistant"))
+        # TODO(jelmer): Newer versions of libsvn_repos crash when passed a nonexistant path.
+        #self.assertEqual(False, root.is_dir("nonexistant"))
 
     def test_is_file(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         root = repos.Repository("foo").fs().revision_root(0)
         self.assertEqual(False, root.is_file(""))
-        self.assertEqual(False, root.is_file("nonexistant"))
+        # TODO(jelmer): Newer versions of libsvn_repos crash when passed a nonexistant path.
+        #self.assertEqual(False, root.is_file("nonexistant"))
 
 
 class StreamTests(TestCase):
