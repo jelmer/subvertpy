@@ -1,4 +1,4 @@
-subvertpy (0.9.3-1) UNRELEASED; urgency=medium
+subvertpy (0.9.3-1) unstable; urgency=medium
 
   * New upstream release.
    + Works around regression in subversion_fs, causing test suite failures.
