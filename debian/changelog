@@ -1,3 +1,11 @@
+subvertpy (0.9.3-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+   + Works around regression in subversion_fs, causing test suite failures.
+     Closes: #795661
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sun, 23 Aug 2015 13:25:14 +0000
+
 subvertpy (0.9.1-8) unstable; urgency=medium
 
   * Update Vcs-Git, Vcs-Browser and Maintainer fields to reflect the
