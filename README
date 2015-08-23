@@ -1,7 +1,7 @@
 Subvertpy
 =========
 
-Homepage: http://samba.org/~jelmer/subvertpy/
+Homepage: https://jelmer.uk/subvertpy/
 
 Python bindings for the Subversion version control system that are aimed to be
 complete, fast and feel native to Python programmers.
@@ -18,7 +18,7 @@ much directly. Neither provide a hookable server-side.
 
 Dependencies
 ------------
-Subvertpy depends on Python 2.4 or later, and Subversion 1.4 or later. It should
+Subvertpy depends on Python 2.6 or later, and Subversion 1.4 or later. It should
 work on Windows as well as most POSIX-based platforms (including Linux, BSDs
 and Mac OS X).
 
@@ -55,3 +55,10 @@ Build instructions for Windows
   Download svn-win32-libintl.zip.
   extract it to the directory that you want.
 * Set SVN_LIBINTL to the extract dir.
+
+Development
+-----------
+If using GCC it might be useful to disable the deprecation warnings when
+compiling to see if there are any more serious warnings:
+
+make CFLAGS="-Wno-deprecated-declarations"

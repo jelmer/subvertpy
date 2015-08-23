@@ -1,5 +1,5 @@
 /*
- * Copyright © 2008 Jelmer Vernooij <jelmer@samba.org>
+ * Copyright © 2008 Jelmer Vernooij <jelmer@jelmer.uk>
  * -*- coding: utf-8 -*-
  *
  * This program is free software; you can redistribute it and/or modify
@@ -33,11 +33,6 @@
 #endif
 
 #define ONLY_BEFORE_SVN(maj, min) (!(ONLY_SINCE_SVN(maj, min)))
-
-/* There's no Py_ssize_t in 2.4, apparently */
-#if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION < 5
-typedef int Py_ssize_t;
-#endif
 
 #ifdef __GNUC__
 #pragma GCC visibility push(hidden)

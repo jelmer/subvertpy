@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # Setup file for subvertpy
-# Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@jelmer.uk>
 
-from distutils.core import setup
+from distutils.core import setup, Command
 from distutils.extension import Extension
-from distutils.command.install_lib import install_lib
+from distutils.command.build import build
 from distutils import log
 import sys
 import os
 import re
+import subprocess
 
 class CommandException(Exception):
     """Encapsulate exit status of command execution"""
@@ -52,8 +53,7 @@ def config_value(command, arg):
     for cmd in cmds:
         try:
             return run_cmd(cmd, arg)
-        except CommandException:
-            _, e, _ = sys.exc_info()
+        except CommandException as e:
             if not e.not_found():
                 raise
     else:
@@ -120,16 +120,16 @@ def is_keychain_provider_available():
     abd = apr_build_data()
     sbd = svn_build_data()
     gcc_command_args = ['gcc'] + ['-I' + inc for inc in sbd[0]] + ['-L' + lib for lib in sbd[1]] + ['-I' + abd[0], '-lsvn_subr-1', '-x', 'c', '-']
-    (gcc_in, gcc_out, gcc_err) = os.popen3(gcc_command_args)
-    gcc_in.write("""
+    gcc = subprocess.Popen(gcc_command_args,
+        stdin=subprocess.PIPE, universal_newlines=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gcc.communicate("""
 #include <svn_auth.h>
 int main(int argc, const char* arv[]) {
     svn_auth_get_keychain_simple_provider(NULL, NULL);
 }
 """)
-    gcc_in.close()
-    gcc_out.read()
-    return (gcc_out.close() is None)
+    return (gcc.returncode == 0)
 
 
 class VersionQuery(object):
@@ -277,11 +277,45 @@ class SvnExtension(Extension):
         Extension.__init__(self, name, *args, **kwargs)
 
 
-# On Windows, we install the apr binaries too.
-class install_lib_with_dlls(install_lib):
+class TestCommand(Command):
+    """Command for running unittests without install."""
+
+    user_options = [("args=", None, '''The command args string passed to
+                                    unittest framework, such as 
+                                     --args="-v -f"''')]
+
+    def initialize_options(self):
+        self.args = ''
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        self.run_command('build')
+        bld = self.distribution.get_command_obj('build')
+        #Add build_lib in to sys.path so that unittest can found DLLs and libs
+        sys.path = [os.path.abspath(bld.build_lib)] + sys.path
+        os.chdir(bld.build_lib)
+        log.info("Running unittest without install.")
+
+        import shlex
+        import unittest
+        test_argv0 = [sys.argv[0] + ' test --args=']
+        #For transfering args to unittest, we have to split args
+        #by ourself, so that command like:
+        #python setup.py test --args="-v -f"
+        #can be executed, and the parameter '-v -f' can be
+        #transfering to unittest properly.
+        test_argv = test_argv0 + shlex.split(self.args)
+        unittest.main(module=None, defaultTest='subvertpy.tests.test_suite', argv=test_argv)
+
+
+class BuildWithDLLs(build):
     def _get_dlls(self):
         # return a list of of (FQ-in-name, relative-out-name) tuples.
         ret = []
+        # the apr binaries.
         apr_bins = [libname + ".dll" for libname in extra_libs
                     if libname.startswith("libapr")]
         if get_svn_version() >= (1,5,0):
@@ -297,11 +331,11 @@ class install_lib_with_dlls(install_lib):
         look_dirs = os.environ.get("PATH","").split(os.pathsep)
         look_dirs.insert(0, os.path.join(os.environ["SVN_DEV"], "bin"))
 
+        target = os.path.abspath(os.path.join(self.build_lib, 'subvertpy'))
         for bin in apr_bins:
             for look in look_dirs:
                 f = os.path.join(look, bin)
                 if os.path.isfile(f):
-                    target = os.path.join(self.install_dir, "subvertpy", bin)
                     ret.append((f, target))
                     break
             else:
@@ -310,20 +344,22 @@ class install_lib_with_dlls(install_lib):
         return ret
 
     def run(self):
-        install_lib.run(self)
+        build.run(self)
         # the apr binaries.
         # On Windows we package up the apr dlls with the plugin.
         for s, d in self._get_dlls():
             self.copy_file(s, d)
 
     def get_outputs(self):
-        ret = install_lib.get_outputs(self)
-        ret.extend([info[1] for info in self._get_dlls()])
+        ret = build.get_outputs(self)
+        ret.extend(info[1] for info in self._get_dlls())
         return ret
 
-cmdclass = {}
+cmdclass = {'test': TestCommand}
 if os.name == 'nt':
-    cmdclass['install_lib'] = install_lib_with_dlls
+    # BuildWithDLLs can copy external DLLs into build directory On Win32.
+    # So we can running unittest directly from build directory.
+    cmdclass['build'] = BuildWithDLLs
 
 def source_path(filename):
     return os.path.join("subvertpy", filename)
@@ -344,7 +380,7 @@ def subvertpy_modules():
         ]
 
 
-subvertpy_version = (0, 9, 1)
+subvertpy_version = (0, 9, 3)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
@@ -353,12 +389,12 @@ if __name__ == "__main__":
           description='Alternative Python bindings for Subversion',
           keywords='svn subvertpy subversion bindings',
           version=subvertpy_version_string,
-          url='http://samba.org/~jelmer/subvertpy',
-          download_url="http://samba.org/~jelmer/subvertpy/subvertpy-%s.tar.gz" % (
+          url='https://jelmer.uk/subvertpy',
+          download_url="https://jelmer.uk/subvertpy/subvertpy-%s.tar.gz" % (
               subvertpy_version_string, ),
           license='LGPLv2.1 or later',
           author='Jelmer Vernooij',
-          author_email='jelmer@samba.org',
+          author_email='jelmer@jelmer.uk',
           long_description="""
           Alternative Python bindings for Subversion. The goal is to have complete, portable and "Pythonic" Python bindings.
           """,

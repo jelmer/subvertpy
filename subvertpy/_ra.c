@@ -1,5 +1,5 @@
 /*
- * Copyright © 2008-2009 Jelmer Vernooij <jelmer@samba.org>
+ * Copyright © 2008-2009 Jelmer Vernooij <jelmer@jelmer.uk>
  * -*- coding: utf-8 -*-
  *
  * This program is free software; you can redistribute it and/or modify
@@ -196,7 +196,7 @@ static PyObject *reporter_link_path(PyObject *self, PyObject *args)
 	ReporterObject *reporter = (ReporterObject *)self;
 	svn_depth_t depth = svn_depth_infinity;
 
-	if (!PyArg_ParseTuple(args, "sslb|zi:kink_path", &path, &url, &revision,
+	if (!PyArg_ParseTuple(args, "sslb|zi:link_path", &path, &url, &revision,
 			&start_empty, &lock_token, &depth))
 		return NULL;
 
@@ -2034,10 +2034,11 @@ static PyMethodDef ra_methods[] = {
 	{ "unlock", ra_unlock, METH_VARARGS, 
 		"S.unlock(path_tokens, break_lock, lock_func)\n" },
 	{ "mergeinfo", ra_mergeinfo, METH_VARARGS, 
-		"S.mergeinfo(&paths, revision, inherit, include_descendants)\n" },
+		"S.mergeinfo(paths, revision, inherit, include_descendants)\n" },
 	{ "get_location_segments", ra_get_location_segments, METH_VARARGS, 
 		"S.get_location_segments(path, peg_revision, start_revision, "
-			"end_revision, rcvr)" 
+			"end_revision, rcvr)\n"
+		"The receiver is called as rcvr(range_start, range_end, path)\n"
 	},
 	{ "has_capability", ra_has_capability, METH_VARARGS, 
 		"S.has_capability(name) -> bool\n"
@@ -2080,7 +2081,7 @@ static PyMethodDef ra_methods[] = {
 	{ "do_update", ra_do_update, METH_VARARGS, 
 		"S.do_update(revision_to_update_to, update_target, recurse, update_editor)\n" },
 	{ "do_diff", ra_do_diff, METH_VARARGS, 
-		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse, ignore_ancestry, text_deltas)\n"
+		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse, ignore_ancestry, text_deltas) -> Reporter object\n"
 	},
 	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_NOARGS, 
 		"S.get_repos_root() -> url\n"
@@ -2089,12 +2090,28 @@ static PyMethodDef ra_methods[] = {
 		"S.get_url() -> url\n"
 		"Return the URL of the repository." },
 	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, 
-		"S.get_log(callback, paths, start, end, limit, discover_changed_paths, "
-		"strict_node_history, include_merged_revisions, revprops)\n"
+		"S.get_log(callback, paths, start, end, limit=0, "
+		"discover_changed_paths=False, strict_node_history=True, "
+		"include_merged_revisions=False, revprops=None)\n"
+		"The callback is passed three or four arguments:\n"
+		"callback(changed_paths, revision, revprops[, has_children])\n"
+		"The changed_paths argument may be None, or a dictionary mapping each\n"
+		"path to a tuple:\n"
+		"(action, from_path, from_rev)\n"
 	},
 	{ "iter_log", (PyCFunction)ra_iter_log, METH_VARARGS|METH_KEYWORDS, 
-		"S.get_log(paths, start, end, limit, discover_changed_paths, "
-		"strict_node_history, include_merged_revisions, revprops)\n"
+		"S.iter_log(paths, start, end, limit=0, "
+		"discover_changed_paths=False, strict_node_history=True, "
+		"include_merged_revisions=False, revprops=None)\n"
+		"Yields tuples of three or four elements:\n"
+		"(changed_paths, revision, revprops[, has_children])\n"
+		"The changed_paths element may be None, or a dictionary mapping each\n"
+		"path to a tuple:\n"
+		"(action, from_path, from_rev, node_kind)\n"
+		"This method collects the log entries in another thread. Before calling\n"
+		"any further methods, make sure the thread has completed by running the\n"
+		"iterator to exhaustion (i.e. until StopIteration is raised, the \"for\"\n"
+		"loop finishes, etc).\n"
 	},
 	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, 
 		"S.get_latest_revnum() -> int\n"
@@ -2436,7 +2453,7 @@ static PyTypeObject CredentialsIter_Type = {
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
 
 	/* Flags to define presence of optional/expanded features */
-	0, /*	long tp_flags;	*/
+	Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
 
 	NULL, /*	const char *tp_doc;  Documentation string */
 
@@ -2715,6 +2732,11 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 	Py_DECREF(py_cert);
 	CB_CHECK_PYRETVAL(ret);
 
+	if (ret == Py_None) {
+		Py_DECREF(ret);
+		PyGILState_Release(state);
+		return NULL;
+	}
 	if (!PyTuple_Check(ret)) {
 		Py_DECREF(ret);
 		PyErr_SetString(PyExc_TypeError, "expected tuple with server trust credentials");
@@ -2907,6 +2929,7 @@ static PyObject *get_username_provider(PyObject *self)
 	if (auth == NULL)
 		return NULL;
 	auth->pool = Pool(NULL);
+	auth->callback = NULL;
 	if (auth->pool == NULL) {
 		PyObject_Del(auth);
 		return NULL;

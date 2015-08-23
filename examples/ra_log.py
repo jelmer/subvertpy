@@ -15,6 +15,7 @@ for (changed_paths, rev, revprops, has_children) in conn.iter_log(paths=None,
     print ""
 
     print "Changed paths"
-    for path, (action, from_path, from_rev) in changed_paths.iteritems():
+    for path, (action, from_path, from_rev, node_kind) in (
+            changed_paths.iteritems()):
         print "  %s (%s)" % (path, action)
 

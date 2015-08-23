@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@jelmer.uk>
  
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -431,6 +431,12 @@ class AuthTests(TestCase):
         auth.set_parameter("svn:auth:ssl:failures", 23)
         creds = auth.credentials("svn.ssl.server", "MyRealm")
         self.assertEqual((42, 0), creds.next())
+        self.assertRaises(StopIteration, creds.next)
+
+    def test_server_untrust(self):
+        auth = ra.Auth([ra.get_ssl_server_trust_prompt_provider(lambda realm, failures, certinfo, may_save: None)])
+        auth.set_parameter("svn:auth:ssl:failures", 23)
+        creds = auth.credentials("svn.ssl.server", "MyRealm")
         self.assertRaises(StopIteration, creds.next)
 
     def test_retry(self):

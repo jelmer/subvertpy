@@ -1,4 +1,4 @@
-# Copyright (C) 2006-2008 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2006-2008 Jelmer Vernooij <jelmer@jelmer.uk>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 """Python bindings for Subversion."""
 
-__author__ = "Jelmer Vernooij <jelmer@samba.org>"
+__author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 
 import SocketServer
 import base64
@@ -23,6 +23,7 @@ import os
 import socket
 import subprocess
 import urllib
+from errno import EPIPE
 
 from subvertpy import (
     ERR_RA_SVN_UNKNOWN_CMD,
@@ -1047,7 +1048,7 @@ class SVNServer(SVNConnection):
         # Expect:
         while not self._stop:
             ( cmd, args ) = self.recv_msg()
-            if not self.commands.has_key(cmd):
+            if cmd not in self.commands:
                 self.mutter("client used unknown command %r" % cmd)
                 self.send_unknown(cmd)
                 return
@@ -1075,7 +1076,7 @@ class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
         try:
             server.serve()
         except socket.error, e:
-            if e.args[0] == 32:# EPIPE
+            if e.args[0] == EPIPE:
                 return
             raise
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@jelmer.uk>
  
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -23,6 +23,8 @@ from subvertpy.delta import (
     pack_svndiff0,
     send_stream,
     unpack_svndiff0,
+    apply_txdelta_handler,
+    TXDELTA_NEW, TXDELTA_SOURCE, TXDELTA_TARGET,
     )
 from subvertpy.tests import TestCase
 
@@ -40,6 +42,28 @@ class DeltaTests(TestCase):
         send_stream(stream, self.storing_window_handler)
         self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], 'foo'), None], 
                           self.windows)
+    
+    def test_apply_delta(self):
+        stream = StringIO()
+        source = "(source)"
+        handler = apply_txdelta_handler(source, stream)
+        
+        new = "(new)"
+        ops = (  # (action, offset, length)
+            (TXDELTA_NEW, 0, len(new)),
+            (TXDELTA_SOURCE, 0, len(source)),
+            (TXDELTA_TARGET, len(new), len("(s")),  # Copy "(s"
+            (TXDELTA_TARGET, len("(n"), len("ew)")),  # Copy "ew)"
+            
+            # Copy as target is generated
+            (TXDELTA_TARGET, len(new + source), len("(sew)") * 2),
+        )
+        result = "(new)(source)(sew)(sew)(sew)"
+        
+        # (source offset, source length, result length, src_ops, ops, new)
+        handler((0, len(source), len(result), 0, ops, new))
+        handler(None)
+        self.assertEqual(result, stream.getvalue())
 
 
 class MarshallTests(TestCase):

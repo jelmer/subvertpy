@@ -1,4 +1,4 @@
-# Copyright (C) 2006-2008 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2006-2008 Jelmer Vernooij <jelmer@jelmer.uk>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -16,7 +16,7 @@
 
 """Tests for subvertpy."""
 
-__author__ = 'Jelmer Vernooij <jelmer@samba.org>'
+__author__ = 'Jelmer Vernooij <jelmer@jelmer.uk>'
 __docformat__ = 'restructuredText'
 
 from cStringIO import StringIO
@@ -25,14 +25,16 @@ import shutil
 import stat
 import sys
 import tempfile
-import unittest
 try:
     from unittest import SkipTest
 except ImportError:
     try:
         from unittest2 import SkipTest
+        import unittest2 as unittest
     except ImportError:
         from testtools.testcase import TestSkipped as SkipTest
+else:
+    import unittest
 import urllib2
 import urllib
 import urlparse

@@ -1,4 +1,4 @@
-# Copyright (C) 2006-2008 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2006-2008 Jelmer Vernooij <jelmer@jelmer.uk>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -16,8 +16,8 @@
 
 """Python bindings for Subversion."""
 
-__author__ = "Jelmer Vernooij <jelmer@samba.org>"
-__version__ = (0, 9, 1)
+__author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
+__version__ = (0, 9, 3)
 
 NODE_DIR = 2
 NODE_FILE = 1
