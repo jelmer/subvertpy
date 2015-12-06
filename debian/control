@@ -10,7 +10,7 @@ Build-Depends: debhelper (>= 8.1.0),
                python-all-dbg (>= 2.6.6-3),
                python-all-dev (>= 2.6.6-3),
                python-docutils,
-               python-pydoctor (>= 0.5+git20150410-1),
+               python-pydoctor (>= 0.5+git20151204-1),
                python-testtools
 Standards-Version: 3.9.6
 X-Python-Version: >= 2.4

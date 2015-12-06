@@ -12,8 +12,6 @@ PYVERS = $(shell pyversions -r -v)
 # Get the default Python version
 PYVERSION = $(shell pyversions -d -v)
 
-BUILD_DATE = $(shell dpkg-parsechangelog -S Date)
-
 # Callable functions to determine the correct PYTHONPATH
 pythonpath = $$(ls -d $(CURDIR)/build/lib.*-$(1))
 pythonpath_dbg = $$(ls -d $(CURDIR)/build/lib_d.*-$(1) 2>/dev/null || ls -d $(CURDIR)/build/lib.*$(1)-pydebug)
@@ -26,7 +24,7 @@ export HOME=$(CURDIR)/nonexistent
 
 override_dh_auto_build:
 	dh_auto_build
-	$(MAKE) pydoctor PYDOCTOR_OPTIONS="--buildtime=$(shell date -u +'%Y-%m-%d\\ %H:%M:%S' --date='$(BUILD_DATE)')"
+	$(MAKE) pydoctor
 
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/tmp

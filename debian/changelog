@@ -1,3 +1,11 @@
+subvertpy (0.9.3-3) UNRELEASED; urgency=medium
+
+  * Drop use of --buildtime in debian/rules, rely on SOURCE_DATE_EPOCH
+    instead. Update pydoctor dependency to a version that supports
+    SOURCE_DATE_EPOCH.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sun, 06 Dec 2015 11:57:23 +0000
+
 subvertpy (0.9.3-2) unstable; urgency=medium
 
   * Build pydoctor docs with --build-time; should make build
