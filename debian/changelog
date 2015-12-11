@@ -1,4 +1,4 @@
-subvertpy (0.9.3-3) UNRELEASED; urgency=medium
+subvertpy (0.9.3-3) unstable; urgency=medium
 
   * Drop use of --buildtime in debian/rules, rely on SOURCE_DATE_EPOCH
     instead. Update pydoctor dependency to a version that supports
