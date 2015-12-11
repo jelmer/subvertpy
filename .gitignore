@@ -10,10 +10,3 @@ apidocs
 *.pyc
 *.so
 *~
-debian/files
-*.debhelper.log
-*.substvars
-*.debhelper
-debian/python-subvertpy-dbg/
-debian/python-subvertpy/
-debian/tmp/
