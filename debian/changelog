@@ -1,3 +1,9 @@
+subvertpy (0.9.3-4) UNRELEASED; urgency=medium
+
+  * Use https in watch file.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sun, 20 Dec 2015 02:01:47 +0000
+
 subvertpy (0.9.3-3) unstable; urgency=medium
 
   * Drop use of --buildtime in debian/rules, rely on SOURCE_DATE_EPOCH
