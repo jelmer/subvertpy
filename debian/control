@@ -2,7 +2,7 @@ Source: subvertpy
 Section: python
 Priority: optional
 Maintainer: Debian Python Modules Team <python-modules-team@lists.alioth.debian.org>
-Uploaders: Jelmer Vernooij <jelmer@debian.org>
+Uploaders: Jelmer Vernooĳ <jelmer@debian.org>
 Homepage: http://samba.org/~jelmer/subvertpy
 Build-Depends: debhelper (>= 8.1.0),
                libsvn-dev,

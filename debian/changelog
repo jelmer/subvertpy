@@ -1,13 +1,11 @@
 subvertpy (0.9.3-4) UNRELEASED; urgency=medium
 
-  [ Jelmer Vernooij ]
-  * Use https in watch file.
-
   [ Jelmer Vernooĳ ]
+  * Use https in watch file.
   * Fix branch in Vcs-Git header.
   * Force python hash seed to 0, for reproducible pydoctor output.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sun, 20 Dec 2015 02:01:47 +0000
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 20 Dec 2015 02:01:47 +0000
 
 subvertpy (0.9.3-3) unstable; urgency=medium
 
