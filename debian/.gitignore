@@ -1,7 +1,8 @@
-debian/files
+debhelper-build-stamp
+files
 *.debhelper.log
 *.substvars
 *.debhelper
-debian/python-subvertpy-dbg/
-debian/python-subvertpy/
-debian/tmp/
+python-subvertpy-dbg/
+python-subvertpy/
+tmp/
