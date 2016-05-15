@@ -1,6 +1,5 @@
-subvertpy (0.9.3-4) UNRELEASED; urgency=medium
+subvertpy (0.9.3-4) unstable; urgency=low
 
-  [ Jelmer Vernooĳ ]
   * Use https in watch file.
   * Fix branch in Vcs-Git header.
   * Force python hash seed to 0, for reproducible pydoctor output.
