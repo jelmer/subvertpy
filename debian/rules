@@ -24,7 +24,7 @@ export HOME=$(CURDIR)/nonexistent
 
 override_dh_auto_build:
 	dh_auto_build
-	$(MAKE) pydoctor
+	PYTHONHASHSEED=0 $(MAKE) pydoctor
 
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/tmp
