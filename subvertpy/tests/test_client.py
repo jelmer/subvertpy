@@ -94,6 +94,13 @@ class TestClient(SubversionTestCase):
         self.client.export(self.repos_url, "de")
         self.assertEqual(["foo"], os.listdir("de"))
 
+    def test_export_new_option(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.commit(["dc"])
+        self.client.export(self.repos_url, "de", ignore_externals=True, ignore_keywords=True)
+        self.assertEqual(["foo"], os.listdir("de"))
+
     def test_add_recursive(self):
         self.build_tree({"dc/trunk/foo": 'bla', "dc/trunk": None})
         self.client.add("dc/trunk")

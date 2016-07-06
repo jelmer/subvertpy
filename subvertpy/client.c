@@ -634,16 +634,16 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     ClientObject *client = (ClientObject *)self;
-    char *kwnames[] = { "from", "to", "rev", "peg_rev", "recurse", "ignore_externals", "overwrite", "native_eol", NULL };
+    char *kwnames[] = { "from", "to", "rev", "peg_rev", "recurse", "ignore_externals", "overwrite", "native_eol", "ignore_keywords", NULL };
     svn_revnum_t result_rev;
     svn_opt_revision_t c_peg_rev, c_rev;
     char *from, *to;
     apr_pool_t *temp_pool;
 	char *native_eol = NULL;
     PyObject *peg_rev=Py_None, *rev=Py_None;
-    bool recurse=true, ignore_externals=false, overwrite=false;
+    bool recurse=true, ignore_externals=false, overwrite=false, ignore_keywords=false;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObbbb", kwnames, &from, &to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObbbbb", kwnames, &from, &to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol, &ignore_keywords))
         return NULL;
 
     if (!to_opt_revision(peg_rev, &c_peg_rev))
@@ -654,7 +654,13 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_SINCE_SVN(1, 7)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_export5(&result_rev, from,
+        svn_path_canonicalize(to, temp_pool),
+        &c_peg_rev, &c_rev, overwrite, ignore_externals, ignore_keywords,
+        recurse?svn_depth_infinity:svn_depth_files,
+        native_eol, client->client, temp_pool));
+#elif ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_export4(&result_rev, from,
         svn_path_canonicalize(to, temp_pool),
         &c_peg_rev, &c_rev, overwrite, ignore_externals,
