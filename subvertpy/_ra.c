@@ -40,11 +40,11 @@
 
 static PyObject *busy_exc;
 
-staticforward PyTypeObject Reporter_Type;
-staticforward PyTypeObject RemoteAccess_Type;
-staticforward PyTypeObject AuthProvider_Type;
-staticforward PyTypeObject CredentialsIter_Type;
-staticforward PyTypeObject Auth_Type;
+static PyTypeObject Reporter_Type;
+static PyTypeObject RemoteAccess_Type;
+static PyTypeObject AuthProvider_Type;
+static PyTypeObject CredentialsIter_Type;
+static PyTypeObject Auth_Type;
 
 static bool ra_check_svn_path(char *path)
 {

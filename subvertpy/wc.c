@@ -39,9 +39,9 @@
 #define REPORTER_T svn_ra_reporter2_t
 #endif
 
-staticforward PyTypeObject Entry_Type;
-staticforward PyTypeObject Status_Type;
-staticforward PyTypeObject Adm_Type;
+static PyTypeObject Entry_Type;
+static PyTypeObject Status_Type;
+static PyTypeObject Adm_Type;
 
 static PyObject *py_entry(const svn_wc_entry_t *entry);
 static PyObject *py_status(const svn_wc_status2_t *status);
