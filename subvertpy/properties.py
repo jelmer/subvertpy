@@ -18,7 +18,11 @@
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 __docformat__ = "restructuredText"
 
-import bisect, calendar, time, urlparse
+import bisect, calendar, time
+try:
+    import urlparse
+except ImportError:
+    import urllib.parse as urlparse
 
 
 class InvalidExternalsDescription(Exception):

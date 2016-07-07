@@ -28,7 +28,10 @@ import tempfile
 import unittest
 import urllib2
 import urllib
-import urlparse
+try:
+    import urlparse
+except ImportError:
+    import urllib.parse as urlparse
 
 from subvertpy import (
     client,
