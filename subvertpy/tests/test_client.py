@@ -20,6 +20,7 @@ import os
 from StringIO import StringIO
 import shutil
 import tempfile
+from unittest import SkipTest
 
 from subvertpy import (
     SubversionException,
@@ -30,7 +31,6 @@ from subvertpy import (
     )
 from subvertpy.tests import (
     SubversionTestCase,
-    SkipTest,
     TestCase,
     )
 

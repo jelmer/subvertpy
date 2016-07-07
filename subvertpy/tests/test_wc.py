@@ -17,6 +17,7 @@
 
 from StringIO import StringIO
 import os
+from unittest import SkipTest
 
 import subvertpy
 from subvertpy import (
@@ -26,7 +27,6 @@ from subvertpy import (
 from subvertpy.tests import (
     SubversionTestCase,
     TestCase,
-    SkipTest,
     )
 
 class VersionTest(TestCase):
