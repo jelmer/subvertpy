@@ -105,7 +105,7 @@ class AdmTests(SubversionTestCase):
 
     def test_get_ancestry(self):
         repos_url = self.make_client("repos", "checkout")
-        self.build_tree({"checkout/bar": "\x00 \x01"})
+        self.build_tree({"checkout/bar": b"\x00 \x01"})
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout")
         path = os.path.join(self.test_dir, "checkout/bar")
@@ -126,7 +126,7 @@ class AdmTests(SubversionTestCase):
 
     def test_mark_missing_deleted(self):
         repos_url = self.make_client("repos", "checkout")
-        self.build_tree({"checkout/bar": "\x00 \x01"})
+        self.build_tree({"checkout/bar": b"\x00 \x01"})
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout", True)
         os.remove("checkout/bar")
@@ -135,7 +135,7 @@ class AdmTests(SubversionTestCase):
 
     def test_remove_from_revision_control(self):
         repos_url = self.make_client("repos", "checkout")
-        self.build_tree({"checkout/bar": "\x00 \x01"})
+        self.build_tree({"checkout/bar": b"\x00 \x01"})
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout", True)
         adm.remove_from_revision_control("bar")
@@ -204,7 +204,7 @@ class AdmTests(SubversionTestCase):
 
     def test_entry(self):
         repos_url = self.make_client("repos", "checkout")
-        self.build_tree({"checkout/bar": "\x00 \x01"})
+        self.build_tree({"checkout/bar": b"\x00 \x01"})
         self.client_add('checkout/bar')
         adm = wc.WorkingCopy(None, "checkout")
         entry = adm.entry("checkout/bar")
