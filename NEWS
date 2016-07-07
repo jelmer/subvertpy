@@ -6,6 +6,11 @@
      a crash in newer versions of libsvn_repos.
      (Jelmer Vernooij)
 
+  CHANGES
+
+   * Drop support for Python versions before 2.7, in preparation of Python3 support.
+     (Jelmer Vernooij)
+
 0.9.2	2015-04-25
 
   BUG FIXES
