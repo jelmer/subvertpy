@@ -103,7 +103,7 @@ def export_revision(rev, fs):
     marks = {}
     file_changes = []
 
-    for path, (node_id, change_type, text_changed, prop_changed) in changes.iteritems():
+    for path, (node_id, change_type, text_changed, prop_changed) in changes.items():
         if root.is_dir(path):
             continue
         if not MATCHER.matches(path):
@@ -177,7 +177,7 @@ def crawl_revisions(repos_path, first_rev=None, final_rev=None):
         first_rev = 1
     if final_rev is None:
         final_rev = fs_obj.youngest_revision()
-    for rev in xrange(first_rev, final_rev + 1):
+    for rev in range(first_rev, final_rev + 1):
         export_revision(rev, fs_obj)
 
 

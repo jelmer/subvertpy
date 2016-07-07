@@ -17,7 +17,7 @@
 
 from datetime import datetime, timedelta
 import os
-from StringIO import StringIO
+from io import BytesIO
 import shutil
 import tempfile
 from unittest import SkipTest
@@ -137,12 +137,12 @@ class TestClient(SubversionTestCase):
                 auth=ra.Auth([ra.get_username_provider()]))
         dc = self.get_commit_editor(self.repos_url) 
         f = dc.add_file("foo")
-        f.modify("foo1")
+        f.modify(b"foo1")
         dc.close()
 
         dc = self.get_commit_editor(self.repos_url) 
         f = dc.open_file("foo")
-        f.modify("foo2")
+        f.modify(b"foo2")
         dc.close()
 
         if client.api_version() < (1, 5):
@@ -166,7 +166,7 @@ class TestClient(SubversionTestCase):
         self.assertEqual(b"", errf.read())
 
     def assertCatEquals(self, value, revision=None):
-        io = StringIO()
+        io = BytesIO()
         self.client.cat("dc/foo", io, revision)
         self.assertEqual(value, io.getvalue())
 
@@ -250,10 +250,10 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         info = self.client.info("dc/foo")
-        self.assertEqual(["foo"], info.keys())
+        self.assertEqual(["foo"], list(info.keys()))
         self.assertEqual(1, info["foo"].revision)
         self.assertEqual(3, info["foo"].size)
-        self.build_tree({"dc/bar": "blablabla"})
+        self.build_tree({"dc/bar": b"blablabla"})
         self.client.add(os.path.abspath("dc/bar"))
 
     def test_info_nonexistant(self):

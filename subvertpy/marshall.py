@@ -102,7 +102,7 @@ def unmarshall(x):
         if len(x) <= 1:
             raise NeedMoreData("Missing whitespace")
 
-        if not x[1:2] in whitespace:
+        if not x[1] in whitespace:
             raise MarshallError("Expected space, got '%c'" % x[1])
 
         return (x[2:], ret)
@@ -110,16 +110,18 @@ def unmarshall(x):
         num = bytearray()
         # Check if this is a string or a number
         while x[:1].isdigit():
-            num.append(x[0:1])
+            num.append(x[0])
             x = x[1:]
         num = int(num)
 
-        if x[0:1] in whitespace:
+        if x[0] in whitespace:
             return (x[1:], num)
         elif x[0:1] == b":":
             if len(x) < num:
                 raise NeedMoreData("Expected string of length %r" % num)
             return (x[num+2:], x[1:num+1])
+        elif not x:
+            raise MarshallError("Expected whitespace, got end of string.")
         else:
             raise MarshallError("Expected whitespace or ':', got '%c'" % x[0])
     elif x[:1].isalpha():
@@ -135,7 +137,7 @@ def unmarshall(x):
         if not x:
             raise MarshallError("Expected whitespace, got end of string.")
 
-        if not x[0:1] in whitespace:
+        if not x[0] in whitespace:
             raise MarshallError("Expected whitespace, got '%c'" % x[0])
 
         return (x[1:], ret.decode("ascii"))

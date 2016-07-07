@@ -15,7 +15,7 @@
 
 """Subversion ra library tests."""
 
-from cStringIO import StringIO
+from io import BytesIO
 
 from subvertpy import (
     NODE_DIR, NODE_NONE, NODE_UNKNOWN,
@@ -159,7 +159,7 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props, has_children) = returned[0]
             self.assertEqual(None, paths)
             self.assertEqual(revnum, 0)
-            self.assertEqual(["svn:date"], props.keys())
+            self.assertEqual(["svn:date"], list(props.keys()))
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
@@ -192,7 +192,7 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props, has_children) = returned[0]
             self.assertEqual(None, paths)
             self.assertEqual(revnum, 0)
-            self.assertEqual(["svn:date"], props.keys())
+            self.assertEqual(["svn:date"], list(props.keys()))
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
@@ -290,10 +290,10 @@ class TestRemoteAccess(SubversionTestCase):
         f.change_prop("bla:bar", None)
         cb.close()
 
-        stream = StringIO()
+        stream = BytesIO()
         props = self.ra.get_file("bar", stream, 1)[1]
         self.assertEqual("blie", props.get("bla:bar"))
-        stream = StringIO()
+        stream = BytesIO()
         props = self.ra.get_file("bar", stream, 2)[1]
         self.assertIs(None, props.get("bla:bar"))
 
@@ -326,12 +326,12 @@ class TestRemoteAccess(SubversionTestCase):
         cb.add_file("bar").modify(b"a")
         cb.close()
 
-        stream = StringIO()
+        stream = BytesIO()
         self.ra.get_file("bar", stream, 1)
         stream.seek(0)
         self.assertEqual(b"a", stream.read())
 
-        stream = StringIO()
+        stream = BytesIO()
         self.ra.get_file("/bar", stream, 1)
         stream.seek(0)
         self.assertEqual(b"a", stream.read())

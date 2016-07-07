@@ -70,7 +70,7 @@ class TestMarshalling(TestCase):
         self.assertEqual((b'', b"bla l"), unmarshall(b"5:bla l"))
 
     def test_unmarshall_list(self):
-        self.assertEqual((b'', [4,5]), unmarshall(b"( 4 5 ) "))
+        self.assertEqual((b'', [4, 5]), unmarshall(b"( 4 5 ) "))
 
     def test_unmarshall_int(self):
         self.assertEqual((b'', 2), unmarshall(b"2 "))
