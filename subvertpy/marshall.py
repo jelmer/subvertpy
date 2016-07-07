@@ -85,15 +85,15 @@ def unmarshall(x):
     whitespace = frozenset(b'\n ')
     if len(x) == 0:
         raise NeedMoreData("Not enough data")
-    if x[0] == ord(b"("): # list follows
+    if x[0:1] == b"(": # list follows
         if len(x) <= 1:
             raise NeedMoreData("Missing whitespace")
-        if x[1] != ord(b" "):
+        if x[1:2] != b" ":
             raise MarshallError("missing whitespace after list start")
         x = x[2:]
         ret = []
         try:
-            while x[0] != ord(b")"):
+            while x[0:1] != b")":
                 (x, n) = unmarshall(x)
                 ret.append(n)
         except IndexError:
@@ -101,22 +101,22 @@ def unmarshall(x):
 
         if len(x) <= 1:
             raise NeedMoreData("Missing whitespace")
-        
-        if not x[1] in whitespace:
+
+        if not x[1:2] in whitespace:
             raise MarshallError("Expected space, got '%c'" % x[1])
 
         return (x[2:], ret)
-    elif x[:1].isdigit():
+    elif x[0:1].isdigit():
         num = bytearray()
         # Check if this is a string or a number
         while x[:1].isdigit():
-            num.append(x[0])
+            num.append(x[0:1])
             x = x[1:]
         num = int(num)
 
-        if x[0] in whitespace:
+        if x[0:1] in whitespace:
             return (x[1:], num)
-        elif x[0] == ord(b":"):
+        elif x[0:1] == b":":
             if len(x) < num:
                 raise NeedMoreData("Expected string of length %r" % num)
             return (x[num+2:], x[1:num+1])
@@ -126,13 +126,16 @@ def unmarshall(x):
         ret = bytearray()
         # Parse literal
         try:
-            while x[:1].isalpha() or x[:1].isdigit() or x[0] == ord(b'-'):
+            while x[:1].isalpha() or x[:1].isdigit() or x[0:1] == b'-':
                 ret.append(x[0])
                 x = x[1:]
         except IndexError:
             raise NeedMoreData("Expected literal")
 
-        if not x[0] in whitespace:
+        if not x:
+            raise MarshallError("Expected whitespace, got end of string.")
+
+        if not x[0:1] in whitespace:
             raise MarshallError("Expected whitespace, got '%c'" % x[0])
 
         return (x[1:], ret.decode("ascii"))
