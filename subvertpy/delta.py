@@ -93,12 +93,12 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
     for (action, offset, length) in ops:
         if action == TXDELTA_SOURCE:
             # Copy from source area.
-            tview += sview[offset:offset+length]
+            tview.extend(sview[offset:offset+length])
         elif action == TXDELTA_TARGET:
-            for i in xrange(length):
-                tview += tview[offset+i:offset+i+1]
+            for i in range(length):
+                tview.append(tview[offset+i])
         elif action == TXDELTA_NEW:
-            tview += new_data[offset:offset+length]
+            tview.extend(new_data[offset:offset+length])
         else:
             raise Exception("Invalid delta instruction code")
     return tview
