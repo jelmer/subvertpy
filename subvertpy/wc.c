@@ -125,7 +125,7 @@ typedef struct {
 	apr_pool_t *pool;
 	svn_wc_committed_queue_t *queue;
 } CommittedQueueObject;
-staticforward PyTypeObject CommittedQueue_Type;
+static PyTypeObject CommittedQueue_Type;
 
 #if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_revnum_t revision, svn_depth_t depth, int start_empty, const char *lock_token, apr_pool_t *pool)
