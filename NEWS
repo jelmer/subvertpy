@@ -5,6 +5,12 @@
    * Drop support for Python versions before 2.7, in preparation of Python3 support.
      (Jelmer Vernooij)
 
+  IMPROVEMENTS
+
+   * Add Python3 support (Martin Panter, Yonggang Luo).
+
+   * Add constant ERR_RA_CANNOT_CREATE_SESSION. (Jelmer Vernooij)
+
 0.9.3	2015-08-23
 
   BUG FIXES
