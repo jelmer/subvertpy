@@ -3269,51 +3269,68 @@ static PyMethodDef ra_module_methods[] = {
 	{ NULL, }
 };
 
-void init_ra(void)
+static PyObject *
+moduleinit(void)
 {
 	static apr_pool_t *pool;
 	PyObject *mod;
 
 	if (PyType_Ready(&RemoteAccess_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&Editor_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&FileEditor_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&DirectoryEditor_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&Reporter_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&TxDeltaWindowHandler_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&Auth_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&CredentialsIter_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&AuthProvider_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&LogIterator_Type) < 0)
-		return;
+		return NULL;
 
 	apr_initialize();
 	pool = Pool(NULL);
 	if (pool == NULL)
-		return;
+		return NULL;
 	svn_ra_initialize(pool);
 	PyEval_InitThreads();
 
+
+#if PY_MAJOR_VERSION >= 3
+	static struct PyModuleDef moduledef = {
+	  PyModuleDef_HEAD_INIT,
+	  "_ra",         /* m_name */
+	  "Remote Access",            /* m_doc */
+	  -1,              /* m_size */
+	  ra_module_methods, /* m_methods */
+	  NULL,            /* m_reload */
+	  NULL,            /* m_traverse */
+	  NULL,            /* m_clear*/
+	  NULL,            /* m_free */
+	};
+	mod = PyModule_Create(&moduledef);
+#else
 	mod = Py_InitModule3("_ra", ra_module_methods, "Remote Access");
+#endif
 	if (mod == NULL)
-		return;
+		return NULL;
 
 	PyModule_AddObject(mod, "RemoteAccess", (PyObject *)&RemoteAccess_Type);
 	Py_INCREF(&RemoteAccess_Type);
@@ -3328,12 +3345,12 @@ void init_ra(void)
 	PyModule_AddObject(mod, "BusyException", busy_exc);
 
 #if ONLY_SINCE_SVN(1, 5)
-    PyModule_AddIntConstant(mod, "DEPTH_UNKNOWN", svn_depth_unknown);
-    PyModule_AddIntConstant(mod, "DEPTH_EXCLUDE", svn_depth_exclude);
-    PyModule_AddIntConstant(mod, "DEPTH_EMPTY", svn_depth_empty);
-    PyModule_AddIntConstant(mod, "DEPTH_FILES", svn_depth_files);
-    PyModule_AddIntConstant(mod, "DEPTH_IMMEDIATES", svn_depth_immediates);
-    PyModule_AddIntConstant(mod, "DEPTH_INFINITY", svn_depth_infinity);
+	PyModule_AddIntConstant(mod, "DEPTH_UNKNOWN", svn_depth_unknown);
+	PyModule_AddIntConstant(mod, "DEPTH_EXCLUDE", svn_depth_exclude);
+	PyModule_AddIntConstant(mod, "DEPTH_EMPTY", svn_depth_empty);
+	PyModule_AddIntConstant(mod, "DEPTH_FILES", svn_depth_files);
+	PyModule_AddIntConstant(mod, "DEPTH_IMMEDIATES", svn_depth_immediates);
+	PyModule_AddIntConstant(mod, "DEPTH_INFINITY", svn_depth_infinity);
 #endif
 
 	PyModule_AddIntConstant(mod, "DIRENT_KIND", SVN_DIRENT_KIND);
@@ -3353,4 +3370,20 @@ void init_ra(void)
 #ifdef SVN_VER_REVISION
 	PyModule_AddIntConstant(mod, "SVN_REVISION", SVN_VER_REVISION);
 #endif
+
+	return mod;
 }
+
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC
+PyInit__ra(void)
+{
+	return moduleinit();
+}
+#else
+PyMODINIT_FUNC
+init_ra(void)
+{
+	moduleinit();
+}
+#endif

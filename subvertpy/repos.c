@@ -928,33 +928,48 @@ PyTypeObject FileSystemRoot_Type = {
 };
 
 
-void initrepos(void)
+static PyObject *moduleinit(void)
 {
 	static apr_pool_t *pool;
 	PyObject *mod;
 
 	if (PyType_Ready(&Repository_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&FileSystem_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&FileSystemRoot_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&Stream_Type) < 0)
-		return;
+		return NULL;
 
 	apr_initialize();
 	pool = Pool(NULL);
 	if (pool == NULL)
-		return;
+		return NULL;
 
 	svn_fs_initialize(pool);
 
+#if PY_MAJOR_VERSION >= 3
+	static struct PyModuleDef moduledef = {
+	  PyModuleDef_HEAD_INIT,
+	  "repos",         /* m_name */
+	  "Local repository management.", /* m_doc */
+	  -1,              /* m_size */
+	  repos_module_methods, /* m_methods */
+	  NULL,            /* m_reload */
+	  NULL,            /* m_traverse */
+	  NULL,            /* m_clear*/
+	  NULL,            /* m_free */
+	};
+	mod = PyModule_Create(&moduledef);
+#else
 	mod = Py_InitModule3("repos", repos_module_methods, "Local repository management");
+#endif
 	if (mod == NULL)
-		return;
+		return NULL;
 
 	PyModule_AddObject(mod, "LOAD_UUID_DEFAULT", PyLong_FromLong(svn_repos_load_uuid_default));
 	PyModule_AddObject(mod, "LOAD_UUID_IGNORE", PyLong_FromLong(svn_repos_load_uuid_ignore));
@@ -977,4 +992,20 @@ void initrepos(void)
 
 	PyModule_AddObject(mod, "Stream", (PyObject *)&Stream_Type);
 	Py_INCREF(&Stream_Type);
+
+	return mod;
 }
+
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC
+PyInit_repos(void)
+{
+	return moduleinit();
+}
+#else
+PyMODINIT_FUNC
+initrepos(void)
+{
+	moduleinit();
+}
+#endif

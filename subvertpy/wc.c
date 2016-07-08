@@ -2669,42 +2669,58 @@ static PyMethodDef wc_methods[] = {
 	{ NULL, }
 };
 
-void initwc(void)
+static PyObject *
+moduleinit(void)
 {
 	PyObject *mod;
 
 	if (PyType_Ready(&Entry_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&Status_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&Adm_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&Editor_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&FileEditor_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&DirectoryEditor_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&TxDeltaWindowHandler_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&Stream_Type) < 0)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&CommittedQueue_Type) < 0)
-		return;
+		return NULL;
 
 	apr_initialize();
 
+#if PY_MAJOR_VERSION >= 3
+	static struct PyModuleDef moduledef = {
+	  PyModuleDef_HEAD_INIT,
+	  "wc",         /* m_name */
+	  "Working Copies", /* m_doc */
+	  -1,              /* m_size */
+	  wc_methods, /* m_methods */
+	  NULL,            /* m_reload */
+	  NULL,            /* m_traverse */
+	  NULL,            /* m_clear*/
+	  NULL,            /* m_free */
+	};
+	mod = PyModule_Create(&moduledef);
+#else
 	mod = Py_InitModule3("wc", wc_methods, "Working Copies");
+#endif
 	if (mod == NULL)
-		return;
+		return NULL;
 
 	PyModule_AddIntConstant(mod, "SCHEDULE_NORMAL", 0);
 	PyModule_AddIntConstant(mod, "SCHEDULE_ADD", 1);
@@ -2770,5 +2786,20 @@ void initwc(void)
 	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
 	Py_INCREF(&CommittedQueue_Type);
 #endif
+
+	return mod;
 }
 
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC
+PyInit_wc(void)
+{
+	return moduleinit();
+}
+#else
+PyMODINIT_FUNC
+initwc(void)
+{
+	moduleinit();
+}
+#endif

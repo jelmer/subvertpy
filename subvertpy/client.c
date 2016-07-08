@@ -2064,44 +2064,76 @@ static PyMethodDef client_mod_methods[] = {
 	{ NULL }
 };
 
-void initclient(void)
+static PyObject *
+moduleinit(void)
 {
-    PyObject *mod;
+	PyObject *mod;
 
-    if (PyType_Ready(&Client_Type) < 0)
-        return;
+	if (PyType_Ready(&Client_Type) < 0)
+		return NULL;
 
-    if (PyType_Ready(&Config_Type) < 0)
-        return;
+	if (PyType_Ready(&Config_Type) < 0)
+		return NULL;
 
-    if (PyType_Ready(&ConfigItem_Type) < 0)
-        return;
+	if (PyType_Ready(&ConfigItem_Type) < 0)
+		return NULL;
 
-    if (PyType_Ready(&Info_Type) < 0)
-        return;
+	if (PyType_Ready(&Info_Type) < 0)
+		return NULL;
 
-    if (PyType_Ready(&WCInfo_Type) < 0)
-        return;
+	if (PyType_Ready(&WCInfo_Type) < 0)
+		return NULL;
 
-    /* Make sure APR is initialized */
-    apr_initialize();
+	/* Make sure APR is initialized */
+	apr_initialize();
 
-    mod = Py_InitModule3("client", client_mod_methods, "Client methods");
-    if (mod == NULL)
-        return;
+#if PY_MAJOR_VERSION >= 3
+	static struct PyModuleDef moduledef = {
+	  PyModuleDef_HEAD_INIT,
+	  "client",         /* m_name */
+	  "Client methods",            /* m_doc */
+	  -1,              /* m_size */
+	  client_mod_methods, /* m_methods */
+	  NULL,            /* m_reload */
+	  NULL,            /* m_traverse */
+	  NULL,            /* m_clear*/
+	  NULL,            /* m_free */
+	};
+	mod = PyModule_Create(&moduledef);
+#else
+	mod = Py_InitModule3("client", client_mod_methods, "Client methods");
+#endif
+	if (mod == NULL)
+		return NULL;
 
-    Py_INCREF(&Client_Type);
-    PyModule_AddObject(mod, "Client", (PyObject *)&Client_Type);
+	Py_INCREF(&Client_Type);
+	PyModule_AddObject(mod, "Client", (PyObject *)&Client_Type);
 
-    PyModule_AddObject(mod, "depth_empty",
-                       (PyObject *)PyLong_FromLong(svn_depth_empty));
-    PyModule_AddObject(mod, "depth_files",
-                       (PyObject *)PyLong_FromLong(svn_depth_files));
-    PyModule_AddObject(mod, "depth_immediates",
-                       (PyObject *)PyLong_FromLong(svn_depth_immediates));
-    PyModule_AddObject(mod, "depth_infinity",
-                       (PyObject *)PyLong_FromLong(svn_depth_infinity));
+	PyModule_AddObject(mod, "depth_empty",
+					   (PyObject *)PyLong_FromLong(svn_depth_empty));
+	PyModule_AddObject(mod, "depth_files",
+					   (PyObject *)PyLong_FromLong(svn_depth_files));
+	PyModule_AddObject(mod, "depth_immediates",
+					   (PyObject *)PyLong_FromLong(svn_depth_immediates));
+	PyModule_AddObject(mod, "depth_infinity",
+					   (PyObject *)PyLong_FromLong(svn_depth_infinity));
 
 	Py_INCREF(&Config_Type);
 	PyModule_AddObject(mod, "Config", (PyObject *)&Config_Type);
+
+	return mod;
 }
+
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC
+PyInit_client(void)
+{
+	return moduleinit();
+}
+#else
+PyMODINIT_FUNC
+initclient(void)
+{
+	moduleinit();
+}
+#endif
