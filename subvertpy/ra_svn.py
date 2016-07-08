@@ -17,7 +17,10 @@
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 
-import SocketServer
+try:
+    from SocketServer import StreamRequestHandler, TCPServer
+except ImportError:
+    from socketserver import StreamRequestHandler, TCPServer
 import base64
 import os
 import socket
@@ -1066,15 +1069,15 @@ class SVNServer(SVNConnection):
             self._logf.write("%s\n" % text)
 
 
-class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
+class TCPSVNRequestHandler(StreamRequestHandler):
 
     def __init__(self, request, client_address, server):
         self._server = server
-        SocketServer.StreamRequestHandler.__init__(self, request, 
+        StreamRequestHandler.__init__(self, request,
             client_address, server)
 
     def handle(self):
-        server = SVNServer(self._server._backend, self.rfile.read, 
+        server = SVNServer(self._server._backend, self.rfile.read,
             self.wfile.write, self._server._logf)
         try:
             server.serve()
@@ -1084,13 +1087,13 @@ class TCPSVNRequestHandler(SocketServer.StreamRequestHandler):
             raise
 
 
-class TCPSVNServer(SocketServer.TCPServer):
+class TCPSVNServer(TCPServer):
 
     allow_reuse_address = True
-    serve = SocketServer.TCPServer.serve_forever
+    serve = TCPServer.serve_forever
 
     def __init__(self, backend, addr, logf=None):
         self._logf = logf
         self._backend = backend
-        SocketServer.TCPServer.__init__(self, addr, TCPSVNRequestHandler)
+        TCPServer.__init__(self, addr, TCPSVNRequestHandler)
 
