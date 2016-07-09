@@ -42,6 +42,15 @@ void PyErr_SetAprStatus(apr_status_t status)
 		apr_strerror(status, errmsg, sizeof(errmsg)));
 }
 
+#if ONLY_BEFORE_SVN(1, 7)
+const char *
+svn_uri_canonicalize(const char *uri,
+                     apr_pool_t *result_pool)
+{
+	return svn_path_canonicalize(uri, result_pool);
+}
+#endif
+
 apr_pool_t *Pool(apr_pool_t *parent)
 {
 	apr_status_t status;

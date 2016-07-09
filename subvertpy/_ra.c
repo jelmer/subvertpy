@@ -595,7 +595,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	ret->url = svn_path_canonicalize(url, ret->pool);
+	ret->url = svn_uri_canonicalize(url, ret->pool);
 	if (ret->url == NULL) {
 		Py_DECREF(ret);
 		return NULL;
@@ -707,7 +707,7 @@ static PyObject *ra_reparent(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	ra->url = svn_path_canonicalize(url, ra->pool);
+	ra->url = svn_uri_canonicalize(url, ra->pool);
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_reparent(ra->ra, ra->url, temp_pool));
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;

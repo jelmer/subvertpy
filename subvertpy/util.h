@@ -137,4 +137,10 @@ typedef struct {
 
 extern PyTypeObject Stream_Type;
 
+#if ONLY_BEFORE_SVN(1, 7)
+const char *
+svn_uri_canonicalize(const char *uri,
+                     apr_pool_t *result_pool);
+#endif
+
 #endif /* _SUBVERTPY_UTIL_H_ */
