@@ -121,7 +121,7 @@ svn_error_t *svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
 #endif
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	apr_pool_t *pool;
 	svn_wc_committed_queue_t *queue;
 } CommittedQueueObject;
@@ -340,7 +340,7 @@ void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_pool_t *p
 }
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	apr_pool_t *pool;
 	svn_wc_entry_t entry;
 } EntryObject;
@@ -382,7 +382,7 @@ static PyMemberDef entry_members[] = {
 };
 
 static PyTypeObject Entry_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.Entry", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EntryObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -459,7 +459,7 @@ static PyObject *py_entry(const svn_wc_entry_t *entry)
 }
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	apr_pool_t *pool;
 	svn_wc_status2_t status;
 	PyObject *entry;
@@ -493,7 +493,7 @@ static PyMemberDef status_members[] = {
 };
 
 static PyTypeObject Status_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.Status", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(StatusObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -582,7 +582,7 @@ static PyObject *py_status(const svn_wc_status2_t *status)
 }
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	svn_wc_adm_access_t *adm;
 	apr_pool_t *pool;
 } AdmObject;
@@ -2105,7 +2105,7 @@ static PyMethodDef adm_methods[] = {
 };
 
 static PyTypeObject Adm_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.WorkingCopy", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AdmObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2274,7 +2274,7 @@ static PyMethodDef committed_queue_methods[] = {
 };
 
 static PyTypeObject CommittedQueue_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.CommittedQueue", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(CommittedQueueObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */

@@ -44,13 +44,13 @@ extern PyTypeObject Info_Type;
 extern PyTypeObject WCInfo_Type;
 
 typedef struct {
-    PyObject_HEAD
+    PyObject_VAR_HEAD
     svn_config_t *item;
     PyObject *parent;
 } ConfigItemObject;
 
 typedef struct {
-    PyObject_HEAD
+    PyObject_VAR_HEAD
 #if ONLY_SINCE_SVN(1, 7)
     svn_wc_info_t info;
 #else
@@ -60,7 +60,7 @@ typedef struct {
 } WCInfoObject;
 
 typedef struct {
-    PyObject_HEAD
+    PyObject_VAR_HEAD
 #if ONLY_SINCE_SVN(1, 7)
     svn_client_info2_t info;
 #else
@@ -314,12 +314,12 @@ static PyObject *py_commit_info_tuple(svn_commit_info_t *ci)
 }
 
 typedef struct {
-    PyObject_HEAD
-    svn_client_ctx_t *client;
-    apr_pool_t *pool;
-    PyObject *callbacks;
-    PyObject *py_auth;
-    PyObject *py_config;
+	PyObject_VAR_HEAD
+	svn_client_ctx_t *client;
+	apr_pool_t *pool;
+	PyObject *callbacks;
+	PyObject *py_auth;
+	PyObject *py_config;
 } ClientObject;
 
 static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -1650,7 +1650,7 @@ static void config_dealloc(PyObject *obj)
 }
 
 PyTypeObject Config_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.Config", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ConfigObject),  /*  tp_basicsize    */
     0,  /*    tp_itemsize;  For allocation */
@@ -1718,7 +1718,7 @@ static void configitem_dealloc(PyObject *self)
 }
 
 PyTypeObject ConfigItem_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.ConfigItem", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ConfigItemObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1772,7 +1772,7 @@ static PyGetSetDef info_getsetters[] = {
 };
 
 PyTypeObject Info_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(InfoObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1872,7 +1872,7 @@ static void wcinfo_dealloc(PyObject *self)
 }
 
 PyTypeObject WCInfo_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     "client.Info", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(WCInfoObject),
     0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -1934,7 +1934,7 @@ PyTypeObject WCInfo_Type = {
 };
 
 PyTypeObject Client_Type = {
-    PyObject_HEAD_INIT(NULL) 0,
+    PyVarObject_HEAD_INIT(NULL, 0)
     /*    PyObject_VAR_HEAD    */
     "client.Client", /*    const char *tp_name;  For printing, in format "<module>.<name>" */
     sizeof(ClientObject),

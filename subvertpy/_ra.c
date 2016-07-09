@@ -112,7 +112,7 @@ static svn_error_t *py_lock_func (void *baton, const char *path, int do_lock,
 
 /** Connection to a remote Subversion repository. */
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	svn_ra_session_t *ra;
 	apr_pool_t *pool;
 	const char *url;
@@ -126,7 +126,7 @@ typedef struct {
 } RemoteAccessObject;
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	const REPORTER_T *reporter;
 	void *report_baton;
 	apr_pool_t *pool;
@@ -295,9 +295,9 @@ static void reporter_dealloc(PyObject *self)
 }
 
 static PyTypeObject Reporter_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.Reporter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(ReporterObject), 
+	sizeof(ReporterObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 
 	/* Methods to implement standard operations */
@@ -775,10 +775,17 @@ apr_array_header_t **apr_paths, apr_array_header_t **apr_revprops)
 	} else {
 		int i;
 		for (i = 0; i < PySequence_Size(revprops); i++) {
-			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
-			if (strcmp(SVN_PROP_REVISION_LOG, n) && 
-				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
-				strcmp(SVN_PROP_REVISION_DATE, n)) {
+			PyObject *n = PySequence_GetItem(revprops, i);
+			char *ns;
+
+			ns = py_object_to_svn_string(n, *pool);
+			if (ns == NULL) {
+				goto fail_prep;
+			}
+
+			if (strcmp(SVN_PROP_REVISION_LOG, ns) && 
+				strcmp(SVN_PROP_REVISION_AUTHOR, ns) &&
+				strcmp(SVN_PROP_REVISION_DATE, ns)) {
 				PyErr_SetString(PyExc_NotImplementedError, 
 								"fetching custom revision properties not supported");
 				goto fail_prep;
@@ -2209,7 +2216,7 @@ static PyMemberDef ra_members[] = {
 };
 
 static PyTypeObject RemoteAccess_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.RemoteAccess", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(RemoteAccessObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2280,7 +2287,7 @@ static PyTypeObject RemoteAccess_Type = {
 };
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	apr_pool_t *pool;
 	svn_auth_provider_object_t *provider;
 	PyObject *callback;
@@ -2296,7 +2303,7 @@ static void auth_provider_dealloc(PyObject *self)
 }
 
 static PyTypeObject AuthProvider_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.AuthProvider", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthProviderObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2417,7 +2424,7 @@ static PyObject *auth_get_parameter(PyObject *self, PyObject *args)
 }
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	apr_pool_t *pool;
 	char *cred_kind;
 	svn_auth_iterstate_t *state;
@@ -2499,7 +2506,7 @@ static PyObject *credentials_iter_next(CredentialsIterObject *iterator)
 }
 
 static PyTypeObject CredentialsIter_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.CredentialsIter", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(CredentialsIterObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -2577,7 +2584,7 @@ static void auth_dealloc(PyObject *self)
 }
 
 static PyTypeObject Auth_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.Auth", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(AuthObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */

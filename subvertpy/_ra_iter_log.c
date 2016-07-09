@@ -24,7 +24,7 @@ struct log_entry {
 };
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	svn_revnum_t start, end;
 	svn_boolean_t discover_changed_paths;
 	svn_boolean_t strict_node_history;
@@ -114,7 +114,7 @@ static PyObject *py_iter_append(LogIteratorObject *iter, PyObject *tuple)
 }
 
 PyTypeObject LogIterator_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.LogIterator", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(LogIteratorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */

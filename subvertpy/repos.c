@@ -32,9 +32,9 @@ extern PyTypeObject FileSystem_Type;
 extern PyTypeObject Stream_Type;
 
 typedef struct { 
-	PyObject_HEAD
-    apr_pool_t *pool;
-    svn_repos_t *repos;
+	PyObject_VAR_HEAD
+	apr_pool_t *pool;
+	svn_repos_t *repos;
 } RepositoryObject;
 
 static PyObject *repos_create(PyObject *self, PyObject *args)
@@ -119,13 +119,13 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 }
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	apr_pool_t *pool;
 	svn_fs_root_t *root;
 } FileSystemRootObject;
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	RepositoryObject *repos;
 	svn_fs_t *fs;
 } FileSystemObject;
@@ -252,7 +252,7 @@ static void fs_dealloc(PyObject *self)
 }
 
 PyTypeObject FileSystem_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.FileSystem", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(FileSystemObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -517,7 +517,7 @@ static PyMethodDef repos_methods[] = {
 };
 
 PyTypeObject Repository_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.Repository", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(RepositoryObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
@@ -868,7 +868,7 @@ static PyMethodDef fs_root_methods[] = {
 };
 
 PyTypeObject FileSystemRoot_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.FileSystemRoot", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(FileSystemRootObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */

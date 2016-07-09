@@ -94,7 +94,7 @@ char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool)
 
 char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
 {
-	char *ret;
+	const char *ret;
 	PyObject *bytes_obj = NULL;
 
 	if (PyUnicode_Check(obj)) {
@@ -993,7 +993,7 @@ static PyMethodDef stream_methods[] = {
 };
 
 PyTypeObject Stream_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.Stream", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(StreamObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
