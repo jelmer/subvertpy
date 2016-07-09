@@ -364,10 +364,11 @@ PyTypeObject FileEditor_Type = {
 static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
-	char *path; 
+	char *path;
+	PyObject *py_path;
 	svn_revnum_t revision = -1;
 
-	if (!PyArg_ParseTuple(args, "s|l", &path, &revision))
+	if (!PyArg_ParseTuple(args, "O|l", &py_path, &revision))
 		return NULL;
 
 	if (editor->done) {
@@ -380,22 +381,27 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	RUN_SVN(editor->editor->delete_entry(svn_relpath_canonicalize(path, editor->pool),
-										 revision, editor->baton, editor->pool));
+	path = py_object_to_svn_relpath(py_path, editor->pool);
+	if (path == NULL) {
+		return NULL;
+	}
+
+	RUN_SVN(editor->editor->delete_entry(path, revision, editor->baton, editor->pool));
 
 	Py_RETURN_NONE;
 }
 
 static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 {
+	PyObject *py_path;
 	char *path;
-	char *copyfrom_path=NULL; 
-	svn_revnum_t copyfrom_rev=-1;
-   	void *child_baton;
+	char *copyfrom_path = NULL;
+	svn_revnum_t copyfrom_rev = -1;
+	void *child_baton;
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!PyArg_ParseTuple(args, "s|zl", &path, &copyfrom_path, &copyfrom_rev))
+	if (!PyArg_ParseTuple(args, "O|zl", &py_path, &copyfrom_path, &copyfrom_rev))
 		return NULL;
 
 	if (editor->done) {
@@ -408,9 +414,14 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	path = py_object_to_svn_relpath(py_path, editor->pool);
+	if (path == NULL) {
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->add_directory(
-		svn_relpath_canonicalize(path, editor->pool), editor->baton,
-		copyfrom_path == NULL?NULL:svn_uri_canonicalize(copyfrom_path, editor->pool), 
+		path, editor->baton,
+		copyfrom_path == NULL?NULL:svn_uri_canonicalize(copyfrom_path, editor->pool),
 		copyfrom_rev, editor->pool, &child_baton));
 
 	subpool = Pool(editor->pool);
@@ -424,12 +435,13 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 {
 	char *path;
+	PyObject *py_path;
 	EditorObject *editor = (EditorObject *)self;
 	svn_revnum_t base_revision=-1;
 	void *child_baton;
 	apr_pool_t *subpool;
 
-	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
+	if (!PyArg_ParseTuple(args, "O|l", &py_path, &base_revision))
 		return NULL;
 
 	if (editor->done) {
@@ -442,15 +454,19 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	path = py_object_to_svn_relpath(py_path, editor->pool);
+	if (path == NULL) {
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->open_directory(
-		svn_relpath_canonicalize(path, editor->pool), editor->baton,
-					base_revision, editor->pool, &child_baton));
+		path, editor->baton, base_revision, editor->pool, &child_baton));
 
 	subpool = Pool(NULL);
 	if (subpool == NULL)
 		return NULL;
 
-	return new_editor_object(editor, editor->editor, child_baton, subpool, 
+	return new_editor_object(editor, editor->editor, child_baton, subpool,
 							 &DirectoryEditor_Type, NULL, NULL, NULL);
 }
 
@@ -476,7 +492,7 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 
 	c_value.len = vallen;
 
-	RUN_SVN(editor->editor->change_dir_prop(editor->baton, name, 
+	RUN_SVN(editor->editor->change_dir_prop(editor->baton, name,
 					(c_value.data == NULL)?NULL:&c_value, editor->pool));
 
 	Py_RETURN_NONE;
@@ -513,9 +529,10 @@ static PyObject *py_dir_editor_close(PyObject *self)
 static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 {
 	char *path;
+	PyObject *py_path;
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!PyArg_ParseTuple(args, "s", &path))
+	if (!PyArg_ParseTuple(args, "O", &py_path))
 		return NULL;
 
 	if (editor->done) {
@@ -528,8 +545,13 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	path = py_object_to_svn_relpath(py_path, editor->pool);
+	if (path == NULL) {
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->absent_directory(
-		svn_relpath_canonicalize(path, editor->pool), editor->baton, editor->pool));
+		path, editor->baton, editor->pool));
 
 	Py_RETURN_NONE;
 }
@@ -537,12 +559,13 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 {
 	char *path, *copy_path=NULL;
+	PyObject *py_path;
 	svn_revnum_t copy_rev=-1;
 	void *file_baton = NULL;
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!PyArg_ParseTuple(args, "s|zl", &path, &copy_path, &copy_rev))
+	if (!PyArg_ParseTuple(args, "O|zl", &py_path, &copy_path, &copy_rev))
 		return NULL;
 
 	if (editor->done) {
@@ -555,8 +578,12 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	RUN_SVN(editor->editor->add_file(svn_relpath_canonicalize(path, editor->pool),
-		editor->baton, 
+	path = py_object_to_svn_relpath(py_path, editor->pool);
+	if (path == NULL) {
+		return NULL;
+	}
+
+	RUN_SVN(editor->editor->add_file(path, editor->baton,
 		copy_path == NULL?NULL:svn_uri_canonicalize(copy_path, editor->pool),
 		copy_rev, editor->pool, &file_baton));
 
@@ -571,12 +598,13 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 {
 	char *path;
+	PyObject *py_path;
 	svn_revnum_t base_revision=-1;
 	void *file_baton;
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!PyArg_ParseTuple(args, "s|l", &path, &base_revision))
+	if (!PyArg_ParseTuple(args, "O|l", &py_path, &base_revision))
 		return NULL;
 
 	if (editor->done) {
@@ -589,8 +617,12 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	RUN_SVN(editor->editor->open_file(svn_relpath_canonicalize(path, editor->pool),
-									  editor->baton, base_revision, 
+	path = py_object_to_svn_relpath(py_path, editor->pool);
+	if (path == NULL) {
+		return NULL;
+	}
+
+	RUN_SVN(editor->editor->open_file(path, editor->baton, base_revision,
 									  editor->pool, &file_baton));
 
 	subpool = Pool(NULL);
@@ -604,9 +636,10 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 {
 	char *path;
+	PyObject *py_path;
 	EditorObject *editor = (EditorObject *)self;
 
-	if (!PyArg_ParseTuple(args, "s", &path))
+	if (!PyArg_ParseTuple(args, "O", &py_path))
 		return NULL;
 
 	if (editor->done) {
@@ -619,8 +652,13 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	path = py_object_to_svn_relpath(py_path, editor->pool);
+	if (path == NULL) {
+		return NULL;
+	}
+
 	RUN_SVN(editor->editor->absent_file(
-		svn_relpath_canonicalize(path, editor->pool), editor->baton, editor->pool));
+		path, editor->baton, editor->pool));
 
 	Py_RETURN_NONE;
 }
@@ -676,65 +714,64 @@ static PyMethodDef py_dir_editor_methods[] = {
 	{ NULL, }
 };
 
-PyTypeObject DirectoryEditor_Type = { 
+PyTypeObject DirectoryEditor_Type = {
 	PyObject_HEAD_INIT(NULL) 0,
 	"_ra.DirEditor", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(EditorObject), 
+	sizeof(EditorObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	py_editor_dealloc, /* destructor tp_dealloc;  */
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	NULL, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	NULL, /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	py_dir_editor_methods, /*	struct PyMethodDef *tp_methods;	*/
-	
 };
 
 static PyObject *py_editor_set_target_revision(PyObject *self, PyObject *args)

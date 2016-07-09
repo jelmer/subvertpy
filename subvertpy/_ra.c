@@ -1380,13 +1380,14 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 	svn_dirent_t *dirent;
 	apr_ssize_t klen;
 	char *path;
+	PyObject *py_path;
 	svn_revnum_t revision = -1;
 	unsigned int dirent_fields = 0;
 	PyObject *py_dirents, *py_props;
     char *kwnames[] = { "path", "revision", "fields", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|lI:get_dir", kwnames,
-                                     &path, &revision, &dirent_fields))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|lI:get_dir", kwnames,
+                                     &py_path, &revision, &dirent_fields))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1399,11 +1400,15 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (revision != SVN_INVALID_REVNUM)
 		fetch_rev = revision;
 
+	path = py_object_to_svn_relpath(py_path, temp_pool);
+	if (path == NULL)
+		return NULL;
+
 	/* Yuck. Subversion doesn't like leading slashes.. */
 	while (*path == '/') path++;
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_dir2(ra->ra, &dirents, &fetch_rev, &props,
-					 svn_relpath_canonicalize(path, temp_pool), revision, dirent_fields, temp_pool));
+					 path, revision, dirent_fields, temp_pool));
 
 	if (dirents == NULL) {
 		py_dirents = Py_None;
@@ -1455,6 +1460,7 @@ fail:
 static PyObject *ra_get_file(PyObject *self, PyObject *args)
 {
 	char *path;
+	PyObject *py_path;
 	svn_revnum_t revision = -1;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_hash_t *props;
@@ -1462,7 +1468,7 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 	PyObject *py_stream, *py_props;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "sO|l:get_file", &path, &py_stream, &revision))
+	if (!PyArg_ParseTuple(args, "OO|l:get_file", &py_path, &py_stream, &revision))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1475,11 +1481,15 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 	if (revision != SVN_INVALID_REVNUM)
 		fetch_rev = revision;
 
+	path = py_object_to_svn_relpath(py_path, temp_pool);
+	if (path == NULL)
+		return NULL;
+
 	/* Yuck. Subversion doesn't like leading slashes.. */
 	while (*path == '/') path++;
 
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file(ra->ra, svn_relpath_canonicalize(path, temp_pool), revision, 
-													new_py_stream(temp_pool, py_stream), 
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file(ra->ra, path, revision,
+													new_py_stream(temp_pool, py_stream),
 													&fetch_rev, &props, temp_pool));
 
 	py_props = prop_hash_to_dict(props);
@@ -1517,15 +1527,14 @@ static PyObject *ra_get_lock(PyObject *self, PyObject *args)
 
 static PyObject *ra_check_path(PyObject *self, PyObject *args)
 {
-	char *path; 
+	char *path;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t revision;
 	svn_node_kind_t kind;
+	PyObject *py_path;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "sl:check_path", &path, &revision))
-		return NULL;
-	if (ra_check_svn_path(path))
+	if (!PyArg_ParseTuple(args, "Ol:check_path", &py_path, &revision))
 		return NULL;
 	if (ra_check_busy(ra))
 		return NULL;
@@ -1534,8 +1543,15 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
+	path = py_object_to_svn_relpath(py_path, temp_pool);
+	if (path == NULL)
+		return NULL;
+
+	if (ra_check_svn_path(path))
+		return NULL;
+
 	RUN_RA_WITH_POOL(temp_pool, ra,
-					  svn_ra_check_path(ra->ra, svn_relpath_canonicalize(path, temp_pool), revision, &kind, 
+					  svn_ra_check_path(ra->ra, path, revision, &kind, 
 					 temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyInt_FromLong(kind);
@@ -1543,16 +1559,15 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 
 static PyObject *ra_stat(PyObject *self, PyObject *args)
 {
-	char *path; 
+	char *path;
+	PyObject *py_path;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	PyObject *ret;
 	svn_revnum_t revision;
 	svn_dirent_t *dirent;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "sl:stat", &path, &revision))
-		return NULL;
-	if (ra_check_svn_path(path))
+	if (!PyArg_ParseTuple(args, "Ol:stat", &py_path, &revision))
 		return NULL;
 	if (ra_check_busy(ra))
 		return NULL;
@@ -1561,8 +1576,15 @@ static PyObject *ra_stat(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
+	path = py_object_to_svn_relpath(py_path, temp_pool);
+	if (path == NULL)
+		return NULL;
+
+	if (ra_check_svn_path(path))
+		return NULL;
+
 	RUN_RA_WITH_POOL(temp_pool, ra,
-					  svn_ra_stat(ra->ra, svn_relpath_canonicalize(path, temp_pool), revision, &dirent,
+					  svn_ra_stat(ra->ra, path, revision, &dirent,
 					 temp_pool));
 	ret = py_dirent(dirent, SVN_DIRENT_ALL);
 	apr_pool_destroy(temp_pool);
@@ -1683,6 +1705,7 @@ fail_busy:
 static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 {
 	char *path;
+	PyObject *py_path;
 	apr_pool_t *temp_pool;
 	apr_hash_t *hash_locks;
 	apr_hash_index_t *idx;
@@ -1692,10 +1715,7 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 	svn_lock_t *lock;
 	PyObject *ret;
 
-	if (!PyArg_ParseTuple(args, "s:get_locks", &path))
-		return NULL;
-
-	if (ra_check_svn_path(path))
+	if (!PyArg_ParseTuple(args, "O:get_locks", &py_path))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1703,6 +1723,13 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
+		return NULL;
+
+	path = py_object_to_svn_relpath(py_path, temp_pool);
+	if (path == NULL)
+		return NULL;
+
+	if (ra_check_svn_path(path))
 		return NULL;
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locks(ra->ra, &hash_locks, path, temp_pool));
@@ -1738,6 +1765,7 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 {
 	char *path;
+	PyObject *py_path;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t peg_revision;
 	PyObject *location_revisions;
@@ -1749,10 +1777,7 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 	apr_ssize_t klen;
 	char *val;
 
-	if (!PyArg_ParseTuple(args, "slO:get_locations", &path, &peg_revision, &location_revisions))
-		goto fail_busy;
-
-	if (ra_check_svn_path(path))
+	if (!PyArg_ParseTuple(args, "OlO:get_locations", &py_path, &peg_revision, &location_revisions))
 		goto fail_busy;
 
 	if (ra_check_busy(ra))
@@ -1762,8 +1787,15 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		goto fail_pool;
 
+	path = py_object_to_svn_relpath(py_path, temp_pool);
+	if (path == NULL)
+		goto fail_dict;
+
+	if (ra_check_svn_path(path))
+		goto fail_dict;
+
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locations(ra->ra, &hash_locations,
-					svn_relpath_canonicalize(path, temp_pool), peg_revision, 
+					path, peg_revision,
 					revnum_list_to_apr_array(temp_pool, location_revisions),
 					temp_pool));
 	ret = PyDict_New();
@@ -1948,18 +1980,23 @@ static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t peg_revision, start_revision, end_revision;
 	char *path;
+	PyObject *py_path;
 	PyObject *py_rcvr;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "slllO:get_location_segments", &path,
+	if (!PyArg_ParseTuple(args, "OlllO:get_location_segments", &py_path,
 			&peg_revision, &start_revision, &end_revision, &py_rcvr))
-		return NULL;
-
-	if (ra_check_svn_path(path))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
+		return NULL;
+
+	path = py_object_to_svn_relpath(py_path, temp_pool);
+	if (path == NULL)
+		return NULL;
+
+	if (ra_check_svn_path(path))
 		return NULL;
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_location_segments(ra->ra, 
