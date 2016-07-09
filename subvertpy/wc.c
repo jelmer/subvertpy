@@ -1750,7 +1750,7 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
 			svn_dirent_canonicalize(path, temp_pool), admobj->adm, fulltext,
 			&py_editor, editor_obj, temp_pool));
 
-	py_digest = PyString_FromStringAndSize((char *)digest, APR_MD5_DIGESTSIZE);
+	py_digest = PyBytes_FromStringAndSize((char *)digest, APR_MD5_DIGESTSIZE);
 	if (py_digest == NULL) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
