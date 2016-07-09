@@ -2910,6 +2910,7 @@ fail:
 
 static svn_error_t *py_ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred, void *baton, const char *realm, svn_boolean_t may_save, apr_pool_t *pool)
 {
+	PyObject *py_cert_bytes = NULL;
 	PyObject *fn = (PyObject *)baton, *ret, *py_may_save, *py_cert_file;
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
@@ -2931,25 +2932,32 @@ static svn_error_t *py_ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **
 	}
 
 	py_cert_file = PyTuple_GetItem(ret, 0);
-	if (!PyString_Check(py_cert_file)) {
+	if (PyUnicode_Check(py_cert_file)) {
+		py_cert_bytes = py_cert_file = PyUnicode_AsUTF8String(py_cert_file);
+		if (py_cert_bytes == NULL) {
+			goto fail;
+		}
+	}
+
+	if (!PyBytes_Check(py_cert_file)) {
 		PyErr_SetString(PyExc_TypeError, "cert_file should be string");
 		goto fail;
 	}
 
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->cert_file = apr_pstrdup(pool, PyString_AsString(py_cert_file));
+	(*cred)->cert_file = apr_pstrdup(pool, PyBytes_AsString(py_cert_file));
 	(*cred)->may_save = (py_may_save == Py_True);
+	Py_XDECREF(py_cert_bytes);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
-	
+
 fail:
+	Py_XDECREF(py_cert_bytes);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return py_svn_error();
 }
-
-
 
 static PyObject *get_ssl_client_cert_pw_prompt_provider(PyObject *self, PyObject *args)
 {
@@ -3136,7 +3144,7 @@ static PyObject *print_modules(PyObject *self)
 		apr_pool_destroy(pool);
 		return NULL;
 	}
-	ret = PyString_FromStringAndSize(string->data, string->len);
+	ret = PyBytes_FromStringAndSize(string->data, string->len);
 	apr_pool_destroy(pool);
 	return ret;
 }

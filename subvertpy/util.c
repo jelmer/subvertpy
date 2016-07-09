@@ -70,28 +70,45 @@ svn_dirent_canonicalize(const char *dirent,
 
 char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
 {
+	char *ret;
+	PyObject *bytes_obj = NULL;
+
 	if (PyUnicode_Check(obj)) {
-		obj = PyUnicode_AsUTF8String(obj);
+		bytes_obj = obj = PyUnicode_AsUTF8String(obj);
+		if (obj == NULL) {
+			return NULL;
+		}
 	}
 
 	if (PyBytes_Check(obj)) {
-		return svn_uri_canonicalize(PyBytes_AsString(obj), pool);
+		ret = svn_uri_canonicalize(PyBytes_AsString(obj), pool);
+		Py_XDECREF(bytes_obj);
+		return ret;
 	} else {
 		PyErr_SetString(PyExc_TypeError,
 						"URIs need to be UTF-8 bytestrings or unicode strings");
+		Py_XDECREF(bytes_obj);
 		return NULL;
 	}
 }
 
 char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool)
 {
+	PyObject *bytes_obj = NULL;
+	char *ret;
+
 	if (PyUnicode_Check(obj)) {
-		obj = PyUnicode_AsUTF8String(obj);
+		bytes_obj = obj = PyUnicode_AsUTF8String(obj);
+		if (obj == NULL) {
+			return NULL;
+		}
 	}
 
 	if (PyBytes_Check(obj)) {
 		return svn_relpath_canonicalize(PyBytes_AsString(obj), pool);
+		Py_XDECREF(bytes_obj);
 	} else {
+		Py_XDECREF(bytes_obj);
 		PyErr_SetString(PyExc_TypeError,
 						"relative paths need to be UTF-8 bytestrings or unicode strings");
 		return NULL;
