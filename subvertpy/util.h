@@ -141,6 +141,9 @@ extern PyTypeObject Stream_Type;
 const char *
 svn_uri_canonicalize(const char *uri,
                      apr_pool_t *result_pool);
+const char *
+svn_relpath_canonicalize(const char *relpath,
+                         apr_pool_t *result_pool);
 #endif
 
 #endif /* _SUBVERTPY_UTIL_H_ */

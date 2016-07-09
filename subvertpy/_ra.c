@@ -1398,7 +1398,7 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 	while (*path == '/') path++;
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_dir2(ra->ra, &dirents, &fetch_rev, &props,
-					 svn_path_canonicalize(path, temp_pool), revision, dirent_fields, temp_pool));
+					 svn_relpath_canonicalize(path, temp_pool), revision, dirent_fields, temp_pool));
 
 	if (dirents == NULL) {
 		py_dirents = Py_None;
@@ -1473,7 +1473,7 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 	/* Yuck. Subversion doesn't like leading slashes.. */
 	while (*path == '/') path++;
 
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file(ra->ra, svn_path_canonicalize(path, temp_pool), revision, 
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file(ra->ra, svn_relpath_canonicalize(path, temp_pool), revision, 
 													new_py_stream(temp_pool, py_stream), 
 													&fetch_rev, &props, temp_pool));
 
@@ -1530,7 +1530,7 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_RA_WITH_POOL(temp_pool, ra,
-					  svn_ra_check_path(ra->ra, svn_path_canonicalize(path, temp_pool), revision, &kind, 
+					  svn_ra_check_path(ra->ra, svn_relpath_canonicalize(path, temp_pool), revision, &kind, 
 					 temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyInt_FromLong(kind);
@@ -1557,7 +1557,7 @@ static PyObject *ra_stat(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_RA_WITH_POOL(temp_pool, ra,
-					  svn_ra_stat(ra->ra, svn_path_canonicalize(path, temp_pool), revision, &dirent,
+					  svn_ra_stat(ra->ra, svn_relpath_canonicalize(path, temp_pool), revision, &dirent,
 					 temp_pool));
 	ret = py_dirent(dirent, SVN_DIRENT_ALL);
 	apr_pool_destroy(temp_pool);
@@ -1758,7 +1758,7 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 		goto fail_pool;
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locations(ra->ra, &hash_locations,
-					svn_path_canonicalize(path, temp_pool), peg_revision, 
+					svn_relpath_canonicalize(path, temp_pool), peg_revision, 
 					revnum_list_to_apr_array(temp_pool, location_revisions),
 					temp_pool));
 	ret = PyDict_New();

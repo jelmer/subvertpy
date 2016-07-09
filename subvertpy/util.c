@@ -49,6 +49,14 @@ svn_uri_canonicalize(const char *uri,
 {
 	return svn_path_canonicalize(uri, result_pool);
 }
+
+const char *
+svn_relpath_canonicalize(const char *relpath,
+                         apr_pool_t *result_pool)
+{
+	return svn_path_canonicalize(relpath, result_pool);
+}
+
 #endif
 
 apr_pool_t *Pool(apr_pool_t *parent)
