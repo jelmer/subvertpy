@@ -529,12 +529,13 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     char *kwnames[] = { "url", "path", "rev", "peg_rev", "recurse", "ignore_externals", "allow_unver_obstructions", NULL };
     svn_revnum_t result_rev;
     svn_opt_revision_t c_peg_rev, c_rev;
-    char *url, *path;
+    char *path, *url;
+	PyObject *py_url = NULL;
     apr_pool_t *temp_pool;
     PyObject *peg_rev=Py_None, *rev=Py_None;
     bool recurse=true, ignore_externals=false, allow_unver_obstructions=false;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObbb", kwnames, &url, &path, &rev, &peg_rev, &recurse, &ignore_externals, &allow_unver_obstructions))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|OObbb", kwnames, &py_url, &path, &rev, &peg_rev, &recurse, &ignore_externals, &allow_unver_obstructions))
         return NULL;
 
     if (!to_opt_revision(peg_rev, &c_peg_rev))
@@ -545,8 +546,13 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
+
+	url = py_object_to_svn_uri(py_url, temp_pool);
+	if (url == NULL)
+		return NULL;
+
 #if ONLY_SINCE_SVN(1, 5)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, svn_uri_canonicalize(url, temp_pool),
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, url,
         svn_dirent_canonicalize(path, temp_pool),
         &c_peg_rev, &c_rev, recurse?svn_depth_infinity:svn_depth_files,
         ignore_externals, allow_unver_obstructions, client->client, temp_pool));
@@ -558,7 +564,7 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
         return NULL;
     }
 
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout2(&result_rev, svn_uri_canonicalize(url, temp_pool),
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout2(&result_rev, url,
         svn_dirent_canonicalize(path, temp_pool),
         &c_peg_rev, &c_rev, recurse,
         ignore_externals, client->client, temp_pool));

@@ -567,7 +567,8 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	char *kwnames[] = { "url", "progress_cb", "auth", "config",
 				"client_string_func", "open_tmp_file_func", "uuid", 
 						NULL };
-	char *url = NULL, *uuid = NULL;
+	char *uuid = NULL;
+	PyObject *py_url;
 	PyObject *progress_cb = Py_None;
 	AuthObject *auth = (AuthObject *)Py_None;
 	PyObject *config = Py_None;
@@ -578,7 +579,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	svn_auth_baton_t *auth_baton;
 	svn_error_t *err;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOOOOz", kwnames, &url, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOOOOz", kwnames, &py_url, 
 									 &progress_cb, (PyObject **)&auth, &config, 
 									 &client_string_func, &open_tmp_file_func, 
 									 &uuid))
@@ -588,6 +589,15 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (ret == NULL)
 		return NULL;
 
+	ret->client_string_func = client_string_func;
+	ret->open_tmp_file_func = open_tmp_file_func;
+	Py_INCREF(client_string_func);
+
+	Py_INCREF(progress_cb);
+	ret->progress_func = progress_cb;
+
+	ret->auth = NULL;
+
 	ret->root = NULL;
 	ret->pool = Pool(NULL);
 	if (ret->pool == NULL) {
@@ -595,7 +605,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	ret->url = svn_uri_canonicalize(url, ret->pool);
+	ret->url = py_object_to_svn_uri(py_url, ret->pool);
 	if (ret->url == NULL) {
 		Py_DECREF(ret);
 		return NULL;
@@ -622,16 +632,11 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	ret->client_string_func = client_string_func;
-	ret->open_tmp_file_func = open_tmp_file_func;
-	Py_INCREF(client_string_func);
+	callbacks2->progress_baton = (void *)ret;
 	callbacks2->progress_func = py_progress_func;
 	callbacks2->auth_baton = auth_baton;
 	callbacks2->open_tmp_file = py_open_tmp_file;
 	callbacks2->cancel_func = py_cancel_check;
-	Py_INCREF(progress_cb);
-	ret->progress_func = progress_cb;
-	callbacks2->progress_baton = (void *)ret;
 #if ONLY_SINCE_SVN(1, 5)
 	callbacks2->get_client_string = py_get_client_string;
 #endif
@@ -694,11 +699,11 @@ static PyObject *ra_get_uuid(PyObject *self)
 /** Switch to a different url. */
 static PyObject *ra_reparent(PyObject *self, PyObject *args)
 {
-	char *url;
+	PyObject *py_url;
 	apr_pool_t *temp_pool;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 
-	if (!PyArg_ParseTuple(args, "s:reparent", &url))
+	if (!PyArg_ParseTuple(args, "O:reparent", &py_url))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -707,7 +712,7 @@ static PyObject *ra_reparent(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	ra->url = svn_uri_canonicalize(url, ra->pool);
+	ra->url = py_object_to_svn_uri(py_url, ra->pool);
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_reparent(ra->ra, ra->url, temp_pool));
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;

@@ -68,6 +68,21 @@ svn_dirent_canonicalize(const char *dirent,
 }
 #endif
 
+char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
+{
+	if (PyUnicode_Check(obj)) {
+		obj = PyUnicode_AsUTF8String(obj);
+	}
+
+	if (PyBytes_Check(obj)) {
+		return svn_uri_canonicalize(PyBytes_AsString(obj), pool);
+	} else {
+		PyErr_SetString(PyExc_TypeError,
+						"URIs need to be UTF-8 bytestrings or unicode strings");
+		return NULL;
+	}
+}
+
 apr_pool_t *Pool(apr_pool_t *parent)
 {
 	apr_status_t status;
