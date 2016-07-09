@@ -68,6 +68,30 @@ svn_dirent_canonicalize(const char *dirent,
 }
 #endif
 
+char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool)
+{
+	char *ret;
+	PyObject *bytes_obj = NULL;
+
+	if (PyUnicode_Check(obj)) {
+		bytes_obj = obj = PyUnicode_AsUTF8String(obj);
+		if (obj == NULL) {
+			return NULL;
+		}
+	}
+
+	if (PyBytes_Check(obj)) {
+		ret = apr_pstrdup(pool, PyBytes_AsString(obj));
+		Py_XDECREF(bytes_obj);
+		return ret;
+	} else {
+		PyErr_SetString(PyExc_TypeError,
+						"URIs need to be UTF-8 bytestrings or unicode strings");
+		Py_XDECREF(bytes_obj);
+		return NULL;
+	}
+}
+
 char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
 {
 	char *ret;
@@ -318,7 +342,7 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 			PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
 			return false;
 		}
-		APR_ARRAY_PUSH(*ret, char *) = apr_pstrdup(pool, PyString_AsString(item));
+		APR_ARRAY_PUSH(*ret, char *) = py_object_to_svn_string(item, pool);
 	}
 	return true;
 }

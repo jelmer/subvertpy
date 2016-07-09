@@ -120,8 +120,12 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (py_new_data == Py_None) {
 		window.new_data = NULL;
 	} else {
-		new_data.data = PyString_AsString(py_new_data);
-		new_data.len = PyString_Size(py_new_data);
+		if (!PyBytes_Check(py_new_data)) {
+			PyErr_SetString(PyExc_TypeError, "delta data should be bytes");
+			return NULL;
+		}
+		new_data.data = PyBytes_AsString(py_new_data);
+		new_data.len = PyBytes_Size(py_new_data);
 		window.new_data = &new_data;
 	}
 

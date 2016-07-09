@@ -77,7 +77,7 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertEqual(1, self.ra.get_latest_revnum())
 
     def test_get_uuid(self):
-        self.assertIsInstance(self.ra.get_uuid(), str)
+        self.assertIsInstance(self.ra.get_uuid(), unicode)
 
     def test_get_repos_root(self):
         self.assertEqual(self.repos_url, self.ra.get_repos_root())

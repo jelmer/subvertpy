@@ -481,7 +481,7 @@ static svn_error_t *py_get_client_string(void *baton, const char **name, apr_poo
 
 	CB_CHECK_PYRETVAL(ret);
 
-	*name = apr_pstrdup(pool, PyString_AsString(ret));
+	*name = py_object_to_svn_string(ret, pool);
 	Py_DECREF(ret);
 
 	PyGILState_Release(state);
@@ -691,7 +691,7 @@ static PyObject *ra_get_uuid(PyObject *self)
 #else
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid(ra->ra, &uuid, temp_pool));
 #endif
-	ret = PyString_FromString(uuid);
+	ret = PyUnicode_FromString(uuid);
 	apr_pool_destroy(temp_pool);
 	return ret;
 }
@@ -1247,6 +1247,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	apr_pool_t *pool;
 	const svn_delta_editor_t *editor;
 	void *edit_baton;
+	char *log_msg;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_hash_t *hash_lock_tokens;
 #if ONLY_SINCE_SVN(1, 5)
@@ -1308,15 +1309,15 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		goto fail_prep2;
 	}
 
-	if (!PyString_Check(py_log_msg)) {
-		PyErr_SetString(PyExc_ValueError, "svn:log property should be set to string.");
+	log_msg = py_object_to_svn_string(py_log_msg, pool);
+	if (log_msg == NULL) {
 		goto fail_prep2;
 	}
 
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_ra_get_commit_editor2(ra->ra, &editor, 
 		&edit_baton, 
-		PyString_AsString(py_log_msg), py_commit_callback, 
+		log_msg, py_commit_callback, 
 		commit_callback, hash_lock_tokens, keep_locks, pool);
 #endif
 	Py_END_ALLOW_THREADS
@@ -1330,7 +1331,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	Py_INCREF(ra);
 	return new_editor_object(NULL, editor, edit_baton, pool, 
 			  &Editor_Type, ra_done_handler, ra, commit_callback);
-	
+
 fail_prep2:
 	Py_DECREF(commit_callback);
 	ra->busy = false;
@@ -2372,7 +2373,10 @@ static PyObject *auth_set_parameter(PyObject *self, PyObject *args)
 		*((apr_uint32_t *)vvalue) = ret;
 	} else if (!strcmp(name, SVN_AUTH_PARAM_DEFAULT_USERNAME) ||
 			   !strcmp(name, SVN_AUTH_PARAM_DEFAULT_PASSWORD)) {
-		vvalue = apr_pstrdup(auth->pool, PyString_AsString(value));
+		vvalue = py_object_to_svn_string(value, auth->pool);
+		if (vvalue == NULL) {
+			return NULL;
+		}
 	} else {
 		PyErr_Format(PyExc_TypeError, "Unsupported auth parameter %s", name);
 		return NULL;
@@ -2640,6 +2644,7 @@ static svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *ba
 {
 	PyObject *fn = (PyObject *)baton, *ret;
 	PyObject *py_username, *py_may_save;
+	char *username;
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
 	CB_CHECK_PYRETVAL(ret);
@@ -2668,18 +2673,18 @@ static svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *ba
 	}
 	py_username = PyTuple_GetItem(ret, 0);
 	CB_CHECK_PYRETVAL(py_username);
-	if (!PyString_Check(py_username)) {
-		PyErr_SetString(PyExc_TypeError, "username should be string");
+	username = py_object_to_svn_string(py_username, pool);
+	if (username == NULL) {
 		goto fail;
 	}
 
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->username = apr_pstrdup(pool, PyString_AsString(py_username));
+	(*cred)->username = username;
 	(*cred)->may_save = (py_may_save == Py_True);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
-	
+
 fail:
 	Py_DECREF(ret);
 	PyGILState_Release(state);
@@ -2711,6 +2716,7 @@ static svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton,
 {
 	PyObject *fn = (PyObject *)baton, *ret;
 	PyObject *py_may_save, *py_username, *py_password;
+	char *ret_username, *password;
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallFunction(fn, "ssb", realm, username, may_save);
 	CB_CHECK_PYRETVAL(ret);
@@ -2733,26 +2739,26 @@ static svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton,
 
 	py_username = PyTuple_GetItem(ret, 0);
 	CB_CHECK_PYRETVAL(py_username);
-	if (!PyString_Check(py_username)) {
-		PyErr_SetString(PyExc_TypeError, "username should be string");
+	ret_username = py_object_to_svn_string(py_username, pool);
+	if (ret_username == NULL) {
 		goto fail;
 	}
 
 	py_password = PyTuple_GetItem(ret, 1);
 	CB_CHECK_PYRETVAL(py_password);
-	if (!PyString_Check(py_password)) {
-		PyErr_SetString(PyExc_TypeError, "password should be string");
+	password = py_object_to_svn_string(py_password, pool);
+	if (password == NULL) {
 		goto fail;
 	}
 
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->username = apr_pstrdup(pool, PyString_AsString(py_username));
-	(*cred)->password = apr_pstrdup(pool, PyString_AsString(py_password));
+	(*cred)->username = ret_username;
+	(*cred)->password = password;
 	(*cred)->may_save = (py_may_save == Py_True);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
-	
+
 fail:
 	Py_DECREF(ret);
 	PyGILState_Release(state);
@@ -2896,7 +2902,7 @@ static svn_error_t *py_ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_p
 		goto fail;
 	}
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->password = apr_pstrdup(pool, PyString_AsString(py_password));
+	(*cred)->password = py_object_to_svn_string(py_password, pool);
 	(*cred)->may_save = (py_may_save == Py_True);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
@@ -2910,9 +2916,9 @@ fail:
 
 static svn_error_t *py_ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred, void *baton, const char *realm, svn_boolean_t may_save, apr_pool_t *pool)
 {
-	PyObject *py_cert_bytes = NULL;
 	PyObject *fn = (PyObject *)baton, *ret, *py_may_save, *py_cert_file;
 	PyGILState_STATE state = PyGILState_Ensure();
+	char *cert_file;
 	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
 	CB_CHECK_PYRETVAL(ret);
 
@@ -2932,28 +2938,19 @@ static svn_error_t *py_ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **
 	}
 
 	py_cert_file = PyTuple_GetItem(ret, 0);
-	if (PyUnicode_Check(py_cert_file)) {
-		py_cert_bytes = py_cert_file = PyUnicode_AsUTF8String(py_cert_file);
-		if (py_cert_bytes == NULL) {
-			goto fail;
-		}
-	}
-
-	if (!PyBytes_Check(py_cert_file)) {
-		PyErr_SetString(PyExc_TypeError, "cert_file should be string");
+	cert_file = py_object_to_svn_string(py_cert_file, pool);
+	if (!cert_file) {
 		goto fail;
 	}
 
 	*cred = apr_pcalloc(pool, sizeof(**cred));
-	(*cred)->cert_file = apr_pstrdup(pool, PyBytes_AsString(py_cert_file));
+	(*cred)->cert_file = cert_file;
 	(*cred)->may_save = (py_may_save == Py_True);
-	Py_XDECREF(py_cert_bytes);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
 
 fail:
-	Py_XDECREF(py_cert_bytes);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return py_svn_error();

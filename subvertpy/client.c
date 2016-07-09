@@ -294,10 +294,10 @@ static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file
         py_log_msg = ret;
     }
     if (py_log_msg != Py_None) {
-        *log_msg = PyString_AsString(py_log_msg);
+        *log_msg = py_object_to_svn_string(py_log_msg, pool);
     }
     if (py_tmp_file != Py_None) {
-        *tmp_file = PyString_AsString(py_tmp_file);
+        *tmp_file = py_object_to_svn_string(py_tmp_file, pool);
     }
     Py_DECREF(ret);
     PyGILState_Release(state);

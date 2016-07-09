@@ -154,5 +154,6 @@ svn_relpath_canonicalize(const char *relpath,
 
 char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool);
 char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool);
+char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool);
 
 #endif /* _SUBVERTPY_UTIL_H_ */

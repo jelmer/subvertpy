@@ -1142,14 +1142,21 @@ static bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_arra
 	*ret = apr_array_make(pool, PyDict_Size(dict), sizeof(char *));
 
 	while (PyDict_Next(dict, &idx, &key, &val)) {
-		   svn_prop_t *prop = apr_palloc(pool, sizeof(svn_prop_t));
-		   prop->name = PyString_AsString(key);
-		   if (val == Py_None) {
-			   prop->value = NULL;
-		   } else {
-			   prop->value = svn_string_ncreate(PyString_AsString(val), PyString_Size(val), pool);
-		   }
-		   APR_ARRAY_PUSH(*ret, svn_prop_t *) = prop;
+		svn_prop_t *prop = apr_palloc(pool, sizeof(svn_prop_t));
+		prop->name = py_object_to_svn_string(key, pool);
+		if (prop->name == NULL) {
+			return false;
+		}
+		if (val == Py_None) {
+			prop->value = NULL;
+		} else {
+			if (!PyBytes_Check(val)) {
+				PyErr_SetString(PyExc_TypeError, "property values should be bytes");
+				return false;
+			}
+			prop->value = svn_string_ncreate(PyBytes_AsString(val), PyBytes_Size(val), pool);
+		}
+		APR_ARRAY_PUSH(*ret, svn_prop_t *) = prop;
 	}
 
 	return true;
