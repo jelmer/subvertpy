@@ -862,8 +862,9 @@ static PyObject *stream_write(StreamObject *self, PyObject *args)
 	return PyInt_FromLong(length);
 }
 
-static PyObject *stream_read(StreamObject *self, PyObject *args)
+static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 {
+	/* TODO(jelmer): Implemented stream_read2 */
 	PyObject *ret;
 	apr_pool_t *temp_pool;
 	long len = -1;
@@ -886,7 +887,11 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 			apr_pool_destroy(temp_pool);
 			return NULL;
 		}
+#if ONLY_SINCE_SVN(1, 9)
+		RUN_SVN_WITH_POOL(temp_pool, svn_stream_read_full(self->stream, buffer, &size));
+#else
 		RUN_SVN_WITH_POOL(temp_pool, svn_stream_read(self->stream, buffer, &size));
+#endif
 		ret = PyString_FromStringAndSize(buffer, size);
 		apr_pool_destroy(temp_pool);
 		return ret;
@@ -910,7 +915,8 @@ static PyObject *stream_read(StreamObject *self, PyObject *args)
 }
 
 static PyMethodDef stream_methods[] = {
-	{ "read", (PyCFunction)stream_read, METH_VARARGS, NULL },
+	{ "read_full", (PyCFunction)stream_read_full, METH_VARARGS, NULL },
+	{ "read", (PyCFunction)stream_read_full, METH_VARARGS, NULL },
 	{ "write", (PyCFunction)stream_write, METH_VARARGS, NULL },
 	{ "close", (PyCFunction)stream_close, METH_NOARGS, NULL },
 	{ NULL, }
