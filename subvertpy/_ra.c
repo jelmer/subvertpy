@@ -863,7 +863,7 @@ static PyObject *ra_get_repos_root(PyObject *self)
 		RUN_RA_WITH_POOL(temp_pool, ra,
 						  svn_ra_get_repos_root(ra->ra, &root, temp_pool));
 #endif
-		ra->root = apr_pstrdup(ra->pool, root);
+		ra->root = svn_uri_canonicalize(root, ra->pool);
 		apr_pool_destroy(temp_pool);
 	}
 
