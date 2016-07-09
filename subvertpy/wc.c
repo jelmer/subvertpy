@@ -622,7 +622,7 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 	}
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_wc_adm_open3(&ret->adm, parent_wc, 
-						   svn_path_canonicalize(path, ret->pool),
+						   svn_dirent_canonicalize(path, ret->pool),
 						   write_lock, depth, py_cancel_check, NULL, 
 						   ret->pool);
 	Py_END_ALLOW_THREADS
@@ -778,7 +778,7 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 		return NULL;
 #if ONLY_SINCE_SVN(1, 5)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries3(
-			  svn_path_canonicalize(path, temp_pool), admobj->adm, 
+			  svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
 				&py_wc_entry_callbacks2, (void *)callbacks,
 				depth, show_hidden, py_cancel_check, NULL,
 				temp_pool));
@@ -790,7 +790,7 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries2(
-			  svn_path_canonicalize(path, temp_pool), admobj->adm, 
+			  svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
 				&py_wc_entry_callbacks, (void *)callbacks,
 				show_hidden, py_cancel_check, NULL,
 				temp_pool));
@@ -817,7 +817,7 @@ static PyObject *adm_entry(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entry(&entry, svn_path_canonicalize(path, temp_pool), admobj->adm, show_hidden, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entry(&entry, svn_dirent_canonicalize(path, temp_pool), admobj->adm, show_hidden, temp_pool));
 
 	if (entry == NULL) {
 		PyErr_Format(PyExc_KeyError, "No such entry '%s'", path);
@@ -850,7 +850,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_prop_diffs(&propchanges, &original_props,
-				svn_path_canonicalize(path, temp_pool), admobj->adm, temp_pool));
+				svn_dirent_canonicalize(path, temp_pool), admobj->adm, temp_pool));
 	py_propchanges = PyList_New(propchanges->nelts);
 	if (py_propchanges == NULL) {
 		apr_pool_destroy(temp_pool);
@@ -904,7 +904,8 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add3(
-						   svn_path_canonicalize(path, temp_pool), admobj->adm, depth, copyfrom_url, 
+						   svn_dirent_canonicalize(path, temp_pool), admobj->adm,
+						   depth, svn_uri_canonicalize(copyfrom_url, temp_pool), 
 							copyfrom_rev, py_cancel_check, NULL,
 							py_wc_notify_func, 
 							(void *)notify_func, 
@@ -916,7 +917,7 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add2(
-						   svn_path_canonicalize(path, temp_pool), admobj->adm, copyfrom_url, 
+						   svn_dirent_canonicalize(path, temp_pool), admobj->adm, copyfrom_url, 
 							copyfrom_rev, py_cancel_check, 
 							py_wc_notify_func, 
 							(void *)notify_func, 
@@ -1019,7 +1020,7 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 		return NULL;
 	traversal_info = svn_wc_init_traversal_info(temp_pool);
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(svn_path_canonicalize(path, temp_pool), admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse?svn_depth_infinity:svn_depth_files,
 				honor_depth_exclude,
@@ -1027,14 +1028,14 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #elif ONLY_SINCE_SVN(1, 5)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(svn_path_canonicalize(path, temp_pool), admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse?svn_depth_infinity:svn_depth_files, 
 				depth_compatibility_trick, use_commit_times, 
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #else
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(svn_path_canonicalize(path, temp_pool), admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
 				&py_ra_reporter, (void *)reporter, 
 				restore_files, recurse, use_commit_times, 
 				py_wc_notify_func, (void *)notify_func,
@@ -1214,7 +1215,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 
 #if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed4(
-		svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
+		svn_dirent_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
 			rev_date, rev_author, wcprop_changes, 
 			remove_lock, remove_changelist, digest, temp_pool));
 #else
@@ -1223,7 +1224,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(svn_path_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(svn_dirent_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
 														   rev_date, rev_author, wcprop_changes, 
 														   remove_lock, digest, temp_pool));
 #endif
@@ -1681,7 +1682,7 @@ static PyObject *get_actual_target(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_SVN_WITH_POOL(temp_pool,
-		  svn_wc_get_actual_target(svn_path_canonicalize(path, temp_pool),
+		  svn_wc_get_actual_target(svn_dirent_canonicalize(path, temp_pool),
 								   &anchor, &target, temp_pool));
 
 	ret = Py_BuildValue("(ss)", anchor, target);
@@ -1739,7 +1740,7 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
 
 	RUN_SVN_WITH_POOL(temp_pool,
 		svn_wc_transmit_text_deltas2(&tempfile, digest,
-			svn_path_canonicalize(path, temp_pool), admobj->adm, fulltext,
+			svn_dirent_canonicalize(path, temp_pool), admobj->adm, fulltext,
 			&py_editor, editor_obj, temp_pool));
 
 	py_digest = PyString_FromStringAndSize((char *)digest, APR_MD5_DIGESTSIZE);
@@ -1779,7 +1780,7 @@ static PyObject *transmit_prop_deltas(PyObject *self, PyObject *args)
 	Py_INCREF(editor_obj);
 
 	RUN_SVN_WITH_POOL(temp_pool,
-		svn_wc_transmit_prop_deltas(svn_path_canonicalize(path, temp_pool),
+		svn_wc_transmit_prop_deltas(svn_dirent_canonicalize(path, temp_pool),
 			admobj->adm, &(py_entry->entry), &py_editor, editor_obj, NULL, temp_pool));
 
 	apr_pool_destroy(temp_pool);
@@ -1804,7 +1805,7 @@ static PyObject *retrieve(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_SVN_WITH_POOL(pool, svn_wc_adm_retrieve(&result, admobj->adm, 
-		svn_path_canonicalize(path, pool), pool));
+		svn_dirent_canonicalize(path, pool), pool));
 
 	ret = PyObject_New(AdmObject, &Adm_Type);
 	if (ret == NULL)
@@ -1833,7 +1834,7 @@ static PyObject *probe_retrieve(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_SVN_WITH_POOL(pool, svn_wc_adm_probe_retrieve(&result, admobj->adm, 
-		svn_path_canonicalize(path, pool), pool));
+		svn_dirent_canonicalize(path, pool), pool));
 
 	ret = PyObject_New(AdmObject, &Adm_Type);
 	if (ret == NULL)
@@ -1864,7 +1865,7 @@ static PyObject *probe_try(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_SVN_WITH_POOL(pool, svn_wc_adm_probe_try3(&result, admobj->adm, 
-		svn_path_canonicalize(path, pool), writelock, levels_to_lock,
+		svn_dirent_canonicalize(path, pool), writelock, levels_to_lock,
 		py_cancel_check, NULL, pool));
 
 	if (result == NULL) {
@@ -2020,7 +2021,7 @@ static PyObject *ra_status(PyObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(temp_pool, 
 			svn_wc_status2(
 				&st,
-				svn_path_canonicalize(svn_path_join(svn_wc_adm_access_path(admobj->adm), path, temp_pool), temp_pool),
+				svn_dirent_canonicalize(svn_path_join(svn_wc_adm_access_path(admobj->adm), path, temp_pool), temp_pool),
 				admobj->adm,
 				temp_pool));
 
@@ -2360,7 +2361,7 @@ static PyObject *revision_status(PyObject *self, PyObject *args, PyObject *kwarg
 	RUN_SVN_WITH_POOL(temp_pool, 
 			svn_wc_revision_status(
 				&revstatus, 
-				svn_path_canonicalize(wc_path, temp_pool),
+				svn_dirent_canonicalize(wc_path, temp_pool),
 				trail_url,
 				 committed, py_cancel_check, NULL, temp_pool));
 	ret = Py_BuildValue("(llbb)", revstatus->min_rev, revstatus->max_rev, 
@@ -2464,7 +2465,7 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 		return NULL;
 	PyErr_WarnEx(PyExc_DeprecationWarning, "get_pristine_copy_path is deprecated. Use get_pristine_contents instead.", 2);
 	RUN_SVN_WITH_POOL(pool,
-		  svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, pool),
+		  svn_wc_get_pristine_copy_path(svn_dirent_canonicalize(path, pool),
 										&pristine_path, pool));
 	ret = PyString_FromString(pristine_path);
 	apr_pool_destroy(pool);
@@ -2498,7 +2499,7 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	RUN_SVN_WITH_POOL(stream_pool, svn_wc_get_pristine_contents(&stream, svn_path_canonicalize(path, temp_pool), stream_pool, temp_pool));
+	RUN_SVN_WITH_POOL(stream_pool, svn_wc_get_pristine_contents(&stream, svn_dirent_canonicalize(path, temp_pool), stream_pool, temp_pool));
 	apr_pool_destroy(temp_pool);
 
 	if (stream == NULL) {
@@ -2519,7 +2520,7 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_pristine_copy_path(svn_path_canonicalize(path, temp_pool), &pristine_path, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_pristine_copy_path(svn_dirent_canonicalize(path, temp_pool), &pristine_path, temp_pool));
 	ret = PyFile_FromString((char *)pristine_path, "rb");
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -2544,7 +2545,7 @@ static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 #if ONLY_SINCE_SVN(1, 5)
 	RUN_SVN_WITH_POOL(pool, 
-					  svn_wc_ensure_adm3(svn_path_canonicalize(path, pool),
+					  svn_wc_ensure_adm3(svn_dirent_canonicalize(path, pool),
 										 uuid, url, repos, rev, depth, pool));
 #else
 	if (depth != svn_depth_infinity) {
@@ -2554,7 +2555,7 @@ static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	RUN_SVN_WITH_POOL(pool, 
-					  svn_wc_ensure_adm2(svn_path_canonicalize(path, pool),
+					  svn_wc_ensure_adm2(svn_dirent_canonicalize(path, pool),
 										 uuid, url, repos, rev, pool));
 #endif
 	apr_pool_destroy(pool);
@@ -2573,7 +2574,7 @@ static PyObject *check_wc(PyObject *self, PyObject *args)
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(svn_path_canonicalize(path, pool), &wc_format, pool));
+	RUN_SVN_WITH_POOL(pool, svn_wc_check_wc(svn_dirent_canonicalize(path, pool), &wc_format, pool));
 	apr_pool_destroy(pool);
 	return PyLong_FromLong(wc_format);
 }

@@ -59,6 +59,15 @@ svn_relpath_canonicalize(const char *relpath,
 
 #endif
 
+#if ONLY_BEFORE_SVN(1, 6)
+const char *
+svn_dirent_canonicalize(const char *dirent,
+                        apr_pool_t *result_pool)
+{
+	return svn_path_canonicalize(dirent, result_pool);
+}
+#endif
+
 apr_pool_t *Pool(apr_pool_t *parent)
 {
 	apr_status_t status;

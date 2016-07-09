@@ -380,7 +380,7 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	RUN_SVN(editor->editor->delete_entry(svn_path_canonicalize(path, editor->pool),
+	RUN_SVN(editor->editor->delete_entry(svn_relpath_canonicalize(path, editor->pool),
 										 revision, editor->baton, editor->pool));
 
 	Py_RETURN_NONE;
@@ -409,8 +409,8 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 	}
 
 	RUN_SVN(editor->editor->add_directory(
-		svn_path_canonicalize(path, editor->pool), editor->baton,
-		copyfrom_path == NULL?NULL:svn_path_canonicalize(copyfrom_path, editor->pool), 
+		svn_relpath_canonicalize(path, editor->pool), editor->baton,
+		copyfrom_path == NULL?NULL:svn_uri_canonicalize(copyfrom_path, editor->pool), 
 		copyfrom_rev, editor->pool, &child_baton));
 
 	subpool = Pool(editor->pool);
@@ -443,7 +443,7 @@ static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 	}
 
 	RUN_SVN(editor->editor->open_directory(
-		svn_path_canonicalize(path, editor->pool), editor->baton,
+		svn_relpath_canonicalize(path, editor->pool), editor->baton,
 					base_revision, editor->pool, &child_baton));
 
 	subpool = Pool(NULL);
@@ -529,7 +529,7 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 	}
 
 	RUN_SVN(editor->editor->absent_directory(
-		svn_path_canonicalize(path, editor->pool), editor->baton, editor->pool));
+		svn_relpath_canonicalize(path, editor->pool), editor->baton, editor->pool));
 
 	Py_RETURN_NONE;
 }
@@ -555,9 +555,9 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	RUN_SVN(editor->editor->add_file(svn_path_canonicalize(path, editor->pool),
+	RUN_SVN(editor->editor->add_file(svn_relpath_canonicalize(path, editor->pool),
 		editor->baton, 
-		copy_path == NULL?NULL:svn_path_canonicalize(copy_path, editor->pool),
+		copy_path == NULL?NULL:svn_uri_canonicalize(copy_path, editor->pool),
 		copy_rev, editor->pool, &file_baton));
 
 	subpool = Pool(NULL);
@@ -589,7 +589,7 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	RUN_SVN(editor->editor->open_file(svn_path_canonicalize(path, editor->pool),
+	RUN_SVN(editor->editor->open_file(svn_relpath_canonicalize(path, editor->pool),
 									  editor->baton, base_revision, 
 									  editor->pool, &file_baton));
 
@@ -620,7 +620,7 @@ static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 	}
 
 	RUN_SVN(editor->editor->absent_file(
-		svn_path_canonicalize(path, editor->pool), editor->baton, editor->pool));
+		svn_relpath_canonicalize(path, editor->pool), editor->baton, editor->pool));
 
 	Py_RETURN_NONE;
 }
