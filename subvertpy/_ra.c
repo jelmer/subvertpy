@@ -1283,8 +1283,12 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		PyObject *k, *v;
 		hash_lock_tokens = apr_hash_make(pool);
 		while (PyDict_Next(lock_tokens, &idx, &k, &v)) {
-			apr_hash_set(hash_lock_tokens, PyString_AsString(k), 
-						 PyString_Size(k), PyString_AsString(v));
+			if (!PyBytes_Check(k)) {
+				PyErr_SetString(PyExc_TypeError, "token not bytes");
+				goto fail_prep;
+			}
+			apr_hash_set(hash_lock_tokens, PyBytes_AsString(k),
+						 PyString_Size(k), PyBytes_AsString(v));
 		}
 	}
 
@@ -1651,14 +1655,20 @@ static PyObject *ra_unlock(PyObject *self, PyObject *args)
 		goto fail_pool;
 	hash_path_tokens = apr_hash_make(temp_pool);
 	while (PyDict_Next(path_tokens, &idx, &k, &v)) {
-		apr_hash_set(hash_path_tokens, PyString_AsString(k), PyString_Size(k), (char *)PyString_AsString(v));
+		if (!PyBytes_Check(k)) {
+			PyErr_SetString(PyExc_TypeError, "token not bytes");
+			goto fail_dict;
+		}
+		apr_hash_set(hash_path_tokens, PyBytes_AsString(k), PyBytes_Size(k), (char *)PyString_AsString(v));
 	}
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_unlock(ra->ra, hash_path_tokens, break_lock,
 					 py_lock_func, lock_func, temp_pool));
 
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
-	
+
+fail_dict:
+	apr_pool_destroy(temp_pool);
 fail_pool:
 	ra->busy = false;
 fail_busy:
@@ -1699,14 +1709,17 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 		if (*rev == -1 && PyErr_Occurred()) {
 			goto fail_prep;
 		}
-		apr_hash_set(hash_path_revs, PyString_AsString(k), PyString_Size(k), 
-					 rev);
+		if (!PyBytes_Check(k)) {
+			PyErr_SetString(PyExc_TypeError, "token not bytes");
+			goto fail_prep;
+		}
+		apr_hash_set(hash_path_revs, PyBytes_AsString(k), PyBytes_Size(k), rev);
 	}
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_lock(ra->ra, hash_path_revs, comment, steal_lock,
 					 py_lock_func, lock_func, temp_pool));
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
-	
+
 fail_prep:
 	apr_pool_destroy(temp_pool);
 fail_pool:
