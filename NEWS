@@ -11,6 +11,10 @@
 
    * Add constant ERR_RA_CANNOT_CREATE_SESSION. (Jelmer Vernooij)
 
+ BUG FIXES
+
+   * Avoid using deprecated svn_path_canonicalize(). (Jelmer Vernooij)
+
 0.9.3	2015-08-23
 
   BUG FIXES
