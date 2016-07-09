@@ -368,7 +368,7 @@ PyTypeObject FileEditor_Type = {
 static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 {
 	EditorObject *editor = (EditorObject *)self;
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	svn_revnum_t revision = -1;
 
@@ -398,7 +398,7 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 {
 	PyObject *py_path;
-	char *path;
+	const char *path;
 	char *copyfrom_path = NULL;
 	svn_revnum_t copyfrom_rev = -1;
 	void *child_baton;
@@ -438,7 +438,7 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 
 static PyObject *py_dir_editor_open_directory(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	EditorObject *editor = (EditorObject *)self;
 	svn_revnum_t base_revision=-1;
@@ -532,7 +532,7 @@ static PyObject *py_dir_editor_close(PyObject *self)
 
 static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	EditorObject *editor = (EditorObject *)self;
 
@@ -562,7 +562,8 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 
 static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 {
-	char *path, *copy_path=NULL;
+	const char *path;
+	char *copy_path=NULL;
 	PyObject *py_path;
 	svn_revnum_t copy_rev=-1;
 	void *file_baton = NULL;
@@ -601,7 +602,7 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 
 static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	svn_revnum_t base_revision=-1;
 	void *file_baton;
@@ -639,7 +640,7 @@ static PyObject *py_dir_editor_open_file(PyObject *self, PyObject *args)
 
 static PyObject *py_dir_editor_absent_file(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	EditorObject *editor = (EditorObject *)self;
 

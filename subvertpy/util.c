@@ -92,7 +92,7 @@ char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool)
 	}
 }
 
-char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
+const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
 {
 	const char *ret;
 	PyObject *bytes_obj = NULL;
@@ -116,8 +116,9 @@ char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
 	}
 }
 
-char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool)
+const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool)
 {
+	const char *ret;
 	PyObject *bytes_obj = NULL;
 
 	if (PyUnicode_Check(obj)) {
@@ -128,8 +129,9 @@ char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool)
 	}
 
 	if (PyBytes_Check(obj)) {
-		return svn_relpath_canonicalize(PyBytes_AsString(obj), pool);
+		ret = svn_relpath_canonicalize(PyBytes_AsString(obj), pool);
 		Py_XDECREF(bytes_obj);
+		return ret;
 	} else {
 		Py_XDECREF(bytes_obj);
 		PyErr_SetString(PyExc_TypeError,

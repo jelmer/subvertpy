@@ -529,11 +529,12 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     char *kwnames[] = { "url", "path", "rev", "peg_rev", "recurse", "ignore_externals", "allow_unver_obstructions", NULL };
     svn_revnum_t result_rev;
     svn_opt_revision_t c_peg_rev, c_rev;
-    char *path, *url;
+	char *path;
+	const char *url;
 	PyObject *py_url = NULL;
-    apr_pool_t *temp_pool;
-    PyObject *peg_rev=Py_None, *rev=Py_None;
-    bool recurse=true, ignore_externals=false, allow_unver_obstructions=false;
+	apr_pool_t *temp_pool;
+	PyObject *peg_rev=Py_None, *rev=Py_None;
+	bool recurse=true, ignore_externals=false, allow_unver_obstructions=false;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|OObbb", kwnames, &py_url, &path, &rev, &peg_rev, &recurse, &ignore_externals, &allow_unver_obstructions))
         return NULL;

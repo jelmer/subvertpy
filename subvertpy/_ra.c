@@ -46,7 +46,7 @@ static PyTypeObject AuthProvider_Type;
 static PyTypeObject CredentialsIter_Type;
 static PyTypeObject Auth_Type;
 
-static bool ra_check_svn_path(char *path)
+static bool ra_check_svn_path(const char *path)
 {
 	/* svn_ra_check_path will raise an assertion error if the path has a
 	 * leading '/'. Raise a Python exception if there ar eleading '/'s so that 
@@ -121,8 +121,8 @@ typedef struct {
 	bool busy;
 	PyObject *client_string_func;
 	PyObject *open_tmp_file_func;
-	char *root;
-	char *corrected_url;
+	const char *root;
+	const char *corrected_url;
 } RemoteAccessObject;
 
 typedef struct {
@@ -1392,12 +1392,12 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_dirent_t *dirent;
 	apr_ssize_t klen;
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	svn_revnum_t revision = -1;
 	unsigned int dirent_fields = 0;
 	PyObject *py_dirents, *py_props;
-    char *kwnames[] = { "path", "revision", "fields", NULL };
+	char *kwnames[] = { "path", "revision", "fields", NULL };
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|lI:get_dir", kwnames,
                                      &py_path, &revision, &dirent_fields))
@@ -1472,7 +1472,7 @@ fail:
 
 static PyObject *ra_get_file(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	svn_revnum_t revision = -1;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
@@ -1540,7 +1540,7 @@ static PyObject *ra_get_lock(PyObject *self, PyObject *args)
 
 static PyObject *ra_check_path(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t revision;
 	svn_node_kind_t kind;
@@ -1572,7 +1572,7 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 
 static PyObject *ra_stat(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	PyObject *ret;
@@ -1717,7 +1717,7 @@ fail_busy:
 
 static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	apr_pool_t *temp_pool;
 	apr_hash_t *hash_locks;
@@ -1777,7 +1777,7 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 
 static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t peg_revision;
@@ -1992,7 +1992,7 @@ static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 #if ONLY_SINCE_SVN(1, 5)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t peg_revision, start_revision, end_revision;
-	char *path;
+	const char *path;
 	PyObject *py_path;
 	PyObject *py_rcvr;
 	apr_pool_t *temp_pool;

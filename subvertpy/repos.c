@@ -86,7 +86,7 @@ static void repos_dealloc(PyObject *self)
 
 static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-	char *path;
+	const char *path;
 	char *kwnames[] = { "path", NULL };
 	svn_error_t *err;
 	RepositoryObject *ret;
