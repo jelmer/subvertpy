@@ -119,7 +119,6 @@ char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
 char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool)
 {
 	PyObject *bytes_obj = NULL;
-	char *ret;
 
 	if (PyUnicode_Check(obj)) {
 		bytes_obj = obj = PyUnicode_AsUTF8String(obj);

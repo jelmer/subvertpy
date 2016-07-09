@@ -2028,7 +2028,7 @@ static PyObject *ra_status(PyObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(temp_pool, 
 			svn_wc_status2(
 				&st,
-				svn_dirent_canonicalize(svn_path_join(svn_wc_adm_access_path(admobj->adm), path, temp_pool), temp_pool),
+				svn_dirent_canonicalize(svn_dirent_join(svn_wc_adm_access_path(admobj->adm), path, temp_pool), temp_pool),
 				admobj->adm,
 				temp_pool));
 
