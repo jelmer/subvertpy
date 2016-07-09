@@ -122,6 +122,7 @@ typedef struct {
 	PyObject *client_string_func;
 	PyObject *open_tmp_file_func;
 	char *root;
+	char *corrected_url;
 } RemoteAccessObject;
 
 typedef struct {
@@ -597,6 +598,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	ret->progress_func = progress_cb;
 
 	ret->auth = NULL;
+	ret->corrected_url = NULL;
 
 	ret->root = NULL;
 	ret->pool = Pool(NULL);
@@ -646,7 +648,10 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_SINCE_SVN(1, 7)
+	err = svn_ra_open4(&ret->ra, &ret->corrected_url, ret->url, uuid,
+			   callbacks2, ret, config_hash, ret->pool);
+#elif ONLY_SINCE_SVN(1, 5)
 	err = svn_ra_open3(&ret->ra, ret->url, uuid,
 			   callbacks2, ret, config_hash, ret->pool);
 #else
@@ -1247,12 +1252,12 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	apr_pool_t *pool;
 	const svn_delta_editor_t *editor;
 	void *edit_baton;
-	char *log_msg;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_hash_t *hash_lock_tokens;
 #if ONLY_SINCE_SVN(1, 5)
 	apr_hash_t *hash_revprops;
 #else
+	char *log_msg;
 	PyObject *py_log_msg;
 #endif
 	svn_error_t *err;
@@ -2198,6 +2203,8 @@ static PyMemberDef ra_members[] = {
 		"Whether this connection is in use at the moment" },
 	{ "url", T_STRING, offsetof(RemoteAccessObject, url), READONLY, 
 		"URL this connection is to" },
+	{ "corrected_url", T_STRING, offsetof(RemoteAccessObject, corrected_url), READONLY,
+		"Corrected URL" },
 	{ NULL, }
 };
 
