@@ -487,12 +487,13 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
     ClientObject *client = (ClientObject *)self;
     bool recursive=true, force=false, no_ignore=false;
     bool add_parents = false;
+	bool no_autoprops = false;
     apr_pool_t *temp_pool;
     char *kwnames[] = { "path", "recursive", "force", "no_ignore",
-                        "add_parents", NULL };
+                        "add_parents", "no_autoprops", NULL };
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|bbbb", kwnames,
-                          &path, &recursive, &force, &no_ignore, &add_parents))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|bbbbb", kwnames,
+                          &path, &recursive, &force, &no_ignore, &add_parents, &no_autoprops))
         return NULL;
 
 #if ONLY_BEFORE_SVN(1, 4)
@@ -503,11 +504,25 @@ static PyObject *client_add(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 #endif
 
+#if ONLY_BEFORE_SVN(1, 8)
+	if (no_autoprops) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"Subversion < 1.8 does not support no_autoprops");
+		return NULL;
+	}
+#endif
+
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
 
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_SINCE_SVN(1, 8)
+    RUN_SVN_WITH_POOL(temp_pool,
+        svn_client_add5(path, recursive?svn_depth_infinity:svn_depth_empty,
+                        force, no_ignore, no_autoprops, add_parents,
+                        client->client, temp_pool)
+        );
+#elif ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool,
         svn_client_add4(path, recursive?svn_depth_infinity:svn_depth_empty,
                         force, no_ignore, add_parents,
@@ -1571,7 +1586,7 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
 
 static PyMethodDef client_methods[] = {
     { "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS,
-        "S.add(path, recursive=True, force=False, no_ignore=False)" },
+        "S.add(path, recursive=True, force=False, no_ignore=False, no_autoprops=False)" },
     { "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS,
         "S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False, allow_unver_obstructions=False)" },
 	{ "export", (PyCFunction)client_export, METH_VARARGS|METH_KEYWORDS,

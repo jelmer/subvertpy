@@ -13,6 +13,8 @@
 
    * Support `depth` argument to RemoteAccess.get_locks(). (Jelmer Vernooij)
 
+   * Support `no_autoprops` argument to Client.add(). (Jelmer Vernooij)
+
  BUG FIXES
 
    * Avoid using deprecated svn_path_canonicalize(). (Jelmer Vernooij)

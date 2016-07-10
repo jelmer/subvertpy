@@ -2132,7 +2132,7 @@ static PyMethodDef ra_methods[] = {
 	{ "get_locations", ra_get_locations, METH_VARARGS, 
 		"S.get_locations(path, peg_revision, location_revisions)" },
 	{ "get_locks", ra_get_locks, METH_VARARGS, 
-		"S.get_locks(path)" },
+		"S.get_locks(path, depth=DEPTH_INFINITY)" },
 	{ "lock", ra_lock, METH_VARARGS, 
 		"S.lock(path_revs, comment, steal_lock, lock_func)\n" },
 	{ "unlock", ra_unlock, METH_VARARGS, 
