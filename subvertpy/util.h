@@ -156,4 +156,10 @@ const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool);
 char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool);
 
+#if PY_MAJOR_VERSION >= 3
+#define PyRepr_FromFormat PyUnicode_FromFormat
+#else
+#define PyRepr_FromFormat PyString_FromFormat
+#endif
+
 #endif /* _SUBVERTPY_UTIL_H_ */

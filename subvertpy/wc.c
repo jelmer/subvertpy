@@ -1272,9 +1272,9 @@ static PyObject *adm_repr(PyObject *self)
 	AdmObject *admobj = (AdmObject *)self;
 
 	if (admobj->adm == NULL) {
-		return PyString_FromFormat("<wc.WorkingCopy (closed) at 0x%p>", admobj);
+		return PyRepr_FromFormat("<wc.WorkingCopy (closed) at 0x%p>", admobj);
 	} else {
-		return PyString_FromFormat("<wc.WorkingCopy at '%s'>", 
+		return PyRepr_FromFormat("<wc.WorkingCopy at '%s'>",
 								   svn_wc_adm_access_path(admobj->adm));
 	}
 }
@@ -2184,7 +2184,7 @@ static PyObject *committed_queue_repr(PyObject *self)
 {
 	CommittedQueueObject *cqobj = (CommittedQueueObject *)self;
 
-	return PyString_FromFormat("<wc.CommittedQueue at 0x%p>", cqobj->queue);
+	return PyRepr_FromFormat("<wc.CommittedQueue at 0x%p>", cqobj->queue);
 }
 
 static PyObject *committed_queue_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
