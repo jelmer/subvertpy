@@ -993,16 +993,18 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	svn_revnum_t revision_to_update_to;
 	char *update_target;
 	bool recurse;
+	bool send_copyfrom_args = false;
+	bool ignore_ancestry = true;
 	char *switch_url;
 	PyObject *update_editor;
 	const REPORTER_T *reporter;
 	void *report_baton;
-	apr_pool_t *temp_pool;
+	apr_pool_t *temp_pool, *result_pool;
 	ReporterObject *ret;
 	svn_error_t *err;
 
-	if (!PyArg_ParseTuple(args, "lsbsO:do_switch", &revision_to_update_to, &update_target, 
-						  &recurse, &switch_url, &update_editor))
+	if (!PyArg_ParseTuple(args, "lsbsO|bb:do_switch", &revision_to_update_to, &update_target, 
+						  &recurse, &switch_url, &update_editor, &send_copyfrom_args, &ignore_ancestry))
 		return NULL;
 	if (ra_check_busy(ra))
 		return NULL;
@@ -1013,10 +1015,24 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	result_pool = Pool(NULL);
+	if (result_pool == NULL) {
+		apr_pool_destroy(temp_pool);
+		ra->busy = false;
+		return NULL;
+	}
+
 	Py_INCREF(update_editor);
 	Py_BEGIN_ALLOW_THREADS
 
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_SINCE_SVN(1, 8)
+	err = svn_ra_do_switch3(
+						ra->ra, &reporter, &report_baton, 
+						revision_to_update_to, update_target, 
+						recurse?svn_depth_infinity:svn_depth_files, switch_url,
+						send_copyfrom_args, ignore_ancestry,
+						&py_editor, update_editor, temp_pool, result_pool);
+#elif ONLY_SINCE_SVN(1, 5)
 	err = svn_ra_do_switch2(
 						ra->ra, &reporter, &report_baton, 
 						revision_to_update_to, update_target, 
@@ -1036,18 +1052,20 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 		handle_svn_error(err);
 		svn_error_clear(err);
 		apr_pool_destroy(temp_pool);
+		apr_pool_destroy(result_pool);
 		ra->busy = false;
 		return NULL;
 	}
 	ret = PyObject_New(ReporterObject, &Reporter_Type);
 	if (ret == NULL) {
 		apr_pool_destroy(temp_pool);
+		apr_pool_destroy(result_pool);
 		ra->busy = false;
 		return NULL;
 	}
 	ret->reporter = reporter;
 	ret->report_baton = report_baton;
-	ret->pool = temp_pool;
+	ret->pool = result_pool;
 	Py_INCREF(ra);
 	ret->ra = ra;
 	return (PyObject *)ret;
@@ -2181,7 +2199,7 @@ static PyMethodDef ra_methods[] = {
 		"- finish_rev_cb(revision, revprops, editor)\n"
 	},
 	{ "do_switch", ra_do_switch, METH_VARARGS, 
-		"S.do_switch(revision_to_update_to, update_target, recurse, switch_url, update_editor)\n" },
+		"S.do_switch(revision_to_update_to, update_target, recurse, switch_url, update_editor, send_copyfrom_args=False, ignore_ancestry=True)\n" },
 	{ "do_update", ra_do_update, METH_VARARGS, 
 		"S.do_update(revision_to_update_to, update_target, recurse, update_editor)\n" },
 	{ "do_diff", ra_do_diff, METH_VARARGS, 

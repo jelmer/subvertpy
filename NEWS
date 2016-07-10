@@ -15,6 +15,9 @@
 
    * Support `no_autoprops` argument to Client.add(). (Jelmer Vernooij)
 
+   * Support `ignore_ancestry` and `send_copyfrom_args` arguments to RemoteAcess.do_switch.
+     (Jelmer Vernooij)
+
  BUG FIXES
 
    * Avoid using deprecated svn_path_canonicalize(). (Jelmer Vernooij)
