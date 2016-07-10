@@ -11,6 +11,8 @@
 
    * Add constant ERR_RA_CANNOT_CREATE_SESSION. (Jelmer Vernooij)
 
+   * Support `depth` argument to RemoteAccess.get_locks(). (Jelmer Vernooij)
+
  BUG FIXES
 
    * Avoid using deprecated svn_path_canonicalize(). (Jelmer Vernooij)

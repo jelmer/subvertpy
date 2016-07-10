@@ -1736,12 +1736,13 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 	apr_hash_t *hash_locks;
 	apr_hash_index_t *idx;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+	svn_depth_t depth = svn_depth_infinity;
 	char *key;
 	apr_ssize_t klen;
 	svn_lock_t *lock;
 	PyObject *ret;
 
-	if (!PyArg_ParseTuple(args, "O:get_locks", &py_path))
+	if (!PyArg_ParseTuple(args, "O|i:get_locks", &py_path, &depth))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1758,7 +1759,17 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 	if (ra_check_svn_path(path))
 		return NULL;
 
+#if ONLY_SINCE_SVN(1, 7)
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locks2(ra->ra, &hash_locks, path, depth, temp_pool));
+#else
+	if (depth != svn_depth_infinity) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"depth != infinity only supported for svn >= 1.7");
+		return NULL;
+	}
+
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locks(ra->ra, &hash_locks, path, temp_pool));
+#endif
 
 	ret = PyDict_New();
 	if (ret == NULL) {
