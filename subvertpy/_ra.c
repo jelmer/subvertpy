@@ -923,28 +923,56 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	svn_revnum_t revision_to_update_to;
 	char *update_target;
 	bool recurse;
+	bool ignore_ancestry = true;
 	PyObject *update_editor;
 	const REPORTER_T *reporter;
 	void *report_baton;
 	svn_error_t *err;
-	apr_pool_t *temp_pool;
+	apr_pool_t *temp_pool, *result_pool;
 	ReporterObject *ret;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_boolean_t send_copyfrom_args = FALSE;
 
-	if (!PyArg_ParseTuple(args, "lsbO|b:do_update", &revision_to_update_to, &update_target, &recurse, &update_editor, 
-						  &send_copyfrom_args))
+	if (!PyArg_ParseTuple(args, "lsbO|bb:do_update", &revision_to_update_to, &update_target, &recurse, &update_editor, 
+						  &send_copyfrom_args, &ignore_ancestry))
 		return NULL;
 
 	if (ra_check_busy(ra))
 		return NULL;
 
-	temp_pool = Pool(NULL);
-	if (temp_pool == NULL)
+#if ONLY_BEFORE_SVN(1, 8)
+	if (!ignore_ancestry) {
+		PyErr_SetString(PyExc_NotImplementedError, "ignore_ancestry only supported on svn >= 1.8");
+		ra->busy = false;
 		return NULL;
+	}
+#endif
+
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL) {
+		ra->busy = false;
+		return NULL;
+	}
+
+	result_pool = Pool(NULL);
+	if (result_pool == NULL) {
+		apr_pool_destroy(temp_pool);
+		ra->busy = false;
+		return NULL;
+	}
 
 	Py_INCREF(update_editor);
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_SINCE_SVN(1, 8)
+	Py_BEGIN_ALLOW_THREADS
+	err = svn_ra_do_update3(ra->ra, &reporter, 
+												  &report_baton, 
+												  revision_to_update_to, 
+												  update_target, recurse?svn_depth_infinity:svn_depth_files, 
+												  send_copyfrom_args,
+												  ignore_ancestry,
+												  &py_editor, update_editor, 
+												  temp_pool, result_pool);
+#elif ONLY_SINCE_SVN(1, 5)
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_ra_do_update2(ra->ra, &reporter, 
 												  &report_baton, 
@@ -952,11 +980,13 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 												  update_target, recurse?svn_depth_infinity:svn_depth_files, 
 												  send_copyfrom_args,
 												  &py_editor, update_editor, 
-												  temp_pool);
+												  result_pool);
 #else
 	if (send_copyfrom_args) {
 		PyErr_SetString(PyExc_NotImplementedError, "send_copyfrom_args only supported for svn >= 1.5");
 		apr_pool_destroy(temp_pool);
+		apr_pool_destroy(result_pool);
+		ra->busy = false;
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
@@ -964,24 +994,28 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 		&report_baton, revision_to_update_to,
 		update_target, recurse,
 		&py_editor, update_editor,
-		temp_pool);
+		result_pool);
 
 #endif
 	Py_END_ALLOW_THREADS
+	apr_pool_destroy(temp_pool);
 	if (err != NULL) {
 		handle_svn_error(err);
 		svn_error_clear(err);
-		apr_pool_destroy(temp_pool);
+		apr_pool_destroy(result_pool);
 		ra->busy = false;
 		return NULL;
 	}
 
 	ret = PyObject_New(ReporterObject, &Reporter_Type);
-	if (ret == NULL)
+	if (ret == NULL) {
+		apr_pool_destroy(result_pool);
+		ra->busy = false;
 		return NULL;
+	}
 	ret->reporter = reporter;
 	ret->report_baton = report_baton;
-	ret->pool = temp_pool;
+	ret->pool = result_pool;
 	Py_INCREF(ra);
 	ret->ra = ra;
 	return (PyObject *)ret;
@@ -1037,28 +1071,27 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 						ra->ra, &reporter, &report_baton, 
 						revision_to_update_to, update_target, 
 						recurse?svn_depth_infinity:svn_depth_files, switch_url, &py_editor, 
-						update_editor, temp_pool);
+						update_editor, result_pool);
 #else
 	err = svn_ra_do_switch(
 						ra->ra, &reporter, &report_baton, 
 						revision_to_update_to, update_target, 
 						recurse, switch_url, &py_editor, 
-						update_editor, temp_pool);
+						update_editor, result_pool);
 #endif
 
 	Py_END_ALLOW_THREADS
+	apr_pool_destroy(temp_pool);
 
 	if (err != NULL) {
 		handle_svn_error(err);
 		svn_error_clear(err);
-		apr_pool_destroy(temp_pool);
 		apr_pool_destroy(result_pool);
 		ra->busy = false;
 		return NULL;
 	}
 	ret = PyObject_New(ReporterObject, &Reporter_Type);
 	if (ret == NULL) {
-		apr_pool_destroy(temp_pool);
 		apr_pool_destroy(result_pool);
 		ra->busy = false;
 		return NULL;
