@@ -1380,13 +1380,15 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	svn_revnum_t rev;
 	char *name;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	char *value;
-	int vallen;
+	char *value, *oldvalue = NULL;
+	int vallen, oldvallen = -2;
 	apr_pool_t *temp_pool;
 	svn_string_t *val_string;
+	const svn_string_t *old_val_string;
+	const svn_string_t *const *old_val_string_p;
 
-	if (!PyArg_ParseTuple(args, "lss#:change_rev_prop", &rev, &name, &value,
-			&vallen))
+	if (!PyArg_ParseTuple(args, "lss#|z#:change_rev_prop", &rev, &name, &value,
+			&vallen, &oldvalue, &oldvallen))
 		return NULL;
 	if (ra_check_busy(ra))
 		return NULL;
@@ -1395,9 +1397,35 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	val_string = svn_string_ncreate(value, vallen, temp_pool);
+#if ONLY_BEFORE_SVN(1, 7)
+	if (oldvallen != -2) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"Atomic revision property updates only supported on svn >= 1.7");
+		ra->busy = false;
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+#else
+	if (oldvallen != -2) {
+		if (oldvalue == NULL) {
+			old_val_string = NULL;
+		} else {
+			old_val_string = svn_string_ncreate(oldvalue, oldvallen, temp_pool);
+		}
+		old_val_string_p = &old_val_string;
+	} else {
+		old_val_string_p = NULL;
+	}
+#endif
+#if ONLY_SINCE_SVN(1, 7)
 	RUN_RA_WITH_POOL(temp_pool, ra,
-					  svn_ra_change_rev_prop(ra->ra, rev, name, val_string, 
+					  svn_ra_change_rev_prop2(ra->ra, rev, name, old_val_string_p, val_string,
 											 temp_pool));
+#else
+	RUN_RA_WITH_POOL(temp_pool, ra,
+					  svn_ra_change_rev_prop(ra->ra, rev, name, val_string,
+											 temp_pool));
+#endif
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }

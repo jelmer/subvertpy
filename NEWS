@@ -18,6 +18,9 @@
    * Support `ignore_ancestry` and `send_copyfrom_args` arguments to RemoteAcess.do_switch.
      (Jelmer Vernooij)
 
+   * Support `old_value` argument to RemoteAccess.change_rev_prop().
+     (Jelmer Vernooij)
+
  BUG FIXES
 
    * Avoid using deprecated svn_path_canonicalize(). (Jelmer Vernooij)
