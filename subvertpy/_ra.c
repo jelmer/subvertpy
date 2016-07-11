@@ -971,7 +971,7 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 												  send_copyfrom_args,
 												  ignore_ancestry,
 												  &py_editor, update_editor, 
-												  temp_pool, result_pool);
+												  result_pool, temp_pool);
 #elif ONLY_SINCE_SVN(1, 5)
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_ra_do_update2(ra->ra, &reporter, 
@@ -1065,7 +1065,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 						revision_to_update_to, update_target, 
 						recurse?svn_depth_infinity:svn_depth_files, switch_url,
 						send_copyfrom_args, ignore_ancestry,
-						&py_editor, update_editor, temp_pool, result_pool);
+						&py_editor, update_editor, result_pool, temp_pool);
 #elif ONLY_SINCE_SVN(1, 5)
 	err = svn_ra_do_switch2(
 						ra->ra, &reporter, &report_baton, 
@@ -2262,7 +2262,7 @@ static PyMethodDef ra_methods[] = {
 	{ "do_switch", ra_do_switch, METH_VARARGS, 
 		"S.do_switch(revision_to_update_to, update_target, recurse, switch_url, update_editor, send_copyfrom_args=False, ignore_ancestry=True)\n" },
 	{ "do_update", ra_do_update, METH_VARARGS, 
-		"S.do_update(revision_to_update_to, update_target, recurse, update_editor)\n" },
+		"S.do_update(revision_to_update_to, update_target, recurse, update_editor, send_copyfrom_args=False, ignore_ancestry=True)\n" },
 	{ "do_diff", ra_do_diff, METH_VARARGS, 
 		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse, ignore_ancestry, text_deltas) -> Reporter object\n"
 	},
