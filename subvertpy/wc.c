@@ -2445,13 +2445,19 @@ static PyObject *set_adm_dir(PyObject *self, PyObject *args)
 {
 	apr_pool_t *temp_pool;
 	char *name;
+	PyObject *py_name;
 
-	if (!PyArg_ParseTuple(args, "s", &name))
+	if (!PyArg_ParseTuple(args, "O", &py_name))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+	name = py_object_to_svn_string(py_name, temp_pool);
+	if (name == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_set_adm_dir(name, temp_pool));
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
@@ -2462,14 +2468,22 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	apr_pool_t *pool;
 	const char *pristine_path;
 	char *path;
+	PyObject *py_path;
 	PyObject *ret;
 
-	if (!PyArg_ParseTuple(args, "s", &path))
+	if (!PyArg_ParseTuple(args, "O", &py_path))
 		return NULL;
 
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
+
+	path = py_object_to_svn_string(py_path, pool);
+	if (path == NULL) {
+		apr_pool_destroy(pool);
+		return NULL;
+	}
+
 	PyErr_WarnEx(PyExc_DeprecationWarning, "get_pristine_copy_path is deprecated. Use get_pristine_contents instead.", 2);
 	RUN_SVN_WITH_POOL(pool,
 		  svn_wc_get_pristine_copy_path(svn_dirent_canonicalize(path, pool),

@@ -5,9 +5,13 @@
    * Drop support for Python versions before 2.7, in preparation of Python3 support.
      (Jelmer Vernooij)
 
+   * subvertpy.client methods no longer canonicalize paths and URLs, instead
+     requiring the caller to do so. If uncanonicalized paths/URLs are passed in,
+     a ValueError will be raised. (Jelmer Vernooij)
+
   IMPROVEMENTS
 
-   * Add Python3 support (Martin Panter, Yonggang Luo).
+   * Add Python3 support. (Martin Panter, Yonggang Luo, Jelmer Vernooij).
 
    * Add constant ERR_RA_CANNOT_CREATE_SESSION. (Jelmer Vernooij)
 

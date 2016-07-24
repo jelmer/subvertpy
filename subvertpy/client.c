@@ -73,25 +73,40 @@ typedef struct {
 static int client_set_auth(PyObject *self, PyObject *auth, void *closure);
 static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
+static bool client_check_path(const char *path, apr_pool_t *scratch_pool)
+{
+	return svn_path_is_canonical(path, scratch_pool);
+}
+
 static bool client_path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **ret)
 {
 	int i;
+	const char *path;
 	if (l == Py_None) {
 		*ret = NULL;
 		return true;
 	}
-	if (PyString_Check(l)) {
+	if (PyUnicode_Check(l) || PyBytes_Check(l)) {
 		*ret = apr_array_make(pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(l), pool);
+		path = py_object_to_svn_string(l, pool);
+		if (path == NULL) {
+			return false;
+		}
+		if (!client_check_path(path, pool)) {
+			PyErr_SetString(PyExc_ValueError, "Expected canonical path or URL");
+			return false;
+		}
+		APR_ARRAY_PUSH(*ret, const char *) = path;
 	} else if (PyList_Check(l)) {
 		*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
 		for (i = 0; i < PyList_GET_SIZE(l); i++) {
 			PyObject *item = PyList_GET_ITEM(l, i);
-			if (!PyString_Check(item)) {
-				PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
+			path = py_object_to_svn_string(item, pool);
+			if (!client_check_path(path, pool)) {
+				PyErr_SetString(PyExc_ValueError, "Expected canonical path or URL");
 				return false;
 			}
-			APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(item), pool);
+			APR_ARRAY_PUSH(*ret, const char *) = path;
 		}
 	} else {
 		PyErr_Format(PyExc_TypeError, "Expected list of strings, got: %s",
@@ -820,34 +835,45 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
 
 static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    ClientObject *client = (ClientObject *)self;
-    char *kwnames[] = { "path", "output_stream", "revision", "peg_revision", NULL };
-    char *path;
-    PyObject *peg_rev=Py_None, *rev=Py_None;
-    svn_opt_revision_t c_peg_rev, c_rev;
-    apr_pool_t *temp_pool;
-    svn_stream_t *stream;
-    PyObject *py_stream;
+	ClientObject *client = (ClientObject *)self;
+	char *kwnames[] = { "path", "output_stream", "revision", "peg_revision", NULL };
+	char *path;
+	PyObject *peg_rev=Py_None, *rev=Py_None;
+	svn_opt_revision_t c_peg_rev, c_rev;
+	apr_pool_t *temp_pool;
+	svn_stream_t *stream;
+	PyObject *py_stream, *py_path;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO|OO", kwnames, &path, &py_stream, &rev, &peg_rev))
-        return NULL;
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OO", kwnames, &py_path, &py_stream, &rev, &peg_rev))
+		return NULL;
 
-    if (!to_opt_revision(rev, &c_rev))
-        return NULL;
-    if (!to_opt_revision(peg_rev, &c_peg_rev))
-        return NULL;
+	if (!to_opt_revision(rev, &c_rev))
+		return NULL;
+	if (!to_opt_revision(peg_rev, &c_peg_rev))
+		return NULL;
 
-    temp_pool = Pool(NULL);
-    if (temp_pool == NULL)
-        return NULL;
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL) {
+		return NULL;
+	}
 
-    stream = new_py_stream(temp_pool, py_stream);
+	path = py_object_to_svn_string(py_path, temp_pool);
+	if (path == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_cat2(stream, path,
-        &c_peg_rev, &c_rev, client->client, temp_pool));
+	stream = new_py_stream(temp_pool, py_stream);
+	if (stream == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 
-    apr_pool_destroy(temp_pool);
-    Py_RETURN_NONE;
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_cat2(stream, path,
+												 &c_peg_rev, &c_rev, client->client, temp_pool));
+
+	apr_pool_destroy(temp_pool);
+	Py_RETURN_NONE;
 }
 
 static PyObject *client_delete(PyObject *self, PyObject *args)

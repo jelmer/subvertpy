@@ -1,5 +1,5 @@
 # Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@jelmer.uk>
- 
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation; either version 2.1 of the License, or
@@ -70,7 +70,7 @@ class TestClient(SubversionTestCase):
         self.client.commit(["dc"])
         r = ra.RemoteAccess(self.repos_url)
         revprops = r.rev_proplist(1)
-        self.assertEqual("Amessage", revprops["svn:log"])
+        self.assertEqual(b"Amessage", revprops["svn:log"])
 
     def test_commit_start(self):
         self.build_tree({"dc/foo": None})
@@ -80,7 +80,7 @@ class TestClient(SubversionTestCase):
         self.client.commit(["dc"])
         r = ra.RemoteAccess(self.repos_url)
         revprops = r.rev_proplist(1)
-        self.assertEqual("Bmessage", revprops["svn:log"])
+        self.assertEqual(b"Bmessage", revprops["svn:log"])
 
     def test_mkdir(self):
         self.client.mkdir(["dc/foo"])
@@ -128,19 +128,21 @@ class TestClient(SubversionTestCase):
             config = client.get_config(svn_cfg_dir)
             self.assertIsInstance(config, client.Config)
             ignores = config.get_default_ignores()
-            self.assertTrue(base_dir_basename in ignores)
+            self.assertTrue(
+                base_dir_basename.encode('utf-8') in ignores,
+                "no %r in %r" % (base_dir_basename, ignores))
         finally:
             shutil.rmtree(base_dir)
 
     def test_diff(self):
         r = ra.RemoteAccess(self.repos_url,
                 auth=ra.Auth([ra.get_username_provider()]))
-        dc = self.get_commit_editor(self.repos_url) 
+        dc = self.get_commit_editor(self.repos_url)
         f = dc.add_file("foo")
         f.modify(b"foo1")
         dc.close()
 
-        dc = self.get_commit_editor(self.repos_url) 
+        dc = self.get_commit_editor(self.repos_url)
         f = dc.open_file("foo")
         f.modify(b"foo2")
         dc.close()
@@ -191,13 +193,15 @@ class TestClient(SubversionTestCase):
         self.assertEqual(expected, entry["revprops"]["svn:log"])
 
     def assertLogEntryDateAlmostEquals(self, expected, entry, delta):
-        actual = datetime.strptime(entry["revprops"]["svn:date"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        actual = datetime.strptime(
+            entry["revprops"]["svn:date"].decode('utf-8'),
+            "%Y-%m-%dT%H:%M:%S.%fZ")
         self.assertTrue((actual - expected) < delta)
 
     def test_log(self):
         log_entries = []
-        commit_msg_1 = "Commit"
-        commit_msg_2 = "Commit 2"
+        commit_msg_1 = b"Commit"
+        commit_msg_2 = b"Commit 2"
         delta = timedelta(hours=1)
         def cb(changed_paths, revision, revprops, has_children=False):
             log_entries.append({

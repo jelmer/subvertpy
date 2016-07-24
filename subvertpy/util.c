@@ -38,7 +38,7 @@ void PyErr_SetAprStatus(apr_status_t status)
 {
 	char errmsg[1024];
 
-	PyErr_SetString(PyExc_Exception, 
+	PyErr_SetString(PyExc_Exception,
 		apr_strerror(status, errmsg, sizeof(errmsg)));
 }
 
@@ -119,23 +119,24 @@ const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
 const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool)
 {
 	const char *ret;
-	PyObject *bytes_obj = NULL;
 
 	if (PyUnicode_Check(obj)) {
-		bytes_obj = obj = PyUnicode_AsUTF8String(obj);
+		obj = PyUnicode_AsUTF8String(obj);
 		if (obj == NULL) {
 			return NULL;
 		}
+	} else {
+		Py_INCREF(obj);
 	}
 
 	if (PyBytes_Check(obj)) {
 		ret = svn_relpath_canonicalize(PyBytes_AsString(obj), pool);
-		Py_XDECREF(bytes_obj);
+		Py_DECREF(obj);
 		return ret;
 	} else {
-		Py_XDECREF(bytes_obj);
 		PyErr_SetString(PyExc_TypeError,
 						"relative paths need to be UTF-8 bytestrings or unicode strings");
+		Py_DECREF(obj);
 		return NULL;
 	}
 }
@@ -239,7 +240,7 @@ void PyErr_SetSubversionException(svn_error_t *error)
 		return;
 	}
 
-	if (error->apr_err >= APR_OS_START_SYSERR && 
+	if (error->apr_err >= APR_OS_START_SYSERR &&
 		error->apr_err < APR_OS_START_SYSERR + APR_OS_ERRSPACE_SIZE) {
 		PyObject *excval = Py_BuildValue("(iz)", error->apr_err - APR_OS_START_SYSERR, error->message);
 		PyErr_SetObject(PyExc_OSError, excval);
@@ -303,10 +304,10 @@ void handle_svn_error(svn_error_t *error)
 		return; /* Cancelled because of a Python exception, let Python deal with it. */
 
 	if (error->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD) {
-		/* svnserve doesn't handle the 'failure' command sent back 
+		/* svnserve doesn't handle the 'failure' command sent back
 		 * by the client if one of the editor commands failed.
-		 * Rather than bouncing the error sent by the client 
-		 * (BZR_SVN_APR_ERROR_OFFSET for example), it will send 
+		 * Rather than bouncing the error sent by the client
+		 * (BZR_SVN_APR_ERROR_OFFSET for example), it will send
 		 * SVN_ERR_RA_SVN_UNKNOWN_CMD. */
 		if (PyErr_Occurred() != NULL)
 			return;
@@ -351,22 +352,27 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 bool relpath_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **ret)
 {
 	int i;
+	const char *relpath;
 	if (l == Py_None) {
 		*ret = NULL;
 		return true;
 	}
-	if (PyString_Check(l)) {
+	if (PyUnicode_Check(l) || PyBytes_Check(l)) {
 		*ret = apr_array_make(pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(*ret, const char *) = py_object_to_svn_relpath(l, pool);
+		relpath = py_object_to_svn_relpath(l, pool);
+		if (relpath == NULL) {
+			return false;
+		}
+		APR_ARRAY_PUSH(*ret, const char *) = relpath;
 	} else if (PyList_Check(l)) {
 		*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
 		for (i = 0; i < PyList_GET_SIZE(l); i++) {
 			PyObject *item = PyList_GET_ITEM(l, i);
-			if (!PyString_Check(item)) {
-				PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
+			relpath = py_object_to_svn_relpath(item, pool);
+			if (relpath == NULL) {
 				return false;
 			}
-			APR_ARRAY_PUSH(*ret, const char *) = py_object_to_svn_relpath(item, pool);
+			APR_ARRAY_PUSH(*ret, const char *) = relpath;
 		}
 	} else {
 		PyErr_Format(PyExc_TypeError, "Expected list of strings, got: %s",
@@ -394,7 +400,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 	if (py_props == NULL) {
 		goto fail_props;
 	}
-	for (idx = apr_hash_first(pool, props); idx != NULL; 
+	for (idx = apr_hash_first(pool, props); idx != NULL;
 		 idx = apr_hash_next(idx)) {
 		PyObject *py_key, *py_val;
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
@@ -425,7 +431,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 	}
 	apr_pool_destroy(pool);
 	return py_props;
-	
+
 fail_item:
 	Py_DECREF(py_props);
 fail_props:
@@ -460,16 +466,23 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 		}
 
 		if (!PyBytes_Check(k)) {
-			PyErr_SetString(PyExc_TypeError, 
+			PyErr_SetString(PyExc_TypeError,
 							"property name should be unicode or byte string");
 			Py_DECREF(k);
 			return NULL;
 		}
 
+		if (PyUnicode_Check(v)) {
+			v = PyUnicode_AsUTF8String(v);
+		} else {
+			Py_INCREF(v);
+		}
+
 		if (!PyBytes_Check(v)) {
-			PyErr_SetString(PyExc_TypeError, 
-							"property value should be byte string");
+			PyErr_SetString(PyExc_TypeError,
+							"property value should be unicode or byte string");
 			Py_DECREF(k);
+			Py_DECREF(v);
 			return NULL;
 		}
 
@@ -478,6 +491,7 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 		apr_hash_set(hash_props, PyBytes_AsString(k),
 					 PyBytes_Size(k), val_string);
 		Py_DECREF(k);
+		Py_DECREF(v);
 	}
 
 	return hash_props;
@@ -678,8 +692,8 @@ svn_error_t *py_svn_error()
 
 PyObject *wrap_lock(svn_lock_t *lock)
 {
-	return Py_BuildValue("(zzzbzz)", lock->path, lock->token, lock->owner, 
-						 lock->comment, lock->is_dav_comment, 
+	return Py_BuildValue("(zzzbzz)", lock->path, lock->token, lock->owner,
+						 lock->comment, lock->is_dav_comment,
 						 lock->creation_date, lock->expiration_date);
 }
 
@@ -719,8 +733,8 @@ static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length
 	ret = PyObject_CallMethod(self, "read", "i", *length);
 	CB_CHECK_PYRETVAL(ret);
 
-	if (!PyString_Check(ret)) {
-		PyErr_SetString(PyExc_TypeError, "Expected stream read function to return string");
+	if (!PyBytes_Check(ret)) {
+		PyErr_SetString(PyExc_TypeError, "Expected stream read function to return bytes");
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
@@ -733,10 +747,13 @@ static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length
 
 static svn_error_t *py_stream_write(void *baton, const char *data, apr_size_t *len)
 {
-	PyObject *self = (PyObject *)baton, *ret;
+	PyObject *self = (PyObject *)baton, *ret, *py_data;
 	PyGILState_STATE state = PyGILState_Ensure();
 
-	ret = PyObject_CallMethod(self, "write", "s#", data, len[0]);
+	py_data = PyBytes_FromStringAndSize(data, *len);
+	CB_CHECK_PYRETVAL(py_data);
+
+	ret = PyObject_CallMethod(self, "write", "O", py_data);
 	CB_CHECK_PYRETVAL(ret);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
@@ -793,7 +810,7 @@ static apr_hash_t *get_default_config(void)
 
 	if (!initialised) {
 		pool = Pool(NULL);
-		RUN_SVN_WITH_POOL(pool, 
+		RUN_SVN_WITH_POOL(pool,
 					  svn_config_get_config(&default_config, NULL, pool));
 		initialised = true;
 	}
@@ -961,7 +978,7 @@ static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 	}
 
 	temp_pool = Pool(NULL);
-	if (temp_pool == NULL) 
+	if (temp_pool == NULL)
 		return NULL;
 	if (len != -1) {
 		char *buffer;
@@ -983,7 +1000,7 @@ static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 	} else {
 #if ONLY_SINCE_SVN(1, 6)
 		svn_string_t *result;
-		RUN_SVN_WITH_POOL(temp_pool, svn_string_from_stream(&result, 
+		RUN_SVN_WITH_POOL(temp_pool, svn_string_from_stream(&result,
 							   self->stream,
 							   temp_pool,
 							   temp_pool));
@@ -992,7 +1009,7 @@ static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 		apr_pool_destroy(temp_pool);
 		return ret;
 #else
-		PyErr_SetString(PyExc_NotImplementedError, 
+		PyErr_SetString(PyExc_NotImplementedError,
 			"Subversion 1.5 does not provide svn_string_from_stream().");
 		return NULL;
 #endif
@@ -1010,7 +1027,7 @@ static PyMethodDef stream_methods[] = {
 PyTypeObject Stream_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.Stream", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(StreamObject), 
+	sizeof(StreamObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 
 	/* Methods to implement standard operations */

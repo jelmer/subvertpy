@@ -77,7 +77,7 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertEqual(1, self.ra.get_latest_revnum())
 
     def test_get_uuid(self):
-        self.assertIsInstance(self.ra.get_uuid(), unicode)
+        self.assertEqual(36, len(self.ra.get_uuid()))
 
     def test_get_repos_root(self):
         self.assertEqual(self.repos_url, self.ra.get_repos_root())
@@ -254,7 +254,10 @@ class TestRemoteAccess(SubversionTestCase):
         root.close()
         editor.close()
 
-        self.assertEqual(set(['bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date', 'svn:log']), set(self.ra.rev_proplist(1).keys()))
+        revprops = self.ra.rev_proplist(1)
+        self.assertEqual(
+            set(['bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date', 'svn:log']),
+            set(revprops.keys()), "result: %r" % revprops)
 
     def test_get_commit_editor_context_manager(self):
         def mycb(paths, rev, revprops):
@@ -292,7 +295,7 @@ class TestRemoteAccess(SubversionTestCase):
 
         stream = BytesIO()
         props = self.ra.get_file("bar", stream, 1)[1]
-        self.assertEqual("blie", props.get("bla:bar"))
+        self.assertEqual(b"blie", props.get("bla:bar"))
         stream = BytesIO()
         props = self.ra.get_file("bar", stream, 2)[1]
         self.assertIs(None, props.get("bla:bar"))

@@ -1281,8 +1281,6 @@ static PyObject *ra_replay_range(PyObject *self, PyObject *args)
 #endif
 }
 
-
-
 static PyObject *ra_rev_proplist(PyObject *self, PyObject *args)
 {
 	apr_pool_t *temp_pool;
@@ -1568,6 +1566,7 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 	svn_revnum_t fetch_rev;
 	PyObject *py_stream, *py_props;
 	apr_pool_t *temp_pool;
+	svn_stream_t *stream;
 
 	if (!PyArg_ParseTuple(args, "OO|l:get_file", &py_path, &py_stream, &revision))
 		return NULL;
@@ -1583,14 +1582,19 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 		fetch_rev = revision;
 
 	path = py_object_to_svn_relpath(py_path, temp_pool);
-	if (path == NULL)
+	if (path == NULL) {
+		apr_pool_destroy(temp_pool);
 		return NULL;
+	}
 
-	/* Yuck. Subversion doesn't like leading slashes.. */
-	while (*path == '/') path++;
+	stream = new_py_stream(temp_pool, py_stream);
+	if (stream == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file(ra->ra, path, revision,
-													new_py_stream(temp_pool, py_stream),
+													stream,
 													&fetch_rev, &props, temp_pool));
 
 	py_props = prop_hash_to_dict(props);

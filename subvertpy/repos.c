@@ -463,14 +463,21 @@ static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	PyObject *py_feedback_stream;
 	svn_revnum_t start_rev, end_rev;
+	svn_stream_t *stream;
 	if (!PyArg_ParseTuple(args, "Oll", &py_feedback_stream, &start_rev, &end_rev))
 		return NULL;
 	temp_pool = Pool(NULL);
-	if (temp_pool == NULL)
+	if (temp_pool == NULL) {
 		return NULL;
+	}
+	stream = new_py_stream(temp_pool, py_feedback_stream);
+	if (stream == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(temp_pool,
 		svn_repos_verify_fs(self->repos,
-			new_py_stream(temp_pool, py_feedback_stream), start_rev, end_rev,
+			stream, start_rev, end_rev,
 			py_cancel_check, NULL, temp_pool));
 	apr_pool_destroy(temp_pool);
 

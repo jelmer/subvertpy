@@ -44,13 +44,13 @@ class VersionTest(TestCase):
 class WorkingCopyTests(TestCase):
 
     def test_get_adm_dir(self):
-        self.assertEqual(".svn", wc.get_adm_dir())
+        self.assertEqual(b".svn", wc.get_adm_dir())
 
     def test_set_adm_dir(self):
         old_dir_name = wc.get_adm_dir()
         try:
-            wc.set_adm_dir("_svn")
-            self.assertEqual("_svn", wc.get_adm_dir())
+            wc.set_adm_dir(b"_svn")
+            self.assertEqual(b"_svn", wc.get_adm_dir())
         finally:
             wc.set_adm_dir(old_dir_name)
 
