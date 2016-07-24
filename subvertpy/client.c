@@ -75,31 +75,41 @@ static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
 static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 {
-    if (PyInt_Check(arg) || PyLong_Check(arg)) {
-        ret->kind = svn_opt_revision_number;
-        ret->value.number = PyInt_AsLong(arg);
-        if (ret->value.number == -1 && PyErr_Occurred())
-            return false;
-        return true;
-    } else if (arg == Py_None) {
-        ret->kind = svn_opt_revision_unspecified;
-        return true;
-    } else if (PyString_Check(arg)) {
-        char *text = PyString_AsString(arg);
-        if (!strcmp(text, "HEAD")) {
-            ret->kind = svn_opt_revision_head;
-            return true;
-        } else if (!strcmp(text, "WORKING")) {
-            ret->kind = svn_opt_revision_working;
-            return true;
-        } else if (!strcmp(text, "BASE")) {
-            ret->kind = svn_opt_revision_base;
-            return true;
-        }
-    }
+	if (PyLong_Check(arg)) {
+		ret->kind = svn_opt_revision_number;
+		ret->value.number = PyLong_AsLong(arg);
+		if (ret->value.number == -1 && PyErr_Occurred()) {
+			return false;
+		}
+		return true;
+#if PY_MAJOR_VERSION < 3
+	} else if (PyInt_Check(arg)) {
+		ret->kind = svn_opt_revision_number;
+		ret->value.number = PyInt_AsLong(arg);
+		if (ret->value.number == -1 && PyErr_Occurred()) {
+			return false;
+		}
+		return true;
+#endif
+	} else if (arg == Py_None) {
+		ret->kind = svn_opt_revision_unspecified;
+		return true;
+	} else if (PyString_Check(arg)) {
+		char *text = PyString_AsString(arg);
+		if (!strcmp(text, "HEAD")) {
+			ret->kind = svn_opt_revision_head;
+			return true;
+		} else if (!strcmp(text, "WORKING")) {
+			ret->kind = svn_opt_revision_working;
+			return true;
+		} else if (!strcmp(text, "BASE")) {
+			ret->kind = svn_opt_revision_base;
+			return true;
+		}
+	}
 
-    PyErr_SetString(PyExc_ValueError, "Unable to parse revision");
-    return false;
+	PyErr_SetString(PyExc_ValueError, "Unable to parse revision");
+	return false;
 }
 
 static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)

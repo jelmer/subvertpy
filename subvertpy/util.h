@@ -162,4 +162,12 @@ char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool);
 #define PyRepr_FromFormat PyString_FromFormat
 #endif
 
+#if PY_MAJOR_VERSION >= 3
+#define py_from_svn_revnum PyLong_FromLong
+#define py_to_svn_revnum PyLong_AsLong
+#else
+#define py_from_svn_revnum PyInt_FromLong
+#define py_to_svn_revnum PyInt_AsLong
+#endif
+
 #endif /* _SUBVERTPY_UTIL_H_ */

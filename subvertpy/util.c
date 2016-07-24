@@ -692,7 +692,7 @@ apr_array_header_t *revnum_list_to_apr_array(apr_pool_t *pool, PyObject *l)
 	}
 	for (i = 0; i < PyList_Size(l); i++) {
 		PyObject *item = PyList_GetItem(l, i);
-		long rev = PyInt_AsLong(item);
+		long rev = py_to_svn_revnum(item);
 		if (rev == -1 && PyErr_Occurred()) {
 			return NULL;
 		}
@@ -808,7 +808,11 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	if (ret == NULL)
 		return NULL;
 	if (dirent_fields & SVN_DIRENT_KIND) {
+#if PY_MAJOR_VERSION < 3
 		obj = PyInt_FromLong(dirent->kind);
+#else
+		obj = PyLong_FromLong(dirent->kind);
+#endif
 		PyDict_SetItemString(ret, "kind", obj);
 		Py_DECREF(obj);
 	}
@@ -931,7 +935,7 @@ static PyObject *stream_write(StreamObject *self, PyObject *args)
 
 	RUN_SVN(svn_stream_write(self->stream, buffer, &length));
 
-	return PyInt_FromLong(length);
+	return PyLong_FromLong(length);
 }
 
 static PyObject *stream_read_full(StreamObject *self, PyObject *args)
@@ -1063,3 +1067,5 @@ PyTypeObject Stream_Type = {
 	NULL, /*	allocfunc tp_alloc;	*/
 	stream_init, /* tp_new tp_new */
 };
+
+

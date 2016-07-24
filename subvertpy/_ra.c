@@ -49,7 +49,7 @@ static PyTypeObject Auth_Type;
 static bool ra_check_svn_path(const char *path)
 {
 	/* svn_ra_check_path will raise an assertion error if the path has a
-	 * leading '/'. Raise a Python exception if there ar eleading '/'s so that 
+	 * leading '/'. Raise a Python exception if there ar eleading '/'s so that
 	 * the Python interpreter won't crash and die. */
 	if (*path == '/') {
 		PyErr_SetString(PyExc_ValueError, "invalid path has a leading '/'");
@@ -68,8 +68,8 @@ static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, voi
 
 	state = PyGILState_Ensure();
 
-	ret = PyObject_CallFunction(fn, "lzz", 
-					commit_info->revision, commit_info->date, 
+	ret = PyObject_CallFunction(fn, "lzz",
+					commit_info->revision, commit_info->date,
 					commit_info->author);
 	CB_CHECK_PYRETVAL(ret);
 	Py_DECREF(ret);
@@ -79,16 +79,16 @@ static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, voi
 
 static PyObject *pyify_lock(const svn_lock_t *lock)
 {
-	return Py_BuildValue("(ssszbLL)", 
-						 lock->path, lock->token, 
+	return Py_BuildValue("(ssszbLL)",
+						 lock->path, lock->token,
 						 lock->owner, lock->comment,
 						 lock->is_dav_comment,
 						 lock->creation_date,
 						 lock->expiration_date);
 }
 
-static svn_error_t *py_lock_func (void *baton, const char *path, int do_lock, 
-						   const svn_lock_t *lock, svn_error_t *ra_err, 
+static svn_error_t *py_lock_func (void *baton, const char *path, int do_lock,
+						   const svn_lock_t *lock, svn_error_t *ra_err,
 						   apr_pool_t *pool)
 {
 	PyObject *py_ra_err, *ret, *py_lock;
@@ -100,7 +100,7 @@ static svn_error_t *py_lock_func (void *baton, const char *path, int do_lock,
 		Py_INCREF(py_ra_err);
 	}
 	py_lock = pyify_lock(lock);
-	ret = PyObject_CallFunction((PyObject *)baton, "zbOO", path, do_lock, 
+	ret = PyObject_CallFunction((PyObject *)baton, "zbOO", path, do_lock,
 						  py_lock, py_ra_err);
 	Py_DECREF(py_lock);
 	Py_DECREF(py_ra_err);
@@ -135,14 +135,14 @@ typedef struct {
 
 static PyObject *reporter_set_path(PyObject *self, PyObject *args)
 {
-	char *path; 
-	svn_revnum_t revision; 
-	bool start_empty; 
+	char *path;
+	svn_revnum_t revision;
+	bool start_empty;
 	char *lock_token = NULL;
 	svn_depth_t depth = svn_depth_infinity;
 	ReporterObject *reporter = (ReporterObject *)self;
 
-	if (!PyArg_ParseTuple(args, "slb|zi:set_path", &path, &revision, &start_empty, 
+	if (!PyArg_ParseTuple(args, "slb|zi:set_path", &path, &revision, &start_empty,
 						  &lock_token, &depth))
 		return NULL;
 
@@ -153,17 +153,17 @@ static PyObject *reporter_set_path(PyObject *self, PyObject *args)
 	}
 
 #if ONLY_SINCE_SVN(1, 5)
-	RUN_SVN(reporter->reporter->set_path(reporter->report_baton, 
-												  path, revision, depth, start_empty, 
+	RUN_SVN(reporter->reporter->set_path(reporter->report_baton,
+												  path, revision, depth, start_empty,
 					 lock_token, reporter->pool));
 #else
 	if (depth != svn_depth_infinity) {
-		PyErr_SetString(PyExc_NotImplementedError, 
+		PyErr_SetString(PyExc_NotImplementedError,
 						"depth != infinity only supported for svn >= 1.5");
 		return NULL;
 	}
-	RUN_SVN(reporter->reporter->set_path(reporter->report_baton, 
-												  path, revision, start_empty, 
+	RUN_SVN(reporter->reporter->set_path(reporter->report_baton,
+												  path, revision, start_empty,
 					 lock_token, reporter->pool));
 #endif
 	Py_RETURN_NONE;
@@ -208,15 +208,15 @@ static PyObject *reporter_link_path(PyObject *self, PyObject *args)
 	}
 
 #if ONLY_SINCE_SVN(1, 5)
-	RUN_SVN(reporter->reporter->link_path(reporter->report_baton, path, url, 
+	RUN_SVN(reporter->reporter->link_path(reporter->report_baton, path, url,
 				revision, depth, start_empty, lock_token, reporter->pool));
 #else
 	if (depth != svn_depth_infinity) {
-		PyErr_SetString(PyExc_NotImplementedError, 
+		PyErr_SetString(PyExc_NotImplementedError,
 						"depth != infinity only supported for svn >= 1.5");
 		return NULL;
 	}
-	RUN_SVN(reporter->reporter->link_path(reporter->report_baton, path, url, 
+	RUN_SVN(reporter->reporter->link_path(reporter->report_baton, path, url,
 				revision, start_empty, lock_token, reporter->pool));
 #endif
 
@@ -257,7 +257,7 @@ static PyObject *reporter_abort(PyObject *self)
 
 	reporter->ra->busy = false;
 
-	RUN_SVN(reporter->reporter->abort_report(reporter->report_baton, 
+	RUN_SVN(reporter->reporter->abort_report(reporter->report_baton,
 													 reporter->pool));
 
 	apr_pool_destroy(reporter->pool);
@@ -268,17 +268,17 @@ static PyObject *reporter_abort(PyObject *self)
 }
 
 static PyMethodDef reporter_methods[] = {
-	{ "abort", (PyCFunction)reporter_abort, METH_NOARGS, 
+	{ "abort", (PyCFunction)reporter_abort, METH_NOARGS,
 		"S.abort()\n"
 		"Abort this report." },
-	{ "finish", (PyCFunction)reporter_finish, METH_NOARGS, 
+	{ "finish", (PyCFunction)reporter_finish, METH_NOARGS,
 		"S.finish()\n"
 		"Finish this report." },
-	{ "link_path", (PyCFunction)reporter_link_path, METH_VARARGS, 
+	{ "link_path", (PyCFunction)reporter_link_path, METH_VARARGS,
 		"S.link_path(path, url, revision, start_empty, lock_token=None)\n" },
-	{ "set_path", (PyCFunction)reporter_set_path, METH_VARARGS, 
+	{ "set_path", (PyCFunction)reporter_set_path, METH_VARARGS,
 		"S.set_path(path, revision, start_empty, lock_token=None)\n" },
-	{ "delete_path", (PyCFunction)reporter_delete_path, METH_VARARGS, 
+	{ "delete_path", (PyCFunction)reporter_delete_path, METH_VARARGS,
 		"S.delete_path(path)\n" },
 	{ NULL, }
 };
@@ -363,7 +363,7 @@ static PyTypeObject Reporter_Type = {
 static PyObject *version(PyObject *self)
 {
 	const svn_version_t *ver = svn_ra_version();
-	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+	return Py_BuildValue("(iiis)", ver->major, ver->minor,
 						 ver->patch, ver->tag);
 }
 
@@ -377,7 +377,7 @@ SVN_VERSION_DEFINE(svn_api_version);
 static PyObject *api_version(PyObject *self)
 {
 	const svn_version_t *ver = &svn_api_version;
-	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+	return Py_BuildValue("(iiis)", ver->major, ver->minor,
 						 ver->patch, ver->tag);
 }
 
@@ -521,7 +521,7 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 
 	if (PyString_Check(ret)) {
 		char* fname = PyString_AsString(ret);
-		status = apr_file_open(fp, fname, APR_CREATE | APR_READ | APR_WRITE, APR_OS_DEFAULT, 
+		status = apr_file_open(fp, fname, APR_CREATE | APR_READ | APR_WRITE, APR_OS_DEFAULT,
 								pool);
 		if (status) {
 			PyErr_SetAprStatus(status);
@@ -543,7 +543,7 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 
 	PyGILState_Release(state);
 	return NULL;
-	
+
 fail_file:
 	Py_DECREF(ret);
 fail:
@@ -566,7 +566,7 @@ static void py_progress_func(apr_off_t progress, apr_off_t total, void *baton, a
 static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	char *kwnames[] = { "url", "progress_cb", "auth", "config",
-				"client_string_func", "open_tmp_file_func", "uuid", 
+				"client_string_func", "open_tmp_file_func", "uuid",
 						NULL };
 	char *uuid = NULL;
 	PyObject *py_url;
@@ -580,9 +580,9 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	svn_auth_baton_t *auth_baton;
 	svn_error_t *err;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOOOOz", kwnames, &py_url, 
-									 &progress_cb, (PyObject **)&auth, &config, 
-									 &client_string_func, &open_tmp_file_func, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOOOOz", kwnames, &py_url,
+									 &progress_cb, (PyObject **)&auth, &config,
+									 &client_string_func, &open_tmp_file_func,
 									 &uuid))
 		return NULL;
 
@@ -656,7 +656,7 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			   callbacks2, ret, config_hash, ret->pool);
 #else
 	if (uuid != NULL) {
-		PyErr_SetString(PyExc_TypeError, 
+		PyErr_SetString(PyExc_TypeError,
 			"uuid argument not supported with svn 1.4");
 		Py_DECREF(ret);
 		return NULL;
@@ -724,7 +724,7 @@ static PyObject *ra_reparent(PyObject *self, PyObject *args)
 }
 
 /**
- * Obtain the number of the latest committed revision in the 
+ * Obtain the number of the latest committed revision in the
  * connected repository.
  */
 static PyObject *ra_get_latest_revnum(PyObject *self)
@@ -741,9 +741,8 @@ static PyObject *ra_get_latest_revnum(PyObject *self)
 	RUN_RA_WITH_POOL(temp_pool, ra,
 				  svn_ra_get_latest_revnum(ra->ra, &latest_revnum, temp_pool));
 	apr_pool_destroy(temp_pool);
-	return PyInt_FromLong(latest_revnum);
+	return py_from_svn_revnum(latest_revnum);
 }
-
 
 static bool ra_get_log_prepare(RemoteAccessObject *ra, PyObject *paths,
 bool include_merged_revisions, PyObject *revprops, apr_pool_t **pool,
@@ -756,7 +755,7 @@ apr_array_header_t **apr_paths, apr_array_header_t **apr_revprops)
 	if (*pool == NULL)
 		goto fail_pool;
 	if (paths == Py_None) {
-		/* The subversion libraries don't behave as expected, 
+		/* The subversion libraries don't behave as expected,
 		 * so tweak our own parameters a bit. */
 		*apr_paths = apr_array_make(*pool, 1, sizeof(char *));
 		APR_ARRAY_PUSH(*apr_paths, char *) = apr_pstrdup(*pool, "");
@@ -783,10 +782,10 @@ apr_array_header_t **apr_paths, apr_array_header_t **apr_revprops)
 				goto fail_prep;
 			}
 
-			if (strcmp(SVN_PROP_REVISION_LOG, ns) && 
+			if (strcmp(SVN_PROP_REVISION_LOG, ns) &&
 				strcmp(SVN_PROP_REVISION_AUTHOR, ns) &&
 				strcmp(SVN_PROP_REVISION_DATE, ns)) {
-				PyErr_SetString(PyExc_NotImplementedError, 
+				PyErr_SetString(PyExc_NotImplementedError,
 								"fetching custom revision properties not supported");
 				goto fail_prep;
 			}
@@ -794,7 +793,7 @@ apr_array_header_t **apr_paths, apr_array_header_t **apr_revprops)
 	}
 
 	if (include_merged_revisions) {
-		PyErr_SetString(PyExc_NotImplementedError, 
+		PyErr_SetString(PyExc_NotImplementedError,
 			"include_merged_revisions not supported in Subversion 1.4");
 		goto fail_prep;
 	}
@@ -803,9 +802,9 @@ apr_array_header_t **apr_paths, apr_array_header_t **apr_revprops)
 	if (!string_list_to_apr_array(*pool, revprops, apr_revprops)) {
 		goto fail_prep;
 	}
-	
+
 	return true;
-	
+
 fail_prep:
 	apr_pool_destroy(*pool);
 fail_pool:
@@ -820,7 +819,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		"discover_changed_paths", "strict_node_history", "include_merged_revisions", "revprops", NULL };
 	PyObject *callback, *paths;
 	svn_revnum_t start = 0, end = 0;
-	int limit=0; 
+	int limit=0;
 	bool discover_changed_paths=false, strict_node_history=true,include_merged_revisions=false;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	PyObject *revprops = Py_None;
@@ -828,7 +827,7 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	apr_array_header_t *apr_paths;
 	apr_array_header_t *apr_revprops;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOll|ibbbO:get_log", kwnames, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOll|ibbbO:get_log", kwnames,
 						 &callback, &paths, &start, &end, &limit,
 						 &discover_changed_paths, &strict_node_history,
 						 &include_merged_revisions, &revprops))
@@ -840,17 +839,17 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 	}
 
 #if ONLY_SINCE_SVN(1, 5)
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_log2(ra->ra, 
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_log2(ra->ra,
 			apr_paths, start, end, limit,
-			discover_changed_paths, strict_node_history, 
+			discover_changed_paths, strict_node_history,
 			include_merged_revisions,
 			apr_revprops,
-			py_svn_log_entry_receiver, 
+			py_svn_log_entry_receiver,
 			callback, temp_pool));
 #else
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_log(ra->ra, 
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_log(ra->ra,
 			apr_paths, start, end, limit,
-			discover_changed_paths, strict_node_history, py_svn_log_wrapper, 
+			discover_changed_paths, strict_node_history, py_svn_log_wrapper,
 			callback, temp_pool));
 #endif
 	apr_pool_destroy(temp_pool);
@@ -912,7 +911,7 @@ static PyObject *ra_get_url(PyObject *self, void *closure)
 
 	return r;
 #else
-	PyErr_SetString(PyExc_NotImplementedError, 
+	PyErr_SetString(PyExc_NotImplementedError,
 					"svn_ra_get_session_url only supported for svn >= 1.5");
 	return NULL;
 #endif
@@ -933,7 +932,7 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_boolean_t send_copyfrom_args = FALSE;
 
-	if (!PyArg_ParseTuple(args, "lsbO|bb:do_update", &revision_to_update_to, &update_target, &recurse, &update_editor, 
+	if (!PyArg_ParseTuple(args, "lsbO|bb:do_update", &revision_to_update_to, &update_target, &recurse, &update_editor,
 						  &send_copyfrom_args, &ignore_ancestry))
 		return NULL;
 
@@ -964,22 +963,22 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	Py_INCREF(update_editor);
 #if ONLY_SINCE_SVN(1, 8)
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_ra_do_update3(ra->ra, &reporter, 
-												  &report_baton, 
-												  revision_to_update_to, 
-												  update_target, recurse?svn_depth_infinity:svn_depth_files, 
+	err = svn_ra_do_update3(ra->ra, &reporter,
+												  &report_baton,
+												  revision_to_update_to,
+												  update_target, recurse?svn_depth_infinity:svn_depth_files,
 												  send_copyfrom_args,
 												  ignore_ancestry,
-												  &py_editor, update_editor, 
+												  &py_editor, update_editor,
 												  result_pool, temp_pool);
 #elif ONLY_SINCE_SVN(1, 5)
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_ra_do_update2(ra->ra, &reporter, 
-												  &report_baton, 
-												  revision_to_update_to, 
-												  update_target, recurse?svn_depth_infinity:svn_depth_files, 
+	err = svn_ra_do_update2(ra->ra, &reporter,
+												  &report_baton,
+												  revision_to_update_to,
+												  update_target, recurse?svn_depth_infinity:svn_depth_files,
 												  send_copyfrom_args,
-												  &py_editor, update_editor, 
+												  &py_editor, update_editor,
 												  result_pool);
 #else
 	if (send_copyfrom_args) {
@@ -1037,7 +1036,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	ReporterObject *ret;
 	svn_error_t *err;
 
-	if (!PyArg_ParseTuple(args, "lsbsO|bb:do_switch", &revision_to_update_to, &update_target, 
+	if (!PyArg_ParseTuple(args, "lsbsO|bb:do_switch", &revision_to_update_to, &update_target,
 						  &recurse, &switch_url, &update_editor, &send_copyfrom_args, &ignore_ancestry))
 		return NULL;
 	if (ra_check_busy(ra))
@@ -1061,22 +1060,22 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 
 #if ONLY_SINCE_SVN(1, 8)
 	err = svn_ra_do_switch3(
-						ra->ra, &reporter, &report_baton, 
-						revision_to_update_to, update_target, 
+						ra->ra, &reporter, &report_baton,
+						revision_to_update_to, update_target,
 						recurse?svn_depth_infinity:svn_depth_files, switch_url,
 						send_copyfrom_args, ignore_ancestry,
 						&py_editor, update_editor, result_pool, temp_pool);
 #elif ONLY_SINCE_SVN(1, 5)
 	err = svn_ra_do_switch2(
-						ra->ra, &reporter, &report_baton, 
-						revision_to_update_to, update_target, 
-						recurse?svn_depth_infinity:svn_depth_files, switch_url, &py_editor, 
+						ra->ra, &reporter, &report_baton,
+						revision_to_update_to, update_target,
+						recurse?svn_depth_infinity:svn_depth_files, switch_url, &py_editor,
 						update_editor, result_pool);
 #else
 	err = svn_ra_do_switch(
-						ra->ra, &reporter, &report_baton, 
-						revision_to_update_to, update_target, 
-						recurse, switch_url, &py_editor, 
+						ra->ra, &reporter, &report_baton,
+						revision_to_update_to, update_target,
+						recurse, switch_url, &py_editor,
 						update_editor, result_pool);
 #endif
 
@@ -1107,7 +1106,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 {
 	svn_revnum_t revision_to_update_to;
-	char *diff_target, *versus_url; 
+	char *diff_target, *versus_url;
 	PyObject *diff_editor;
 	const REPORTER_T *reporter;
 	void *report_baton;
@@ -1130,22 +1129,22 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 	Py_INCREF(diff_editor);
 	Py_BEGIN_ALLOW_THREADS
 #if ONLY_SINCE_SVN(1, 5)
-	err = svn_ra_do_diff3(ra->ra, &reporter, &report_baton, 
-												  revision_to_update_to, 
+	err = svn_ra_do_diff3(ra->ra, &reporter, &report_baton,
+												  revision_to_update_to,
 												  diff_target, recurse?svn_depth_infinity:svn_depth_files,
-												  ignore_ancestry, 
+												  ignore_ancestry,
 												  text_deltas,
 												  versus_url,
-												  &py_editor, diff_editor, 
+												  &py_editor, diff_editor,
 												  temp_pool);
 #else
-	err = svn_ra_do_diff2(ra->ra, &reporter, &report_baton, 
-												  revision_to_update_to, 
+	err = svn_ra_do_diff2(ra->ra, &reporter, &report_baton,
+												  revision_to_update_to,
 												  diff_target, recurse,
-												  ignore_ancestry, 
+												  ignore_ancestry,
 												  text_deltas,
 												  versus_url,
-												  &py_editor, diff_editor, 
+												  &py_editor, diff_editor,
 												  temp_pool);
 #endif
 	Py_END_ALLOW_THREADS
@@ -1186,10 +1185,10 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	/* Only INCREF here, py_editor takes care of the DECREF */
-	Py_INCREF(update_editor); 
+	Py_INCREF(update_editor);
 	RUN_RA_WITH_POOL(temp_pool, ra,
 					  svn_ra_replay(ra->ra, revision, low_water_mark,
-									send_deltas, &py_editor, update_editor, 
+									send_deltas, &py_editor, update_editor,
 									temp_pool));
 	apr_pool_destroy(temp_pool);
 
@@ -1216,8 +1215,8 @@ static svn_error_t *py_revstart_cb(svn_revnum_t revision, void *replay_baton,
 	return NULL;
 }
 
-static svn_error_t *py_revfinish_cb(svn_revnum_t revision, void *replay_baton, 
-									const svn_delta_editor_t *editor, void *edit_baton, 
+static svn_error_t *py_revfinish_cb(svn_revnum_t revision, void *replay_baton,
+									const svn_delta_editor_t *editor, void *edit_baton,
 									apr_hash_t *rev_props, apr_pool_t *pool)
 {
 	PyObject *cbs = (PyObject *)replay_baton;
@@ -1264,13 +1263,13 @@ static PyObject *ra_replay_range(PyObject *self, PyObject *args)
 	Py_INCREF(cbs);
 	RUN_RA_WITH_POOL(temp_pool, ra,
 					  svn_ra_replay_range(ra->ra, start_revision, end_revision, low_water_mark,
-									send_deltas, py_revstart_cb, py_revfinish_cb, cbs, 
+									send_deltas, py_revstart_cb, py_revfinish_cb, cbs,
 									temp_pool));
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
 #else
-	PyErr_SetString(PyExc_NotImplementedError, 
+	PyErr_SetString(PyExc_NotImplementedError,
 		"svn_ra_replay not available with Subversion 1.4");
 	return NULL;
 #endif
@@ -1303,7 +1302,7 @@ static PyObject *ra_rev_proplist(PyObject *self, PyObject *args)
 
 static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-	char *kwnames[] = { "revprops", "callback", "lock_tokens", "keep_locks", 
+	char *kwnames[] = { "revprops", "callback", "lock_tokens", "keep_locks",
 		NULL };
 	PyObject *revprops, *commit_callback = Py_None, *lock_tokens = Py_None;
 	bool keep_locks = false;
@@ -1359,9 +1358,9 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		goto fail_prep2;
 	}
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_ra_get_commit_editor3(ra->ra, &editor, 
-		&edit_baton, 
-		hash_revprops, py_commit_callback, 
+	err = svn_ra_get_commit_editor3(ra->ra, &editor,
+		&edit_baton,
+		hash_revprops, py_commit_callback,
 		commit_callback, hash_lock_tokens, keep_locks, pool);
 #else
 	/* Check that revprops has only one member named SVN_PROP_REVISION_LOG */
@@ -1382,9 +1381,9 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	}
 
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_ra_get_commit_editor2(ra->ra, &editor, 
-		&edit_baton, 
-		log_msg, py_commit_callback, 
+	err = svn_ra_get_commit_editor2(ra->ra, &editor,
+		&edit_baton,
+		log_msg, py_commit_callback,
 		commit_callback, hash_lock_tokens, keep_locks, pool);
 #endif
 	Py_END_ALLOW_THREADS
@@ -1396,7 +1395,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	}
 
 	Py_INCREF(ra);
-	return new_editor_object(NULL, editor, edit_baton, pool, 
+	return new_editor_object(NULL, editor, edit_baton, pool,
 			  &Editor_Type, ra_done_handler, ra, commit_callback);
 
 fail_prep2:
@@ -1545,7 +1544,7 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 	}
 	apr_pool_destroy(temp_pool);
 	return Py_BuildValue("(NlN)", py_dirents, fetch_rev, py_props);
-	
+
 fail_dirents:
 	Py_DECREF(py_dirents);
 fail:
@@ -1647,10 +1646,14 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_RA_WITH_POOL(temp_pool, ra,
-					  svn_ra_check_path(ra->ra, path, revision, &kind, 
+					  svn_ra_check_path(ra->ra, path, revision, &kind,
 					 temp_pool));
 	apr_pool_destroy(temp_pool);
+#if PY_MAJOR_VERSION < 3
 	return PyInt_FromLong(kind);
+#else
+	return PyLong_FromLong(kind);
+#endif
 }
 
 static PyObject *ra_stat(PyObject *self, PyObject *args)
@@ -1784,7 +1787,7 @@ static PyObject *ra_lock(PyObject *self, PyObject *args)
 
 	while (PyDict_Next(path_revs, &idx, &k, &v)) {
 		rev = (svn_revnum_t *)apr_palloc(temp_pool, sizeof(svn_revnum_t));
-		*rev = PyInt_AsLong(v);
+		*rev = py_to_svn_revnum(v);
 		if (*rev == -1 && PyErr_Occurred()) {
 			goto fail_prep;
 		}
@@ -1922,13 +1925,13 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 	for (idx = apr_hash_first(temp_pool, hash_locations); idx != NULL;
 		idx = apr_hash_next(idx)) {
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-		if (PyDict_SetItem(ret, PyInt_FromLong(*key), PyString_FromString(val)) != 0) {
+		if (PyDict_SetItem(ret, py_from_svn_revnum(*key), PyString_FromString(val)) != 0) {
 			goto fail_conv;
 		}
 	}
 	apr_pool_destroy(temp_pool);
 	return ret;
-	
+
 fail_conv:
 	Py_DECREF(ret);
 fail_dict:
@@ -1984,7 +1987,7 @@ static PyObject *mergeinfo_to_dict(svn_mergeinfo_t mergeinfo, apr_pool_t *temp_p
 		return NULL;
 	}
 
-	for (idx = apr_hash_first(temp_pool, mergeinfo); idx != NULL; 
+	for (idx = apr_hash_first(temp_pool, mergeinfo); idx != NULL;
 		idx = apr_hash_next(idx)) {
 		PyObject *pyval;
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&range);
@@ -2034,8 +2037,8 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_mergeinfo(ra->ra, 
-                     &catalog, apr_paths, revision, inherit, 
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_mergeinfo(ra->ra,
+                     &catalog, apr_paths, revision, inherit,
 					 include_descendants,
                      temp_pool));
 
@@ -2046,7 +2049,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 	}
 
 	if (catalog != NULL) {
-		for (idx = apr_hash_first(temp_pool, catalog); idx != NULL; 
+		for (idx = apr_hash_first(temp_pool, catalog); idx != NULL;
 			idx = apr_hash_next(idx)) {
 			PyObject *pyval;
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
@@ -2115,9 +2118,9 @@ static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 	if (ra_check_svn_path(path))
 		return NULL;
 
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_location_segments(ra->ra, 
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_location_segments(ra->ra,
 					 path, peg_revision, start_revision, end_revision,
-					 py_location_segment_receiver, 
+					 py_location_segment_receiver,
 					 py_rcvr, temp_pool));
 
 	apr_pool_destroy(temp_pool);
@@ -2153,18 +2156,18 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 		return NULL;
 
 #if ONLY_SINCE_SVN(1, 5)
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs2(ra->ra, path, start, end, 
-				include_merged_revisions, 
-				py_file_rev_handler, (void *)file_rev_handler, 
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs2(ra->ra, path, start, end,
+				include_merged_revisions,
+				py_file_rev_handler, (void *)file_rev_handler,
 					temp_pool));
 #else
 	if (include_merged_revisions) {
-		PyErr_SetString(PyExc_NotImplementedError, 
+		PyErr_SetString(PyExc_NotImplementedError,
 						"include_merged_revisions only supported with svn >= 1.5");
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs(ra->ra, path, start, end, 
+	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs(ra->ra, path, start, end,
 				py_ra_file_rev_handler, (void *)file_rev_handler, temp_pool));
 #endif
 
@@ -2198,7 +2201,7 @@ static int ra_set_progress_func(PyObject *self, PyObject *value, void *closure)
 	return 0;
 }
 
-static PyGetSetDef ra_getsetters[] = { 
+static PyGetSetDef ra_getsetters[] = {
 	{ "progress_func", NULL, ra_set_progress_func, NULL },
 	{ NULL }
 };
@@ -2206,73 +2209,73 @@ static PyGetSetDef ra_getsetters[] = {
 #include "_ra_iter_log.c"
 
 static PyMethodDef ra_methods[] = {
-	{ "get_file_revs", ra_get_file_revs, METH_VARARGS, 
+	{ "get_file_revs", ra_get_file_revs, METH_VARARGS,
 		"S.get_file_revs(path, start_rev, end_revs, handler)" },
-	{ "get_locations", ra_get_locations, METH_VARARGS, 
+	{ "get_locations", ra_get_locations, METH_VARARGS,
 		"S.get_locations(path, peg_revision, location_revisions)" },
-	{ "get_locks", ra_get_locks, METH_VARARGS, 
+	{ "get_locks", ra_get_locks, METH_VARARGS,
 		"S.get_locks(path, depth=DEPTH_INFINITY)" },
-	{ "lock", ra_lock, METH_VARARGS, 
+	{ "lock", ra_lock, METH_VARARGS,
 		"S.lock(path_revs, comment, steal_lock, lock_func)\n" },
-	{ "unlock", ra_unlock, METH_VARARGS, 
+	{ "unlock", ra_unlock, METH_VARARGS,
 		"S.unlock(path_tokens, break_lock, lock_func)\n" },
-	{ "mergeinfo", ra_mergeinfo, METH_VARARGS, 
+	{ "mergeinfo", ra_mergeinfo, METH_VARARGS,
 		"S.mergeinfo(paths, revision, inherit, include_descendants)\n" },
-	{ "get_location_segments", ra_get_location_segments, METH_VARARGS, 
+	{ "get_location_segments", ra_get_location_segments, METH_VARARGS,
 		"S.get_location_segments(path, peg_revision, start_revision, "
 			"end_revision, rcvr)\n"
 		"The receiver is called as rcvr(range_start, range_end, path)\n"
 	},
-	{ "has_capability", ra_has_capability, METH_VARARGS, 
+	{ "has_capability", ra_has_capability, METH_VARARGS,
 		"S.has_capability(name) -> bool\n"
 		"Check whether the specified capability is supported by the client and server" },
-	{ "check_path", ra_check_path, METH_VARARGS, 
+	{ "check_path", ra_check_path, METH_VARARGS,
 		"S.check_path(path, revnum) -> node_kind\n"
 		"Check the type of a path (one of NODE_DIR, NODE_FILE, NODE_UNKNOWN)" },
 	{ "stat", ra_stat, METH_VARARGS,
 		"S.stat(path, revnum) -> dirent\n" },
-	{ "get_lock", ra_get_lock, METH_VARARGS, 
+	{ "get_lock", ra_get_lock, METH_VARARGS,
 		"S.get_lock(path) -> lock\n"
 	},
-	{ "get_dir", (PyCFunction)ra_get_dir, METH_VARARGS|METH_KEYWORDS, 
+	{ "get_dir", (PyCFunction)ra_get_dir, METH_VARARGS|METH_KEYWORDS,
 		"S.get_dir(path, revision, dirent_fields=-1) -> (dirents, fetched_rev, properties)\n"
 		"Get the contents of a directory. "},
-	{ "get_file", ra_get_file, METH_VARARGS, 
+	{ "get_file", ra_get_file, METH_VARARGS,
 		"S.get_file(path, stream, revnum=-1) -> (fetched_rev, properties)\n"
 		"Fetch a file. The contents will be written to stream." },
-	{ "change_rev_prop", ra_change_rev_prop, METH_VARARGS, 
+	{ "change_rev_prop", ra_change_rev_prop, METH_VARARGS,
 		"S.change_rev_prop(revnum, name, value)\n"
 		"Change a revision property" },
-	{ "get_commit_editor", (PyCFunction)get_commit_editor, METH_VARARGS|METH_KEYWORDS, 
+	{ "get_commit_editor", (PyCFunction)get_commit_editor, METH_VARARGS|METH_KEYWORDS,
 		"S.get_commit_editor(revprops, commit_callback, lock_tokens, keep_locks) -> editor\n"
 	},
-	{ "rev_proplist", ra_rev_proplist, METH_VARARGS, 
+	{ "rev_proplist", ra_rev_proplist, METH_VARARGS,
 		"S.rev_proplist(revnum) -> properties\n"
 		"Return a dictionary with the properties set on the specified revision" },
-	{ "replay", ra_replay, METH_VARARGS, 
-		"S.replay(revision, low_water_mark, update_editor, send_deltas=True)\n" 
+	{ "replay", ra_replay, METH_VARARGS,
+		"S.replay(revision, low_water_mark, update_editor, send_deltas=True)\n"
 		"Replay a revision, reporting changes to update_editor." },
-	{ "replay_range", ra_replay_range, METH_VARARGS, 
+	{ "replay_range", ra_replay_range, METH_VARARGS,
 		"S.replay_range(start_rev, end_rev, low_water_mark, cbs, send_deltas=True)\n"
 		"Replay a range of revisions, reporting them to an update editor.\n"
 		"cbs is a two-tuple with two callbacks:\n"
 		"- start_rev_cb(revision, revprops) -> editor\n"
 		"- finish_rev_cb(revision, revprops, editor)\n"
 	},
-	{ "do_switch", ra_do_switch, METH_VARARGS, 
+	{ "do_switch", ra_do_switch, METH_VARARGS,
 		"S.do_switch(revision_to_update_to, update_target, recurse, switch_url, update_editor, send_copyfrom_args=False, ignore_ancestry=True)\n" },
-	{ "do_update", ra_do_update, METH_VARARGS, 
+	{ "do_update", ra_do_update, METH_VARARGS,
 		"S.do_update(revision_to_update_to, update_target, recurse, update_editor, send_copyfrom_args=False, ignore_ancestry=True)\n" },
-	{ "do_diff", ra_do_diff, METH_VARARGS, 
+	{ "do_diff", ra_do_diff, METH_VARARGS,
 		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse, ignore_ancestry, text_deltas) -> Reporter object\n"
 	},
-	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_NOARGS, 
+	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_NOARGS,
 		"S.get_repos_root() -> url\n"
 		"Return the URL to the root of the repository." },
 	{ "get_url", (PyCFunction)ra_get_url, METH_NOARGS,
 		"S.get_url() -> url\n"
 		"Return the URL of the repository." },
-	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS, 
+	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS,
 		"S.get_log(callback, paths, start, end, limit=0, "
 		"discover_changed_paths=False, strict_node_history=True, "
 		"include_merged_revisions=False, revprops=None)\n"
@@ -2282,7 +2285,7 @@ static PyMethodDef ra_methods[] = {
 		"path to a tuple:\n"
 		"(action, from_path, from_rev)\n"
 	},
-	{ "iter_log", (PyCFunction)ra_iter_log, METH_VARARGS|METH_KEYWORDS, 
+	{ "iter_log", (PyCFunction)ra_iter_log, METH_VARARGS|METH_KEYWORDS,
 		"S.iter_log(paths, start, end, limit=0, "
 		"discover_changed_paths=False, strict_node_history=True, "
 		"include_merged_revisions=False, revprops=None)\n"
@@ -2296,22 +2299,22 @@ static PyMethodDef ra_methods[] = {
 		"iterator to exhaustion (i.e. until StopIteration is raised, the \"for\"\n"
 		"loop finishes, etc).\n"
 	},
-	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS, 
+	{ "get_latest_revnum", (PyCFunction)ra_get_latest_revnum, METH_NOARGS,
 		"S.get_latest_revnum() -> int\n"
 		"Return the last revision committed in the repository." },
-	{ "reparent", ra_reparent, METH_VARARGS, 
+	{ "reparent", ra_reparent, METH_VARARGS,
 		"S.reparent(url)\n"
 		"Reparent to a new URL" },
-	{ "get_uuid", (PyCFunction)ra_get_uuid, METH_NOARGS, 
+	{ "get_uuid", (PyCFunction)ra_get_uuid, METH_NOARGS,
 		"S.get_uuid() -> uuid\n"
 		"Return the UUID of the repository." },
 	{ NULL, }
 };
 
 static PyMemberDef ra_members[] = {
-	{ "busy", T_BYTE, offsetof(RemoteAccessObject, busy), READONLY, 
+	{ "busy", T_BYTE, offsetof(RemoteAccessObject, busy), READONLY,
 		"Whether this connection is in use at the moment" },
-	{ "url", T_STRING, offsetof(RemoteAccessObject, url), READONLY, 
+	{ "url", T_STRING, offsetof(RemoteAccessObject, url), READONLY,
 		"URL this connection is to" },
 	{ "corrected_url", T_STRING, offsetof(RemoteAccessObject, corrected_url), READONLY,
 		"Corrected URL" },
@@ -2321,7 +2324,7 @@ static PyMemberDef ra_members[] = {
 static PyTypeObject RemoteAccess_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.RemoteAccess", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(RemoteAccessObject), 
+	sizeof(RemoteAccessObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 
 	/* Methods to implement standard operations */
@@ -2483,7 +2486,7 @@ static PyObject *auth_set_parameter(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!strcmp(name, SVN_AUTH_PARAM_SSL_SERVER_FAILURES)) {
-		long ret = PyInt_AsLong(value);
+		long ret = PyLong_AsLong(value);
 		if (ret == -1 && PyErr_Occurred())
 			return NULL;
 		vvalue = apr_pcalloc(auth->pool, sizeof(apr_uint32_t));
@@ -2516,7 +2519,7 @@ static PyObject *auth_get_parameter(PyObject *self, PyObject *args)
 	value = svn_auth_get_parameter(auth->auth_baton, name);
 
 	if (!strcmp(name, SVN_AUTH_PARAM_SSL_SERVER_FAILURES)) {
-		return PyInt_FromLong(*((apr_uint32_t *)value));
+		return PyLong_FromLong(*((apr_uint32_t *)value));
 	} else if (!strcmp(name, SVN_AUTH_PARAM_DEFAULT_USERNAME) ||
 			   !strcmp(name, SVN_AUTH_PARAM_DEFAULT_PASSWORD)) {
 		return PyString_FromString((const char *)value);
@@ -2905,9 +2908,9 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 {
 	PyObject *fn = (PyObject *)baton;
 	PyObject *ret;
-	PyObject *py_cert, *py_may_save, *py_accepted_failures;
+	PyObject *py_cert;
 	PyGILState_STATE state = PyGILState_Ensure();
-	long accepted_failures;
+	int accepted_failures;
 
 	if (cert_info == NULL) {
 		py_cert = Py_None;
@@ -2929,44 +2932,16 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 		PyGILState_Release(state);
 		return NULL;
 	}
-	if (!PyTuple_Check(ret)) {
+
+	if (!PyArg_ParseTuple(ret, "ib", &accepted_failures, &may_save)) {
 		Py_DECREF(ret);
-		PyErr_SetString(PyExc_TypeError, "expected tuple with server trust credentials");
-		PyGILState_Release(state);
-		return py_svn_error();
-	}
-	if (PyTuple_Size(ret) != 2) {
-		Py_DECREF(ret);
-		PyErr_SetString(PyExc_TypeError, "expected tuple of size 2");
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
 
-	py_accepted_failures = PyTuple_GetItem(ret, 0);
-	if (!PyInt_Check(py_accepted_failures)) {
-		Py_DECREF(ret);
-		PyErr_SetString(PyExc_TypeError, "accepted_failures should be integer");
-		PyGILState_Release(state);
-		return py_svn_error();
-	}
-
-	py_may_save = PyTuple_GetItem(ret, 1);
-	if (!PyBool_Check(py_may_save)) {
-		Py_DECREF(ret);
-		PyErr_SetString(PyExc_TypeError, "may_save should be boolean");
-		PyGILState_Release(state);
-		return py_svn_error();
-	}
-
-	accepted_failures = PyInt_AsLong(py_accepted_failures);
-	if (accepted_failures == -1 && PyErr_Occurred()) {
-		Py_DECREF(ret);
-		PyGILState_Release(state);
-		return py_svn_error();
-	}
 	*cred = apr_pcalloc(pool, sizeof(**cred));
 	(*cred)->accepted_failures = accepted_failures;
-	(*cred)->may_save = (py_may_save == Py_True);
+	(*cred)->may_save = may_save;
 
 	Py_DECREF(ret);
 	PyGILState_Release(state);
@@ -3024,7 +2999,7 @@ static svn_error_t *py_ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_p
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
-	
+
 fail:
 	Py_DECREF(ret);
 	PyGILState_Release(state);

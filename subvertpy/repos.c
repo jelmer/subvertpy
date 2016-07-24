@@ -31,7 +31,7 @@ extern PyTypeObject Repository_Type;
 extern PyTypeObject FileSystem_Type;
 extern PyTypeObject Stream_Type;
 
-typedef struct { 
+typedef struct {
 	PyObject_VAR_HEAD
 	apr_pool_t *pool;
 	svn_repos_t *repos;
@@ -181,7 +181,7 @@ static PyObject *fs_get_youngest_revision(FileSystemObject *self)
 	if (temp_pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(temp_pool, svn_fs_youngest_rev(&rev, self->fs, temp_pool));
-	ret = PyInt_FromLong(rev);
+	ret = py_from_svn_revnum(rev);
 	apr_pool_destroy(temp_pool);
 
 	return ret;
@@ -254,59 +254,59 @@ static void fs_dealloc(PyObject *self)
 PyTypeObject FileSystem_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.FileSystem", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(FileSystemObject), 
+	sizeof(FileSystemObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	fs_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	NULL, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	NULL, /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	fs_methods, /*	struct PyMethodDef *tp_methods;	*/
 
@@ -318,7 +318,7 @@ static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 	PyObject *dumpstream, *feedback_stream;
 	unsigned char use_pre_commit_hook = 0, use_post_commit_hook = 0;
 	char *kwnames[] = { "dumpstream", "feedback_stream", "uuid_action",
-		                "parent_dir", "use_pre_commit_hook", 
+		                "parent_dir", "use_pre_commit_hook",
 						"use_post_commit_hook", NULL };
 	int uuid_action;
 	apr_pool_t *temp_pool;
@@ -340,10 +340,10 @@ static PyObject *repos_load_fs(PyObject *self, PyObject *args, PyObject *kwargs)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_repos_load_fs2(reposobj->repos, 
-				new_py_stream(temp_pool, dumpstream), 
+	RUN_SVN_WITH_POOL(temp_pool, svn_repos_load_fs2(reposobj->repos,
+				new_py_stream(temp_pool, dumpstream),
 				new_py_stream(temp_pool, feedback_stream),
-				uuid_action, parent_dir, use_pre_commit_hook, 
+				uuid_action, parent_dir, use_pre_commit_hook,
 				use_post_commit_hook, py_cancel_check, NULL,
 				temp_pool));
 	apr_pool_destroy(temp_pool);
@@ -397,7 +397,7 @@ static PyObject *repos_hotcopy(RepositoryObject *self, PyObject *args)
 static PyObject *version(PyObject *self)
 {
 	const svn_version_t *ver = svn_repos_version();
-	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+	return Py_BuildValue("(iiis)", ver->major, ver->minor,
 						 ver->patch, ver->tag);
 }
 
@@ -411,18 +411,18 @@ SVN_VERSION_DEFINE(svn_api_version);
 static PyObject *api_version(PyObject *self)
 {
 	const svn_version_t *ver = &svn_api_version;
-	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+	return Py_BuildValue("(iiis)", ver->major, ver->minor,
 						 ver->patch, ver->tag);
 }
 
 static PyMethodDef repos_module_methods[] = {
-	{ "create", (PyCFunction)repos_create, METH_VARARGS, 
+	{ "create", (PyCFunction)repos_create, METH_VARARGS,
 		"create(path, config=None, fs_config=None)\n\n"
 		"Create a new repository." },
-	{ "delete", (PyCFunction)repos_delete, METH_VARARGS, 
+	{ "delete", (PyCFunction)repos_delete, METH_VARARGS,
 		"delete(path)\n\n"
 		"Delete a repository." },
-	{ "hotcopy", (PyCFunction)repos_hotcopy, METH_VARARGS, 
+	{ "hotcopy", (PyCFunction)repos_hotcopy, METH_VARARGS,
 		"hotcopy(src_path, dest_path, clean_logs=False)\n\n"
 		"Make a hot copy of a repository." },
 	{ "api_version", (PyCFunction)api_version, METH_NOARGS,
@@ -519,59 +519,59 @@ static PyMethodDef repos_methods[] = {
 PyTypeObject Repository_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.Repository", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(RepositoryObject), 
+	sizeof(RepositoryObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	repos_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	NULL, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	"Local repository", /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	repos_methods, /*	struct PyMethodDef *tp_methods;	*/
 	NULL, /*	struct PyMemberDef *tp_members;	*/
@@ -664,10 +664,10 @@ static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
 	if (temp_pool == NULL)
 		return NULL;
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, 
+	RUN_SVN_WITH_POOL(temp_pool,
 					  svn_fs_paths_changed2(&changed_paths, self->root, temp_pool));
 #else
-	RUN_SVN_WITH_POOL(temp_pool, 
+	RUN_SVN_WITH_POOL(temp_pool,
 					  svn_fs_paths_changed(&changed_paths, self->root, temp_pool));
 #endif
 	ret = PyDict_New();
@@ -720,7 +720,7 @@ static PyObject *fs_root_is_dir(FileSystemRootObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_fs_is_dir(&is_dir, self->root, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_is_dir(&is_dir, self->root,
 											   path, temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(is_dir);
@@ -738,7 +738,7 @@ static PyObject *fs_root_is_file(FileSystemRootObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_fs_is_file(&is_file, self->root, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_is_file(&is_file, self->root,
 											   path, temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(is_file);
@@ -756,10 +756,10 @@ static PyObject *fs_root_file_length(FileSystemRootObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_length(&filesize, self->root, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_length(&filesize, self->root,
 											   path, temp_pool));
 	apr_pool_destroy(temp_pool);
-	return PyInt_FromLong(filesize);
+	return PyLong_FromLong(filesize);
 }
 
 static PyObject *fs_node_file_proplist(FileSystemRootObject *self, PyObject *args)
@@ -775,7 +775,7 @@ static PyObject *fs_node_file_proplist(FileSystemRootObject *self, PyObject *arg
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_fs_node_proplist(&proplist, self->root, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_node_proplist(&proplist, self->root,
 											   path, temp_pool));
 	ret = prop_hash_to_dict(proplist);
 	apr_pool_destroy(temp_pool);
@@ -804,8 +804,8 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	if (temp_pool == NULL)
 		return NULL;
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_checksum(&checksum, kind, 
-													  self->root, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_checksum(&checksum, kind,
+													  self->root,
 											   path, force, temp_pool));
 	cstr = svn_checksum_to_cstring(checksum, temp_pool);
 	if (cstr == NULL) {
@@ -820,8 +820,8 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 		return NULL;
 	}
 
-	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_md5_checksum(checksum, 
-													  self->root, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_md5_checksum(checksum,
+													  self->root,
 											   path, temp_pool));
 	ret = PyString_FromStringAndSize((char *)checksum, APR_MD5_DIGESTSIZE);
 #endif
@@ -842,7 +842,7 @@ static PyObject *fs_root_file_contents(FileSystemRootObject *self, PyObject *arg
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(pool, svn_fs_file_contents(&stream, self->root, 
+	RUN_SVN_WITH_POOL(pool, svn_fs_file_contents(&stream, self->root,
 											   path, pool));
 
 	ret = PyObject_New(StreamObject, &Stream_Type);
@@ -870,59 +870,59 @@ static PyMethodDef fs_root_methods[] = {
 PyTypeObject FileSystemRoot_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"repos.FileSystemRoot", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(FileSystemRootObject), 
+	sizeof(FileSystemRootObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	fs_root_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	NULL, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	NULL, /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	fs_root_methods, /*	struct PyMethodDef *tp_methods;	*/
 };
