@@ -681,51 +681,52 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
 
 static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    PyObject *targets;
-    ClientObject *client = (ClientObject *)self;
-    bool recurse=true, keep_locks=true;
-    apr_pool_t *temp_pool;
-    svn_commit_info_t *commit_info = NULL;
-    PyObject *ret;
-    apr_array_header_t *apr_targets;
-    PyObject *revprops = Py_None;
-    char *kwnames[] = { "targets", "recurse", "keep_locks", "revprops", NULL };
+	PyObject *targets;
+	ClientObject *client = (ClientObject *)self;
+	bool recurse=true, keep_locks=true;
+	apr_pool_t *temp_pool;
+	svn_commit_info_t *commit_info = NULL;
+	PyObject *ret;
+	apr_array_header_t *apr_targets;
+	PyObject *revprops = Py_None;
+	char *kwnames[] = { "targets", "recurse", "keep_locks", "revprops", NULL };
 #if ONLY_SINCE_SVN(1, 5)
-    apr_hash_t *hash_revprops;
+	apr_hash_t *hash_revprops;
 #endif
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bbO", kwnames, &targets, &recurse, &keep_locks, &revprops))
-        return NULL;
-    temp_pool = Pool(NULL);
-    if (temp_pool == NULL)
-        return NULL;
-    if (!path_list_to_apr_array(temp_pool, targets, &apr_targets)) {
-        apr_pool_destroy(temp_pool);
-        return NULL;
-    }
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bbO", kwnames, &targets, &recurse, &keep_locks, &revprops))
+		return NULL;
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL) {
+		return NULL;
+	}
+	if (!path_list_to_apr_array(temp_pool, targets, &apr_targets)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 
-    if (revprops != Py_None && !PyDict_Check(revprops)) {
-        apr_pool_destroy(temp_pool);
-        PyErr_SetString(PyExc_TypeError, "Expected dictionary with revision properties");
-        return NULL;
-    }
+	if (revprops != Py_None && !PyDict_Check(revprops)) {
+		apr_pool_destroy(temp_pool);
+		PyErr_SetString(PyExc_TypeError, "Expected dictionary with revision properties");
+		return NULL;
+	}
 
 
 #if ONLY_SINCE_SVN(1, 5)
-    if (revprops != Py_None) {
-        hash_revprops = prop_dict_to_hash(temp_pool, revprops);
-        if (hash_revprops == NULL) {
-            apr_pool_destroy(temp_pool);
-            return NULL;
-        }
-    } else {
-        hash_revprops = NULL;
-    }
+	if (revprops != Py_None) {
+		hash_revprops = prop_dict_to_hash(temp_pool, revprops);
+		if (hash_revprops == NULL) {
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+	} else {
+		hash_revprops = NULL;
+	}
 
-    /* FIXME: Support keep_changelist and changelists */
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_commit4(&commit_info,
-                apr_targets, recurse?svn_depth_infinity:svn_depth_files,
-               keep_locks, false, NULL, hash_revprops,
-               client->client, temp_pool));
+	/* FIXME: Support keep_changelist and changelists */
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_commit4(&commit_info,
+													apr_targets, recurse?svn_depth_infinity:svn_depth_files,
+													keep_locks, false, NULL, hash_revprops,
+													client->client, temp_pool));
 #else
     if (revprops != Py_None && PyDict_Size(revprops) > 0) {
         PyErr_SetString(PyExc_NotImplementedError,
@@ -1576,17 +1577,17 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 #endif
 
-    if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
-        apr_pool_destroy(temp_pool);
-        return NULL;
-    }
+	if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 
-    if (revprops) {
-        if (!path_list_to_apr_array(temp_pool, revprops, &apr_revprops)) {
-            apr_pool_destroy(temp_pool);
-            return NULL;
-        }
-    }
+	if (revprops) {
+		if (!path_list_to_apr_array(temp_pool, revprops, &apr_revprops)) {
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+	}
 
 #if ONLY_SINCE_SVN(1, 6)
     revision_range.start = c_start_rev;
