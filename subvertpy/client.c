@@ -639,7 +639,7 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 #else
     if (revprops != Py_None && PyDict_Size(revprops) > 0) {
         PyErr_SetString(PyExc_NotImplementedError,
-                "Setting revision properties only supported on svn > 1.5");
+                "Setting revision properties only supported on svn >= 1.5");
         apr_pool_destroy(temp_pool);
         return NULL;
     }
