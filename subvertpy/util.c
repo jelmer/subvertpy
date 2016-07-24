@@ -339,7 +339,7 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 	}
 	for (i = 0; i < PyList_GET_SIZE(l); i++) {
 		PyObject *item = PyList_GET_ITEM(l, i);
-		if (!PyString_Check(item)) {
+		if (!PyUnicode_Check(item) && !PyBytes_Check(item)) {
 			PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
 			return false;
 		}

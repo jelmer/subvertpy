@@ -883,7 +883,7 @@ static PyObject *ra_get_repos_root(PyObject *self)
 		apr_pool_destroy(temp_pool);
 	}
 
-	return PyString_FromString(ra->root);
+	return PyUnicode_FromString(ra->root);
 }
 
 /**
@@ -905,7 +905,7 @@ static PyObject *ra_get_url(PyObject *self, void *closure)
 	RUN_RA_WITH_POOL(temp_pool, ra,
 						svn_ra_get_session_url(ra->ra, &url, temp_pool));
 
-	r = PyString_FromString(url);
+	r = PyUnicode_FromString(url);
 
 	apr_pool_destroy(temp_pool);
 
@@ -1338,7 +1338,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 				goto fail_prep;
 			}
 			apr_hash_set(hash_lock_tokens, PyBytes_AsString(k),
-						 PyString_Size(k), PyBytes_AsString(v));
+						 PyBytes_Size(k), PyBytes_AsString(v));
 		}
 	}
 
@@ -1924,8 +1924,17 @@ static PyObject *ra_get_locations(PyObject *self, PyObject *args)
 
 	for (idx = apr_hash_first(temp_pool, hash_locations); idx != NULL;
 		idx = apr_hash_next(idx)) {
+		PyObject *py_key, *py_val;
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-		if (PyDict_SetItem(ret, py_from_svn_revnum(*key), PyString_FromString(val)) != 0) {
+		py_key = py_from_svn_revnum(*key);
+		if (py_key == NULL) {
+			goto fail_conv;
+		}
+		py_val = PyUnicode_FromString(val);
+		if (py_val == NULL) {
+			goto fail_conv;
+		}
+		if (PyDict_SetItem(ret, py_key, py_val) != 0) {
 			goto fail_conv;
 		}
 	}
@@ -2522,7 +2531,7 @@ static PyObject *auth_get_parameter(PyObject *self, PyObject *args)
 		return PyLong_FromLong(*((apr_uint32_t *)value));
 	} else if (!strcmp(name, SVN_AUTH_PARAM_DEFAULT_USERNAME) ||
 			   !strcmp(name, SVN_AUTH_PARAM_DEFAULT_PASSWORD)) {
-		return PyString_FromString((const char *)value);
+		return PyUnicode_FromString((const char *)value);
 	} else {
 		PyErr_Format(PyExc_TypeError, "Unsupported auth parameter %s", name);
 		return NULL;
