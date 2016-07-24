@@ -1,5 +1,5 @@
 # Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@jelmer.uk>
- 
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation; either version 2.1 of the License, or
@@ -56,11 +56,11 @@ class TestProperties(TestCase):
 
 class TestExternalsParser(TestCase):
     def test_parse_root_relative_externals(self):
-        self.assertRaises(NotImplementedError, properties.parse_externals_description, 
+        self.assertRaises(NotImplementedError, properties.parse_externals_description,
                     "http://example.com", "third-party/skins              ^/foo")
 
     def test_parse_scheme_relative_externals(self):
-        self.assertRaises(NotImplementedError, properties.parse_externals_description, 
+        self.assertRaises(NotImplementedError, properties.parse_externals_description,
                     "http://example.com", "third-party/skins              //foo")
 
     def test_parse_externals(self):
@@ -112,14 +112,14 @@ third-party/sounds             http://sounds.red-bean.com/repos
 
     def test_parse_invalid_missing_url(self):
         """No URL specified."""
-        self.assertRaises(properties.InvalidExternalsDescription, 
+        self.assertRaises(properties.InvalidExternalsDescription,
             lambda: properties.parse_externals_description("http://example.com/", "bla"))
-            
+
     def test_parse_invalid_too_much_data(self):
         """No URL specified."""
-        self.assertRaises(properties.InvalidExternalsDescription, 
+        self.assertRaises(properties.InvalidExternalsDescription,
             lambda: properties.parse_externals_description(None, "bla -R40 http://bla/"))
- 
+
 
 class MergeInfoPropertyParserTests(TestCase):
     def test_simple_range(self):
@@ -133,7 +133,7 @@ class MergeInfoPropertyParserTests(TestCase):
 
     def test_empty(self):
         self.assertEqual({}, properties.parse_mergeinfo_property(""))
-       
+
 
 class MergeInfoPropertyCreatorTests(TestCase):
     def test_simple_range(self):
@@ -155,7 +155,7 @@ class RevnumRangeTests(TestCase):
 
     def test_add_revnum_included(self):
         self.assertEqual([(1, 3, True)], properties.range_add_revnum([(1, 3, True)], 2))
-        
+
     def test_add_revnum_after(self):
         self.assertEqual([(1, 3, True), (5, 5, True)], properties.range_add_revnum([(1, 3, True)], 5))
 
