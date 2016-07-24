@@ -641,7 +641,7 @@ static PyObject *adm_access_path(PyObject *self)
 {
 	AdmObject *admobj = (AdmObject *)self;
 	ADM_CHECK_CLOSED(admobj);
-	return PyString_FromString(svn_wc_adm_access_path(admobj->adm));
+	return py_object_from_svn_abspath(svn_wc_adm_access_path(admobj->adm));
 }
 
 static PyObject *adm_locked(PyObject *self)
@@ -2436,7 +2436,7 @@ static PyObject *get_adm_dir(PyObject *self)
 	if (pool == NULL)
 		return NULL;
 	dir = svn_wc_get_adm_dir(pool);
-	ret = PyString_FromString(dir);
+	ret = py_object_from_svn_abspath(dir);
 	apr_pool_destroy(pool);
 	return ret;
 }
@@ -2474,7 +2474,7 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	RUN_SVN_WITH_POOL(pool,
 		  svn_wc_get_pristine_copy_path(svn_dirent_canonicalize(path, pool),
 										&pristine_path, pool));
-	ret = PyString_FromString(pristine_path);
+	ret = py_object_from_svn_abspath(pristine_path);
 	apr_pool_destroy(pool);
 	return ret;
 }

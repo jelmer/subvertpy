@@ -120,54 +120,17 @@ PyTypeObject LogIterator_Type = {
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
 	/* Methods to implement standard operations */
-	
-	(destructor)log_iter_dealloc, /*	destructor tp_dealloc;	*/
-	NULL, /*	printfunc tp_print;	*/
-	NULL, /*	getattrfunc tp_getattr;	*/
-	NULL, /*	setattrfunc tp_setattr;	*/
-	NULL, /*	cmpfunc tp_compare;	*/
-	NULL, /*	reprfunc tp_repr;	*/
-	
-	/* Method suites for standard classes */
-	
-	NULL, /*	PyNumberMethods *tp_as_number;	*/
-	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
-	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
-	/* More standard operations (here for binary compatibility) */
-	
-	NULL, /*	hashfunc tp_hash;	*/
-	NULL, /*	ternaryfunc tp_call;	*/
-	NULL, /*	reprfunc tp_str;	*/
-	NULL, /*	getattrofunc tp_getattro;	*/
-	NULL, /*	setattrofunc tp_setattro;	*/
-	
-	/* Functions to access object as input/output buffer */
-	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
+	.tp_dealloc = (destructor)log_iter_dealloc, /*	destructor tp_dealloc;	*/
+
+#if PY_MAJOR_VERSION < 3
 	/* Flags to define presence of optional/expanded features */
-	Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
-	
-	NULL, /*	const char *tp_doc;  Documentation string */
-	
-	/* Assigned meaning in release 2.0 */
-	/* call function for all accessible objects */
-	NULL, /*	traverseproc tp_traverse;	*/
-	
-	/* delete references to contained objects */
-	NULL, /*	inquiry tp_clear;	*/
-	
-	/* Assigned meaning in release 2.1 */
-	/* rich comparisons */
-	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
-	/* weak reference enabler */
-	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
-	/* Added in release 2.2 */
+	.tp_flags = Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
+#endif
+
 	/* Iterators */
-	PyObject_SelfIter, /*	getiterfunc tp_iter;	*/
-	(iternextfunc)log_iter_next, /*	iternextfunc tp_iternext;	*/
+	.tp_iter = PyObject_SelfIter,
+	.tp_iternext = (iternextfunc)log_iter_next,
 };
 
 #if ONLY_SINCE_SVN(1, 5)

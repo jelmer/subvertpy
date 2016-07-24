@@ -2644,53 +2644,13 @@ static PyTypeObject CredentialsIter_Type = {
 
 	/* Methods to implement standard operations */
 
-	(destructor)credentials_iter_dealloc, /*	destructor tp_dealloc;	*/
-	NULL, /*	printfunc tp_print;	*/
-	NULL, /*	getattrfunc tp_getattr;	*/
-	NULL, /*	setattrfunc tp_setattr;	*/
-	NULL, /*	cmpfunc tp_compare;	*/
-	NULL, /*	reprfunc tp_repr;	*/
+	.tp_dealloc = (destructor)credentials_iter_dealloc, /*	destructor tp_dealloc;	*/
 
-	/* Method suites for standard classes */
+#if PY_MAJOR_VERSION < 3
+	.tp_flags = Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
+#endif
 
-	NULL, /*	PyNumberMethods *tp_as_number;	*/
-	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
-	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-
-	/* More standard operations (here for binary compatibility) */
-
-	NULL, /*	hashfunc tp_hash;	*/
-	NULL, /*	ternaryfunc tp_call;	*/
-	NULL, /*	reprfunc tp_str;	*/
-	NULL, /*	getattrofunc tp_getattro;	*/
-	NULL, /*	setattrofunc tp_setattro;	*/
-
-	/* Functions to access object as input/output buffer */
-	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-
-	/* Flags to define presence of optional/expanded features */
-	Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
-
-	NULL, /*	const char *tp_doc;  Documentation string */
-
-	/* Assigned meaning in release 2.0 */
-	/* call function for all accessible objects */
-	NULL, /*	traverseproc tp_traverse;	*/
-
-	/* delete references to contained objects */
-	NULL, /*	inquiry tp_clear;	*/
-
-	/* Assigned meaning in release 2.1 */
-	/* rich comparisons */
-	NULL, /*	richcmpfunc tp_richcompare;	*/
-
-	/* weak reference enabler */
-	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-
-	/* Added in release 2.2 */
-	/* Iterators */
-	NULL, /*	getiterfunc tp_iter;	*/
-	(iternextfunc)credentials_iter_next, /*	iternextfunc tp_iternext;	*/
+	.tp_iternext = (iternextfunc)credentials_iter_next, /*	iternextfunc tp_iternext;	*/
 
 };
 

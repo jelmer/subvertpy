@@ -45,9 +45,9 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
 PyObject *prop_hash_to_dict(apr_hash_t *props);
 apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props);
-svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, 
-								long revision, const char *author, 
-								const char *date, const char *message, 
+svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths,
+								long revision, const char *author,
+								const char *date, const char *message,
 								apr_pool_t *pool);
 svn_error_t *py_svn_error(void);
 void PyErr_SetSubversionException(svn_error_t *error);
@@ -155,6 +155,7 @@ svn_relpath_canonicalize(const char *relpath,
 const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool);
 char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool);
+#define py_object_from_svn_abspath PyBytes_FromString
 
 #if PY_MAJOR_VERSION >= 3
 #define PyRepr_FromFormat PyUnicode_FromFormat
