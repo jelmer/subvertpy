@@ -149,7 +149,41 @@ static PyObject *wrap_py_commit_items(const apr_array_header_t *commit_items)
     return ret;
 }
 
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_SINCE_SVN(1, 8)
+static svn_error_t *proplist_receiver2(void *prop_list, const char *path,
+                                      apr_hash_t *prop_hash,
+									  apr_array_header_t *inherited_props,
+									  apr_pool_t *scratch_pool)
+{
+	PyGILState_STATE state = PyGILState_Ensure();
+	PyObject *prop_dict;
+	PyObject *value;
+
+	prop_dict = prop_hash_to_dict(prop_hash);
+
+	if (prop_dict == NULL) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
+
+	value = Py_BuildValue("(sO)", path, prop_dict);
+	if (value == NULL) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
+
+	/* TODO(jelmer): Convert inherited_props */
+
+	if (PyList_Append(prop_list, value) != 0) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
+
+	PyGILState_Release(state);
+
+	return NULL;
+}
+#elif ONLY_SINCE_SVN(1, 5)
 static svn_error_t *proplist_receiver(void *prop_list, const char *path,
                                       apr_hash_t *prop_hash, apr_pool_t *pool)
 {
@@ -1112,7 +1146,16 @@ static PyObject *client_proplist(PyObject *self, PyObject *args,
         return NULL;
     }
 
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_SINCE_SVN(1, 8)
+    RUN_SVN_WITH_POOL(temp_pool,
+                      svn_client_proplist4(target, &c_peg_rev, &c_rev,
+                                           depth, NULL,
+                                           false, /* TODO(jelmer): Support get_target_inherited_props */
+                                           proplist_receiver2, prop_list,
+                                           client->client, temp_pool));
+
+    apr_pool_destroy(temp_pool);
+#elif ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_proplist3(target, &c_peg_rev, &c_rev,
                                            depth, NULL,
