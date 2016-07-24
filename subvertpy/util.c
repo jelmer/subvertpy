@@ -459,6 +459,7 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	}
 
 	while (PyDict_Next(py_props, &idx, &k, &v)) {
+		char *key;
 		if (PyUnicode_Check(k)) {
 			k = PyUnicode_AsUTF8String(k);
 		} else {
@@ -486,10 +487,18 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 			return NULL;
 		}
 
+		key = apr_pmemdup(pool, PyBytes_AsString(k), PyBytes_Size(k));
+		if (key == NULL) {
+			PyErr_SetString(PyExc_TypeError,
+							"property value should be unicode or byte string");
+			Py_DECREF(k);
+			Py_DECREF(v);
+			return NULL;
+		}
+
 		val_string = svn_string_ncreate(PyBytes_AsString(v),
 										PyBytes_Size(v), pool);
-		apr_hash_set(hash_props, PyBytes_AsString(k),
-					 PyBytes_Size(k), val_string);
+		apr_hash_set(hash_props, key, PyBytes_Size(k), val_string);
 		Py_DECREF(k);
 		Py_DECREF(v);
 	}
