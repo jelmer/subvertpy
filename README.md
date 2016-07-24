@@ -20,11 +20,9 @@ much directly. Neither provide a hookable server-side.
 
 Dependencies
 ------------
-Subvertpy depends on Python 2.7 or later, and Subversion 1.4 or later. It should
+Subvertpy depends on Python 2.7 or 3.5, and Subversion 1.4 or later. It should
 work on Windows as well as most POSIX-based platforms (including Linux, BSDs
 and Mac OS X).
-
-A port to Python 3 is planned but has not happened yet. Patches are welcome.
 
 Installation
 ------------
