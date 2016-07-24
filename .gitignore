@@ -10,3 +10,4 @@ apidocs
 *.pyc
 *.so
 *~
+.tox/
