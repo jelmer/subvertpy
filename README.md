@@ -34,7 +34,8 @@ development libraries by itself. On Windows you may have to set various
 environment variables, see the next section for details.
 
 Build instructions for Windows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+==============================
+
 * Install the SVN dev kit ZIP for Windows from
   http://sourceforge.net/projects/win32svn/files/
   E.g. svn-win32-1.4.6_dev.zip
