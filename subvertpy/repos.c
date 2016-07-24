@@ -98,8 +98,9 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 	char *kwnames[] = { "path", NULL };
 	svn_error_t *err;
 	RepositoryObject *ret;
+	PyObject *py_path;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwnames, &path))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwnames, &py_path))
 		return NULL;
 
 	ret = PyObject_New(RepositoryObject, &Repository_Type);
@@ -111,9 +112,15 @@ static PyObject *repos_init(PyTypeObject *type, PyObject *args, PyObject *kwargs
 		PyObject_DEL(ret);
 		return NULL;
 	}
+
+	path = py_object_to_svn_dirent(py_path, ret->pool);
+	if (path == NULL) {
+		Py_DECREF(ret);
+		return NULL;
+	}
+
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_repos_open(&ret->repos, svn_dirent_canonicalize(path, ret->pool),
-                            ret->pool);
+	err = svn_repos_open(&ret->repos, path, ret->pool);
 	Py_END_ALLOW_THREADS
 
 	if (err != NULL) {

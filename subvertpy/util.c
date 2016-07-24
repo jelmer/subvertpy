@@ -59,24 +59,6 @@ svn_relpath_canonicalize(const char *relpath,
 
 #endif
 
-#if ONLY_BEFORE_SVN(1, 6)
-const char *
-svn_dirent_canonicalize(const char *dirent,
-                        apr_pool_t *result_pool)
-{
-	return svn_path_canonicalize(dirent, result_pool);
-}
-
-char *
-svn_dirent_join(const char *base,
-                const char *component,
-                apr_pool_t *result_pool)
-{
-	return svn_path_join(base, component, result_pool);
-}
-
-#endif
-
 const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool)
 {
 	const char *ret;
@@ -90,7 +72,11 @@ const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool)
 	}
 
 	if (PyBytes_Check(obj)) {
+#if ONLY_SINCE_SVN(1, 7)
 		ret = svn_dirent_canonicalize(PyBytes_AsString(obj), pool);
+#else
+		ret = svn_path_canonicalize(PyBytes_AsString(obj), pool);
+#endif
 		Py_XDECREF(bytes_obj);
 		return ret;
 	} else {

@@ -503,7 +503,11 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 		const char *path;
 
 		SVN_ERR (svn_io_temp_dir (&path, pool));
+#if ONLY_SINCE_SVN(1, 7)
 		path = svn_dirent_join (path, "subvertpy", pool);
+#else
+		path = svn_path_join (path, "subvertpy", pool);
+#endif
 #if ONLY_SINCE_SVN(1, 6)
 		SVN_ERR (svn_io_open_unique_file3(fp, NULL, path, svn_io_file_del_on_pool_cleanup, pool, pool));
 #else
