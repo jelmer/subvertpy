@@ -94,18 +94,29 @@ static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 	} else if (arg == Py_None) {
 		ret->kind = svn_opt_revision_unspecified;
 		return true;
-	} else if (PyString_Check(arg)) {
-		char *text = PyString_AsString(arg);
+	} else if (PyUnicode_Check(arg) || PyBytes_Check(arg)) {
+		char *text;
+		if (PyUnicode_Check(arg)) {
+			arg = PyUnicode_AsUTF8String(arg);
+		} else {
+			Py_INCREF(arg);
+		}
+
+		text = PyBytes_AsString(arg);
 		if (!strcmp(text, "HEAD")) {
 			ret->kind = svn_opt_revision_head;
+			Py_DECREF(arg);
 			return true;
 		} else if (!strcmp(text, "WORKING")) {
 			ret->kind = svn_opt_revision_working;
+			Py_DECREF(arg);
 			return true;
 		} else if (!strcmp(text, "BASE")) {
 			ret->kind = svn_opt_revision_base;
+			Py_DECREF(arg);
 			return true;
 		}
+		Py_DECREF(arg);
 	}
 
 	PyErr_SetString(PyExc_ValueError, "Unable to parse revision");
@@ -1748,7 +1759,7 @@ static PyObject *get_default_ignores(PyObject *self)
 	RUN_SVN_WITH_POOL(pool, svn_wc_get_default_ignores(&patterns, configobj->config, pool));
 	ret = PyList_New(patterns->nelts);
 	for (i = 0; i < patterns->nelts; i++) {
-		PyObject *item = PyString_FromString(APR_ARRAY_IDX(patterns, i, char *));
+		PyObject *item = PyBytes_FromString(APR_ARRAY_IDX(patterns, i, char *));
 		if (item == NULL) {
 			apr_pool_destroy(pool);
 			Py_DECREF(item);

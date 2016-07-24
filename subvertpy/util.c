@@ -411,7 +411,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 			py_key = Py_None;
 			Py_INCREF(py_key);
 		} else {
-			py_key = PyString_FromString(key);
+			py_key = PyUnicode_FromString(key);
 		}
 		if (PyDict_SetItem(py_props, py_key, py_val) != 0) {
 			Py_DECREF(py_key);
@@ -725,7 +725,7 @@ static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length
 		return py_svn_error();
 	}
 	*length = PyString_Size(ret);
-	memcpy(buffer, PyString_AS_STRING(ret), *length);
+	memcpy(buffer, PyBytes_AsString(ret), *length);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;
