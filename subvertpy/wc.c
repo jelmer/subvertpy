@@ -24,6 +24,7 @@
 #include <structmember.h>
 #include <stdbool.h>
 #include <apr_md5.h>
+#include <apr_sha1.h>
 
 #include "util.h"
 #include "editor.h"
@@ -2425,21 +2426,24 @@ static PyObject *committed_queue_init(PyTypeObject *self, PyObject *args, PyObje
 	return (PyObject *)ret;
 }
 
-static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *args)
+static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *args, PyObject *kwargs)
 {
 	char *path;
 	AdmObject *admobj;
 	PyObject *py_wcprop_changes = Py_None;
 	svn_boolean_t remove_lock = FALSE, remove_changelist = FALSE;
-	char *digest = NULL;
+	char *md5_digest = NULL, *sha1_digest = NULL;
 	svn_boolean_t recurse = FALSE;
 	apr_pool_t *temp_pool;
 	apr_array_header_t *wcprop_changes;
-	int digest_len;
+	int md5_digest_len, sha1_digest_len;
+	char *kwnames[] = { "path", "adm", "recurse", "wcprop_changes", "remove_lock", "remove_changelist", "md5_digest", "sha1_digest", NULL };
 
-	if (!PyArg_ParseTuple(args, "sO!|bObbz#", &path, &Adm_Type, &admobj,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO!|bObbz#z#", kwnames,
+									 &path, &Adm_Type, &admobj,
 						  &recurse, &py_wcprop_changes, &remove_lock,
-						  &remove_changelist, &digest, &digest_len))
+						  &remove_changelist, &md5_digest, &md5_digest_len,
+						  &sha1_digest, &sha1_digest_len))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -2457,23 +2461,56 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		return NULL;
 	}
 
-	if (digest != NULL) {
-		if (digest_len != APR_MD5_DIGESTSIZE) {
+	if (md5_digest != NULL) {
+		if (md5_digest_len != APR_MD5_DIGESTSIZE) {
 			PyErr_SetString(PyExc_ValueError, "Invalid size for md5 digest");
 			apr_pool_destroy(temp_pool);
 			return NULL;
 		}
-		digest = apr_pstrdup(self->pool, digest);
-		if (digest == NULL) {
+		md5_digest = apr_pstrdup(temp_pool, md5_digest);
+		if (md5_digest == NULL) {
 			PyErr_NoMemory();
 			return NULL;
 		}
 	}
 
+	if (sha1_digest != NULL) {
+		if (sha1_digest_len != APR_SHA1_DIGESTSIZE) {
+			PyErr_SetString(PyExc_ValueError, "Invalid size for sha1 digest");
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+		sha1_digest = apr_pstrdup(temp_pool, sha1_digest);
+		if (sha1_digest == NULL) {
+			PyErr_NoMemory();
+			return NULL;
+		}
+	}
+
+#if ONLY_SINCE_SVN(1, 6)
+	{
+	svn_checksum_t svn_checksum, *svn_checksum_p = &svn_checksum;
+
+	if (sha1_digest != NULL) {
+		svn_checksum.digest = (unsigned char *)sha1_digest;
+		svn_checksum.kind = svn_checksum_sha1;
+	} else if (md5_digest != NULL) {
+		svn_checksum.digest = (unsigned char *)md5_digest;
+		svn_checksum.kind = svn_checksum_md5;
+	} else {
+		svn_checksum_p = NULL;
+	}
+	RUN_SVN_WITH_POOL(temp_pool,
+		svn_wc_queue_committed2(self->queue, path, admobj->adm, recurse,
+							   wcprop_changes, remove_lock, remove_changelist,
+							   svn_checksum_p, temp_pool));
+	}
+#else
 	RUN_SVN_WITH_POOL(temp_pool,
 		svn_wc_queue_committed(&self->queue, path, admobj->adm, recurse,
 							   wcprop_changes, remove_lock, remove_changelist,
-							   (unsigned char *)digest, temp_pool));
+							   (unsigned char *)md5_digest, temp_pool));
+#endif
 
 	apr_pool_destroy(temp_pool);
 
@@ -2481,8 +2518,8 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 }
 
 static PyMethodDef committed_queue_methods[] = {
-	{ "queue", (PyCFunction)committed_queue_queue, METH_VARARGS,
-		"S.queue(path, adm, recurse, wcprop_changes, remove_lock, remove_changelist, digest)" },
+	{ "queue", (PyCFunction)committed_queue_queue, METH_VARARGS|METH_KEYWORDS,
+		"S.queue(path, adm, recurse=False, wcprop_changes=[], remove_lock=False, remove_changelist=False, digest=None)" },
 	{ NULL }
 };
 
