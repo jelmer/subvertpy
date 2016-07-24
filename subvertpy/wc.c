@@ -136,7 +136,7 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 		py_lock_token = Py_None;
 		Py_INCREF(py_lock_token);
 	} else {
-		py_lock_token = PyString_FromString(lock_token);
+		py_lock_token = PyBytes_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, depth);
 	Py_DECREF(py_lock_token);
@@ -153,8 +153,8 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 	if (lock_token == NULL) {
 		py_lock_token = Py_None;
 		Py_INCREF(py_lock_token);
-	} else { 
-		py_lock_token = PyString_FromString(lock_token);
+	} else {
+		py_lock_token = PyBytes_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, depth);
 	Py_DECREF(py_lock_token);
@@ -174,7 +174,7 @@ static svn_error_t *py_ra_report_set_path(void *baton, const char *path, svn_rev
 		py_lock_token = Py_None;
 		Py_INCREF(py_lock_token);
 	} else {
-		py_lock_token = PyString_FromString(lock_token);
+		py_lock_token = PyBytes_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "set_path", "slbOi", path, revision, start_empty, py_lock_token, svn_depth_infinity);
 	CB_CHECK_PYRETVAL(ret);
@@ -190,8 +190,8 @@ static svn_error_t *py_ra_report_link_path(void *report_baton, const char *path,
 	if (lock_token == NULL) {
 		py_lock_token = Py_None;
 		Py_INCREF(py_lock_token);
-	} else { 
-		py_lock_token = PyString_FromString(lock_token);
+	} else {
+		py_lock_token = PyBytes_FromString(lock_token);
 	}
 	ret = PyObject_CallMethod(self, "link_path", "sslbOi", path, url, revision, start_empty, py_lock_token, svn_depth_infinity);
 	CB_CHECK_PYRETVAL(ret);
@@ -254,7 +254,7 @@ static const REPORTER_T py_ra_reporter = {
 static PyObject *version(PyObject *self)
 {
 	const svn_version_t *ver = svn_wc_version();
-	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+	return Py_BuildValue("(iiis)", ver->major, ver->minor,
 						 ver->patch, ver->tag);
 }
 
@@ -268,7 +268,7 @@ SVN_VERSION_DEFINE(svn_api_version);
 static PyObject *api_version(PyObject *self)
 {
 	const svn_version_t *ver = &svn_api_version;
-	return Py_BuildValue("(iiis)", ver->major, ver->minor, 
+	return Py_BuildValue("(iiis)", ver->major, ver->minor,
 						 ver->patch, ver->tag);
 }
 
@@ -352,31 +352,31 @@ static void entry_dealloc(PyObject *self)
 }
 
 static PyMemberDef entry_members[] = {
-	{ "name", T_STRING, offsetof(EntryObject, entry.name), READONLY, 
+	{ "name", T_STRING, offsetof(EntryObject, entry.name), READONLY,
 		"Name of the file"},
-	{ "copyfrom_url", T_STRING, offsetof(EntryObject, entry.copyfrom_url), READONLY, 
+	{ "copyfrom_url", T_STRING, offsetof(EntryObject, entry.copyfrom_url), READONLY,
 		"Copyfrom location" },
-	{ "copyfrom_rev", T_LONG, offsetof(EntryObject, entry.copyfrom_rev), READONLY, 
+	{ "copyfrom_rev", T_LONG, offsetof(EntryObject, entry.copyfrom_rev), READONLY,
 		"Copyfrom revision" },
 	{ "uuid", T_STRING, offsetof(EntryObject, entry.uuid), READONLY,
 		"UUID of repository" },
-	{ "url", T_STRING, offsetof(EntryObject, entry.url), READONLY, 
+	{ "url", T_STRING, offsetof(EntryObject, entry.url), READONLY,
 		"URL in repository" },
-	{ "repos", T_STRING, offsetof(EntryObject, entry.repos), READONLY, 
+	{ "repos", T_STRING, offsetof(EntryObject, entry.repos), READONLY,
 		"Canonical repository URL" },
-	{ "schedule", T_INT, offsetof(EntryObject, entry.schedule), READONLY, 
+	{ "schedule", T_INT, offsetof(EntryObject, entry.schedule), READONLY,
 		"Scheduling (add, replace, delete, etc)" },
-	{ "kind", T_INT, offsetof(EntryObject, entry.kind), READONLY, 
+	{ "kind", T_INT, offsetof(EntryObject, entry.kind), READONLY,
 		"Kind of file (file, dir, etc)" },
-	{ "revision", T_LONG, offsetof(EntryObject, entry.revision), READONLY, 
+	{ "revision", T_LONG, offsetof(EntryObject, entry.revision), READONLY,
 		"Base revision", },
-	{ "cmt_rev", T_LONG, offsetof(EntryObject, entry.cmt_rev), READONLY, 
+	{ "cmt_rev", T_LONG, offsetof(EntryObject, entry.cmt_rev), READONLY,
 		"Last revision this was changed" },
-	{ "checksum", T_STRING, offsetof(EntryObject, entry.checksum), READONLY, 
+	{ "checksum", T_STRING, offsetof(EntryObject, entry.checksum), READONLY,
 		"Hex MD5 checksum for the untranslated text base file" },
-	{ "cmt_date", T_LONG, offsetof(EntryObject, entry.cmt_date), READONLY, 
+	{ "cmt_date", T_LONG, offsetof(EntryObject, entry.cmt_date), READONLY,
 		"Last date this was changed" },
-	{ "cmt_author", T_STRING, offsetof(EntryObject, entry.cmt_author), READONLY, 
+	{ "cmt_author", T_STRING, offsetof(EntryObject, entry.cmt_author), READONLY,
 		"Last commit author of this item" },
 	{ NULL, }
 };
@@ -384,59 +384,59 @@ static PyMemberDef entry_members[] = {
 static PyTypeObject Entry_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.Entry", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(EntryObject), 
+	sizeof(EntryObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	entry_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	NULL, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	NULL, /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	NULL, /*	struct PyMethodDef *tp_methods;	*/
 	entry_members, /*	struct PyMemberDef *tp_members;	*/
@@ -473,21 +473,21 @@ static void status_dealloc(PyObject *self)
 }
 
 static PyMemberDef status_members[] = {
-	{ "entry", T_OBJECT, offsetof(StatusObject, entry), READONLY, 
+	{ "entry", T_OBJECT, offsetof(StatusObject, entry), READONLY,
 		"Can be NULL if not under version control." },
-	{ "locked", T_BOOL, offsetof(StatusObject, status.locked), READONLY, 
+	{ "locked", T_BOOL, offsetof(StatusObject, status.locked), READONLY,
 		"a directory can be 'locked' if a working copy update was interrupted." },
-	{ "copied", T_BOOL, offsetof(StatusObject, status.copied), READONLY, 
+	{ "copied", T_BOOL, offsetof(StatusObject, status.copied), READONLY,
 		"a file or directory can be 'copied' if it's scheduled for addition-with-history (or part of a subtree that is scheduled as such.)." },
-	{ "switched", T_BOOL, offsetof(StatusObject, status.switched), READONLY, 
+	{ "switched", T_BOOL, offsetof(StatusObject, status.switched), READONLY,
 		"a file or directory can be 'switched' if the switch command has been used." },
-	{ "url", T_STRING, offsetof(StatusObject, status.url), READONLY, 
+	{ "url", T_STRING, offsetof(StatusObject, status.url), READONLY,
 		"URL (actual or expected) in repository" },
-	{ "revision", T_LONG, offsetof(StatusObject, status.ood_last_cmt_rev), READONLY, 
+	{ "revision", T_LONG, offsetof(StatusObject, status.ood_last_cmt_rev), READONLY,
 		"Set to the youngest committed revision, or SVN_INVALID_REVNUM if not out of date.", },
-	{ "kind", T_INT, offsetof(StatusObject, status.ood_kind), READONLY, 
+	{ "kind", T_INT, offsetof(StatusObject, status.ood_kind), READONLY,
 		"Set to the node kind of the youngest commit, or svn_node_none if not out of date.", },
-	{ "status", T_INT, offsetof(StatusObject, status.text_status), READONLY, 
+	{ "status", T_INT, offsetof(StatusObject, status.text_status), READONLY,
 		"The status of the entry.", },
 	{ NULL, }
 };
@@ -495,59 +495,59 @@ static PyMemberDef status_members[] = {
 static PyTypeObject Status_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.Status", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(StatusObject), 
+	sizeof(StatusObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	status_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	NULL, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	"Working copy status object", /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	NULL, /*	struct PyMethodDef *tp_methods;	*/
 	status_members, /*	struct PyMemberDef *tp_members;	*/
@@ -621,12 +621,12 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
 		parent_wc = ((AdmObject *)associated)->adm;
 	}
 	Py_BEGIN_ALLOW_THREADS
-	err = svn_wc_adm_open3(&ret->adm, parent_wc, 
+	err = svn_wc_adm_open3(&ret->adm, parent_wc,
 						   svn_dirent_canonicalize(path, ret->pool),
-						   write_lock, depth, py_cancel_check, NULL, 
+						   write_lock, depth, py_cancel_check, NULL,
 						   ret->pool);
 	Py_END_ALLOW_THREADS
-	
+
 	if (err != NULL) {
 		handle_svn_error(err);
 		svn_error_clear(err);
@@ -672,7 +672,7 @@ static PyObject *adm_prop_get(PyObject *self, PyObject *args)
 		ret = Py_None;
 		Py_INCREF(ret);
 	} else {
-		ret = PyString_FromStringAndSize(value->data, value->len);
+		ret = PyBytes_FromStringAndSize(value->data, value->len);
 	}
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -680,7 +680,7 @@ static PyObject *adm_prop_get(PyObject *self, PyObject *args)
 
 static PyObject *adm_prop_set(PyObject *self, PyObject *args)
 {
-	char *name, *value, *path; 
+	char *name, *value, *path;
 	AdmObject *admobj = (AdmObject *)self;
 	bool skip_checks=false;
 	apr_pool_t *temp_pool;
@@ -703,11 +703,11 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
 		cvalue = svn_string_ncreate(value, vallen, temp_pool);
 	}
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_set3(name, cvalue, path, admobj->adm, 
-				skip_checks, py_wc_notify_func, (void *)notify_func, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_set3(name, cvalue, path, admobj->adm,
+				skip_checks, py_wc_notify_func, (void *)notify_func,
 				temp_pool));
 #else
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_set2(name, cvalue, path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_prop_set2(name, cvalue, path, admobj->adm,
 				skip_checks, temp_pool));
 #endif
 	apr_pool_destroy(temp_pool);
@@ -735,7 +735,7 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entries_read(&entries, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_entries_read(&entries, admobj->adm,
 				 show_hidden, temp_pool));
 	py_entries = PyDict_New();
 	if (py_entries == NULL) {
@@ -762,7 +762,7 @@ static PyObject *adm_entries_read(PyObject *self, PyObject *args)
 static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 {
 	char *path;
-	PyObject *callbacks; 
+	PyObject *callbacks;
 	bool show_hidden=false;
 	apr_pool_t *temp_pool;
 	AdmObject *admobj = (AdmObject *)self;
@@ -778,7 +778,7 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 		return NULL;
 #if ONLY_SINCE_SVN(1, 5)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries3(
-			  svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
+			  svn_dirent_canonicalize(path, temp_pool), admobj->adm,
 				&py_wc_entry_callbacks2, (void *)callbacks,
 				depth, show_hidden, py_cancel_check, NULL,
 				temp_pool));
@@ -790,7 +790,7 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_walk_entries2(
-			  svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
+			  svn_dirent_canonicalize(path, temp_pool), admobj->adm,
 				&py_wc_entry_callbacks, (void *)callbacks,
 				show_hidden, py_cancel_check, NULL,
 				temp_pool));
@@ -885,7 +885,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	char *path, *copyfrom_url=NULL;
-	svn_revnum_t copyfrom_rev=-1; 
+	svn_revnum_t copyfrom_rev=-1;
 	char *kwnames[] = { "path", "copyfrom_url", "copyfrom_rev", "notify_func", "depth", NULL };
 	PyObject *notify_func=Py_None;
 	AdmObject *admobj = (AdmObject *)self;
@@ -905,10 +905,10 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 #if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add3(
 						   svn_dirent_canonicalize(path, temp_pool), admobj->adm,
-						   depth, svn_uri_canonicalize(copyfrom_url, temp_pool), 
+						   depth, svn_uri_canonicalize(copyfrom_url, temp_pool),
 							copyfrom_rev, py_cancel_check, NULL,
-							py_wc_notify_func, 
-							(void *)notify_func, 
+							py_wc_notify_func,
+							(void *)notify_func,
 							temp_pool));
 #else
 	if (depth != svn_depth_infinity) {
@@ -917,10 +917,10 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_add2(
-						   svn_dirent_canonicalize(path, temp_pool), admobj->adm, copyfrom_url, 
-							copyfrom_rev, py_cancel_check, 
-							py_wc_notify_func, 
-							(void *)notify_func, 
+						   svn_dirent_canonicalize(path, temp_pool), admobj->adm, copyfrom_url,
+							copyfrom_rev, py_cancel_check,
+							py_wc_notify_func,
+							(void *)notify_func,
 							temp_pool));
 #endif
 	apr_pool_destroy(temp_pool);
@@ -931,7 +931,7 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *adm_copy(PyObject *self, PyObject *args)
 {
 	AdmObject *admobj = (AdmObject *)self;
-	char *src, *dst; 
+	char *src, *dst;
 	PyObject *notify_func=Py_None;
 	apr_pool_t *temp_pool;
 
@@ -945,7 +945,7 @@ static PyObject *adm_copy(PyObject *self, PyObject *args)
 		return NULL;
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_copy2(src, admobj->adm, dst,
 							py_cancel_check, NULL,
-							py_wc_notify_func, (void *)notify_func, 
+							py_wc_notify_func, (void *)notify_func,
 							temp_pool));
 	apr_pool_destroy(temp_pool);
 
@@ -962,7 +962,7 @@ static PyObject *adm_delete(PyObject *self, PyObject *args, PyObject *kwargs)
 	PyObject *notify_func=Py_None;
 	bool keep_local = false;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|Ob:delete", kwnames, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|Ob:delete", kwnames,
 			&path, &notify_func, &keep_local))
 		return NULL;
 
@@ -973,21 +973,21 @@ static PyObject *adm_delete(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 #if ONLY_SINCE_SVN(1, 5)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_delete3(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_delete3(path, admobj->adm,
 							py_cancel_check, NULL,
-							py_wc_notify_func, (void *)notify_func, 
+							py_wc_notify_func, (void *)notify_func,
 							keep_local,
 							temp_pool));
 #else
 	if (keep_local) {
-		PyErr_SetString(PyExc_NotImplementedError, 
+		PyErr_SetString(PyExc_NotImplementedError,
 						"keep_local not supported on Subversion < 1.5");
 		return NULL;
 	}
 
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_delete2(path, admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_delete2(path, admobj->adm,
 							py_cancel_check, NULL,
-							py_wc_notify_func, (void *)notify_func, 
+							py_wc_notify_func, (void *)notify_func,
 							temp_pool));
 #endif
 	apr_pool_destroy(temp_pool);
@@ -1020,24 +1020,24 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 		return NULL;
 	traversal_info = svn_wc_init_traversal_info(temp_pool);
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
-				&py_ra_reporter, (void *)reporter, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(svn_dirent_canonicalize(path, temp_pool), admobj->adm,
+				&py_ra_reporter, (void *)reporter,
 				restore_files, recurse?svn_depth_infinity:svn_depth_files,
 				honor_depth_exclude,
-				depth_compatibility_trick, use_commit_times, 
+				depth_compatibility_trick, use_commit_times,
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #elif ONLY_SINCE_SVN(1, 5)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
-				&py_ra_reporter, (void *)reporter, 
-				restore_files, recurse?svn_depth_infinity:svn_depth_files, 
-				depth_compatibility_trick, use_commit_times, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions3(svn_dirent_canonicalize(path, temp_pool), admobj->adm,
+				&py_ra_reporter, (void *)reporter,
+				restore_files, recurse?svn_depth_infinity:svn_depth_files,
+				depth_compatibility_trick, use_commit_times,
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #else
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(svn_dirent_canonicalize(path, temp_pool), admobj->adm, 
-				&py_ra_reporter, (void *)reporter, 
-				restore_files, recurse, use_commit_times, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions2(svn_dirent_canonicalize(path, temp_pool), admobj->adm,
+				&py_ra_reporter, (void *)reporter,
+				restore_files, recurse, use_commit_times,
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #endif
@@ -1084,32 +1084,32 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 	/* FIXME: Support all values of depth */
 	/* FIXME: Support fetch_func */
 	/* FIXME: Support conflict func */
-	err = svn_wc_get_update_editor3(latest_revnum, admobj->adm, target, 
+	err = svn_wc_get_update_editor3(latest_revnum, admobj->adm, target,
 				use_commit_times, recurse?svn_depth_infinity:svn_depth_files,
-				depth_is_sticky, allow_unver_obstructions, 
-				py_wc_notify_func, (void *)notify_func, 
+				depth_is_sticky, allow_unver_obstructions,
+				py_wc_notify_func, (void *)notify_func,
 				py_cancel_check, NULL,
 				NULL, NULL, NULL, NULL,
-				diff3_cmd, NULL, &editor, &edit_baton, 
+				diff3_cmd, NULL, &editor, &edit_baton,
 				NULL, pool);
 #else
 	if (allow_unver_obstructions) {
-		PyErr_SetString(PyExc_NotImplementedError, 
+		PyErr_SetString(PyExc_NotImplementedError,
 						"allow_unver_obstructions is not supported in svn < 1.5");
 		apr_pool_destroy(pool);
 		PyEval_RestoreThread(_save);
 		return NULL;
 	}
 	if (depth_is_sticky) {
-		PyErr_SetString(PyExc_NotImplementedError, 
+		PyErr_SetString(PyExc_NotImplementedError,
 						"depth_is_sticky is not supported in svn < 1.5");
 		apr_pool_destroy(pool);
 		PyEval_RestoreThread(_save);
 		return NULL;
 	}
-	err = svn_wc_get_update_editor2(latest_revnum, admobj->adm, target, 
-				use_commit_times, recurse, py_wc_notify_func, (void *)notify_func, 
-				py_cancel_check, NULL, diff3_cmd, &editor, &edit_baton, 
+	err = svn_wc_get_update_editor2(latest_revnum, admobj->adm, target,
+				use_commit_times, recurse, py_wc_notify_func, (void *)notify_func,
+				py_cancel_check, NULL, diff3_cmd, &editor, &edit_baton,
 				NULL, pool);
 #endif
 	Py_END_ALLOW_THREADS
@@ -1197,12 +1197,12 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	apr_pool_t *temp_pool;
 	int digest_len;
 	svn_boolean_t remove_changelist = FALSE;
-	char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author", 
+	char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author",
 						"wcprop_changes", "remove_lock", "digest", "remove_changelist", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblzz|Obz#b", kwnames, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sblzz|Obz#b", kwnames,
 									 &path, &recurse, &new_revnum, &rev_date,
-									 &rev_author, &py_wcprop_changes, 
+									 &rev_author, &py_wcprop_changes,
 									 &remove_lock, &digest, &digest_len, &remove_changelist))
 		return NULL;
 
@@ -1222,8 +1222,8 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 
 #if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed4(
-		svn_dirent_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
-			rev_date, rev_author, wcprop_changes, 
+		svn_dirent_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum,
+			rev_date, rev_author, wcprop_changes,
 			remove_lock, remove_changelist, digest, temp_pool));
 #else
 	if (remove_changelist) {
@@ -1231,8 +1231,8 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(svn_dirent_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum, 
-														   rev_date, rev_author, wcprop_changes, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed3(svn_dirent_canonicalize(path, temp_pool), admobj->adm, recurse, new_revnum,
+														   rev_date, rev_author, wcprop_changes,
 														   remove_lock, digest, temp_pool));
 #endif
 
@@ -1360,7 +1360,7 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
 	apr_hash_t *new_props, *new_base_props;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOOOO|zlO", kwnames,
-			&dst_path, &py_new_base_contents, &py_new_contents, &py_new_base_props, 
+			&dst_path, &py_new_base_contents, &py_new_contents, &py_new_base_props,
 			&py_new_props, &copyfrom_url, &copyfrom_rev, &notify))
 		return NULL;
 
@@ -1533,7 +1533,7 @@ static PyObject *crop_tree(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crop_tree(admobj->adm, 
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crop_tree(admobj->adm,
 		target, depth, py_wc_notify_func, notify,
 		py_cancel_check, NULL, temp_pool));
 
@@ -1541,7 +1541,7 @@ static PyObject *crop_tree(PyObject *self, PyObject *args)
 
 	Py_RETURN_NONE;
 #else
-	PyErr_SetString(PyExc_NotImplementedError, 
+	PyErr_SetString(PyExc_NotImplementedError,
 					"crop_tree only available on subversion < 1.6");
 	return NULL;
 #endif
@@ -1567,7 +1567,7 @@ static PyObject *translated_stream(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_SVN_WITH_POOL(stream_pool,
-		svn_wc_translated_stream(&stream, path, versioned_file, admobj->adm, 
+		svn_wc_translated_stream(&stream, path, versioned_file, admobj->adm,
 			flags, stream_pool));
 
 	ret = PyObject_New(StreamObject, &Stream_Type);
@@ -1604,7 +1604,7 @@ static PyObject *adm_text_modified(PyObject *self, PyObject *args)
 		return NULL;
 
 	RUN_SVN_WITH_POOL(temp_pool,
-		  svn_wc_text_modified_p(&ret, path, force_comparison, admobj->adm, 
+		  svn_wc_text_modified_p(&ret, path, force_comparison, admobj->adm,
 			temp_pool));
 
 	apr_pool_destroy(temp_pool);
@@ -1811,7 +1811,7 @@ static PyObject *retrieve(PyObject *self, PyObject *args)
 	if (pool == NULL)
 		return NULL;
 
-	RUN_SVN_WITH_POOL(pool, svn_wc_adm_retrieve(&result, admobj->adm, 
+	RUN_SVN_WITH_POOL(pool, svn_wc_adm_retrieve(&result, admobj->adm,
 		svn_dirent_canonicalize(path, pool), pool));
 
 	ret = PyObject_New(AdmObject, &Adm_Type);
@@ -1840,7 +1840,7 @@ static PyObject *probe_retrieve(PyObject *self, PyObject *args)
 	if (pool == NULL)
 		return NULL;
 
-	RUN_SVN_WITH_POOL(pool, svn_wc_adm_probe_retrieve(&result, admobj->adm, 
+	RUN_SVN_WITH_POOL(pool, svn_wc_adm_probe_retrieve(&result, admobj->adm,
 		svn_dirent_canonicalize(path, pool), pool));
 
 	ret = PyObject_New(AdmObject, &Adm_Type);
@@ -1871,7 +1871,7 @@ static PyObject *probe_try(PyObject *self, PyObject *args)
 	if (pool == NULL)
 		return NULL;
 
-	RUN_SVN_WITH_POOL(pool, svn_wc_adm_probe_try3(&result, admobj->adm, 
+	RUN_SVN_WITH_POOL(pool, svn_wc_adm_probe_try3(&result, admobj->adm,
 		svn_dirent_canonicalize(path, pool), writelock, levels_to_lock,
 		py_cancel_check, NULL, pool));
 
@@ -1917,7 +1917,7 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 
 #if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool,
-		  svn_wc_resolved_conflict4(path, admobj->adm, resolve_text, 
+		  svn_wc_resolved_conflict4(path, admobj->adm, resolve_text,
 										resolve_props, resolve_tree, depth,
 										conflict_choice, py_wc_notify_func,
 									   (void *)notify_func, py_cancel_check,
@@ -1930,7 +1930,7 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 		return NULL;
 	} else {
 		RUN_SVN_WITH_POOL(temp_pool,
-			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text, 
+			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text,
 											resolve_props, depth,
 											conflict_choice, py_wc_notify_func,
 										   (void *)notify_func, py_cancel_check,
@@ -2025,7 +2025,7 @@ static PyObject *ra_status(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-	RUN_SVN_WITH_POOL(temp_pool, 
+	RUN_SVN_WITH_POOL(temp_pool,
 			svn_wc_status2(
 				&st,
 				svn_dirent_canonicalize(svn_dirent_join(svn_wc_adm_access_path(admobj->adm), path, temp_pool), temp_pool),
@@ -2039,40 +2039,40 @@ static PyObject *ra_status(PyObject *self, PyObject *args)
 	return (PyObject*)ret;
 }
 
-static PyMethodDef adm_methods[] = { 
+static PyMethodDef adm_methods[] = {
 	{ "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
-	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS, 
+	{ "access_path", (PyCFunction)adm_access_path, METH_NOARGS,
 		"S.access_path() -> path\n"
 		"Returns the base path for this working copy handle." },
 	{ "prop_get", adm_prop_get, METH_VARARGS, "S.prop_get(name, path) -> value" },
 	{ "entries_read", adm_entries_read, METH_VARARGS, "S.entries_read(include_hidden=False) -> dict" },
-	{ "walk_entries", adm_walk_entries, METH_VARARGS, 
+	{ "walk_entries", adm_walk_entries, METH_VARARGS,
 		"S.walk_entries(path, callback, show_hidden=False)\n"
 		"callback should be a function that takes a path and a wc entry" },
-	{ "locked", (PyCFunction)adm_locked, METH_NOARGS, 
+	{ "locked", (PyCFunction)adm_locked, METH_NOARGS,
 		"S.locked() -> bool" },
-	{ "get_prop_diffs", adm_get_prop_diffs, METH_VARARGS, 
+	{ "get_prop_diffs", adm_get_prop_diffs, METH_VARARGS,
 		"S.get_prop_diffs(path) -> (propchanges, originalprops)" },
 	{ "add", (PyCFunction)adm_add, METH_VARARGS|METH_KEYWORDS, "S.add(path, copyfrom_url=None, copyfrom_rev=-1, notify_func=None)" },
 	{ "copy", adm_copy, METH_VARARGS, "S.copy(src_path, dest_path, notify_func=None)" },
 	{ "delete", (PyCFunction)adm_delete, METH_VARARGS|METH_KEYWORDS, "S.delete(path, notify_func=None, keep_local=False)" },
-	{ "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS, 
+	{ "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS,
 		"S.crawl_revisions(path, reporter, restore_files=True, recurse=True, use_commit_times=True, notify_func=None) -> None" },
 	{ "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
-	{ "close", (PyCFunction)adm_close, METH_NOARGS, 
+	{ "close", (PyCFunction)adm_close, METH_NOARGS,
 		"S.close()" },
-	{ "entry", (PyCFunction)adm_entry, METH_VARARGS, 
+	{ "entry", (PyCFunction)adm_entry, METH_VARARGS,
 		"s.entry(path, show_hidden=False) -> entry" },
 	{ "process_committed", (PyCFunction)adm_process_committed, METH_VARARGS|METH_KEYWORDS, "S.process_committed(path, recurse, new_revnum, rev_date, rev_author, wcprop_changes=None, remove_lock=False, digest=None)" },
 	{ "process_committed_queue", (PyCFunction)adm_process_committed_queue, METH_VARARGS, "S.process_committed_queue(queue, new_revnum, rev_date, rev_author)" },
-	{ "remove_lock", (PyCFunction)adm_remove_lock, METH_VARARGS, "S.remove_lock(path)" }, 
+	{ "remove_lock", (PyCFunction)adm_remove_lock, METH_VARARGS, "S.remove_lock(path)" },
 	{ "has_binary_prop", (PyCFunction)adm_has_binary_prop, METH_VARARGS, "S.has_binary_prop(path) -> bool" },
 	{ "text_modified", (PyCFunction)adm_text_modified, METH_VARARGS, "S.text_modified(filename, force_comparison=False) -> bool" },
 	{ "props_modified", (PyCFunction)adm_props_modified, METH_VARARGS, "S.props_modified(filename) -> bool" },
 	{ "get_ancestry", (PyCFunction)get_ancestry, METH_VARARGS,
 		"S.get_ancestry(path) -> (url, rev)" },
 	{ "maybe_set_repos_root", (PyCFunction)maybe_set_repos_root, METH_VARARGS, "S.maybe_set_repos_root(path, repos)" },
-	{ "add_repos_file", (PyCFunction)add_repos_file, METH_KEYWORDS, 
+	{ "add_repos_file", (PyCFunction)add_repos_file, METH_KEYWORDS,
 		"S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url=None, copyfrom_rev=-1, notify_func=None)" },
 	{ "mark_missing_deleted", (PyCFunction)mark_missing_deleted, METH_VARARGS,
 		"S.mark_missing_deleted(path)" },
@@ -2107,59 +2107,59 @@ static PyMethodDef adm_methods[] = {
 static PyTypeObject Adm_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.WorkingCopy", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(AdmObject), 
+	sizeof(AdmObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	adm_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	adm_repr, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	adm_repr, /*	reprfunc tp_repr;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	"Local working copy", /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	adm_methods, /*	struct PyMethodDef *tp_methods;	*/
 	NULL, /*	struct PyMemberDef *tp_members;	*/
@@ -2257,7 +2257,7 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		}
 	}
 
-	RUN_SVN_WITH_POOL(temp_pool, 
+	RUN_SVN_WITH_POOL(temp_pool,
 		svn_wc_queue_committed(&self->queue, path, admobj->adm, recurse,
 							   wcprop_changes, remove_lock, remove_changelist,
 							   (unsigned char *)digest, temp_pool));
@@ -2276,59 +2276,59 @@ static PyMethodDef committed_queue_methods[] = {
 static PyTypeObject CommittedQueue_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.CommittedQueue", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(CommittedQueueObject), 
+	sizeof(CommittedQueueObject),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
-	
+
 	/* Methods to implement standard operations */
-	
+
 	committed_queue_dealloc, /*	destructor tp_dealloc;	*/
 	NULL, /*	printfunc tp_print;	*/
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
 	committed_queue_repr, /*	reprfunc tp_repr;	*/
-	
+
 	/* Method suites for standard classes */
-	
+
 	NULL, /*	PyNumberMethods *tp_as_number;	*/
 	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
 	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
+
 	/* More standard operations (here for binary compatibility) */
-	
+
 	NULL, /*	hashfunc tp_hash;	*/
 	NULL, /*	ternaryfunc tp_call;	*/
 	NULL, /*	reprfunc tp_str;	*/
 	NULL, /*	getattrofunc tp_getattro;	*/
 	NULL, /*	setattrofunc tp_setattro;	*/
-	
+
 	/* Functions to access object as input/output buffer */
 	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
 	/* Flags to define presence of optional/expanded features */
 	0, /*	long tp_flags;	*/
-	
+
 	"Committed queue", /*	const char *tp_doc;  Documentation string */
-	
+
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	NULL, /*	traverseproc tp_traverse;	*/
-	
+
 	/* delete references to contained objects */
 	NULL, /*	inquiry tp_clear;	*/
-	
+
 	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
+
 	/* weak reference enabler */
 	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
+
 	/* Added in release 2.2 */
 	/* Iterators */
 	NULL, /*	getiterfunc tp_iter;	*/
 	NULL, /*	iternextfunc tp_iternext;	*/
-	
+
 	/* Attribute descriptor and subclassing stuff */
 	committed_queue_methods, /*	struct PyMethodDef *tp_methods;	*/
 	NULL, /*	struct PyMemberDef *tp_members;	*/
@@ -2343,10 +2343,10 @@ static PyTypeObject CommittedQueue_Type = {
 	committed_queue_init, /*	newfunc tp_new;	*/
 };
 
-/** 
+/**
  * Determine the revision status of a specified working copy.
  *
- * :return: Tuple with minimum and maximum revnums found, whether the 
+ * :return: Tuple with minimum and maximum revnums found, whether the
  * working copy was switched and whether it was modified.
  */
 static PyObject *revision_status(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -2365,13 +2365,13 @@ static PyObject *revision_status(PyObject *self, PyObject *args, PyObject *kwarg
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, 
+	RUN_SVN_WITH_POOL(temp_pool,
 			svn_wc_revision_status(
-				&revstatus, 
+				&revstatus,
 				svn_dirent_canonicalize(wc_path, temp_pool),
 				trail_url,
 				 committed, py_cancel_check, NULL, temp_pool));
-	ret = Py_BuildValue("(llbb)", revstatus->min_rev, revstatus->max_rev, 
+	ret = Py_BuildValue("(llbb)", revstatus->min_rev, revstatus->max_rev,
 			revstatus->switched, revstatus->modified);
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -2537,13 +2537,13 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	char *path, *uuid, *url;
-	char *repos=NULL; 
+	char *repos=NULL;
 	svn_revnum_t rev=-1;
 	apr_pool_t *pool;
 	char *kwnames[] = { "path", "uuid", "url", "repos", "rev", "depth", NULL };
 	svn_depth_t depth = svn_depth_infinity;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|sli", kwnames, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sss|sli", kwnames,
 									 &path, &uuid, &url, &repos, &rev, &depth))
 		return NULL;
 
@@ -2551,17 +2551,17 @@ static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (pool == NULL)
 		return NULL;
 #if ONLY_SINCE_SVN(1, 5)
-	RUN_SVN_WITH_POOL(pool, 
+	RUN_SVN_WITH_POOL(pool,
 					  svn_wc_ensure_adm3(svn_dirent_canonicalize(path, pool),
 										 uuid, url, repos, rev, depth, pool));
 #else
 	if (depth != svn_depth_infinity) {
-		PyErr_SetString(PyExc_NotImplementedError, 
+		PyErr_SetString(PyExc_NotImplementedError,
 						"depth != infinity not supported with svn < 1.5");
 		apr_pool_destroy(pool);
 		return NULL;
 	}
-	RUN_SVN_WITH_POOL(pool, 
+	RUN_SVN_WITH_POOL(pool,
 					  svn_wc_ensure_adm2(svn_dirent_canonicalize(path, pool),
 										 uuid, url, repos, rev, pool));
 #endif
@@ -2593,14 +2593,14 @@ static PyObject *cleanup_wc(PyObject *self, PyObject *args, PyObject *kwargs)
 	char *kwnames[] = { "path", "diff3_cmd", NULL };
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|z", kwnames, 
-									 &path, &diff3_cmd)) 
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|z", kwnames,
+									 &path, &diff3_cmd))
 		return NULL;
 
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, 
+	RUN_SVN_WITH_POOL(temp_pool,
 				svn_wc_cleanup2(path, diff3_cmd, py_cancel_check, NULL,
 								temp_pool));
 	apr_pool_destroy(temp_pool);
@@ -2643,23 +2643,23 @@ static PyMethodDef wc_methods[] = {
 		"Check whether path contains a Subversion working copy\n"
 		"return the workdir version"},
 	{ "cleanup", (PyCFunction)cleanup_wc, METH_VARARGS|METH_KEYWORDS, "cleanup(path, diff3_cmd=None)\n" },
-	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS, 
+	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS,
 		"ensure_adm(path, uuid, url, repos=None, rev=None)" },
-	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS, 
+	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS,
 		"get_adm_dir() -> name" },
 	{ "set_adm_dir", (PyCFunction)set_adm_dir, METH_VARARGS,
 		"set_adm_dir(name)" },
-	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS, 
+	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS,
 		"get_pristine_copy_path(path) -> path" },
 	{ "get_pristine_contents", get_pristine_contents, METH_VARARGS,
 		"get_pristine_contents(path) -> stream" },
-	{ "is_adm_dir", is_adm_dir, METH_VARARGS, 
+	{ "is_adm_dir", is_adm_dir, METH_VARARGS,
 		"is_adm_dir(name) -> bool" },
-	{ "is_normal_prop", is_normal_prop, METH_VARARGS, 
+	{ "is_normal_prop", is_normal_prop, METH_VARARGS,
 		"is_normal_prop(name) -> bool" },
-	{ "is_entry_prop", is_entry_prop, METH_VARARGS, 
+	{ "is_entry_prop", is_entry_prop, METH_VARARGS,
 		"is_entry_prop(name) -> bool" },
-	{ "is_wc_prop", is_wc_prop, METH_VARARGS, 
+	{ "is_wc_prop", is_wc_prop, METH_VARARGS,
 		"is_wc_prop(name) -> bool" },
 	{ "revision_status", (PyCFunction)revision_status, METH_KEYWORDS|METH_VARARGS, "revision_status(wc_path, trail_url=None, committed=False) -> (min_rev, max_rev, switched, modified)" },
 	{ "version", (PyCFunction)version, METH_NOARGS,

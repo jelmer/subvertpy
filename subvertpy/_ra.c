@@ -534,7 +534,7 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 			goto fail_file;
 		}
 		Py_DECREF(ret);
-	} else if (PyFile_Check(ret)) {
+	} else if (PyObject_AsFileDescriptor(ret) != -1) {
 		*fp = apr_file_from_object(ret, pool);
 		Py_DECREF(ret);
 		if (!*fp) {

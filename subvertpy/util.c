@@ -724,7 +724,7 @@ static svn_error_t *py_stream_read(void *baton, char *buffer, apr_size_t *length
 		PyGILState_Release(state);
 		return py_svn_error();
 	}
-	*length = PyString_Size(ret);
+	*length = PyBytes_Size(ret);
 	memcpy(buffer, PyBytes_AsString(ret), *length);
 	Py_DECREF(ret);
 	PyGILState_Release(state);
