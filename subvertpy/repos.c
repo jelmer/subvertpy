@@ -165,7 +165,7 @@ static PyObject *fs_get_uuid(PyObject *self)
 	if (temp_pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(temp_pool, svn_fs_get_uuid(fsobj->fs, &uuid, temp_pool));
-	ret = PyString_FromString(uuid);
+	ret = PyUnicode_FromString(uuid);
 	apr_pool_destroy(temp_pool);
 
 	return ret;
@@ -607,7 +607,7 @@ static PyObject *py_string_from_svn_node_id(const svn_fs_id_t *id)
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
-	return PyString_FromStringAndSize(str->data, str->len);
+	return PyBytes_FromStringAndSize(str->data, str->len);
 }
 
 #if ONLY_BEFORE_SVN(1, 6)
@@ -812,7 +812,7 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 		ret = Py_None;
 		Py_INCREF(ret);
 	} else {
-		ret = PyString_FromString(cstr);
+		ret = PyUnicode_FromString(cstr);
 	}
 #else
 	if (kind > 0)  {
@@ -823,7 +823,7 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_md5_checksum(checksum,
 													  self->root,
 											   path, temp_pool));
-	ret = PyString_FromStringAndSize((char *)checksum, APR_MD5_DIGESTSIZE);
+	ret = PyBytes_FromStringAndSize((char *)checksum, APR_MD5_DIGESTSIZE);
 #endif
 	apr_pool_destroy(temp_pool);
 	return ret;

@@ -519,8 +519,14 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 
 	CB_CHECK_PYRETVAL(ret);
 
-	if (PyString_Check(ret)) {
-		char* fname = PyString_AsString(ret);
+	if (PyUnicode_Check(ret)) {
+		PyObject *orig_ret = ret;
+		ret = PyUnicode_AsUTF8String(ret);
+		Py_DECREF(orig_ret);
+	}
+
+	if (PyBytes_Check(ret)) {
+		char* fname = PyBytes_AsString(ret);
 		status = apr_file_open(fp, fname, APR_CREATE | APR_READ | APR_WRITE, APR_OS_DEFAULT,
 								pool);
 		if (status) {
@@ -1525,7 +1531,7 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 				pykey = Py_None;
 				Py_INCREF(pykey);
 			} else {
-				pykey = PyString_FromString((char *)key);
+				pykey = PyUnicode_FromString((char *)key);
 			}
 			if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
 				Py_DECREF(item);
@@ -1741,7 +1747,17 @@ static PyObject *ra_unlock(PyObject *self, PyObject *args)
 			PyErr_SetString(PyExc_TypeError, "token not bytes");
 			goto fail_dict;
 		}
-		apr_hash_set(hash_path_tokens, PyBytes_AsString(k), PyBytes_Size(k), (char *)PyString_AsString(v));
+		if (PyUnicode_Check(v)) {
+			v = PyUnicode_AsUTF8String(v);
+		} else {
+			Py_INCREF(v);
+		}
+		if (!PyBytes_Check(v)) {
+			PyErr_SetString(PyExc_TypeError, "path not bytestring or unicode string");
+			goto fail_dict;
+		}
+
+		apr_hash_set(hash_path_tokens, PyBytes_AsString(k), PyBytes_Size(k), (char *)PyBytes_AsString(v));
 	}
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_unlock(ra->ra, hash_path_tokens, break_lock,
 					 py_lock_func, lock_func, temp_pool));
@@ -2979,32 +2995,20 @@ static PyObject *get_ssl_server_trust_prompt_provider(PyObject *self, PyObject *
 
 static svn_error_t *py_ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred, void *baton, const char *realm, svn_boolean_t may_save, apr_pool_t *pool)
 {
-	PyObject *fn = (PyObject *)baton, *ret, *py_may_save, *py_password;
+	PyObject *fn = (PyObject *)baton, *ret, *py_password;
 	PyGILState_STATE state = PyGILState_Ensure();
 	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
 	CB_CHECK_PYRETVAL(ret);
-	if (!PyTuple_Check(ret)) {
-		PyErr_SetString(PyExc_TypeError, "expected tuple with client cert pw credentials");
+	if (!PyArg_ParseTuple(ret, "Ob", &py_password, &may_save)) {
 		goto fail;
 	}
 
-	if (PyTuple_Size(ret) != 2) {
-		PyErr_SetString(PyExc_TypeError, "expected tuple of size 2");
-		goto fail;
-	}
-	py_may_save = PyTuple_GetItem(ret, 1);
-	if (!PyBool_Check(py_may_save)) {
-		PyErr_SetString(PyExc_TypeError, "may_save should be boolean");
-		goto fail;
-	}
-	py_password = PyTuple_GetItem(ret, 0);
-	if (!PyString_Check(py_password)) {
-		PyErr_SetString(PyExc_TypeError, "password should be string");
-		goto fail;
-	}
 	*cred = apr_pcalloc(pool, sizeof(**cred));
 	(*cred)->password = py_object_to_svn_string(py_password, pool);
-	(*cred)->may_save = (py_may_save == Py_True);
+	if ((*cred)->password == NULL) {
+		goto fail;
+	}
+	(*cred)->may_save = may_save;
 	Py_DECREF(ret);
 	PyGILState_Release(state);
 	return NULL;

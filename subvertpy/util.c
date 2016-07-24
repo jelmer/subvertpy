@@ -402,7 +402,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 			py_val = Py_None;
 			Py_INCREF(py_val);
 		} else {
-			py_val = PyString_FromStringAndSize(val->data, val->len);
+			py_val = PyBytes_FromStringAndSize(val->data, val->len);
 		}
 		if (py_val == NULL) {
 			goto fail_item;
@@ -453,22 +453,31 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	}
 
 	while (PyDict_Next(py_props, &idx, &k, &v)) {
-
-		if (!PyString_Check(k)) {
-			PyErr_SetString(PyExc_TypeError, 
-							"property name should be string");
-			return NULL;
-		}
-		if (!PyString_Check(v)) {
-			PyErr_SetString(PyExc_TypeError, 
-							"property value should be string");
-			return NULL;
+		if (PyUnicode_Check(k)) {
+			k = PyUnicode_AsUTF8String(k);
+		} else {
+			Py_INCREF(k);
 		}
 
-		val_string = svn_string_ncreate(PyString_AsString(v), 
-										PyString_Size(v), pool);
-		apr_hash_set(hash_props, PyString_AsString(k), 
-					 PyString_Size(k), val_string);
+		if (!PyBytes_Check(k)) {
+			PyErr_SetString(PyExc_TypeError, 
+							"property name should be unicode or byte string");
+			Py_DECREF(k);
+			return NULL;
+		}
+
+		if (!PyBytes_Check(v)) {
+			PyErr_SetString(PyExc_TypeError, 
+							"property value should be byte string");
+			Py_DECREF(k);
+			return NULL;
+		}
+
+		val_string = svn_string_ncreate(PyBytes_AsString(v),
+										PyBytes_Size(v), pool);
+		apr_hash_set(hash_props, PyBytes_AsString(k),
+					 PyBytes_Size(k), val_string);
+		Py_DECREF(k);
 	}
 
 	return hash_props;
@@ -593,22 +602,22 @@ PyObject **py_changed_paths, PyObject **revprops)
 		goto fail_dict;
 	}
 	if (message != NULL) {
-		obj = PyString_FromString(message);
+		obj = PyBytes_FromString(message);
 		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_LOG, obj);
 		Py_DECREF(obj);
 	}
 	if (author != NULL) {
-		obj = PyString_FromString(author);
+		obj = PyBytes_FromString(author);
 		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_AUTHOR, obj);
 		Py_DECREF(obj);
 	}
 	if (date != NULL) {
-		obj = PyString_FromString(date);
+		obj = PyBytes_FromString(date);
 		PyDict_SetItemString(*revprops, SVN_PROP_REVISION_DATE, obj);
 		Py_DECREF(obj);
 	}
 	return true;
-	
+
 fail_dict:
 	Py_DECREF(*py_changed_paths);
 fail:
@@ -838,7 +847,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	}
 	if (dirent_fields & SVN_DIRENT_LAST_AUTHOR) {
 		if (dirent->last_author != NULL) {
-			obj = PyString_FromString(dirent->last_author);
+			obj = PyBytes_FromString(dirent->last_author);
 		} else {
 			obj = Py_None;
 			Py_INCREF(obj);
@@ -948,7 +957,7 @@ static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 		return NULL;
 
 	if (self->closed) {
-		return PyString_FromString("");
+		return PyBytes_FromString("");
 	}
 
 	temp_pool = Pool(NULL);
@@ -968,7 +977,7 @@ static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 #else
 		RUN_SVN_WITH_POOL(temp_pool, svn_stream_read(self->stream, buffer, &size));
 #endif
-		ret = PyString_FromStringAndSize(buffer, size);
+		ret = PyBytes_FromStringAndSize(buffer, size);
 		apr_pool_destroy(temp_pool);
 		return ret;
 	} else {
@@ -979,7 +988,7 @@ static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 							   temp_pool,
 							   temp_pool));
 		self->closed = TRUE;
-		ret = PyString_FromStringAndSize(result->data, result->len);
+		ret = PyBytes_FromStringAndSize(result->data, result->len);
 		apr_pool_destroy(temp_pool);
 		return ret;
 #else

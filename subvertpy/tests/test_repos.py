@@ -62,7 +62,7 @@ class TestRepository(TestCaseInTempDir):
 
     def test_uuid(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertIsInstance(repos.Repository("foo").fs().get_uuid(), str)
+        self.assertEqual(36, len(repos.Repository("foo").fs().get_uuid()))
 
     def test_youngest_rev(self):
         repos.create(os.path.join(self.test_dir, "foo"))
