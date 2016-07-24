@@ -1591,6 +1591,9 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	/* Yuck. Subversion doesn't like leading slashes.. */
+	while (*path == '/') path++;
+
 	stream = new_py_stream(temp_pool, py_stream);
 	if (stream == NULL) {
 		apr_pool_destroy(temp_pool);
