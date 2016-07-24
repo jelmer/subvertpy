@@ -73,6 +73,35 @@ typedef struct {
 static int client_set_auth(PyObject *self, PyObject *auth, void *closure);
 static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
+static bool client_path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **ret)
+{
+	int i;
+	if (l == Py_None) {
+		*ret = NULL;
+		return true;
+	}
+	if (PyString_Check(l)) {
+		*ret = apr_array_make(pool, 1, sizeof(char *));
+		APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(l), pool);
+	} else if (PyList_Check(l)) {
+		*ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
+		for (i = 0; i < PyList_GET_SIZE(l); i++) {
+			PyObject *item = PyList_GET_ITEM(l, i);
+			if (!PyString_Check(item)) {
+				PyErr_Format(PyExc_TypeError, "Expected list of strings, item was %s", item->ob_type->tp_name);
+				return false;
+			}
+			APR_ARRAY_PUSH(*ret, const char *) = svn_path_canonicalize(PyString_AsString(item), pool);
+		}
+	} else {
+		PyErr_Format(PyExc_TypeError, "Expected list of strings, got: %s",
+					 l->ob_type->tp_name);
+		return false;
+	}
+
+	return true;
+}
+
 static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
 {
 	if (PyLong_Check(arg)) {
@@ -699,7 +728,7 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 	if (temp_pool == NULL) {
 		return NULL;
 	}
-	if (!path_list_to_apr_array(temp_pool, targets, &apr_targets)) {
+	if (!client_path_list_to_apr_array(temp_pool, targets, &apr_targets)) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
@@ -823,24 +852,24 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
 
 static PyObject *client_delete(PyObject *self, PyObject *args)
 {
-    PyObject *paths;
-    bool force=false, keep_local=false;
-    apr_pool_t *temp_pool;
-    svn_commit_info_t *commit_info = NULL;
-    PyObject *ret;
-    apr_array_header_t *apr_paths;
-    ClientObject *client = (ClientObject *)self;
+	PyObject *paths;
+	bool force=false, keep_local=false;
+	apr_pool_t *temp_pool;
+	svn_commit_info_t *commit_info = NULL;
+	PyObject *ret;
+	apr_array_header_t *apr_paths;
+	ClientObject *client = (ClientObject *)self;
 
-    if (!PyArg_ParseTuple(args, "O|bb", &paths, &force, &keep_local))
-        return NULL;
+	if (!PyArg_ParseTuple(args, "O|bb", &paths, &force, &keep_local))
+		return NULL;
 
-    temp_pool = Pool(NULL);
-    if (temp_pool == NULL)
-        return NULL;
-    if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
-        apr_pool_destroy(temp_pool);
-        return NULL;
-    }
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL)
+		return NULL;
+	if (!client_path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 
 #if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_delete3(&commit_info,
@@ -882,7 +911,7 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args)
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
-    if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+    if (!client_path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
         apr_pool_destroy(temp_pool);
         return NULL;
     }
@@ -1308,7 +1337,7 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-	if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+	if (!client_path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
@@ -1577,13 +1606,13 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 #endif
 
-	if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+	if (!client_path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
 
 	if (revprops) {
-		if (!path_list_to_apr_array(temp_pool, revprops, &apr_revprops)) {
+		if (!string_list_to_apr_array(temp_pool, revprops, &apr_revprops)) {
 			apr_pool_destroy(temp_pool);
 			return NULL;
 		}

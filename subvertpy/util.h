@@ -42,7 +42,7 @@ svn_error_t *py_cancel_check(void *cancel_baton);
 __attribute__((warn_unused_result)) apr_pool_t *Pool(apr_pool_t *parent);
 void handle_svn_error(svn_error_t *error);
 bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
-bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
+bool relpath_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
 PyObject *prop_hash_to_dict(apr_hash_t *props);
 apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props);
 svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths,

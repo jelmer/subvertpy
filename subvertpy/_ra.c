@@ -765,7 +765,7 @@ apr_array_header_t **apr_paths, apr_array_header_t **apr_revprops)
 		 * so tweak our own parameters a bit. */
 		*apr_paths = apr_array_make(*pool, 1, sizeof(char *));
 		APR_ARRAY_PUSH(*apr_paths, char *) = apr_pstrdup(*pool, "");
-	} else if (!path_list_to_apr_array(*pool, paths, apr_paths)) {
+	} else if (!relpath_list_to_apr_array(*pool, paths, apr_paths)) {
 		goto fail_prep;
 	}
 
@@ -2057,7 +2057,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-	if (!path_list_to_apr_array(temp_pool, paths, &apr_paths)) {
+	if (!relpath_list_to_apr_array(temp_pool, paths, &apr_paths)) {
 		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
