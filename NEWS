@@ -21,6 +21,8 @@
    * Support `old_value` argument to RemoteAccess.change_rev_prop().
      (Jelmer Vernooij)
 
+   * Support `include_externals` argument to Client.list(). (Jelmer Vernooij)
+
  BUG FIXES
 
    * Avoid using deprecated svn_path_canonicalize(). (Jelmer Vernooij)

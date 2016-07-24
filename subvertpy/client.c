@@ -181,32 +181,67 @@ static svn_error_t *proplist_receiver(void *prop_list, const char *path,
 }
 #endif
 
+#if ONLY_SINCE_SVN(1, 8)
+static svn_error_t *list_receiver2(void *dict, const char *path,
+                                  const svn_dirent_t *dirent,
+                                  const svn_lock_t *lock, const char *abs_path,
+                                  const char *external_parent_url,
+                                  const char *external_target,
+                                  apr_pool_t *pool)
+{
+	PyGILState_STATE state = PyGILState_Ensure();
+	PyObject *value;
+
+	value = py_dirent(dirent, SVN_DIRENT_ALL);
+	if (value == NULL) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
+
+	if (external_parent_url != NULL || external_target != NULL) {
+		value = Py_BuildValue("(Nzz)", value, external_parent_url, external_target);
+	}
+
+	if (PyDict_SetItemString(dict, path, value) != 0) {
+		Py_DECREF(value);
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
+
+	Py_DECREF(value);
+
+	PyGILState_Release(state);
+
+	return NULL;
+}
+#else
 static svn_error_t *list_receiver(void *dict, const char *path,
                                   const svn_dirent_t *dirent,
                                   const svn_lock_t *lock, const char *abs_path,
                                   apr_pool_t *pool)
 {
-    PyGILState_STATE state = PyGILState_Ensure();
-    PyObject *value;
+	PyGILState_STATE state = PyGILState_Ensure();
+	PyObject *value;
 
-    value = py_dirent(dirent, SVN_DIRENT_ALL);
-    if (value == NULL) {
-        PyGILState_Release(state);
-        return py_svn_error();
-    }
+	value = py_dirent(dirent, SVN_DIRENT_ALL);
+	if (value == NULL) {
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
 
-    if (PyDict_SetItemString(dict, path, value) != 0) {
-        Py_DECREF(value);
-        PyGILState_Release(state);
-        return py_svn_error();
-    }
+	if (PyDict_SetItemString(dict, path, value) != 0) {
+		Py_DECREF(value);
+		PyGILState_Release(state);
+		return py_svn_error();
+	}
 
-    Py_DECREF(value);
+	Py_DECREF(value);
 
-    PyGILState_Release(state);
+	PyGILState_Release(state);
 
-    return NULL;
+	return NULL;
 }
+#endif
 
 #if ONLY_SINCE_SVN(1, 7)
 static PyObject *py_info(const svn_client_info2_t *info)
@@ -1238,13 +1273,14 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
     int dirents = SVN_DIRENT_ALL;
     apr_pool_t *temp_pool;
     char *path;
+    bool include_externals = false;
     PyObject *peg_revision = Py_None, *revision = Py_None;
     ClientObject *client = (ClientObject *)self;
     PyObject *entry_dict;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOi|iO", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOi|iOb", kwnames,
                                      &path, &peg_revision, &depth, &dirents,
-                                     &revision))
+                                     &revision, &include_externals))
         return NULL;
 
     if (!to_opt_revision(peg_revision, &c_peg_rev))
@@ -1260,7 +1296,23 @@ static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_BEFORE_SVN(1, 8)
+    if (include_externals) {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "include_externals requires svn >= 1.8");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+#endif
+
+#if ONLY_SINCE_SVN(1, 8)
+    RUN_SVN_WITH_POOL(temp_pool,
+                      svn_client_list3(path, &c_peg_rev, &c_rev,
+                                       depth, dirents, false,
+                                       include_externals,
+                                       list_receiver2, entry_dict,
+                                       client->client, temp_pool));
+#elif ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool,
                       svn_client_list2(path, &c_peg_rev, &c_rev,
                                        depth, dirents, false,
