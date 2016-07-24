@@ -141,6 +141,10 @@ extern PyTypeObject Stream_Type;
 const char *
 svn_dirent_canonicalize(const char *dirent,
                         apr_pool_t *result_pool);
+char *
+svn_dirent_join(const char *base,
+                const char *component,
+                apr_pool_t *result_pool);
 #endif
 
 #if ONLY_BEFORE_SVN(1, 7)
@@ -153,6 +157,7 @@ svn_relpath_canonicalize(const char *relpath,
 #endif
 
 const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool);
+const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool);
 char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool);
 #define py_object_from_svn_abspath PyBytes_FromString

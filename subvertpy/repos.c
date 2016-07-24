@@ -40,13 +40,13 @@ typedef struct {
 static PyObject *repos_create(PyObject *self, PyObject *args)
 {
 	char *path;
-	PyObject *config=Py_None, *fs_config=Py_None;
+	PyObject *config=Py_None, *fs_config=Py_None, *py_path;
 	svn_repos_t *repos = NULL;
 	apr_pool_t *pool;
 	apr_hash_t *hash_config, *hash_fs_config;
 	RepositoryObject *ret;
 
-	if (!PyArg_ParseTuple(args, "s|OO:create", &path, &config, &fs_config))
+	if (!PyArg_ParseTuple(args, "O|OO:create", &py_path, &config, &fs_config))
 		return NULL;
 
     pool = Pool(NULL);
@@ -57,13 +57,21 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
 		apr_pool_destroy(pool);
 		return NULL;
 	}
-	hash_fs_config = apr_hash_make(pool); /* FIXME */
+	hash_fs_config = apr_hash_make(pool); /* TODO(jelmer): Allow config hash */
 	if (hash_fs_config == NULL) {
+		apr_pool_destroy(pool);
 		PyErr_SetString(PyExc_RuntimeError, "Unable to create fs config hash");
 		return NULL;
 	}
+
+	path = py_object_to_svn_string(py_path, pool);
+	if (path == NULL) {
+		apr_pool_destroy(pool);
+		return NULL;
+	}
+
 	RUN_SVN_WITH_POOL(pool, svn_repos_create(&repos,
-											 svn_dirent_canonicalize(path, pool), NULL, NULL,
+											 path, NULL, NULL,
 											 hash_config, hash_fs_config, pool));
 
 	ret = PyObject_New(RepositoryObject, &Repository_Type);

@@ -66,7 +66,40 @@ svn_dirent_canonicalize(const char *dirent,
 {
 	return svn_path_canonicalize(dirent, result_pool);
 }
+
+char *
+svn_dirent_join(const char *base,
+                const char *component,
+                apr_pool_t *result_pool)
+{
+	return svn_path_join(base, component, result_pool);
+}
+
 #endif
+
+const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool)
+{
+	const char *ret;
+	PyObject *bytes_obj = NULL;
+
+	if (PyUnicode_Check(obj)) {
+		bytes_obj = obj = PyUnicode_AsUTF8String(obj);
+		if (obj == NULL) {
+			return NULL;
+		}
+	}
+
+	if (PyBytes_Check(obj)) {
+		ret = svn_dirent_canonicalize(PyBytes_AsString(obj), pool);
+		Py_XDECREF(bytes_obj);
+		return ret;
+	} else {
+		PyErr_SetString(PyExc_TypeError,
+						"URIs need to be UTF-8 bytestrings or unicode strings");
+		Py_XDECREF(bytes_obj);
+		return NULL;
+	}
+}
 
 char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool)
 {

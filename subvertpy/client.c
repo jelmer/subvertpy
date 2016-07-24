@@ -678,44 +678,53 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     char *kwnames[] = { "url", "path", "rev", "peg_rev", "recurse", "ignore_externals", "allow_unver_obstructions", NULL };
     svn_revnum_t result_rev;
     svn_opt_revision_t c_peg_rev, c_rev;
-	char *path;
+	const char *path;
 	const char *url;
-	PyObject *py_url = NULL;
+	PyObject *py_url = NULL, *py_path;
 	apr_pool_t *temp_pool;
 	PyObject *peg_rev=Py_None, *rev=Py_None;
 	bool recurse=true, ignore_externals=false, allow_unver_obstructions=false;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|OObbb", kwnames, &py_url, &path, &rev, &peg_rev, &recurse, &ignore_externals, &allow_unver_obstructions))
-        return NULL;
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OObbb", kwnames, &py_url, &py_path, &rev, &peg_rev, &recurse, &ignore_externals, &allow_unver_obstructions))
+		return NULL;
 
-    if (!to_opt_revision(peg_rev, &c_peg_rev))
-        return NULL;
-    if (!to_opt_revision(rev, &c_rev))
-        return NULL;
+	if (!to_opt_revision(peg_rev, &c_peg_rev))
+		return NULL;
+	if (!to_opt_revision(rev, &c_rev))
+		return NULL;
 
-    temp_pool = Pool(NULL);
-    if (temp_pool == NULL)
-        return NULL;
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL) {
+		return NULL;
+	}
 
 	url = py_object_to_svn_uri(py_url, temp_pool);
-	if (url == NULL)
+	if (url == NULL) {
+		apr_pool_destroy(temp_pool);
 		return NULL;
+	}
+
+	path = py_object_to_svn_dirent(py_path, temp_pool);
+	if (path == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 
 #if ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout3(&result_rev, url,
-        svn_dirent_canonicalize(path, temp_pool),
+        path,
         &c_peg_rev, &c_rev, recurse?svn_depth_infinity:svn_depth_files,
         ignore_externals, allow_unver_obstructions, client->client, temp_pool));
 #else
-    if (allow_unver_obstructions) {
-        PyErr_SetString(PyExc_NotImplementedError,
+	if (allow_unver_obstructions) {
+		PyErr_SetString(PyExc_NotImplementedError,
             "allow_unver_obstructions not supported when built against svn<1.5");
-        apr_pool_destroy(temp_pool);
-        return NULL;
-    }
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout2(&result_rev, url,
-        svn_dirent_canonicalize(path, temp_pool),
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_checkout2(&result_rev, url,
+        path,
         &c_peg_rev, &c_rev, recurse,
         ignore_externals, client->client, temp_pool));
 #endif
@@ -794,13 +803,14 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
     char *kwnames[] = { "from", "to", "rev", "peg_rev", "recurse", "ignore_externals", "overwrite", "native_eol", "ignore_keywords", NULL };
     svn_revnum_t result_rev;
     svn_opt_revision_t c_peg_rev, c_rev;
-    char *from, *to;
+	PyObject *py_from, *py_to;
+    const char *from, *to;
     apr_pool_t *temp_pool;
 	char *native_eol = NULL;
     PyObject *peg_rev=Py_None, *rev=Py_None;
     bool recurse=true, ignore_externals=false, overwrite=false, ignore_keywords=false;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|OObbbbb", kwnames, &from, &to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol, &ignore_keywords))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OObbbbb", kwnames, &py_from, &py_to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol, &ignore_keywords))
         return NULL;
 
     if (!to_opt_revision(peg_rev, &c_peg_rev))
@@ -811,21 +821,31 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
+
+	from = py_object_to_svn_string(py_from, temp_pool);
+	if (from == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+	to = py_object_to_svn_dirent(py_to, temp_pool);
+	if (to == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
 #if ONLY_SINCE_SVN(1, 7)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_export5(&result_rev, from,
-        svn_dirent_canonicalize(to, temp_pool),
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_export5(&result_rev, from, to,
         &c_peg_rev, &c_rev, overwrite, ignore_externals, ignore_keywords,
         recurse?svn_depth_infinity:svn_depth_files,
         native_eol, client->client, temp_pool));
 #elif ONLY_SINCE_SVN(1, 5)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_export4(&result_rev, from,
-        svn_dirent_canonicalize(to, temp_pool),
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_export4(&result_rev, from, to,
         &c_peg_rev, &c_rev, overwrite, ignore_externals,
 		recurse?svn_depth_infinity:svn_depth_files,
         native_eol, client->client, temp_pool));
 #else
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_export3(&result_rev, from,
-        svn_dirent_canonicalize(to, temp_pool),
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_export3(&result_rev, from, to,
         &c_peg_rev, &c_rev, overwrite, ignore_externals, recurse,
         native_eol, client->client, temp_pool));
 #endif
