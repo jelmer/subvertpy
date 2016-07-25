@@ -866,9 +866,11 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
 	svn_opt_revision_t c_peg_rev, c_rev;
 	apr_pool_t *temp_pool;
 	svn_stream_t *stream;
-	PyObject *py_stream, *py_path;
+	bool expand_keywords = true;
+	PyObject *py_stream, *py_path, *ret;
+	apr_hash_t *props = NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OO", kwnames, &py_path, &py_stream, &rev, &peg_rev))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OOb", kwnames, &py_path, &py_stream, &rev, &peg_rev, &expand_keywords))
 		return NULL;
 
 	if (!to_opt_revision(rev, &c_rev))
@@ -893,11 +895,32 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
+#if ONLY_SINCE_SVN(1, 9)
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_cat3(
+		&props, stream, path, &c_peg_rev, &c_rev, expand_keywords,
+		client->client, temp_pool, temp_pool));
+
+	ret = prop_hash_to_dict(props);
+	if (ret == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+#else
+	if (!expand_keywords) {
+		PyErr_SetString(PyExc_NotImplementedError,
+						"expand_keywords=false only supported with svn >= 1.9");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_cat2(stream, path,
-												 &c_peg_rev, &c_rev, client->client, temp_pool));
+		&c_peg_rev, &c_rev, client->client, temp_pool));
+
+	ret = Py_None;
+	Py_INCREF(ret);
+#endif
 
 	apr_pool_destroy(temp_pool);
-	Py_RETURN_NONE;
+	return ret;
 }
 
 static PyObject *client_delete(PyObject *self, PyObject *args)
