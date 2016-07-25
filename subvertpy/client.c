@@ -476,7 +476,11 @@ static PyObject *client_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 		return NULL;
 	}
 
+#if ONLY_SINCE_SVN(1, 8)
+	err = svn_client_create_context2(&ret->client, NULL, ret->pool);
+#else
 	err = svn_client_create_context(&ret->client, ret->pool);
+#endif
 	if (err != NULL) {
 		handle_svn_error(err);
 		svn_error_clear(err);
