@@ -29,6 +29,8 @@
 
    * Support `expand_keywords` argument to Client.cat(). (Jelmer Vernooĳ)
 
+   * Support `revprops` argument to Client.delete(). (Jelmer Vernooĳ)
+
  BUG FIXES
 
    * Avoid using deprecated svn_path_canonicalize(). (Jelmer Vernooij)

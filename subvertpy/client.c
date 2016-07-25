@@ -929,11 +929,12 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 	bool force=false, keep_local=false;
 	apr_pool_t *temp_pool;
 	svn_commit_info_t *commit_info = NULL;
-	PyObject *ret;
+	PyObject *ret, *py_revprops;
 	apr_array_header_t *apr_paths;
 	ClientObject *client = (ClientObject *)self;
+	apr_hash_t *hash_revprops;
 
-	if (!PyArg_ParseTuple(args, "O|bb", &paths, &force, &keep_local))
+	if (!PyArg_ParseTuple(args, "O|bbO", &paths, &force, &keep_local, &py_revprops))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -944,27 +945,42 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	if (py_revprops != Py_None) {
+		hash_revprops = prop_dict_to_hash(temp_pool, py_revprops);
+		if (hash_revprops == NULL) {
+			apr_pool_destroy(temp_pool);
+			return NULL;
+		}
+	} else {
+		hash_revprops = NULL;
+	}
+
 #if ONLY_SINCE_SVN(1, 5)
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_delete3(&commit_info,
-                                                    apr_paths,
-                force, keep_local, NULL, client->client, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_delete3(
+		&commit_info, apr_paths, force, keep_local, hash_revprops, client->client, temp_pool));
 #else
-    if (keep_local) {
-        PyErr_SetString(PyExc_ValueError,
+	if (hash_revprops != NULL) {
+		PyErr_SetString(PyExc_NotImplementedError,
+                        "revprops not supported against svn 1.4");
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
+	if (keep_local) {
+		PyErr_SetString(PyExc_NotImplementedError,
                         "keep_local not supported against svn 1.4");
-        apr_pool_destroy(temp_pool);
-        return NULL;
-    }
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_delete2(&commit_info,
-                                                    apr_paths,
-                force, client->client, temp_pool));
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	RUN_SVN_WITH_POOL(temp_pool, svn_client_delete2(
+		&commit_info, apr_paths, force, client->client, temp_pool));
 #endif
 
-    ret = py_commit_info_tuple(commit_info);
+	ret = py_commit_info_tuple(commit_info);
 
-    apr_pool_destroy(temp_pool);
+	apr_pool_destroy(temp_pool);
 
-    return ret;
+	return ret;
 }
 
 static PyObject *client_mkdir(PyObject *self, PyObject *args)
