@@ -12,6 +12,7 @@ url = sys.argv[1]
 
 conn = RemoteAccess(url)
 
+
 def log_printer(changed_paths, rev, revprops, has_children=None):
     print("=" * 79)
     print("%d:" % rev)
@@ -92,10 +93,9 @@ class RaCmd(cmd.Cmd):
         print(conn.get_repos_root())
 
     def do_log(self, args):
-        conn.get_log(callback=log_printer, paths=None, start=0, 
+        conn.get_log(callback=log_printer, paths=None, start=0,
                      end=conn.get_latest_revnum(), discover_changed_paths=True)
+
 
 cmdline = RaCmd()
 cmdline.cmdloop()
-
-

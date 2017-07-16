@@ -1,14 +1,15 @@
 #!/usr/bin/python
-# Demonstrates how to use the replay function to fetch the 
+# Demonstrates how to use the replay function to fetch the
 # changes made in a revision.
 
 from subvertpy.ra import RemoteAccess, Auth, get_username_provider
 
 conn = RemoteAccess("svn://svn.gnome.org/svn/gnome-specimen/trunk",
-        auth=Auth([get_username_provider()]))
+                    auth=Auth([get_username_provider()]))
+
 
 class MyFileEditor:
-    
+
     def change_prop(self, key, value):
         print("Change prop: %s -> %r" % (key, value))
 
@@ -20,6 +21,7 @@ class MyFileEditor:
 
     def close(self):
         pass
+
 
 class MyDirEditor:
 
@@ -36,7 +38,8 @@ class MyDirEditor:
         return MyFileEditor()
 
     def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
-        print("Add file: %s (from %r:%r)" % (path, copyfrom_path, copyfrom_rev))
+        print("Add file: %s (from %r:%r)" %
+              (path, copyfrom_path, copyfrom_rev))
         return MyFileEditor()
 
     def change_prop(self, key, value):

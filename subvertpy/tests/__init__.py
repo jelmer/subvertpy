@@ -54,8 +54,9 @@ def rmtree_with_readonly(path):
     In Windows a read-only file cannot be removed, and shutil.rmtree fails.
     """
     def force_rm_handle(remove_path, path, excinfo):
-        os.chmod(path, os.stat(path).st_mode | stat.S_IWUSR | stat.S_IWGRP |
-            stat.S_IWOTH)
+        os.chmod(
+            path,
+            os.stat(path).st_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
         remove_path(path)
     shutil.rmtree(path, onerror=force_rm_handle)
 
@@ -69,8 +70,9 @@ class TestCase(unittest.TestCase):
     def assertIsInstance(self, obj, kls, msg=None):
         """Fail if obj is not an instance of kls"""
         if not isinstance(obj, kls):
-            if msg is None: msg = "%r is an instance of %s rather than %s" % (
-                obj, obj.__class__, kls)
+            if msg is None:
+                msg = "%r is an instance of %s rather than %s" % (
+                        obj, obj.__class__, kls)
             self.fail(msg)
 
     def assertIs(self, left, right, message=None):
@@ -145,7 +147,8 @@ class TestDirEditor(object):
 
     def open_dir(self, path):
         self.close_children()
-        child = TestDirEditor(self.dir.open_directory(path, -1), self.baseurl, self.revnum)
+        child = TestDirEditor(self.dir.open_directory(path, -1), self.baseurl,
+                              self.revnum)
         self.children.append(child)
         return child
 
@@ -164,7 +167,7 @@ class TestDirEditor(object):
         assert (copyfrom_path is None and copyfrom_rev == -1) or \
                (copyfrom_path is not None and copyfrom_rev > -1)
         child = TestDirEditor(self.dir.add_directory(path, copyfrom_path,
-            copyfrom_rev), self.baseurl, self.revnum)
+                              copyfrom_rev), self.baseurl, self.revnum)
         self.children.append(child)
         return child
 
@@ -175,7 +178,7 @@ class TestDirEditor(object):
         if copyfrom_path is not None and copyfrom_rev == -1:
             copyfrom_rev = self.revnum
         child = TestFileEditor(self.dir.add_file(path, copyfrom_path,
-            copyfrom_rev))
+                               copyfrom_rev))
         self.children.append(child)
         return child
 
@@ -208,7 +211,7 @@ class SubversionTestCase(TestCaseInTempDir):
                                      ra.get_ssl_client_cert_pw_file_provider(),
                                      ra.get_ssl_server_trust_file_provider()])
         self.client_ctx.log_msg_func = self.log_message_func
-        #self.client_ctx.notify_func = lambda err: mutter("Error: %s" % err)
+        # self.client_ctx.notify_func = lambda err: mutter("Error: %s" % err)
 
     def setUp(self):
         super(SubversionTestCase, self).setUp()
@@ -232,16 +235,16 @@ class SubversionTestCase(TestCaseInTempDir):
 
         if allow_revprop_changes:
             if sys.platform == 'win32':
-                revprop_hook = os.path.join(abspath, "hooks",
-                        "pre-revprop-change.bat")
+                revprop_hook = os.path.join(
+                    abspath, "hooks", "pre-revprop-change.bat")
                 f = open(revprop_hook, 'w')
                 try:
                     f.write("exit 0\n")
                 finally:
                     f.close()
             else:
-                revprop_hook = os.path.join(abspath, "hooks",
-                        "pre-revprop-change")
+                revprop_hook = os.path.join(
+                    abspath, "hooks", "pre-revprop-change")
                 f = open(revprop_hook, 'w')
                 try:
                     f.write("#!/bin/sh\n")
@@ -253,7 +256,6 @@ class SubversionTestCase(TestCaseInTempDir):
             return 'file:%s' % pathname2url(abspath)
         else:
             return "file://%s" % abspath
-
 
     def make_checkout(self, repos_url, relpath):
         """Create a new checkout."""
@@ -334,15 +336,17 @@ class SubversionTestCase(TestCaseInTempDir):
         r = ra.RemoteAccess(url)
         assert isinstance(url, str)
         ret = {}
+
         def rcvr(orig_paths, rev, revprops, has_children=None):
-            ret[rev] = (orig_paths,
+            ret[rev] = (
+                    orig_paths,
                     revprops.get(properties.PROP_REVISION_AUTHOR),
                     revprops.get(properties.PROP_REVISION_DATE),
                     revprops.get(properties.PROP_REVISION_LOG))
         r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True,
                   revprops=[properties.PROP_REVISION_AUTHOR,
-                      properties.PROP_REVISION_DATE,
-                      properties.PROP_REVISION_LOG])
+                            properties.PROP_REVISION_DATE,
+                            properties.PROP_REVISION_LOG])
         return ret
 
     def client_delete(self, relpath):
@@ -402,8 +406,8 @@ class SubversionTestCase(TestCaseInTempDir):
         :param clientpath: Path to checkout
         :return: Repository URL.
         """
-        repos_url = self.make_repository(repospath,
-            allow_revprop_changes=allow_revprop_changes)
+        repos_url = self.make_repository(
+            repospath, allow_revprop_changes=allow_revprop_changes)
         self.make_checkout(repos_url, clientpath)
         return repos_url
 
@@ -421,11 +425,11 @@ class SubversionTestCase(TestCaseInTempDir):
         :param message: Commit message
         :return: Commit editor object
         """
-        ra_ctx = RemoteAccess(url.encode("utf-8"),
-            auth=Auth([ra.get_username_provider()]))
+        ra_ctx = RemoteAccess(
+            url.encode("utf-8"), auth=Auth([ra.get_username_provider()]))
         revnum = ra_ctx.get_latest_revnum()
-        return TestCommitEditor(ra_ctx.get_commit_editor({"svn:log": message}),
-            ra_ctx.url, revnum)
+        return TestCommitEditor(ra_ctx.get_commit_editor(
+            {"svn:log": message}), ra_ctx.url, revnum)
 
 
 def test_suite():

@@ -1,5 +1,5 @@
 # Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@jelmer.uk>
- 
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation; either version 2.1 of the License, or
@@ -28,6 +28,7 @@ from subvertpy.delta import (
     )
 from subvertpy.tests import TestCase
 
+
 class DeltaTests(TestCase):
 
     def setUp(self):
@@ -40,8 +41,8 @@ class DeltaTests(TestCase):
     def test_send_stream(self):
         stream = BytesIO(b"foo")
         send_stream(stream, self.storing_window_handler)
-        self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], b'foo'), None], 
-                          self.windows)
+        self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], b'foo'), None],
+                         self.windows)
 
     def test_apply_delta(self):
         stream = BytesIO()
@@ -74,7 +75,8 @@ class MarshallTests(TestCase):
     def test_roundtrip_length(self):
         self.assertEqual((42, bytes()), decode_length(encode_length(42)))
 
-
     def test_roundtrip_window(self):
         mywindow = (0, 0, 3, 1, [(2, 0, 3)], b'foo')
-        self.assertEqual([mywindow], list(unpack_svndiff0(pack_svndiff0([mywindow]))))
+        self.assertEqual(
+            [mywindow],
+            list(unpack_svndiff0(pack_svndiff0([mywindow]))))

@@ -24,6 +24,7 @@ from subvertpy.marshall import (
     )
 from subvertpy.tests import TestCase
 
+
 class TestMarshalling(TestCase):
 
     def test_literal_txt(self):
@@ -41,15 +42,15 @@ class TestMarshalling(TestCase):
     def test_marshall_error(self):
         e = MarshallError("bla bla")
         self.assertEqual("bla bla", e.__str__())
-    
+
     def test_marshall_int(self):
         self.assertEqual(b"1 ", marshall(1))
 
     def test_marshall_list(self):
-        self.assertEqual(b"( 1 2 3 4 ) ", marshall([1,2,3,4]))
-    
+        self.assertEqual(b"( 1 2 3 4 ) ", marshall([1, 2, 3, 4]))
+
     def test_marshall_list_mixed(self):
-        self.assertEqual(b"( 1 3 4 3:str ) ", marshall([1,3,4,"str"]))
+        self.assertEqual(b"( 1 3 4 3:str ) ", marshall([1, 3, 4, "str"]))
 
     def test_marshall_literal(self):
         self.assertEqual(b"foo ", marshall(literal("foo")))
@@ -87,9 +88,8 @@ class TestMarshalling(TestCase):
     def test_unmarshall_toolong(self):
         self.assertRaises(MarshallError, unmarshall, b"43432432:bla")
 
-    def test_unmarshall_literal(self):
+    def test_unmarshall_literal_negative(self):
         self.assertRaises(MarshallError, unmarshall, b":-3213")
 
     def test_unmarshall_open_list(self):
         self.assertRaises(MarshallError, unmarshall, b"( 3 4 ")
-

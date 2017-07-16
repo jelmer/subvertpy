@@ -1,4 +1,5 @@
 PYTHON = python
+FLAKE8 ?= flake8
 PYDOCTOR = pydoctor
 PYDOCTOR_OPTIONS ?=
 SETUP = $(PYTHON) setup.py
@@ -23,7 +24,7 @@ check:: build-inplace
 gdb-check::
 	$(MAKE) check DEBUGGER="gdb --args"
 
-check-one:: 
+check-one::
 	$(MAKE) check TEST_OPTIONS=-f
 
 clean::
@@ -32,3 +33,6 @@ clean::
 
 pydoctor:
 	$(PYDOCTOR) $(PYDOCTOR_OPTIONS) --introspect-c-modules -c subvertpy.cfg --make-html
+
+style:
+	$(FLAKE8) --exclude=build,.git,build-pypy,.tox

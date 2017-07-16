@@ -32,6 +32,7 @@ MAX_ENCODED_INT_LEN = 10
 
 DELTA_WINDOW_SIZE = 102400
 
+
 def apply_txdelta_window(sbuf, window):
     """Apply a txdelta window to a buffer.
 
@@ -60,9 +61,10 @@ def apply_txdelta_handler_chunks(source_chunks, target_chunks):
     :param target_stream: Target stream
     """
     sbuf = bytes().join(source_chunks)
+
     def apply_window(window):
         if window is None:
-            return # Last call
+            return  # Last call
         target_chunks.append(apply_txdelta_window(sbuf, window))
     return apply_window
 
@@ -75,7 +77,7 @@ def apply_txdelta_handler(sbuf, target_stream):
     """
     def apply_window(window):
         if window is None:
-            return # Last call
+            return  # Last call
         target_stream.write(apply_txdelta_window(sbuf, window))
     return apply_window
 
@@ -136,16 +138,16 @@ def encode_length(len):
 
     # Count number of required bytes
     v = len >> 7
-    n = 1;
+    n = 1
     while v > 0:
         v = v >> 7
-        n+=1
+        n += 1
 
     assert n <= MAX_ENCODED_INT_LEN
 
     ret = bytearray()
     while n > 0:
-        n-=1
+        n -= 1
         if n > 0:
             cont = 1
         else:
@@ -211,6 +213,7 @@ def unpack_svndiff_instruction(text):
 
 SVNDIFF0_HEADER = b"SVN\0"
 
+
 def pack_svndiff0_window(window):
     """Pack an individual window using svndiff0.
 
@@ -273,4 +276,3 @@ def unpack_svndiff0(text):
         newdata = text[:newdata_len]
         text = text[newdata_len:]
         yield (sview_offset, sview_len, tview_len, len(ops), ops, newdata)
-

@@ -92,10 +92,10 @@ AUTH_PARAM_DEFAULT_USERNAME = 'svn:auth:username'
 AUTH_PARAM_DEFAULT_PASSWORD = 'svn:auth:password'
 
 SSL_NOTYETVALID = 0x00000001
-SSL_EXPIRED     = 0x00000002
-SSL_CNMISMATCH  = 0x00000004
-SSL_UNKNOWNCA   = 0x00000008
-SSL_OTHER       = 0x40000000
+SSL_EXPIRED = 0x00000002
+SSL_CNMISMATCH = 0x00000004
+SSL_UNKNOWNCA = 0x00000008
+SSL_OTHER = 0x40000000
 
 
 class SubversionException(Exception):
@@ -109,7 +109,7 @@ class SubversionException(Exception):
 
 def _check_mtime(m):
     """Check whether a C extension is out of date.
-    
+
     :param m: Python module that is a C extension
     """
     import os
@@ -121,6 +121,7 @@ def _check_mtime(m):
         return False
     return True
 
+
 try:
     from subvertpy import client, _ra, repos, wc
     for x in client, _ra, repos, wc:
@@ -130,5 +131,3 @@ try:
             break
 except ImportError as e:
     raise ImportError("Unable to load subvertpy extensions: %s" % e)
-
-

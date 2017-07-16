@@ -1,5 +1,5 @@
 # Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@jelmer.uk>
- 
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation; either version 2.1 of the License, or
@@ -46,7 +46,8 @@ class TestRepository(TestCaseInTempDir):
     def test_capability(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
         if repos.api_version() < (1, 5):
-            self.assertRaises(NotImplementedError, r.has_capability, "mergeinfo")
+            self.assertRaises(NotImplementedError, r.has_capability,
+                              "mergeinfo")
         else:
             self.assertIsInstance(r.has_capability("mergeinfo"), bool)
 
@@ -70,13 +71,15 @@ class TestRepository(TestCaseInTempDir):
 
     def test_rev_root(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertTrue(repos.Repository("foo").fs().revision_root(0) is not None)
+        self.assertTrue(
+            repos.Repository("foo").fs().revision_root(0) is not None)
 
     def test_load_fs_invalid(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
         dumpfile = b"Malformed"
         feedback = BytesIO()
-        self.assertRaises(SubversionException, r.load_fs, BytesIO(dumpfile),
+        self.assertRaises(
+            SubversionException, r.load_fs, BytesIO(dumpfile),
             feedback, repos.LOAD_UUID_DEFAULT)
 
     def test_load_fs(self):
@@ -98,15 +101,19 @@ class TestRepository(TestCaseInTempDir):
         """).encode("ascii")
         feedback = BytesIO()
         r.load_fs(BytesIO(dumpfile), feedback, repos.LOAD_UUID_DEFAULT)
-        self.assertEqual(r.fs().get_uuid(), "38f0a982-fd1f-4e00-aa6b-a20720f4b9ca")
+        self.assertEqual(r.fs().get_uuid(),
+                         "38f0a982-fd1f-4e00-aa6b-a20720f4b9ca")
 
     def test_rev_props(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertEqual(["svn:date"], list(repos.Repository("foo").fs().revision_proplist(0).keys()))
+        self.assertEqual(
+                ["svn:date"],
+                list(repos.Repository("foo").fs().revision_proplist(0).keys()))
 
     def test_rev_root_invalid(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertRaises(SubversionException, repos.Repository("foo").fs().revision_root, 1)
+        self.assertRaises(SubversionException,
+                          repos.Repository("foo").fs().revision_root, 1)
 
     def test_pack_fs(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
@@ -121,15 +128,17 @@ class TestRepository(TestCaseInTempDir):
         repos.create(os.path.join(self.test_dir, "foo"))
         root = repos.Repository("foo").fs().revision_root(0)
         self.assertEqual(True, root.is_dir(""))
-        # TODO(jelmer): Newer versions of libsvn_repos crash when passed a nonexistant path.
-        #self.assertEqual(False, root.is_dir("nonexistant"))
+        # TODO(jelmer): Newer versions of libsvn_repos crash when passed a
+        # nonexistant path.
+        # self.assertEqual(False, root.is_dir("nonexistant"))
 
     def test_is_file(self):
         repos.create(os.path.join(self.test_dir, "foo"))
         root = repos.Repository("foo").fs().revision_root(0)
         self.assertEqual(False, root.is_file(""))
-        # TODO(jelmer): Newer versions of libsvn_repos crash when passed a nonexistant path.
-        #self.assertEqual(False, root.is_file("nonexistant"))
+        # TODO(jelmer): Newer versions of libsvn_repos crash when passed a
+        # nonexistant path.
+        # self.assertEqual(False, root.is_file("nonexistant"))
 
 
 class StreamTests(TestCase):

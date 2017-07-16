@@ -74,8 +74,9 @@ class TestClient(SubversionTestCase):
 
     def test_commit_start(self):
         self.build_tree({"dc/foo": None})
-        self.client = client.Client(auth=ra.Auth([ra.get_username_provider()]),
-                log_msg_func=lambda c: "Bmessage")
+        self.client = client.Client(
+            auth=ra.Auth([ra.get_username_provider()]),
+            log_msg_func=lambda c: "Bmessage")
         self.client.add("dc/foo")
         self.client.commit(["dc"])
         r = ra.RemoteAccess(self.repos_url)
@@ -98,7 +99,8 @@ class TestClient(SubversionTestCase):
         self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
         self.client.commit(["dc"])
-        self.client.export(self.repos_url, "de", ignore_externals=True, ignore_keywords=True)
+        self.client.export(self.repos_url, "de", ignore_externals=True,
+                           ignore_keywords=True)
         self.assertEqual(["foo"], os.listdir("de"))
 
     def test_add_recursive(self):
@@ -135,8 +137,6 @@ class TestClient(SubversionTestCase):
             shutil.rmtree(base_dir)
 
     def test_diff(self):
-        r = ra.RemoteAccess(self.repos_url,
-                auth=ra.Auth([ra.get_username_provider()]))
         dc = self.get_commit_editor(self.repos_url)
         f = dc.add_file("foo")
         f.modify(b"foo1")
@@ -148,9 +148,10 @@ class TestClient(SubversionTestCase):
         dc.close()
 
         if client.api_version() < (1, 5):
-            self.assertRaises(NotImplementedError, self.client.diff, 1, 2,
+            self.assertRaises(
+                NotImplementedError, self.client.diff, 1, 2,
                 self.repos_url, self.repos_url)
-            return # Skip test
+            return  # Skip test
 
         (outf, errf) = self.client.diff(1, 2, self.repos_url, self.repos_url)
         self.addCleanup(outf.close)
@@ -203,6 +204,7 @@ class TestClient(SubversionTestCase):
         commit_msg_1 = b"Commit"
         commit_msg_2 = b"Commit 2"
         delta = timedelta(hours=1)
+
         def cb(changed_paths, revision, revprops, has_children=False):
             log_entries.append({
                 'changed_paths': changed_paths,
@@ -241,7 +243,8 @@ class TestClient(SubversionTestCase):
         self.assertLogEntryMessageEquals(commit_msg_1, log_entries[1])
         self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[1], delta)
         log_entries = []
-        self.client.log(cb, "dc/foo", start_rev=2, end_rev=2, discover_changed_paths=True)
+        self.client.log(cb, "dc/foo", start_rev=2, end_rev=2,
+                        discover_changed_paths=True)
         self.assertEqual(1, len(log_entries))
         self.assertLogEntryChangedPathsEquals(["/foo", "/bar"], log_entries[0])
         self.assertEqual(2, log_entries[0]["revision"])

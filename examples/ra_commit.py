@@ -9,7 +9,7 @@ from subvertpy.ra import RemoteAccess, Auth, get_username_provider
 # Create a repository
 repos.create("tmprepo")
 
-# Connect to the "remote" repository using the file transport. 
+# Connect to the "remote" repository using the file transport.
 # Note that a username provider needs to be provided, so that Subversion
 # knows who to record as the author of new commits made over this connection.
 repo_url = "file://%s" % os.path.abspath("tmprepo")

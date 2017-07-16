@@ -16,6 +16,7 @@
 
 """Marshalling for the svn_ra protocol."""
 
+
 class literal:
     """A protocol literal."""
 
@@ -30,10 +31,10 @@ class literal:
 
 # 1. Syntactic structure
 # ----------------------
-# 
+#
 # The Subversion protocol is specified in terms of the following
 # syntactic elements, specified using ABNF [RFC 2234]:
-# 
+#
 #   item   = word / number / string / list
 #   word   = ALPHA *(ALPHA / DIGIT / "-") space
 #   number = 1*DIGIT space
@@ -41,7 +42,8 @@ class literal:
 #          ; digits give the byte count of the *OCTET portion
 #   list   = "(" space *item ")" space
 #   space  = 1*(SP / LF)
-# 
+#
+
 
 class MarshallError(Exception):
     """A Marshall error."""
@@ -53,7 +55,7 @@ class NeedMoreData(MarshallError):
 
 def marshall(x):
     """Marshall a Python data item.
-    
+
     :param x: Data item
     :return: encoded byte string
     """
@@ -69,9 +71,9 @@ def marshall(x):
         x = x.encode("utf-8")
         return ("%d:" % len(x)).encode("ascii") + x + b" "
     elif isinstance(x, bool):
-        if x == True:
+        if x is True:
             return b"true "
-        elif x == False:
+        elif x is False:
             return b"false "
     raise MarshallError("Unable to marshall type %s" % x)
 
@@ -85,7 +87,7 @@ def unmarshall(x):
     whitespace = frozenset(b'\n ')
     if len(x) == 0:
         raise NeedMoreData("Not enough data")
-    if x[0:1] == b"(": # list follows
+    if x[0:1] == b"(":  # list follows
         if len(x) <= 1:
             raise NeedMoreData("Missing whitespace")
         if x[1:2] != b" ":
@@ -143,4 +145,3 @@ def unmarshall(x):
         return (x[1:], ret.decode("ascii"))
     else:
         raise MarshallError("Unexpected character '%c'" % x[0])
-
