@@ -17,7 +17,7 @@
 """Marshalling for the svn_ra protocol."""
 
 
-class literal:
+class literal(object):
     """A protocol literal."""
 
     def __init__(self, txt):
@@ -28,6 +28,9 @@ class literal:
 
     def __repr__(self):
         return self.txt
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and self.txt == other.txt)
 
 # 1. Syntactic structure
 # ----------------------
@@ -142,6 +145,6 @@ def unmarshall(x):
         if not x[0] in whitespace:
             raise MarshallError("Expected whitespace, got '%c'" % x[0])
 
-        return (x[1:], ret.decode("ascii"))
+        return (x[1:], literal(ret.decode("ascii")))
     else:
         raise MarshallError("Unexpected character '%c'" % x[0])
