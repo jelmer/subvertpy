@@ -24,7 +24,7 @@ export HOME=$(CURDIR)/nonexistent
 
 override_dh_auto_build:
 	dh_auto_build
-	PYTHONHASHSEED=0 $(MAKE) pydoctor
+	PYTHONHASHSEED=0 pydoctor --introspect-c-modules --project-name=subvertpy --make-html --docformat=restructuredText --add-package subvertpy
 
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/tmp
