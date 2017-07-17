@@ -14,34 +14,22 @@ PY3VERS = $(shell py3versions -r -v)
 # Callable functions to determine the correct PYTHONPATH
 pythonpath = $$(ls -d $(CURDIR)/build/lib.*-$(1))
 
+export PYBUILD_NAME=subvertpy
 export HOME=$(CURDIR)/nonexistent
 
 %:
 	CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" \
-	LDFLAGS="$(LDFLAGS)" dh $* --with python2,python3 --buildsystem=python_distutils
+	LDFLAGS="$(LDFLAGS)" dh $* --with python2,python3 --buildsystem=pybuild
 
 override_dh_auto_build:
 	dh_auto_build
 	PYTHONHASHSEED=0 pydoctor --introspect-c-modules --project-name=subvertpy --make-html --docformat=restructuredtext --add-package subvertpy
 
 override_dh_auto_install:
-	set -ex; for python in $(shell pyversions -r) $(shell py3versions -r); do \
-		  $$python setup.py install --root=$(CURDIR)/debian/tmp --install-layout=deb; \
-	done;
-	# Install everything excluding the *_d.so debug extensions to python-subvertpy
-	dh_install -X"*_d.so" "debian/tmp/usr/lib/python2*/*-packages" -p python-subvertpy
-	dh_install -X"*_d.so" "debian/tmp/usr/lib/python3*/*-packages" -p python3-subvertpy
+	dh_auto_install
 	mkdir -p debian/python{,3}-subvertpy/usr/share/doc/python-subvertpy
 	cp -a apidocs debian/python-subvertpy/usr/share/doc/python-subvertpy/api
 	cp -a apidocs debian/python3-subvertpy/usr/share/doc/python3-subvertpy/api
-
-override_dh_auto_test:
-ifeq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
-		set -e -x; \
-		for py in $(PYVERS) $(PY3VERS); do \
-			cd $(call pythonpath,$$py); python$$py -m testtools.run subvertpy.tests.test_suite ;\
-		done
-endif
 
 override_dh_strip:
 	dh_strip -p python-subvertpy --dbgsym-migration='python-subvertpy-dbg (<< 0.9.3-1)'
