@@ -2,14 +2,14 @@
 # Demonstrates how to do a new commit using Subvertpy
 
 import os
-from cStringIO import StringIO
+from io import BytesIO
 from subvertpy import delta, repos
 from subvertpy.ra import RemoteAccess, Auth, get_username_provider
 
 # Create a repository
 repos.create("tmprepo")
 
-# Connect to the "remote" repository using the file transport. 
+# Connect to the "remote" repository using the file transport.
 # Note that a username provider needs to be provided, so that Subversion
 # knows who to record as the author of new commits made over this connection.
 repo_url = "file://%s" % os.path.abspath("tmprepo")
@@ -28,7 +28,7 @@ file = root.add_file("somefile")
 file.change_prop("svn:executable", "*")
 # Obtain a textdelta handler and send the new file contents
 txdelta = file.apply_textdelta()
-delta.send_stream(StringIO("new file contents"), txdelta)
+delta.send_stream(BytesIO(b"new file contents"), txdelta)
 file.close()
 root.close()
 editor.close()

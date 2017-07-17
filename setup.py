@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 
+
 class CommandException(Exception):
     """Encapsulate exit status of command execution"""
     def __init__(self, msg, cmd, arg, status, val):
@@ -19,6 +20,7 @@ class CommandException(Exception):
         self.cmd = cmd
         self.arg = arg
         self.status = status
+
     def not_found(self):
         return os.WIFEXITED(self.status) and os.WEXITSTATUS(self.status) == 127
 
@@ -49,7 +51,9 @@ def run_cmd(cmd, arg):
 
 
 def config_value(command, arg):
-    cmds = [command] + [os.path.join(p, command) for p in ["/usr/local/apr/bin/", "/opt/local/bin/"]]
+    cmds = [command] + [
+            os.path.join(p, command) for p in
+            ["/usr/local/apr/bin/", "/opt/local/bin/"]]
     for cmd in cmds:
         try:
             return run_cmd(cmd, arg)
@@ -98,7 +102,8 @@ def apu_build_data():
 def svn_build_data():
     """Determine the Subversion header file location."""
     if "SVN_HEADER_PATH" in os.environ and "SVN_LIBRARY_PATH" in os.environ:
-        return ([os.getenv("SVN_HEADER_PATH")], [os.getenv("SVN_LIBRARY_PATH")], [], [])
+        return ([os.getenv("SVN_HEADER_PATH")],
+                [os.getenv("SVN_LIBRARY_PATH")], [], [])
     svn_prefix = os.getenv("SVN_PREFIX")
     if svn_prefix is None:
         basedirs = ["/usr/local", "/usr"]
@@ -111,18 +116,25 @@ def svn_build_data():
         return ([os.path.join(svn_prefix, "include/subversion-1")],
                 [os.path.join(svn_prefix, "lib")], [], [])
     raise Exception("Subversion development files not found. "
-                    "Please set SVN_PREFIX or (SVN_LIBRARY_PATH and SVN_HEADER_PATH) environment variable. ")
+                    "Please set SVN_PREFIX or (SVN_LIBRARY_PATH and "
+                    "SVN_HEADER_PATH) environment variable. ")
+
 
 def is_keychain_provider_available():
     """
-    Checks for the availability of the Keychain simple authentication provider in Subversion by compiling a simple test program.
+    Checks for the availability of the Keychain simple authentication provider
+    in Subversion by compiling a simple test program.
     """
     abd = apr_build_data()
     sbd = svn_build_data()
-    gcc_command_args = ['gcc'] + ['-I' + inc for inc in sbd[0]] + ['-L' + lib for lib in sbd[1]] + ['-I' + abd[0], '-lsvn_subr-1', '-x', 'c', '-']
-    gcc = subprocess.Popen(gcc_command_args,
-        stdin=subprocess.PIPE, universal_newlines=True,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gcc_command_args = (
+            ['gcc'] + ['-I' + inc for inc in sbd[0]] +
+            ['-L' + lib for lib in sbd[1]] +
+            ['-I' + abd[0], '-lsvn_subr-1', '-x', 'c', '-'])
+    gcc = subprocess.Popen(
+            gcc_command_args,
+            stdin=subprocess.PIPE, universal_newlines=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     gcc.communicate("""
 #include <svn_auth.h>
 int main(int argc, const char* arv[]) {
@@ -143,16 +155,21 @@ class VersionQuery(object):
             f.close()
 
     def grep(self, what):
-        m = re.search(r"^#define\s+%s\s+(\d+)\s*$" % (what,), self.text, re.MULTILINE)
+        m = re.search(r"^#define\s+%s\s+(\d+)\s*$" % (what,), self.text,
+                      re.MULTILINE)
         if not m:
-            raise Exception("Definition for %s was not found in file %s." % (what, self.filename))
+            raise Exception(
+                    "Definition for %s was not found in file %s." %
+                    (what, self.filename))
         return int(m.group(1))
+
 
 # Windows versions - we use environment variables to locate the directories
 # and hard-code a list of libraries.
 if os.name == "nt":
     def get_apr_version():
-        apr_version_file = os.path.join(os.environ["SVN_DEV"],
+        apr_version_file = os.path.join(
+                os.environ["SVN_DEV"],
                 r"include\apr\apr_version.h")
         if not os.path.isfile(apr_version_file):
             raise Exception(
@@ -164,7 +181,9 @@ if os.name == "nt":
                 query.grep("APR_PATCH_VERSION"))
 
     def get_svn_version():
-        svn_version_file = os.path.join(os.environ["SVN_DEV"], r"include\svn_version.h")
+        svn_version_file = os.path.join(
+                os.environ["SVN_DEV"],
+                r"include\svn_version.h")
         if not os.path.isfile(svn_version_file):
             raise Exception(
                 "Please check that your SVN_DEV location is correct.\n"
@@ -176,13 +195,14 @@ if os.name == "nt":
 
     # just clobber the functions above we can't use
     # for simplicitly, everything is done in the 'svn' one
-    def apr_build_data():
+
+    def apr_build_data():  # noqa: F811
         return '.', []
 
-    def apu_build_data():
+    def apu_build_data():  # noqa: F811
         return '.', []
 
-    def svn_build_data():
+    def svn_build_data():  # noqa: F811
         # environment vars for the directories we need.
         svn_dev_dir = os.environ.get("SVN_DEV")
         if not svn_dev_dir or not os.path.isdir(svn_dev_dir):
@@ -227,7 +247,8 @@ if os.name == "nt":
         elif apr_version[0] > 1:
             raise Exception(
                 "You have apr version %d.%d.%d.\n"
-                "This setup only knows how to build with 0.*.* or 1.*.*." % apr_version)
+                "This setup only knows how to build with 0.*.* or 1.*.*." %
+                apr_version)
         libs = """libneon libsvn_subr-1 libsvn_client-1 libsvn_ra-1
                   libsvn_ra_dav-1 libsvn_ra_local-1 libsvn_ra_svn-1
                   libsvn_repos-1 libsvn_wc-1 libsvn_delta-1 libsvn_diff-1
@@ -236,11 +257,11 @@ if os.name == "nt":
                   xml
                   advapi32 shell32 ws2_32 zlibstat
                """.split()
-        if svn_version >= (1,7,0):
+        if svn_version >= (1, 7, 0):
             libs += ["libdb48"]
         else:
             libs += ["libdb44"]
-        if svn_version >= (1,5,0):
+        if svn_version >= (1, 5, 0):
             # Since 1.5.0 libsvn_ra_dav-1 was removed
             libs.remove("libsvn_ra_dav-1")
 
@@ -250,11 +271,12 @@ if os.name == "nt":
 (apu_includedir, apu_link_flags) = apu_build_data()
 (svn_includedirs, svn_libdirs, svn_link_flags, extra_libs) = svn_build_data()
 
+
 class SvnExtension(Extension):
 
     def __init__(self, name, *args, **kwargs):
-        kwargs["include_dirs"] = ([apr_includedir, apu_includedir] + svn_includedirs +
-                                  ["subvertpy"])
+        kwargs["include_dirs"] = ([apr_includedir, apu_includedir] +
+                                  svn_includedirs + ["subvertpy"])
         kwargs["library_dirs"] = svn_libdirs
         # Note that the apr-util link flags are not included here, as
         # subvertpy only uses some apr util constants but does not use
@@ -280,9 +302,9 @@ class SvnExtension(Extension):
 class TestCommand(Command):
     """Command for running unittests without install."""
 
-    user_options = [("args=", None, '''The command args string passed to
-                                    unittest framework, such as 
-                                     --args="-v -f"''')]
+    user_options = [
+        ("args=", None, '''The command args string passed to '''
+                        '''unittest framework, such as --args="-v -f"''')]
 
     def initialize_options(self):
         self.args = ''
@@ -294,7 +316,7 @@ class TestCommand(Command):
     def run(self):
         self.run_command('build')
         bld = self.distribution.get_command_obj('build')
-        #Add build_lib in to sys.path so that unittest can found DLLs and libs
+        # Add build_lib in to sys.path so that unittest can found DLLs and libs
         sys.path = [os.path.abspath(bld.build_lib)] + sys.path
         os.chdir(bld.build_lib)
         log.info("Running unittest without install.")
@@ -302,13 +324,14 @@ class TestCommand(Command):
         import shlex
         import unittest
         test_argv0 = [sys.argv[0] + ' test --args=']
-        #For transfering args to unittest, we have to split args
-        #by ourself, so that command like:
-        #python setup.py test --args="-v -f"
-        #can be executed, and the parameter '-v -f' can be
-        #transfering to unittest properly.
+        # For transfering args to unittest, we have to split args
+        # by ourself, so that command like:
+        # python setup.py test --args="-v -f"
+        # can be executed, and the parameter '-v -f' can be
+        # transfering to unittest properly.
         test_argv = test_argv0 + shlex.split(self.args)
-        unittest.main(module=None, defaultTest='subvertpy.tests.test_suite', argv=test_argv)
+        unittest.main(module=None, defaultTest='subvertpy.tests.test_suite',
+                      argv=test_argv)
 
 
 class BuildWithDLLs(build):
@@ -318,17 +341,18 @@ class BuildWithDLLs(build):
         # the apr binaries.
         apr_bins = [libname + ".dll" for libname in extra_libs
                     if libname.startswith("libapr")]
-        if get_svn_version() >= (1,5,0):
+        if get_svn_version() >= (1, 5, 0):
             # Since 1.5.0 these libraries became shared
             apr_bins += """libsvn_client-1.dll libsvn_delta-1.dll libsvn_diff-1.dll
                            libsvn_fs-1.dll libsvn_ra-1.dll libsvn_repos-1.dll
-                           libsvn_subr-1.dll libsvn_wc-1.dll libsasl.dll""".split()
-        if get_svn_version() >= (1,7,0):
+                           libsvn_subr-1.dll libsvn_wc-1.dll libsasl.dll
+                           """.split()
+        if get_svn_version() >= (1, 7, 0):
             apr_bins += ["libdb48.dll"]
         else:
             apr_bins += ["libdb44.dll"]
         apr_bins += """intl3_svn.dll libeay32.dll ssleay32.dll""".split()
-        look_dirs = os.environ.get("PATH","").split(os.pathsep)
+        look_dirs = os.environ.get("PATH", "").split(os.pathsep)
         look_dirs.insert(0, os.path.join(os.environ["SVN_DEV"], "bin"))
 
         target = os.path.abspath(os.path.join(self.build_lib, 'subvertpy'))
@@ -355,11 +379,13 @@ class BuildWithDLLs(build):
         ret.extend(info[1] for info in self._get_dlls())
         return ret
 
+
 cmdclass = {'test': TestCommand}
 if os.name == 'nt':
     # BuildWithDLLs can copy external DLLs into build directory On Win32.
     # So we can running unittest directly from build directory.
     cmdclass['build'] = BuildWithDLLs
+
 
 def source_path(filename):
     return os.path.join("subvertpy", filename)
@@ -367,20 +393,26 @@ def source_path(filename):
 
 def subvertpy_modules():
     return [
-        SvnExtension("subvertpy.client", [source_path(n) for n in
-            ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")],
+        SvnExtension(
+            "subvertpy.client",
+            [source_path(n)
+                for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")],
             libraries=["svn_client-1", "svn_subr-1", "svn_ra-1", "svn_wc-1"]),
-        SvnExtension("subvertpy._ra", [source_path(n) for n in
-            ("_ra.c", "util.c", "editor.c")],
+        SvnExtension(
+            "subvertpy._ra",
+            [source_path(n) for n in ("_ra.c", "util.c", "editor.c")],
             libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
-        SvnExtension("subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")],
+        SvnExtension(
+            "subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")],
             libraries=["svn_repos-1", "svn_subr-1", "svn_fs-1"]),
-        SvnExtension("subvertpy.wc", [source_path(n) for n in ("wc.c",
-            "util.c", "editor.c")], libraries=["svn_wc-1", "svn_subr-1"])
+        SvnExtension(
+            "subvertpy.wc",
+            [source_path(n) for n in ("wc.c", "util.c", "editor.c")],
+            libraries=["svn_wc-1", "svn_subr-1"])
         ]
 
 
-subvertpy_version = (0, 9, 3)
+subvertpy_version = (0, 10, 0)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
@@ -396,10 +428,23 @@ if __name__ == "__main__":
           author='Jelmer Vernooij',
           author_email='jelmer@jelmer.uk',
           long_description="""
-          Alternative Python bindings for Subversion. The goal is to have complete, portable and "Pythonic" Python bindings.
+          Alternative Python bindings for Subversion. The goal is to have
+          complete, portable and "Pythonic" Python bindings.
           """,
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
           scripts=['bin/subvertpy-fast-export'],
           cmdclass=cmdclass,
+          classifiers=[
+              'Development Status :: 4 - Beta',
+              'License :: OSI Approved :: GNU General Public '
+              'License v2 or later (GPLv2+)',
+              'Programming Language :: Python :: 2.7',
+              'Programming Language :: Python :: 3.4',
+              'Programming Language :: Python :: 3.5',
+              'Programming Language :: Python :: 3.6',
+              'Programming Language :: Python :: Implementation :: CPython',
+              'Operating System :: POSIX',
+              'Topic :: Software Development :: Version Control',
+          ],
           )

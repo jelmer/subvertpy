@@ -1,5 +1,5 @@
 # Copyright (C) 2005-2007 Jelmer Vernooij <jelmer@jelmer.uk>
- 
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation; either version 2.1 of the License, or
@@ -14,7 +14,3 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Subversion server tests."""
-
-from subvertpy.ra_svn import SVNServer
-from subvertpy.tests import SubversionTestCase
-

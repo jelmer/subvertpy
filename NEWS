@@ -1,10 +1,49 @@
+0.10.0	UNRELEASED
+
+  CHANGES
+
+   * Drop support for Python versions before 2.7, in preparation of Python3 support.
+     (Jelmer Vernooĳ)
+
+   * Add support for Python 3.4, 3.5 and 3.6. (Jelmer Vernooĳ)
+
+   * subvertpy.client methods no longer canonicalize paths and URLs, instead
+     requiring the caller to do so. If uncanonicalized paths/URLs are passed in,
+     a ValueError will be raised. (Jelmer Vernooĳ)
+
+  IMPROVEMENTS
+
+   * Add Python3 support. (Martin Panter, Yonggang Luo, Jelmer Vernooĳ).
+
+   * Add constant ERR_RA_CANNOT_CREATE_SESSION. (Jelmer Vernooĳ)
+
+   * Support `depth` argument to RemoteAccess.get_locks(). (Jelmer Vernooĳ)
+
+   * Support `no_autoprops` argument to Client.add(). (Jelmer Vernooĳ)
+
+   * Support `ignore_ancestry` and `send_copyfrom_args` arguments to RemoteAcess.do_switch.
+     (Jelmer Vernooĳ)
+
+   * Support `old_value` argument to RemoteAccess.change_rev_prop().
+     (Jelmer Vernooĳ)
+
+   * Support `include_externals` argument to Client.list(). (Jelmer Vernooĳ)
+
+   * Support `expand_keywords` argument to Client.cat(). (Jelmer Vernooĳ)
+
+   * Support `revprops` argument to Client.delete(). (Jelmer Vernooĳ)
+
+ BUG FIXES
+
+   * Avoid using deprecated svn_path_canonicalize(). (Jelmer Vernooĳ)
+
 0.9.3	2015-08-23
 
   BUG FIXES
 
    * Disable tests probing for nonexistant paths in FS, as this causes
      a crash in newer versions of libsvn_repos.
-     (Jelmer Vernooij)
+     (Jelmer Vernooĳ)
 
 0.9.2	2015-04-25
 
@@ -14,11 +53,11 @@
 
   CHANGES
 
-   * Drop support for Python versions before 2.6. (Jelmer Vernooij)
+   * Drop support for Python versions before 2.6. (Jelmer Vernooĳ)
 
   IMPROVEMENTS
 
-   * Support PYDOCTOR_OPTIONS in Makefile. (Jelmer Vernooij)
+   * Support PYDOCTOR_OPTIONS in Makefile. (Jelmer Vernooĳ)
 
 0.9.1	2013-05-06
 
@@ -33,11 +72,11 @@
     don't seem to actually rely on it, it seemed better to disable it and
     support 1.7 than to prevent use of newer svn versions altogether.
 
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
  TESTS
 
-  * Fix TestClient.test_info when run against Subversion 1.6. (Jelmer Vernooij)
+  * Fix TestClient.test_info when run against Subversion 1.6. (Jelmer Vernooĳ)
 
  BUG FIXES
 
@@ -53,9 +92,9 @@
   * Add bindings for svn.client.Client.info(), svn.client.Client.log() and
     svn.client.Client.cat(). (Mark Lee)
 
-  * Add constant ERR_WC_UPGRADE_REQUIRED. (Jelmer Vernooij)
+  * Add constant ERR_WC_UPGRADE_REQUIRED. (Jelmer Vernooĳ)
 
-  * In Client.checkout, default to HEAD revision. (Jelmer Vernooij)
+  * In Client.checkout, default to HEAD revision. (Jelmer Vernooĳ)
 
  TESTS
 
@@ -84,57 +123,57 @@
 
  BUG FIXES
 
-  * Fix compilation with Python 2.4 and 2.5. (Jelmer Vernooij, #860621)
+  * Fix compilation with Python 2.4 and 2.5. (Jelmer Vernooĳ, #860621)
 
  FEATURES
 
-  * Add constant ERR_WC_NODE_KIND_CHANGE. (Jelmer Vernooij)
+  * Add constant ERR_WC_NODE_KIND_CHANGE. (Jelmer Vernooĳ)
 
 0.8.8	2011-09-27
 
  BUG FIXES
 
   * Fix several memory leaks and error checks in subvertpy.client
-    pointed out by Barry Warsaw. (Jelmer Vernooij)
+    pointed out by Barry Warsaw. (Jelmer Vernooĳ)
 
   * Drop broken code to support loading configuration from has.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
   * WorkingCopy.prop_set() now accepts None as a value,
-    removing a properties. (Jelmer Vernooij)
+    removing a properties. (Jelmer Vernooĳ)
 
  FEATURES
 
-  * Add constant ERR_BAD_FILENAME. (Jelmer Vernooij)
+  * Add constant ERR_BAD_FILENAME. (Jelmer Vernooĳ)
 
 0.8.7	2011-09-19
 
  BUG FIXES
 
   * Fix revnum types in subvertpy.repos.Repos.verify_fs().
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
 0.8.6	2011-09-19
 
  FEATURES
 
   * Allow passing in log_msg_func when creating subvertpy.client.Client.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
   * subvertpy.client.Client.update now accepts keyword arguments.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
   * Editors will now raise an exception if the protocol is not followed;
     children have to be closed before their parents are accessed again.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Add constant ERR_DIR_NOT_EMPTY. (Jelmer Vernooij)
+  * Add constant ERR_DIR_NOT_EMPTY. (Jelmer Vernooĳ)
 
-  * Add constant ERR_FS_ROOT_DIR. (Jelmer Vernooij)
+  * Add constant ERR_FS_ROOT_DIR. (Jelmer Vernooĳ)
 
-  * Add `subvertpy.repos.Repository.verify_fs`. (Jelmer Vernooij)
+  * Add `subvertpy.repos.Repository.verify_fs`. (Jelmer Vernooĳ)
 
-  * Add `subvertpy.repos.Repository.pack_fs`. (Jelmer Vernooij)
+  * Add `subvertpy.repos.Repository.pack_fs`. (Jelmer Vernooĳ)
 
  BUG FIXES
 
@@ -142,20 +181,20 @@
     (Wez Furlong)
 
   * Fix double free of apr pools from subverty.repos.Repos.fs.
-    (Roland Mas, Jelmer Vernooij, #853960)
+    (Roland Mas, Jelmer Vernooĳ, #853960)
 
 0.8.5	2011-08-21 "boomerang arrow"
 
  BUG FIXES
 
  * Fix compatibility with python < 2.6, where T_BOOL is not available.
-   (Jelmer Vernooij, #829993)
+   (Jelmer Vernooĳ, #829993)
 
 0.8.4	2011-08-18 "mimic octopus"
 
  FEATURES
 
-  * Fix argument count in subvertpy.client.Client.export. (Jelmer Vernooij, #820662)
+  * Fix argument count in subvertpy.client.Client.export. (Jelmer Vernooĳ, #820662)
 
   * Add subvertpy.wc.WorkingCopy.status. (Mark Lee)
 
@@ -163,120 +202,120 @@
 
  BUG FIXES
 
-  * Fix memory management in subvertpy.ra.Auth. (Jelmer Vernooij)
+  * Fix memory management in subvertpy.ra.Auth. (Jelmer Vernooĳ)
 
-  * Fix type for revnum in process_committed_queue. (Jelmer Vernooij, #730931)
+  * Fix type for revnum in process_committed_queue. (Jelmer Vernooĳ, #730931)
 
   * Fix double free when calling close() more than once on editor objects.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Fix too early free during iter_log. (Jelmer Vernooij)
+  * Fix too early free during iter_log. (Jelmer Vernooĳ)
 
   * Prevent freeing the RemoteAccess object before any
     individual request frees. Thanks very much to Steve Langasek for the help
-    debugging this! (Jelmer Vernooij, #803353)
+    debugging this! (Jelmer Vernooĳ, #803353)
 
   * Error out properly when editor objects are used after they are closed.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
  FEATURES
 
-  * Add constant ERR_BAD_PROPERTY_VALUE. (Jelmer Vernooij)
+  * Add constant ERR_BAD_PROPERTY_VALUE. (Jelmer Vernooĳ)
 
 0.8.2   2011-06-17 "mathematically annoying"
 
  BUG FIXES
 
   * Abort immediately if a callback raises an exception.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Fix leaking of error objects. (Jelmer Vernooij)
+  * Fix leaking of error objects. (Jelmer Vernooĳ)
 
 0.8.1   2011-06-02 "ornithologic reptile"
 
  FEATURES
 
-  * Add subvertpy.wc.WorkingCopy.conflicted. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.conflicted. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.resolved_conflict. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.resolved_conflict. (Jelmer Vernooĳ)
 
-  * Add subvertpy.client.Client.mkdir. (Jelmer Vernooij)
+  * Add subvertpy.client.Client.mkdir. (Jelmer Vernooĳ)
 
  BUG FIXES
 
   * Fix compilation on OS X. (#728574)
 
-  * Keep reference to commit callback in editor. (Jelmer Vernooij, #732120)
+  * Keep reference to commit callback in editor. (Jelmer Vernooĳ, #732120)
 
   * Properly check return values of PyInt_AsLong() in various places.
 
   * Convert times and file sizes to 64 bit integer objects.
-    (Jelmer Vernooij, #786156)
+    (Jelmer Vernooĳ, #786156)
 
 0.8.0   2011-03-02 "("
 
  FEATURES
 
-  * Add --version option to subvertpy-fast-export. (Jelmer Vernooij)
+  * Add --version option to subvertpy-fast-export. (Jelmer Vernooĳ)
 
-  * Add basic manual page for subvertpy-fast-export. (Jelmer Vernooij)
+  * Add basic manual page for subvertpy-fast-export. (Jelmer Vernooĳ)
 
   * Automatically convert the appropriate errors to socket.gaierror.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.set_adm_dir(). (Jelmer Vernooij)
+  * Add subvertpy.wc.set_adm_dir(). (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.has_binary_prop. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.has_binary_prop. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.get_ancestry. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.get_ancestry. (Jelmer Vernooĳ)
 
   * Add subvertpy.wc.WorkingCopy.maybe_set_repos_root.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
   * Add subvertpy.wc.WorkingCopy.add_repos_file.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
   * Add subvertpy.wc.WorkingCopy.mark_missing_deleted.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
   * Add subvertpy.wc.WorkingCopy.remove_from_revision_control.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.relocate. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.relocate. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.crop_tree. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.crop_tree. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.translated_stream. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.translated_stream. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.text_modified. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.text_modified. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.props_modified. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.props_modified. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.CommittedQueue. (Jelmer Vernooij)
+  * Add subvertpy.wc.CommittedQueue. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.get_actual_target. (Jelmer Vernooij)
+  * Add subvertpy.wc.get_actual_target. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.is_wc_root. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.is_wc_root. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.transmit_text_deltas. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.transmit_text_deltas. (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.transmit_prop_deltas. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.transmit_prop_deltas. (Jelmer Vernooĳ)
 
   * Add subvertpy.wc.WorkingCopy.probe_retrieve, subvertpy.wc.WorkingCopy.retrieve.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.WorkingCopy.probe_try. (Jelmer Vernooij)
+  * Add subvertpy.wc.WorkingCopy.probe_try. (Jelmer Vernooĳ)
 
-  * Add subvertpy.client.export. (Jelmer Vernooij)
+  * Add subvertpy.client.export. (Jelmer Vernooĳ)
 
  DEPRECATIONS
 
   * ERR_UNKNOWN_HOSTNAME and ERR_EAI_NONAME are deprecated
     and will be removed in the next version of subvertpy.
     Instead, subvertpy will raise socket.gaierror.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Use svn_fs_paths_changed2() if available. (Jelmer Vernooij)
+  * Use svn_fs_paths_changed2() if available. (Jelmer Vernooĳ)
 
  BUG FIXES
 
@@ -284,9 +323,9 @@
 
   * Re-using a WorkingCopy object after calling close() on it
     now raises an exception rather than trigger a segfault.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Fix type mismatch in svn.ra.get_dir(). (Jelmer Vernooij, #686663)
+  * Fix type mismatch in svn.ra.get_dir(). (Jelmer Vernooĳ, #686663)
 
   * Cope with trailing slash being specified to subvertpy.wc.revision_stats().
     (Ronny Pfannschmidt)
@@ -294,7 +333,7 @@
  API BREAKS
 
   * WorkingCopy.entry() will now raise KeyError if the specified entry was not found.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
 0.7.5   2010-10-26
 
@@ -307,27 +346,27 @@
  FEATURES
 
   * Add constants ERR_APR_OS_START_EAIERR and ERR_APR_OS_ERRSPACE_SIZE.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Implement subvertpy.wc.match_ignore_list. (Jelmer Vernooij)
+  * Implement subvertpy.wc.match_ignore_list. (Jelmer Vernooĳ)
 
-  * Add subvertpy.ra.RemoteAccess.iter_log(). (Jelmer Vernooij)
+  * Add subvertpy.ra.RemoteAccess.iter_log(). (Jelmer Vernooĳ)
 
-  * Add subvertpy.wc.STATUS_* constants. (Jelmer Vernooij)
+  * Add subvertpy.wc.STATUS_* constants. (Jelmer Vernooĳ)
 
   * Add subvertpy.wc.api_version(), subvertpy.ra.api_version().
-    (Dan Villiom Podlaski Christiansen, Jelmer Vernooij)
+    (Dan Villiom Podlaski Christiansen, Jelmer Vernooĳ)
 
  DEPRECATION
 
   * Avoid deprecation warnings for svn.client.Client.copy,
         svn.client.Client.propset, svn.client.Client.propget,
         svn.client.Client.do_update.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
   * Avoid deprecation warnings for svn.ra.RemoteAccess.do_update,
         svn.ra.RemoteAccess.do_switch, svn.ra.RemoteAccess.do_diff.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
   * Avoid deprecation warnings for svn.wc.WorkingCopy.propset,
         svn.wc.WorkingCopy.walk_entries,
@@ -335,9 +374,9 @@
         svn.wc.WorkingCopy.crawl_revisions,
         svn.wc.WorkingCopy.update_editor,
         svn.wc.ensure_adm.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
- * Add ERR_ENTRY_NOT_FOUND constant. (Jelmer Vernooij)
+ * Add ERR_ENTRY_NOT_FOUND constant. (Jelmer Vernooĳ)
 
  * Add subvertpy.ra.RemoteAccess.get_url(). (Dan Villiom Podlaski Christiansen)
 
@@ -347,24 +386,24 @@
     (Ronald Blaschke, #612056)
 
   * Return an empty dictionary rather than None when there are no revision
-    properties.  (Jelmer Vernooij)
+    properties.  (Jelmer Vernooĳ)
 
   * Link against all libraries that are somehow called.
-    (Daniel Johnson, Jelmer Vernooij, #615015)
+    (Daniel Johnson, Jelmer Vernooĳ, #615015)
 
-  * Include check for apr util headers. (Jelmer Vernooij, #615017)
+  * Include check for apr util headers. (Jelmer Vernooĳ, #615017)
 
   * Fix reference leaks in Auth and SubversionException handling.
-    (Jelmer Vernooij, #436406)
+    (Jelmer Vernooĳ, #436406)
 
   * Canonicalize paths in subvertpy.ra.RemoteAccess.get_locations(). 
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
 0.7.3.1    2010-07-27
 
  BUG FIXES
 
-  * Fix compilation against Subversion 1.5. (Jelmer Vernooij)
+  * Fix compilation against Subversion 1.5. (Jelmer Vernooĳ)
 
 0.7.3    2010-07-21
 
@@ -379,17 +418,17 @@
 
   * Various methods are now a bit more liberal in accepting any
     sort of sequence rather than explicitly requiring lists.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
  FEATURES
 
   * Implement subvertpy.client.Client.diff. (Dan Villiom Podlaski Christiansen,
-                                       Jelmer Vernooij)
+                                       Jelmer Vernooĳ)
 
   * Support ``revprops`` argument to subvertpy.client.Client.commit. 
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
-  * Implement subvertpy.wc.get_pristine_contents(). (Jelmer Vernooij)
+  * Implement subvertpy.wc.get_pristine_contents(). (Jelmer Vernooĳ)
 
   * Use better error messages when possible. 
     (Dan Villiom Podlaski Christiansen)
@@ -407,10 +446,10 @@
   * Add constant for ERR_NODE_UNKNOWN_KIND. (Dan Villiom Podlaski Christiansen)
 
   * Add svn.client.proplist() binding. (Dan Villiom Podlaski Christiansen,
-                                        Jelmer Vernooij)
+                                        Jelmer Vernooĳ)
 
   * Add svn.client.list() binding. (Dan Villiom Podlaski Christiansen, 
-                                    Jelmer Vernooij)
+                                    Jelmer Vernooĳ)
 
 0.7.1    2009-10-20
 
@@ -425,13 +464,13 @@
   * Add definition for ERR_EAI_NONAME. (John Szakmeister)
 
   * Add subvertpy.repos.FileSystem methods: youngest_revision, revision_root, 
-    revision_proplist.  (Jelmer Vernooij)
+    revision_proplist.  (Jelmer Vernooĳ)
 
   * Add subvertpy.repos.{delete,Repository.has_capability,hotcopy}.
-    (Jelmer Vernooij)
+    (Jelmer Vernooĳ)
 
   * Add subvertpy-fast-export script, based on svn-fast-export.py by Chris Lee 
-    included with bzr-fast-import. (Jelmer Vernooij)
+    included with bzr-fast-import. (Jelmer Vernooĳ)
 
 0.6.9    2009-09-10
 
