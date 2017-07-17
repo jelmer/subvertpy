@@ -24,7 +24,7 @@ struct log_entry {
 };
 
 typedef struct {
-	PyObject_HEAD
+	PyObject_VAR_HEAD
 	svn_revnum_t start, end;
 	svn_boolean_t discover_changed_paths;
 	svn_boolean_t strict_node_history;
@@ -114,60 +114,23 @@ static PyObject *py_iter_append(LogIteratorObject *iter, PyObject *tuple)
 }
 
 PyTypeObject LogIterator_Type = {
-	PyObject_HEAD_INIT(NULL) 0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_ra.LogIterator", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(LogIteratorObject), 
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 	
 	/* Methods to implement standard operations */
-	
-	(destructor)log_iter_dealloc, /*	destructor tp_dealloc;	*/
-	NULL, /*	printfunc tp_print;	*/
-	NULL, /*	getattrfunc tp_getattr;	*/
-	NULL, /*	setattrfunc tp_setattr;	*/
-	NULL, /*	cmpfunc tp_compare;	*/
-	NULL, /*	reprfunc tp_repr;	*/
-	
-	/* Method suites for standard classes */
-	
-	NULL, /*	PyNumberMethods *tp_as_number;	*/
-	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
-	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
-	
-	/* More standard operations (here for binary compatibility) */
-	
-	NULL, /*	hashfunc tp_hash;	*/
-	NULL, /*	ternaryfunc tp_call;	*/
-	NULL, /*	reprfunc tp_str;	*/
-	NULL, /*	getattrofunc tp_getattro;	*/
-	NULL, /*	setattrofunc tp_setattro;	*/
-	
-	/* Functions to access object as input/output buffer */
-	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
-	
+
+	.tp_dealloc = (destructor)log_iter_dealloc, /*	destructor tp_dealloc;	*/
+
+#if PY_MAJOR_VERSION < 3
 	/* Flags to define presence of optional/expanded features */
-	Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
-	
-	NULL, /*	const char *tp_doc;  Documentation string */
-	
-	/* Assigned meaning in release 2.0 */
-	/* call function for all accessible objects */
-	NULL, /*	traverseproc tp_traverse;	*/
-	
-	/* delete references to contained objects */
-	NULL, /*	inquiry tp_clear;	*/
-	
-	/* Assigned meaning in release 2.1 */
-	/* rich comparisons */
-	NULL, /*	richcmpfunc tp_richcompare;	*/
-	
-	/* weak reference enabler */
-	0, /*	Py_ssize_t tp_weaklistoffset;	*/
-	
-	/* Added in release 2.2 */
+	.tp_flags = Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
+#endif
+
 	/* Iterators */
-	PyObject_SelfIter, /*	getiterfunc tp_iter;	*/
-	(iternextfunc)log_iter_next, /*	iternextfunc tp_iternext;	*/
+	.tp_iter = PyObject_SelfIter,
+	.tp_iternext = (iternextfunc)log_iter_next,
 };
 
 #if ONLY_SINCE_SVN(1, 5)
@@ -222,56 +185,27 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 #else
 static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
-	PyObject *revprops, *py_changed_paths, *ret, *obj, *tuple;
+	PyObject *revprops, *py_changed_paths, *ret, *tuple;
 	LogIteratorObject *iter = (LogIteratorObject *)baton;
 
 	PyGILState_STATE state;
 
 	state = PyGILState_Ensure();
 
-	py_changed_paths = pyify_changed_paths(changed_paths, true, pool);
-	if (py_changed_paths == NULL) {
-		PyGILState_Release(state);
-		return py_svn_error();
-	}
-
-	revprops = PyDict_New();
-	if (revprops == NULL) {
-		Py_DECREF(py_changed_paths);
-		PyGILState_Release(state);
-		return py_svn_error();
-	}
-
-	if (message != NULL) {
-		obj = PyString_FromString(message);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_LOG, obj);
-		Py_DECREF(obj);
-	}
-	if (author != NULL) {
-		obj = PyString_FromString(author);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_AUTHOR, obj);
-		Py_DECREF(obj);
-	}
-	if (date != NULL) {
-		obj = PyString_FromString(date);
-		PyDict_SetItemString(revprops, SVN_PROP_REVISION_DATE, 
-							 obj);
-		Py_DECREF(obj);
+	if (!pyify_log_message(changed_paths, author, date, message, true,
+	pool, &py_changed_paths, &revprops)) {
+		goto fail;
 	}
 	tuple = Py_BuildValue("NlN", py_changed_paths, revision, revprops);
 	if (tuple == NULL) {
-		Py_DECREF(py_changed_paths);
-		Py_DECREF(revprops);
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail_tuple;
 	}
 
 	ret = py_iter_append(iter, tuple);
 
 	if (ret == NULL) {
 		Py_DECREF(tuple);
-		PyGILState_Release(state);
-		return py_svn_error();
+		goto fail;
 	}
 
 	Py_DECREF(ret);
@@ -279,6 +213,13 @@ static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_r
 	PyGILState_Release(state);
 
 	return NULL;
+	
+fail_tuple:
+	Py_DECREF(revprops);
+	Py_DECREF(py_changed_paths);
+fail:
+	PyGILState_Release(state);
+	return py_svn_error();
 }
 #endif
 
@@ -340,57 +281,8 @@ PyObject *ra_iter_log(PyObject *self, PyObject *args, PyObject *kwargs)
 						 &include_merged_revisions, &revprops))
 		return NULL;
 
-	if (ra_check_busy(ra))
-		return NULL;
-
-	pool = Pool(ra->pool);
-	if (pool == NULL)
-		return NULL;
-	if (paths == Py_None) {
-		/* The subversion libraries don't behave as expected, 
-		 * so tweak our own parameters a bit. */
-		apr_paths = apr_array_make(pool, 1, sizeof(char *));
-		APR_ARRAY_PUSH(apr_paths, char *) = apr_pstrdup(pool, "");
-	} else if (!path_list_to_apr_array(pool, paths, &apr_paths)) {
-		apr_pool_destroy(pool);
-		return NULL;
-	}
-
-#if ONLY_BEFORE_SVN(1, 5)
-	if (revprops == Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError,
-		"fetching all revision properties not supported");
-		apr_pool_destroy(pool);
-		return NULL;
-	} else if (!PySequence_Check(revprops)) {
-		PyErr_SetString(PyExc_TypeError, "revprops should be a sequence");
-		apr_pool_destroy(pool);
-		return NULL;
-	} else {
-		int i;
-		for (i = 0; i < PySequence_Size(revprops); i++) {
-			const char *n = PyString_AsString(PySequence_GetItem(revprops, i));
-			if (strcmp(SVN_PROP_REVISION_LOG, n) &&
-				strcmp(SVN_PROP_REVISION_AUTHOR, n) &&
-				strcmp(SVN_PROP_REVISION_DATE, n)) {
-				PyErr_SetString(PyExc_NotImplementedError,
-								"fetching custom revision properties not supported");
-				apr_pool_destroy(pool);
-				return NULL;
-			}
-		}
-	}
-
-	if (include_merged_revisions) {
-		PyErr_SetString(PyExc_NotImplementedError, 
-			"include_merged_revisions not supported in Subversion 1.4");
-		apr_pool_destroy(pool);
-		return NULL;
-	}
-#endif
-
-	if (!string_list_to_apr_array(pool, revprops, &apr_revprops)) {
-		apr_pool_destroy(pool);
+	if (!ra_get_log_prepare(ra, paths, include_merged_revisions,
+	revprops, &pool, &apr_paths, &apr_revprops)) {
 		return NULL;
 	}
 

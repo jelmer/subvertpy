@@ -42,12 +42,12 @@ svn_error_t *py_cancel_check(void *cancel_baton);
 __attribute__((warn_unused_result)) apr_pool_t *Pool(apr_pool_t *parent);
 void handle_svn_error(svn_error_t *error);
 bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
-bool path_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
+bool relpath_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
 PyObject *prop_hash_to_dict(apr_hash_t *props);
 apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props);
-svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, 
-								long revision, const char *author, 
-								const char *date, const char *message, 
+svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths,
+								long revision, const char *author,
+								const char *date, const char *message,
 								apr_pool_t *pool);
 svn_error_t *py_svn_error(void);
 void PyErr_SetSubversionException(svn_error_t *error);
@@ -89,6 +89,9 @@ void PyErr_SetAprStatus(apr_status_t status);
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
 PyObject *PyOS_tmpfile(void);
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool);
+bool pyify_log_message(apr_hash_t *changed_paths, const char *author,
+	const char *date, const char *message, bool node_kind,
+	apr_pool_t *pool, PyObject **py_changed_paths, PyObject **revprops);
 #if ONLY_SINCE_SVN(1, 6)
 PyObject *pyify_changed_paths2(apr_hash_t *changed_paths2, apr_pool_t *pool);
 #endif
@@ -133,5 +136,34 @@ typedef struct {
 } StreamObject;
 
 extern PyTypeObject Stream_Type;
+
+#if ONLY_BEFORE_SVN(1, 7)
+const char *
+svn_uri_canonicalize(const char *uri,
+                     apr_pool_t *result_pool);
+const char *
+svn_relpath_canonicalize(const char *relpath,
+                         apr_pool_t *result_pool);
+#endif
+
+const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool);
+const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool);
+const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool);
+char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool);
+#define py_object_from_svn_abspath PyBytes_FromString
+
+#if PY_MAJOR_VERSION >= 3
+#define PyRepr_FromFormat PyUnicode_FromFormat
+#else
+#define PyRepr_FromFormat PyString_FromFormat
+#endif
+
+#if PY_MAJOR_VERSION >= 3
+#define py_from_svn_revnum PyLong_FromLong
+#define py_to_svn_revnum PyLong_AsLong
+#else
+#define py_from_svn_revnum PyInt_FromLong
+#define py_to_svn_revnum PyInt_AsLong
+#endif
 
 #endif /* _SUBVERTPY_UTIL_H_ */

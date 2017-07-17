@@ -16,6 +16,7 @@
 
 """Server backend base classes."""
 
+
 class ServerBackend(object):
     """A server backend."""
 
@@ -30,7 +31,7 @@ def generate_random_id():
 
 
 class ServerRepositoryBackend(object):
-    
+
     def get_uuid(self):
         raise NotImplementedError(self.get_uuid)
 
@@ -60,6 +61,3 @@ class ServerRepositoryBackend(object):
 
     def get_locations(self, path, peg_revnum, revnums):
         raise NotImplementedError(self.get_locations)
-
-
-

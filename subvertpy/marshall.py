@@ -16,7 +16,8 @@
 
 """Marshalling for the svn_ra protocol."""
 
-class literal:
+
+class literal(object):
     """A protocol literal."""
 
     def __init__(self, txt):
@@ -28,12 +29,15 @@ class literal:
     def __repr__(self):
         return self.txt
 
+    def __eq__(self, other):
+        return (type(self) == type(other) and self.txt == other.txt)
+
 # 1. Syntactic structure
 # ----------------------
-# 
+#
 # The Subversion protocol is specified in terms of the following
 # syntactic elements, specified using ABNF [RFC 2234]:
-# 
+#
 #   item   = word / number / string / list
 #   word   = ALPHA *(ALPHA / DIGIT / "-") space
 #   number = 1*DIGIT space
@@ -41,7 +45,8 @@ class literal:
 #          ; digits give the byte count of the *OCTET portion
 #   list   = "(" space *item ")" space
 #   space  = 1*(SP / LF)
-# 
+#
+
 
 class MarshallError(Exception):
     """A Marshall error."""
@@ -53,47 +58,47 @@ class NeedMoreData(MarshallError):
 
 def marshall(x):
     """Marshall a Python data item.
-    
+
     :param x: Data item
-    :return: encoded string
+    :return: encoded byte string
     """
-    if type(x) is int:
-        return "%d " % x
-    elif type(x) is list or type(x) is tuple:
-        return "( " + "".join(map(marshall, x)) + ") "
+    if isinstance(x, int):
+        return ("%d " % x).encode("ascii")
+    elif isinstance(x, (list, tuple)):
+        return b"( " + bytes().join(map(marshall, x)) + b") "
     elif isinstance(x, literal):
-        return "%s " % x
-    elif type(x) is str:
-        return "%d:%s " % (len(x), x)
-    elif type(x) is unicode:
+        return ("%s " % x).encode("ascii")
+    elif isinstance(x, bytes):
+        return ("%d:" % len(x)).encode("ascii") + x + b" "
+    elif isinstance(x, str):
         x = x.encode("utf-8")
-        return "%d:%s " % (len(x), x)
-    elif type(x) is bool:
-        if x == True:
-            return "true "
-        elif x == False:
-            return "false "
+        return ("%d:" % len(x)).encode("ascii") + x + b" "
+    elif isinstance(x, bool):
+        if x is True:
+            return b"true "
+        elif x is False:
+            return b"false "
     raise MarshallError("Unable to marshall type %s" % x)
 
 
 def unmarshall(x):
-    """Unmarshall the next item from a text.
+    """Unmarshall the next item from a buffer.
 
-    :param x: Text to parse
-    :return: tuple with unpacked item and remaining text
+    :param x: Bytes to parse
+    :return: tuple with unpacked item and remaining bytes
     """
-    whitespace = ['\n', ' ']
+    whitespace = frozenset(b'\n ')
     if len(x) == 0:
         raise NeedMoreData("Not enough data")
-    if x[0] == "(": # list follows
+    if x[0:1] == b"(":  # list follows
         if len(x) <= 1:
             raise NeedMoreData("Missing whitespace")
-        if x[1] != " ": 
+        if x[1:2] != b" ":
             raise MarshallError("missing whitespace after list start")
         x = x[2:]
         ret = []
         try:
-            while x[0] != ")":
+            while x[0:1] != b")":
                 (x, n) = unmarshall(x)
                 ret.append(n)
         except IndexError:
@@ -101,41 +106,45 @@ def unmarshall(x):
 
         if len(x) <= 1:
             raise NeedMoreData("Missing whitespace")
-        
+
         if not x[1] in whitespace:
             raise MarshallError("Expected space, got '%c'" % x[1])
 
         return (x[2:], ret)
-    elif x[0].isdigit():
-        num = ""
+    elif x[0:1].isdigit():
+        num = bytearray()
         # Check if this is a string or a number
-        while x[0].isdigit():
-            num += x[0]
+        while x[:1].isdigit():
+            num.append(x[0])
             x = x[1:]
         num = int(num)
 
         if x[0] in whitespace:
             return (x[1:], num)
-        elif x[0] == ":":
+        elif x[0:1] == b":":
             if len(x) < num:
                 raise NeedMoreData("Expected string of length %r" % num)
             return (x[num+2:], x[1:num+1])
+        elif not x:
+            raise MarshallError("Expected whitespace, got end of string.")
         else:
             raise MarshallError("Expected whitespace or ':', got '%c'" % x[0])
-    elif x[0].isalpha():
-        ret = ""
+    elif x[:1].isalpha():
+        ret = bytearray()
         # Parse literal
         try:
-            while x[0].isalpha() or x[0].isdigit() or x[0] == '-':
-                ret += x[0]
+            while x[:1].isalpha() or x[:1].isdigit() or x[0:1] == b'-':
+                ret.append(x[0])
                 x = x[1:]
         except IndexError:
             raise NeedMoreData("Expected literal")
 
+        if not x:
+            raise MarshallError("Expected whitespace, got end of string.")
+
         if not x[0] in whitespace:
             raise MarshallError("Expected whitespace, got '%c'" % x[0])
 
-        return (x[1:], ret)
+        return (x[1:], literal(ret.decode("ascii")))
     else:
         raise MarshallError("Unexpected character '%c'" % x[0])
-

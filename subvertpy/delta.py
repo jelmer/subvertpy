@@ -32,11 +32,12 @@ MAX_ENCODED_INT_LEN = 10
 
 DELTA_WINDOW_SIZE = 102400
 
-def apply_txdelta_window(sbuf,
-            (sview_offset, sview_len, tview_len, src_ops, ops, new_data)):
+
+def apply_txdelta_window(sbuf, window):
     """Apply a txdelta window to a buffer.
 
     :param sbuf: Source buffer (as bytestring)
+    :param window: (sview_offset, sview_len, tview_len, src_ops, ops, new_data)
     :param sview_offset: Offset of the source view
     :param sview_len: Length of the source view
     :param tview_len: Target view length
@@ -45,6 +46,7 @@ def apply_txdelta_window(sbuf,
     :param new_data: Buffer with possible new data
     :return: Target buffer
     """
+    (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
     sview = sbuf[sview_offset:sview_offset+sview_len]
     tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
     if len(tview) != tview_len:
@@ -58,10 +60,11 @@ def apply_txdelta_handler_chunks(source_chunks, target_chunks):
     :param sbuf: Source buffer
     :param target_stream: Target stream
     """
-    sbuf = "".join(source_chunks)
+    sbuf = bytes().join(source_chunks)
+
     def apply_window(window):
         if window is None:
-            return # Last call
+            return  # Last call
         target_chunks.append(apply_txdelta_window(sbuf, window))
     return apply_window
 
@@ -74,7 +77,7 @@ def apply_txdelta_handler(sbuf, target_stream):
     """
     def apply_window(window):
         if window is None:
-            return # Last call
+            return  # Last call
         target_stream.write(apply_txdelta_window(sbuf, window))
     return apply_window
 
@@ -88,16 +91,16 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
     :param sview: Source data
     :return: Result data
     """
-    tview = ""
+    tview = bytearray()
     for (action, offset, length) in ops:
         if action == TXDELTA_SOURCE:
             # Copy from source area.
-            tview += sview[offset:offset+length]
+            tview.extend(sview[offset:offset+length])
         elif action == TXDELTA_TARGET:
-            for i in xrange(length):
-                tview += tview[offset+i]
+            for i in range(length):
+                tview.append(tview[offset+i])
         elif action == TXDELTA_NEW:
-            tview += new_data[offset:offset+length]
+            tview.extend(new_data[offset:offset+length])
         else:
             raise Exception("Invalid delta instruction code")
     return tview
@@ -112,7 +115,9 @@ def send_stream(stream, handler, block_size=DELTA_WINDOW_SIZE):
     """
     hash = md5()
     text = stream.read(block_size)
-    while text != "":
+    if not isinstance(text, bytes):
+        raise TypeError("The stream should read out bytes")
+    while text:
         hash.update(text)
         window = (0, 0, len(text), 0, [(TXDELTA_NEW, 0, len(text))], text)
         handler(window)
@@ -133,21 +138,21 @@ def encode_length(len):
 
     # Count number of required bytes
     v = len >> 7
-    n = 1;
+    n = 1
     while v > 0:
         v = v >> 7
-        n+=1
+        n += 1
 
     assert n <= MAX_ENCODED_INT_LEN
 
-    ret = ""
+    ret = bytearray()
     while n > 0:
-        n-=1
+        n -= 1
         if n > 0:
             cont = 1
         else:
             cont = 0
-        ret += chr(((len >> (n * 7)) & 0x7f) | (cont << 7))
+        ret.append(((len >> (n * 7)) & 0x7f) | (cont << 7))
 
     return ret
 
@@ -162,24 +167,26 @@ def decode_length(text):
     ret = 0
     next = True
     while next:
-        ret = ((ret << 7) | (ord(text[0]) & 0x7f))
-        next = ((ord(text[0]) >> 7) & 0x1)
+        ret = (ret << 7) | (text[0] & 0x7f)
+        next = (text[0] >> 7) & 0x1
         text = text[1:]
     return ret, text
 
 
-def pack_svndiff_instruction((action, offset, length)):
+def pack_svndiff_instruction(diff_params):
     """Pack a SVN diff instruction
 
+    :param diff_params: (action, offset, length)
     :param action: Action
     :param offset: Offset
     :param length: Length
     :return: encoded text
     """
+    (action, offset, length) = diff_params
     if length < 0x3f:
-        text = chr((action << 6) + length)
+        text = bytearray(((action << 6) + length,))
     else:
-        text = chr((action << 6)) + encode_length(length)
+        text = bytearray((action << 6,)) + encode_length(length)
     if action != TXDELTA_NEW:
         text += encode_length(offset)
     return text
@@ -191,8 +198,8 @@ def unpack_svndiff_instruction(text):
     :param text: Text to parse
     :return: tuple with operation, remaining text
     """
-    action = (ord(text[0]) >> 6)
-    length = (ord(text[0]) & 0x3f)
+    action = text[0] >> 6
+    length = text[0] & 0x3f
     text = text[1:]
     assert action in (TXDELTA_NEW, TXDELTA_SOURCE, TXDELTA_TARGET)
     if length == 0:
@@ -204,7 +211,8 @@ def unpack_svndiff_instruction(text):
     return (action, offset, length), text
 
 
-SVNDIFF0_HEADER = "SVN\0"
+SVNDIFF0_HEADER = b"SVN\0"
+
 
 def pack_svndiff0_window(window):
     """Pack an individual window using svndiff0.
@@ -213,19 +221,19 @@ def pack_svndiff0_window(window):
     :return: Packed diff (as bytestring)
     """
     (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
-    ret = [encode_length(sview_offset) + \
-           encode_length(sview_len) + \
-           encode_length(tview_len)]
+    ret = (encode_length(sview_offset) +
+           encode_length(sview_len) +
+           encode_length(tview_len))
 
-    instrdata = ""
+    instrdata = bytearray()
     for op in ops:
         instrdata += pack_svndiff_instruction(op)
 
-    ret.append(encode_length(len(instrdata)))
-    ret.append(encode_length(len(new_data)))
-    ret.append(instrdata)
-    ret.append(new_data)
-    return "".join(ret)
+    ret.extend(encode_length(len(instrdata)))
+    ret.extend(encode_length(len(new_data)))
+    ret.extend(instrdata)
+    ret.extend(new_data)
+    return ret
 
 
 def pack_svndiff0(windows):
@@ -242,15 +250,15 @@ def pack_svndiff0(windows):
 
 def unpack_svndiff0(text):
     """Unpack a version 0 svndiff text.
-    
+
     :param text: Text to unpack.
-    :return: yields tuples with sview_offset, sview_len, tview_len, ops_len, 
+    :return: yields tuples with sview_offset, sview_len, tview_len, ops_len,
         ops, newdata
     """
     assert text.startswith(SVNDIFF0_HEADER)
     text = text[4:]
 
-    while text != "":
+    while text:
         sview_offset, text = decode_length(text)
         sview_len, text = decode_length(text)
         tview_len, text = decode_length(text)
@@ -261,11 +269,10 @@ def unpack_svndiff0(text):
         text = text[instr_len:]
 
         ops = []
-        while instrdata != "":
+        while instrdata:
             op, instrdata = unpack_svndiff_instruction(instrdata)
             ops.append(op)
 
         newdata = text[:newdata_len]
         text = text[newdata_len:]
         yield (sview_offset, sview_len, tview_len, len(ops), ops, newdata)
-

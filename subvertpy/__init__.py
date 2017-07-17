@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
-__version__ = (0, 9, 3)
+__version__ = (0, 10, 0)
 
 NODE_DIR = 2
 NODE_FILE = 1
@@ -77,6 +77,7 @@ ERR_BAD_PROPERTY_VALUE = 125005
 ERR_FS_ROOT_DIR = 160021
 ERR_WC_NODE_KIND_CHANGE = 155018
 ERR_WC_UPGRADE_REQUIRED = 155036
+ERR_RA_CANNOT_CREATE_SESSION = 170013
 
 ERR_APR_OS_START_EAIERR = 670000
 ERR_APR_OS_ERRSPACE_SIZE = 50000
@@ -91,10 +92,10 @@ AUTH_PARAM_DEFAULT_USERNAME = 'svn:auth:username'
 AUTH_PARAM_DEFAULT_PASSWORD = 'svn:auth:password'
 
 SSL_NOTYETVALID = 0x00000001
-SSL_EXPIRED     = 0x00000002
-SSL_CNMISMATCH  = 0x00000004
-SSL_UNKNOWNCA   = 0x00000008
-SSL_OTHER       = 0x40000000
+SSL_EXPIRED = 0x00000002
+SSL_CNMISMATCH = 0x00000004
+SSL_UNKNOWNCA = 0x00000008
+SSL_OTHER = 0x40000000
 
 
 class SubversionException(Exception):
@@ -108,7 +109,7 @@ class SubversionException(Exception):
 
 def _check_mtime(m):
     """Check whether a C extension is out of date.
-    
+
     :param m: Python module that is a C extension
     """
     import os
@@ -120,6 +121,7 @@ def _check_mtime(m):
         return False
     return True
 
+
 try:
     from subvertpy import client, _ra, repos, wc
     for x in client, _ra, repos, wc:
@@ -127,7 +129,5 @@ try:
             from warnings import warn
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
-except ImportError, e:
+except ImportError as e:
     raise ImportError("Unable to load subvertpy extensions: %s" % e)
-
-
