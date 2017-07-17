@@ -1,4 +1,4 @@
-subvertpy (0.10.0-1) UNRELEASED; urgency=medium
+subvertpy (0.10.0-1) unstable; urgency=medium
 
   * watch: Update watch file., add signing key.
   * New upstream release.
