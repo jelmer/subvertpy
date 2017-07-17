@@ -3,17 +3,20 @@ Section: python
 Priority: optional
 Maintainer: Debian Python Modules Team <python-modules-team@lists.alioth.debian.org>
 Uploaders: Jelmer Vernooĳ <jelmer@debian.org>
-Homepage: http://samba.org/~jelmer/subvertpy
-Build-Depends: debhelper (>= 8.1.0),
+Homepage: https://www.jelmer.uk/subvertpy
+Build-Depends: debhelper (>= 9),
                libsvn-dev,
                python (>= 2.6.6-3),
                python-all-dbg (>= 2.6.6-3),
                python-all-dev (>= 2.6.6-3),
+               python3-all-dev,
+               python3-all-dbg,
                python-docutils,
                python-pydoctor (>= 0.5+git20151204-1),
                python-testtools
 Standards-Version: 4.0.0
-X-Python-Version: >= 2.4
+X-Python-Version: >= 2.7
+X-Python3-Version: >= 3.3
 Vcs-Git: git://anonscm.debian.org/python-modules/packages/subvertpy.git
 XS-Testsuite: autopkgtest
 
@@ -22,29 +25,26 @@ Architecture: any
 Conflicts: bzr-svn (<< 0.5.0~rc2~)
 Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
 Provides: ${python:Provides}
-Suggests: python-subvertpy-dbg
-Description: Alternative Python bindings for Subversion
+Description: Alternative Python bindings for Subversion - Python 2
  Python bindings for the Subversion version control system. The aim of
  these bindings is to be fast, complete and to provide an API that feels native
  to Python programmers.
  .
  This also includes an experimental server-side implementation of the
  Subversion protocol.
+ .
+ This package contains the Python 2 version.
 
-Package: python-subvertpy-dbg
+Package: python3-subvertpy
 Architecture: any
-Conflicts: bzr-svn (<< 0.5.0~rc2~)
-Priority: extra
-Section: debug
-Recommends: libapr1-dbg, libaprutil1-dbg, python-dbg
-Provides: ${python:Provides}
-Depends: python-subvertpy (= ${binary:Version}),
-         ${misc:Depends},
-         ${python:Depends},
-         ${shlibs:Depends}
-Description: Alternative Python bindings for Subversion - Debugging Symbols
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
+Provides: ${python3:Provides}
+Description: Alternative Python bindings for Subversion - Python 3
  Python bindings for the Subversion version control system. The aim of
  these bindings is to be fast, complete and to provide an API that feels native
  to Python programmers.
  .
- This package contains the debug extension.
+ This also includes an experimental server-side implementation of the
+ Subversion protocol.
+ .
+ This package contains the Python 3 version.

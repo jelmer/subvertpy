@@ -9,18 +9,16 @@ LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
 
 # Get the supported Python versions
 PYVERS = $(shell pyversions -r -v)
-# Get the default Python version
-PYVERSION = $(shell pyversions -d -v)
+PY3VERS = $(shell py3versions -r -v)
 
 # Callable functions to determine the correct PYTHONPATH
 pythonpath = $$(ls -d $(CURDIR)/build/lib.*-$(1))
-pythonpath_dbg = $$(ls -d $(CURDIR)/build/lib_d.*-$(1) 2>/dev/null || ls -d $(CURDIR)/build/lib.*$(1)-pydebug)
 
 export HOME=$(CURDIR)/nonexistent
 
 %:
 	CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" \
-	LDFLAGS="$(LDFLAGS)" dh --with python2 --buildsystem=python_distutils $*
+	LDFLAGS="$(LDFLAGS)" dh --with python2,python3 --buildsystem=python_distutils $*
 
 override_dh_auto_build:
 	dh_auto_build
@@ -28,26 +26,24 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/tmp
+	set -ex; for python in $(shell py3versions -r); do \
+		  $$python setup.py install --root=$(CURDIR)/debian/tmp --install-layout=deb; \
+	done;
 	# Install everything excluding the *_d.so debug extensions to python-subvertpy
-	dh_install -X"*_d.so" "debian/tmp/*" -p python-subvertpy
-	# Install the debug extensions to python-subvertpy-dbg
-	dh_install "debian/tmp/usr/lib/python*/*-packages/subvertpy/*_d.so" -p python-subvertpy-dbg
-	mkdir -p debian/python-subvertpy/usr/share/doc/python-subvertpy
-	mv apidocs debian/python-subvertpy/usr/share/doc/python-subvertpy/api
-
-override_dh_installdocs:
-	dh_installdocs --link-doc=python-subvertpy
+	dh_install -X"*_d.so" "debian/tmp/usr/lib/python2*/*-packages" -p python-subvertpy
+	dh_install -X"*_d.so" "debian/tmp/usr/lib/python3*/*-packages" -p python3-subvertpy
+	mkdir -p debian/python{,3}-subvertpy/usr/share/doc/python-subvertpy
+	cp -a apidocs debian/python-subvertpy/usr/share/doc/python-subvertpy/api
+	cp -a apidocs debian/python3-subvertpy/usr/share/doc/python3-subvertpy/api
 
 override_dh_auto_test:
 ifeq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
 		set -e -x; \
-		for py in $(PYVERS); do \
+		for py in $(PYVERS) $(PY3VERS); do \
 			cd $(call pythonpath,$$py); python$$py -m testtools.run subvertpy.tests.test_suite ;\
-			cd $(call pythonpath_dbg,$$py); python$$py-dbg -m testtools.run subvertpy.tests.test_suite ;\
 		done
 endif
 
 override_dh_strip:
-ifeq (,$(filter nostrip,$(DEB_BUILD_OPTIONS)))
-	dh_strip --dbg-package=python-subvertpy-dbg
-endif
+	dh_strip -p python-subvertpy --dbgsym-migration='python-subvertpy-dbg (<< 0.9.3-1)'
+	dh_strip -p python3-subvertpy
