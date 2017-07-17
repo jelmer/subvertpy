@@ -22,11 +22,10 @@ export HOME=$(CURDIR)/nonexistent
 
 override_dh_auto_build:
 	dh_auto_build
-	PYTHONHASHSEED=0 pydoctor --introspect-c-modules --project-name=subvertpy --make-html --docformat=restructuredText --add-package subvertpy
+	PYTHONHASHSEED=0 pydoctor --introspect-c-modules --project-name=subvertpy --make-html --docformat=restructuredtext --add-package subvertpy
 
 override_dh_auto_install:
-	dh_auto_install --destdir=debian/tmp
-	set -ex; for python in $(shell py3versions -r); do \
+	set -ex; for python in $(shell pyversions -r) $(shell py3versions -r); do \
 		  $$python setup.py install --root=$(CURDIR)/debian/tmp --install-layout=deb; \
 	done;
 	# Install everything excluding the *_d.so debug extensions to python-subvertpy
