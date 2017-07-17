@@ -1,4 +1,10 @@
-0.10.0	UNRELEASED
+0.10.1	UNRELEASED
+
+ BUG FIXES
+
+  * Bundle Makefile and subvertpy.cfg.
+
+0.10.0	2017-07-17
 
   CHANGES
 

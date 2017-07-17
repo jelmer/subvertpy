@@ -1,6 +1,7 @@
 build
 _trial_temp
 dist
+sdist
 MANIFEST
 .coverage
 tags
