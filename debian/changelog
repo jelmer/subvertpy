@@ -1,3 +1,9 @@
+subvertpy (0.9.3-5) UNRELEASED; urgency=medium
+
+  * watch: Update watch file., add signing key.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 17 Jul 2017 23:28:49 +0000
+
 subvertpy (0.9.3-4) unstable; urgency=low
 
   * Use https in watch file.

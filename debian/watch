@@ -1,2 +1,3 @@
-version=2
-https://samba.org/~jelmer/subvertpy/subvertpy-(.*).tar.gz
+version=3
+opts=uversionmangle=s/(rc|a|b|c)/~$1/,pgpsigurlmangle=s/$/.asc/ \
+     https://pypi.debian.net/subvertpy/subvertpy-(.+)\.(?:zip|tgz|tbz|txz|(?:tar\.(?:gz|bz2|xz)))
