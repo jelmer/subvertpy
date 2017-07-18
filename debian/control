@@ -12,7 +12,7 @@ Build-Depends: debhelper (>= 9),
                python3-all-dev,
                python3-all-dbg,
                python-docutils,
-               python-pydoctor (>= 0.5+git20151204-1),
+               python-pydoctor (>= 0.5+git20151204),
                python-testtools
 Standards-Version: 4.0.0
 X-Python-Version: >= 2.7
