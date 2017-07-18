@@ -1,0 +1,13 @@
+diff --git a/bin/subvertpy-fast-export b/bin/subvertpy-fast-export
+index 913168cf..e9a6ecc9 100755
+--- a/bin/subvertpy-fast-export
++++ b/bin/subvertpy-fast-export
+@@ -202,7 +202,7 @@ if __name__ == '__main__':
+ 
+     if options.version:
+         import subvertpy
+-        print ".".join(str(x) for x in subvertpy.__version__)
++        print(".".join(str(x) for x in subvertpy.__version__))
+         sys.exit(0)
+     if options.trunk_path != None:
+         trunk_path = options.trunk_path
