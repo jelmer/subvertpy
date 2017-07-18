@@ -27,7 +27,8 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	dh_auto_install
-	mkdir -p debian/python{,3}-subvertpy/usr/share/doc/python-subvertpy
+	mkdir -p debian/python3-subvertpy/usr/share/doc/python3-subvertpy \
+	         debian/python-subvertpy/usr/share/doc/python-subvertpy
 	cp -a apidocs debian/python-subvertpy/usr/share/doc/python-subvertpy/api
 	cp -a apidocs debian/python3-subvertpy/usr/share/doc/python3-subvertpy/api
 

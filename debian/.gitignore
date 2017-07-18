@@ -5,4 +5,6 @@ files
 *.debhelper
 python-subvertpy-dbg/
 python-subvertpy/
+python3-subvertpy/
+python3-subvertpy-dbg/
 tmp/
