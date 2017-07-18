@@ -1,13 +1,9 @@
-subvertpy (0.10.0-2) UNRELEASED; urgency=medium
+subvertpy (0.10.0-1) UNRELEASED; urgency=medium
 
   * Bump standards version to 4.0.0 (no changes).
   * Add python3-subvertpy package.
+   + Use alternatives for /usr/bin/subvertpy-fast-export.
   * Migrate python-subvertpy-dbg package to python-subvertpy-dbgsym.
-
- -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 17 Jul 2017 23:40:27 +0000
-
-subvertpy (0.10.0-1) unstable; urgency=medium
-
   * watch: Update watch file., add signing key.
   * New upstream release.
 
