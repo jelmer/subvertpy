@@ -1,4 +1,4 @@
-subvertpy (0.10.0-1) UNRELEASED; urgency=medium
+subvertpy (0.10.0-1) unstable; urgency=medium
 
   * Bump standards version to 4.0.0 (no changes).
   * Add python3-subvertpy package.
