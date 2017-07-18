@@ -1,0 +1,10 @@
+#!/bin/sh -e
+
+#DEBHELPER#
+
+case "$1" in
+    remove|deconfigure)
+	update-alternatives --remove subvertpy-fast-export /usr/bin/subvertpy2-fast-export
+        ;;
+    *)
+esac

@@ -31,6 +31,10 @@ override_dh_auto_install:
 	         debian/python-subvertpy/usr/share/doc/python-subvertpy
 	cp -a apidocs debian/python-subvertpy/usr/share/doc/python-subvertpy/api
 	cp -a apidocs debian/python3-subvertpy/usr/share/doc/python3-subvertpy/api
+	mv debian/python3-subvertpy/usr/bin/subvertpy-fast-export \
+	   debian/python3-subvertpy/usr/bin/subvertpy3-fast-export
+	mv debian/python-subvertpy/usr/bin/subvertpy-fast-export \
+	   debian/python-subvertpy/usr/bin/subvertpy2-fast-export
 
 override_dh_strip:
 	dh_strip -p python-subvertpy --dbgsym-migration='python-subvertpy-dbg (<< 0.9.3-1)'

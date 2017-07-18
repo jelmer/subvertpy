@@ -1,0 +1,5 @@
+#!/bin/sh -e
+
+update-alternatives --install /usr/bin/subvertpy-fast-export subvertpy-fast-export  /usr/bin/subvertpy2-fast-export 10
+
+#DEBHELPER#
