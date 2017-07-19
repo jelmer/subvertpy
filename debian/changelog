@@ -1,3 +1,10 @@
+subvertpy (0.10.1-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+   + Fixes bigendian issues. Closes: #868770
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Wed, 19 Jul 2017 23:47:51 +0000
+
 subvertpy (0.10.0-1) unstable; urgency=medium
 
   * Bump standards version to 4.0.0 (no changes).
