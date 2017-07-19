@@ -45,39 +45,38 @@ bool string_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t 
 bool relpath_list_to_apr_array(apr_pool_t *pool, PyObject *l, apr_array_header_t **);
 PyObject *prop_hash_to_dict(apr_hash_t *props);
 apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props);
-svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths,
-								long revision, const char *author,
-								const char *date, const char *message,
-								apr_pool_t *pool);
+svn_error_t *py_svn_log_wrapper(
+    void *baton, apr_hash_t *changed_paths, long revision, const char *author,
+    const char *date, const char *message, apr_pool_t *pool);
 svn_error_t *py_svn_error(void);
 void PyErr_SetSubversionException(svn_error_t *error);
 PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void);
 
 #define RUN_SVN(cmd) { \
-	svn_error_t *err; \
-	PyThreadState *_save; \
-	_save = PyEval_SaveThread(); \
-	err = (cmd); \
-	PyEval_RestoreThread(_save); \
-	if (err != NULL) { \
-		handle_svn_error(err); \
-		svn_error_clear(err); \
-		return NULL; \
-	} \
+    svn_error_t *err; \
+    PyThreadState *_save; \
+    _save = PyEval_SaveThread(); \
+    err = (cmd); \
+    PyEval_RestoreThread(_save); \
+    if (err != NULL) { \
+        handle_svn_error(err); \
+        svn_error_clear(err); \
+        return NULL; \
+    } \
 }
 
 #define RUN_SVN_WITH_POOL(pool, cmd) { \
-	svn_error_t *err; \
-	PyThreadState *_save; \
-	_save = PyEval_SaveThread(); \
-	err = (cmd); \
-	PyEval_RestoreThread(_save); \
-	if (err != NULL) { \
-		handle_svn_error(err); \
-		svn_error_clear(err); \
-		apr_pool_destroy(pool); \
-		return NULL; \
-	} \
+    svn_error_t *err; \
+    PyThreadState *_save; \
+    _save = PyEval_SaveThread(); \
+    err = (cmd); \
+    PyEval_RestoreThread(_save); \
+    if (err != NULL) { \
+        handle_svn_error(err); \
+        svn_error_clear(err); \
+        apr_pool_destroy(pool); \
+        return NULL; \
+    } \
 }
 
 PyObject *wrap_lock(svn_lock_t *lock);
@@ -89,9 +88,10 @@ void PyErr_SetAprStatus(apr_status_t status);
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
 PyObject *PyOS_tmpfile(void);
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool);
-bool pyify_log_message(apr_hash_t *changed_paths, const char *author,
-	const char *date, const char *message, bool node_kind,
-	apr_pool_t *pool, PyObject **py_changed_paths, PyObject **revprops);
+bool pyify_log_message(
+    apr_hash_t *changed_paths, const char *author,
+    const char *date, const char *message, bool node_kind,
+    apr_pool_t *pool, PyObject **py_changed_paths, PyObject **revprops);
 #if ONLY_SINCE_SVN(1, 6)
 PyObject *pyify_changed_paths2(apr_hash_t *changed_paths2, apr_pool_t *pool);
 #endif
@@ -106,19 +106,19 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 #endif
 
 #define CB_CHECK_PYRETVAL(ret) \
-	if (ret == NULL) { \
-		PyGILState_Release(state); \
-		return py_svn_error(); \
-	}
+    if (ret == NULL) { \
+        PyGILState_Release(state); \
+        return py_svn_error(); \
+    }
 
 #if SVN_VER_MINOR < 5
 typedef enum svn_depth_t {
-	svn_depth_unknown = -2,
-	svn_depth_exclude = -1,
-	svn_depth_empty = 0,
-	svn_depth_files = 1,
-	svn_depth_immediates = 2,
-	svn_depth_infinity = 3
+    svn_depth_unknown = -2,
+    svn_depth_exclude = -1,
+    svn_depth_empty = 0,
+    svn_depth_files = 1,
+    svn_depth_immediates = 2,
+    svn_depth_infinity = 3
 } svn_depth_t;
 #endif
 
@@ -129,10 +129,10 @@ typedef struct {
 } ConfigObject;
 
 typedef struct {
-	PyObject_HEAD
-	svn_stream_t *stream;
-	apr_pool_t *pool;
-	svn_boolean_t closed;
+    PyObject_HEAD
+    svn_stream_t *stream;
+    apr_pool_t *pool;
+    bool closed;
 } StreamObject;
 
 extern PyTypeObject Stream_Type;
