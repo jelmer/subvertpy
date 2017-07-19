@@ -132,7 +132,7 @@ typedef struct {
 	PyObject_HEAD
 	svn_stream_t *stream;
 	apr_pool_t *pool;
-	svn_boolean_t closed;
+	bool closed;
 } StreamObject;
 
 extern PyTypeObject Stream_Type;

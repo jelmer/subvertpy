@@ -386,7 +386,7 @@ static PyObject *repos_delete(PyObject *self, PyObject *args)
 static PyObject *repos_hotcopy(RepositoryObject *self, PyObject *args)
 {
 	char *src_path, *dest_path;
-	svn_boolean_t clean_logs = FALSE;
+	bool clean_logs = false;
 	apr_pool_t *temp_pool;
 
 	if (!PyArg_ParseTuple(args, "ss|b", &src_path, &dest_path, &clean_logs))
@@ -397,7 +397,7 @@ static PyObject *repos_hotcopy(RepositoryObject *self, PyObject *args)
 		return NULL;
 
 	RUN_SVN_WITH_POOL(temp_pool,
-		svn_repos_hotcopy(src_path, dest_path, clean_logs, temp_pool));
+		svn_repos_hotcopy(src_path, dest_path, clean_logs?TRUE:FALSE, temp_pool));
 
 	apr_pool_destroy(temp_pool);
 
@@ -807,7 +807,7 @@ static PyObject *fs_node_file_proplist(FileSystemRootObject *self, PyObject *arg
 static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *args)
 {
 	apr_pool_t *temp_pool;
-	svn_boolean_t force = FALSE;
+	bool force = false;
 	char *path;
 #if ONLY_SINCE_SVN(1, 6)
 	svn_checksum_kind_t kind;
@@ -826,9 +826,8 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	if (temp_pool == NULL)
 		return NULL;
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_checksum(&checksum, kind,
-													  self->root,
-											   path, force, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_checksum(
+		&checksum, kind, self->root, path, force?TRUE:FALSE, temp_pool));
 	cstr = svn_checksum_to_cstring(checksum, temp_pool);
 	if (cstr == NULL) {
 		ret = Py_None;

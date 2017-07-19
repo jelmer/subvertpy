@@ -986,7 +986,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 static PyObject *client_mkdir(PyObject *self, PyObject *args)
 {
     PyObject *paths, *revprops = NULL;
-    svn_boolean_t make_parents=FALSE;
+    bool make_parents = false;
     apr_pool_t *temp_pool;
     svn_commit_info_t *commit_info = NULL;
     PyObject *ret;
@@ -1024,7 +1024,7 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args)
 
     RUN_SVN_WITH_POOL(temp_pool, svn_client_mkdir3(&commit_info,
                                                     apr_paths,
-                make_parents, hash_revprops, client->client, temp_pool));
+                make_parents?TRUE:FALSE, hash_revprops, client->client, temp_pool));
 #else
     if (make_parents) {
         PyErr_SetString(PyExc_ValueError,
@@ -1410,8 +1410,8 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *ret;
     int i = 0;
     ClientObject *client = (ClientObject *)self;
-    svn_boolean_t allow_unver_obstructions = FALSE,
-                  depth_is_sticky = FALSE;
+    bool allow_unver_obstructions = false,
+                  depth_is_sticky = false;
 	char *kwnames[] =
 		{ "path", "revision", "recurse", "ignore_externals", "depth_is_sticky",
 			"allow_unver_obstructions", NULL };
@@ -1433,7 +1433,7 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
 #if ONLY_SINCE_SVN(1, 5)
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_update3(&result_revs,
 		apr_paths, &c_rev, recurse?svn_depth_infinity:svn_depth_files,
-		depth_is_sticky, ignore_externals, allow_unver_obstructions,
+		depth_is_sticky?TRUE:FALSE, ignore_externals, allow_unver_obstructions?TRUE:FALSE,
 		client->client, temp_pool));
 #else
 	RUN_SVN_WITH_POOL(temp_pool, svn_client_update2(&result_revs,
@@ -1653,8 +1653,8 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *callback, *paths, *start_rev = Py_None, *end_rev = Py_None,
              *peg_revision = Py_None, *revprops = NULL;
     int limit = 0;
-    svn_boolean_t discover_changed_paths = FALSE, strict_node_history = FALSE,
-                  include_merged_revisions = FALSE;
+    bool discover_changed_paths = false, strict_node_history = false,
+                  include_merged_revisions = false;
     apr_array_header_t *apr_paths, *apr_revprops = NULL;
     svn_opt_revision_t c_peg_rev, c_start_rev, c_end_rev;
 #if ONLY_SINCE_SVN(1, 6)
@@ -1719,24 +1719,24 @@ static PyObject *client_log(PyObject *self, PyObject *args, PyObject *kwargs)
     APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = &revision_range;
 
     RUN_SVN_WITH_POOL(temp_pool, svn_client_log5(apr_paths, &c_peg_rev,
-        revision_ranges, limit, discover_changed_paths,
-        strict_node_history, include_merged_revisions, apr_revprops,
+        revision_ranges, limit, discover_changed_paths?TRUE:FALSE,
+        strict_node_history?TRUE:FALSE, include_merged_revisions?TRUE:FALSE, apr_revprops,
         py_svn_log_entry_receiver, (void*)callback,
         client->client, temp_pool));
 #elif ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_log4(apr_paths, &c_peg_rev,
-        &c_start_rev, &c_end_rev, limit, discover_changed_paths,
-        strict_node_history, include_merged_revisions, apr_revprops,
+        &c_start_rev, &c_end_rev, limit, discover_changed_paths?TRUE:FALSE,
+        strict_node_history?TRUE:FALSE, include_merged_revisions?TRUE:FALSE, apr_revprops,
         py_svn_log_entry_receiver, (void*)callback,
         client->client, temp_pool));
 #elif ONLY_SINCE_SVN(1, 4)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_log3(apr_paths, &c_peg_rev,
-        &c_start_rev, &c_end_rev, limit, discover_changed_paths,
-        strict_node_history, py_svn_log_wrapper,
+        &c_start_rev, &c_end_rev, limit, discover_changed_paths?TRUE:FALSE,
+        strict_node_history?TRUE:FALSE, py_svn_log_wrapper,
         (void*)callback, client->client, temp_pool));
 #else
     RUN_SVN_WITH_POOL(temp_pool, svn_client_log2(apr_paths, &c_start_rev,
-        &c_end_rev, limit, discover_changed_paths, strict_node_history,
+        &c_end_rev, limit, discover_changed_paths?TRUE:FALSE, strict_node_history?TRUE:FALSE,
         py_svn_log_wrapper, (void*)callback,
         client->client, temp_pool));
 #endif
@@ -1757,7 +1757,7 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
 
     const char *path;
     int depth = svn_depth_empty;
-    svn_boolean_t fetch_excluded = FALSE, fetch_actual_only = FALSE;
+    bool fetch_excluded = false, fetch_actual_only = false;
     PyObject *revision = Py_None, *peg_revision = Py_None;
     svn_opt_revision_t c_peg_rev, c_rev;
     PyObject *entry_dict;
@@ -1798,8 +1798,8 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
     Py_BEGIN_ALLOW_THREADS;
 #if ONLY_SINCE_SVN(1, 7)
     /* FIXME: Support changelists */
-	err = svn_client_info3(path, &c_peg_rev, &c_rev, depth, fetch_excluded,
-						   fetch_actual_only, NULL,
+	err = svn_client_info3(path, &c_peg_rev, &c_rev, depth, fetch_excluded?TRUE:FALSE,
+						   fetch_actual_only?TRUE:FALSE, NULL,
 						   info_receiver,
 						   entry_dict,
 						   client->client, temp_pool);
