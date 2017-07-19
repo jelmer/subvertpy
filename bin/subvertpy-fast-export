@@ -10,21 +10,23 @@
 #
 # Adapted for subvertpy by Jelmer Vernooij <jelmer@samba.org>
 
-trunk_path = '/trunk/'
-branches_path = '/branches/'
-tags_path = '/tags/'
-address = 'localhost'
-
 from io import BytesIO
-import sys, os.path
+import sys
+import os.path
 from optparse import OptionParser
 import stat
 from time import mktime, strptime
 
 from subvertpy.repos import PATH_CHANGE_DELETE, Repository
 
+trunk_path = '/trunk/'
+branches_path = '/branches/'
+tags_path = '/tags/'
+address = 'localhost'
+
 ct_short = ['M', 'A', 'D', 'R', 'X']
 stdout = getattr(sys.stdout, 'buffer', sys.stdout)
+
 
 def dump_file_blob(root, stream, stream_length):
     stdout.write(("data %s\n" % stream_length).encode("ascii"))
@@ -189,28 +191,38 @@ if __name__ == '__main__':
                       dest='final_rev', metavar='FINAL_REV', type='int')
     parser.add_option('-r', '--first-rev', help='First revision to import', 
                       dest='first_rev', metavar='FIRST_REV', type='int')
-    parser.add_option('-t', '--trunk-path', help="Path in repo to /trunk, may be `regex:/cvs/(trunk)/proj1/(.*)`\nFirst group is used as branchname, second to match files",
-                      dest='trunk_path', metavar='TRUNK_PATH')
-    parser.add_option('-b', '--branches-path', help='Path in repo to /branches',
-                      dest='branches_path', metavar='BRANCHES_PATH')
-    parser.add_option('-T', '--tags-path', help='Path in repo to /tags',
-                      dest='tags_path', metavar='TAGS_PATH')
-    parser.add_option('-a', '--address', help='Domain to put on users for their mail address',
-                      dest='address', metavar='hostname', type='string')
-    parser.add_option("--version", help="Print version and exit", action="store_true")
+    parser.add_option(
+        '-t', '--trunk-path',
+        help=(
+            "Path in repo to /trunk, may be `regex:/cvs/(trunk)/proj1/(.*)`\n"
+            "First group is used as branchname, second to match files"),
+        dest='trunk_path', metavar='TRUNK_PATH')
+    parser.add_option(
+        '-b', '--branches-path', help='Path in repo to /branches',
+        dest='branches_path', metavar='BRANCHES_PATH')
+    parser.add_option(
+        '-T', '--tags-path', help='Path in repo to /tags',
+        dest='tags_path', metavar='TAGS_PATH')
+    parser.add_option(
+        '-a', '--address',
+        help='Domain to put on users for their mail address',
+        dest='address', metavar='hostname', type='string')
+    parser.add_option(
+        "--version", help="Print version and exit",
+        action="store_true")
     (options, args) = parser.parse_args()
 
     if options.version:
         import subvertpy
         print(".".join(str(x) for x in subvertpy.__version__))
         sys.exit(0)
-    if options.trunk_path != None:
+    if options.trunk_path is not None:
         trunk_path = options.trunk_path
-    if options.branches_path != None:
+    if options.branches_path is not None:
         branches_path = options.branches_path
-    if options.tags_path != None:
+    if options.tags_path is not None:
         tags_path = options.tags_path
-    if options.address != None:
+    if options.address is not None:
         address = options.address
 
     MATCHER = Matcher.getMatcher(trunk_path)

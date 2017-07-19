@@ -100,7 +100,7 @@ static svn_error_t *py_lock_func (void *baton, const char *path, int do_lock,
 		Py_INCREF(py_ra_err);
 	}
 	py_lock = pyify_lock(lock);
-	ret = PyObject_CallFunction((PyObject *)baton, "zbOO", path, do_lock,
+	ret = PyObject_CallFunction((PyObject *)baton, "zbOO", path, do_lock?true:false,
 						  py_lock, py_ra_err);
 	Py_DECREF(py_lock);
 	Py_DECREF(py_ra_err);
@@ -390,7 +390,7 @@ static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnu
 	py_rev_props = prop_hash_to_dict(rev_props);
 	CB_CHECK_PYRETVAL(py_rev_props);
 
-	ret = PyObject_CallFunction(fn, "slOb", path, rev, py_rev_props, result_of_merge);
+	ret = PyObject_CallFunction(fn, "slOi", path, rev, py_rev_props, result_of_merge);
 	Py_DECREF(py_rev_props);
 	CB_CHECK_PYRETVAL(ret);
 
@@ -940,7 +940,7 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool, *result_pool;
 	ReporterObject *ret;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	svn_boolean_t send_copyfrom_args = FALSE;
+	bool send_copyfrom_args = false;
 
 	if (!PyArg_ParseTuple(args, "lsbO|bb:do_update", &revision_to_update_to, &update_target, &recurse, &update_editor,
 						  &send_copyfrom_args, &ignore_ancestry))
@@ -1981,7 +1981,7 @@ fail_busy:
 #if ONLY_SINCE_SVN(1, 5)
 static PyObject *range_to_tuple(svn_merge_range_t *range)
 {
-	return Py_BuildValue("(llb)", range->start, range->end, range->inheritable);
+	return Py_BuildValue("(llb)", range->start, range->end, range->inheritable?true:false);
 }
 
 static PyObject *merge_rangelist_to_list(apr_array_header_t *rangelist)
@@ -2059,7 +2059,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 	svn_revnum_t revision = -1;
 	PyObject *paths;
 	svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
-	svn_boolean_t include_descendants;
+	bool include_descendants;
 
 	if (!PyArg_ParseTuple(args, "O|lib:mergeinfo", &paths, &revision, &inherit, &include_descendants))
 		return NULL;
@@ -2175,7 +2175,7 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 	PyObject *file_rev_handler;
 	apr_pool_t *temp_pool;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	svn_boolean_t include_merged_revisions = FALSE;
+	bool include_merged_revisions = false;
 
 	if (!PyArg_ParseTuple(args, "sllO|b:get_file_revs", &path, &start,
 			&end, &file_rev_handler, &include_merged_revisions))
@@ -2623,19 +2623,19 @@ static PyObject *credentials_iter_next(CredentialsIterObject *iterator)
 
 	if (!strcmp(iterator->cred_kind, SVN_AUTH_CRED_SIMPLE)) {
 		svn_auth_cred_simple_t *simple = iterator->credentials;
-		ret = Py_BuildValue("(zzb)", simple->username, simple->password, simple->may_save);
+		ret = Py_BuildValue("(zzb)", simple->username, simple->password, simple->may_save?true:false);
 	} else if (!strcmp(iterator->cred_kind, SVN_AUTH_CRED_USERNAME)) {
 		svn_auth_cred_username_t *uname = iterator->credentials;
-		ret = Py_BuildValue("(zb)", uname->username, uname->may_save);
+		ret = Py_BuildValue("(zb)", uname->username, uname->may_save?true:false);
 	} else if (!strcmp(iterator->cred_kind, SVN_AUTH_CRED_SSL_CLIENT_CERT)) {
 		svn_auth_cred_ssl_client_cert_t *ccert = iterator->credentials;
-		ret = Py_BuildValue("(zb)", ccert->cert_file, ccert->may_save);
+		ret = Py_BuildValue("(zb)", ccert->cert_file, ccert->may_save?true:false);
 	} else if (!strcmp(iterator->cred_kind, SVN_AUTH_CRED_SSL_CLIENT_CERT_PW)) {
 		svn_auth_cred_ssl_client_cert_pw_t *ccert = iterator->credentials;
-		ret = Py_BuildValue("(zb)", ccert->password, ccert->may_save);
+		ret = Py_BuildValue("(zb)", ccert->password, ccert->may_save?true:false);
 	} else if (!strcmp(iterator->cred_kind, SVN_AUTH_CRED_SSL_SERVER_TRUST)) {
 		svn_auth_cred_ssl_server_trust_t *ccert = iterator->credentials;
-		ret = Py_BuildValue("(ib)", ccert->accepted_failures, ccert->may_save);
+		ret = Py_BuildValue("(ib)", ccert->accepted_failures, ccert->may_save?true:false);
 	} else {
 		PyErr_Format(PyExc_RuntimeError, "Unknown cred kind %s", iterator->cred_kind);
 		return NULL;
@@ -2762,7 +2762,7 @@ static svn_error_t *py_username_prompt(svn_auth_cred_username_t **cred, void *ba
 	PyObject *py_username, *py_may_save;
 	char *username;
 	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
+	ret = PyObject_CallFunction(fn, "si", realm, may_save);
 	CB_CHECK_PYRETVAL(ret);
 
 	if (ret == Py_None) {
@@ -2834,7 +2834,7 @@ static svn_error_t *py_simple_prompt(svn_auth_cred_simple_t **cred, void *baton,
 	PyObject *py_may_save, *py_username, *py_password;
 	char *ret_username, *password;
 	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallFunction(fn, "ssb", realm, username, may_save);
+	ret = PyObject_CallFunction(fn, "ssi", realm, username, may_save);
 	CB_CHECK_PYRETVAL(ret);
 	if (!PyTuple_Check(ret)) {
 		PyErr_SetString(PyExc_TypeError, "expected tuple with simple credentials");
@@ -2919,7 +2919,7 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 
 	CB_CHECK_PYRETVAL(py_cert);
 
-	ret = PyObject_CallFunction(fn, "slOb", realm, failures, py_cert, may_save);
+	ret = PyObject_CallFunction(fn, "slOi", realm, failures, py_cert, may_save);
 	Py_DECREF(py_cert);
 	CB_CHECK_PYRETVAL(ret);
 
@@ -2929,7 +2929,7 @@ static svn_error_t *py_ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t 
 		return NULL;
 	}
 
-	if (!PyArg_ParseTuple(ret, "ib", &accepted_failures, &may_save)) {
+	if (!PyArg_ParseTuple(ret, "ii", &accepted_failures, &may_save)) {
 		Py_DECREF(ret);
 		PyGILState_Release(state);
 		return py_svn_error();
@@ -2968,9 +2968,9 @@ static svn_error_t *py_ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_p
 {
 	PyObject *fn = (PyObject *)baton, *ret, *py_password;
 	PyGILState_STATE state = PyGILState_Ensure();
-	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
+	ret = PyObject_CallFunction(fn, "si", realm, may_save);
 	CB_CHECK_PYRETVAL(ret);
-	if (!PyArg_ParseTuple(ret, "Ob", &py_password, &may_save)) {
+	if (!PyArg_ParseTuple(ret, "Oi", &py_password, &may_save)) {
 		goto fail;
 	}
 
@@ -2995,7 +2995,7 @@ static svn_error_t *py_ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **
 	PyObject *fn = (PyObject *)baton, *ret, *py_may_save, *py_cert_file;
 	PyGILState_STATE state = PyGILState_Ensure();
 	char *cert_file;
-	ret = PyObject_CallFunction(fn, "sb", realm, may_save);
+	ret = PyObject_CallFunction(fn, "si", realm, may_save);
 	CB_CHECK_PYRETVAL(ret);
 
 	if (!PyTuple_Check(ret)) {
@@ -3108,7 +3108,7 @@ static svn_error_t *py_cb_get_simple_provider_prompt(svn_boolean_t *may_save_pla
 			PyGILState_Release(state);
 			return py_svn_error();
 		}
-		*may_save_plaintext = PyObject_IsTrue(ret);
+		*may_save_plaintext = PyObject_IsTrue(ret)?TRUE:FALSE;
 		Py_DECREF(ret);
 		PyGILState_Release(state);
 	}

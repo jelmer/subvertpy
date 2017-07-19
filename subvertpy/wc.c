@@ -1074,8 +1074,8 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 	apr_pool_t *temp_pool;
 	AdmObject *admobj = (AdmObject *)self;
 	svn_wc_traversal_info_t *traversal_info;
-	svn_boolean_t depth_compatibility_trick = FALSE;
-	svn_boolean_t honor_depth_exclude = FALSE;
+	bool depth_compatibility_trick = false;
+	bool honor_depth_exclude = false;
 	char *kwnames[] = { "path", "reporter", "restore_files", "recurse", "use_commit_times", "notify_func", "depth_compatibility_trick", "honor_depth_exclude,", NULL };
 	PyObject *py_path;
 
@@ -1101,8 +1101,8 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_crawl_revisions4(path, admobj->adm,
 				&py_ra_reporter, (void *)reporter,
 				restore_files, recurse?svn_depth_infinity:svn_depth_files,
-				honor_depth_exclude,
-				depth_compatibility_trick, use_commit_times,
+				honor_depth_exclude?TRUE:FALSE,
+				depth_compatibility_trick?TRUE:FALSE, use_commit_times,
 				py_wc_notify_func, (void *)notify_func,
 				traversal_info, temp_pool));
 #elif ONLY_SINCE_SVN(1, 5)
@@ -1143,8 +1143,8 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 	apr_pool_t *pool;
 	svn_revnum_t *latest_revnum;
 	svn_error_t *err;
-	svn_boolean_t allow_unver_obstructions = FALSE;
-	svn_boolean_t depth_is_sticky = FALSE;
+	bool allow_unver_obstructions = false;
+	bool depth_is_sticky = false;
 
 	if (!PyArg_ParseTuple(args, "s|bbOzbb", &target, &use_commit_times,
 			&recurse, &notify_func, &diff3_cmd, &depth_is_sticky,
@@ -1164,7 +1164,7 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
 	/* FIXME: Support conflict func */
 	err = svn_wc_get_update_editor3(latest_revnum, admobj->adm, target,
 				use_commit_times, recurse?svn_depth_infinity:svn_depth_files,
-				depth_is_sticky, allow_unver_obstructions,
+				depth_is_sticky?TRUE:FALSE, allow_unver_obstructions?TRUE:FALSE,
 				py_wc_notify_func, (void *)notify_func,
 				py_cancel_check, NULL,
 				NULL, NULL, NULL, NULL,
@@ -1283,7 +1283,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
 	int digest_len;
-	svn_boolean_t remove_changelist = FALSE;
+	bool remove_changelist = false;
 	char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author",
 						"wcprop_changes", "remove_lock", "digest", "remove_changelist", NULL };
 
@@ -1317,7 +1317,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_process_committed4(
 		path, admobj->adm, recurse, new_revnum,
 			rev_date, rev_author, wcprop_changes,
-			remove_lock, remove_changelist, digest, temp_pool));
+			remove_lock, remove_changelist?TRUE:FALSE, digest, temp_pool));
 #else
 	if (remove_changelist) {
 		PyErr_SetString(PyExc_NotImplementedError, "remove_changelist only supported in svn < 1.6");
@@ -1540,7 +1540,7 @@ static PyObject *mark_missing_deleted(PyObject *self, PyObject *args)
 static PyObject *remove_from_revision_control(PyObject *self, PyObject *args)
 {
 	char *name;
-	svn_boolean_t destroy_wf = FALSE, instant_error = FALSE;
+	bool destroy_wf = false, instant_error = false;
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
 
@@ -1555,7 +1555,7 @@ static PyObject *remove_from_revision_control(PyObject *self, PyObject *args)
 
 	RUN_SVN_WITH_POOL(temp_pool,
 		svn_wc_remove_from_revision_control(admobj->adm, name,
-			destroy_wf, instant_error, py_cancel_check, NULL, temp_pool));
+			destroy_wf?TRUE:FALSE, instant_error?TRUE:FALSE, py_cancel_check, NULL, temp_pool));
 
 	apr_pool_destroy(temp_pool);
 
@@ -1609,7 +1609,7 @@ static PyObject *relocate(PyObject *self, PyObject *args)
 	char *from, *to;
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
-	svn_boolean_t recurse = TRUE;
+	bool recurse = true;
 	PyObject *py_validator = Py_None, *py_path;
 
 	if (!PyArg_ParseTuple(args, "Oss|bO:relocate", &py_path, &from, &to, &recurse,
@@ -1630,9 +1630,9 @@ static PyObject *relocate(PyObject *self, PyObject *args)
 	}
 
 #if ONLY_SINCE_SVN(1, 6)
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_relocate3(path, admobj->adm, from, to, recurse, wc_validator3, py_validator, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_relocate3(path, admobj->adm, from, to, recurse?TRUE:FALSE, wc_validator3, py_validator, temp_pool));
 #else
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_relocate2(path, admobj->adm, from, to, recurse, wc_validator2, py_validator, temp_pool));
+	RUN_SVN_WITH_POOL(temp_pool, svn_wc_relocate2(path, admobj->adm, from, to, recurse?TRUE:FALSE, wc_validator2, py_validator, temp_pool));
 #endif
 
 	apr_pool_destroy(temp_pool);
@@ -1714,7 +1714,7 @@ static PyObject *translated_stream(PyObject *self, PyObject *args)
 static PyObject *adm_text_modified(PyObject *self, PyObject *args)
 {
 	const char *path;
-	svn_boolean_t force_comparison = FALSE;
+	bool force_comparison = false;
 	apr_pool_t *temp_pool;
 	svn_boolean_t ret;
 	AdmObject *admobj = (AdmObject *)self;
@@ -1737,7 +1737,7 @@ static PyObject *adm_text_modified(PyObject *self, PyObject *args)
 	}
 
 	RUN_SVN_WITH_POOL(temp_pool,
-		  svn_wc_text_modified_p(&ret, path, force_comparison, admobj->adm,
+		  svn_wc_text_modified_p(&ret, path, force_comparison?TRUE:FALSE, admobj->adm,
 			temp_pool));
 
 	apr_pool_destroy(temp_pool);
@@ -1883,7 +1883,7 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
 {
 	const char *path;
 	const char *tempfile;
-	svn_boolean_t fulltext;
+	bool fulltext;
 	PyObject *editor_obj, *py_digest, *py_path;
 	unsigned char digest[APR_MD5_DIGESTSIZE];
 	apr_pool_t *temp_pool;
@@ -1910,7 +1910,7 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
 
 	RUN_SVN_WITH_POOL(temp_pool,
 		svn_wc_transmit_text_deltas2(&tempfile, digest,
-			path, admobj->adm, fulltext,
+			path, admobj->adm, fulltext?TRUE:FALSE,
 			&py_editor, editor_obj, temp_pool));
 
 	py_digest = PyBytes_FromStringAndSize((char *)digest, APR_MD5_DIGESTSIZE);
@@ -2046,7 +2046,7 @@ static PyObject *probe_try(PyObject *self, PyObject *args)
 	AdmObject *admobj = (AdmObject *)self, *ret;
 	apr_pool_t *pool;
 	int levels_to_lock = -1;
-	svn_boolean_t writelock = FALSE;
+	bool writelock = false;
 	PyObject *py_path;
 
 	if (!PyArg_ParseTuple(args, "O|bi", &py_path, &writelock, &levels_to_lock))
@@ -2088,7 +2088,7 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 {
 	AdmObject *admobj = (AdmObject *)self;
 	apr_pool_t *temp_pool;
-	svn_boolean_t resolve_props, resolve_tree, resolve_text;
+	bool resolve_props, resolve_tree, resolve_text;
 	int depth;
 #if ONLY_SINCE_SVN(1, 5)
 	svn_wc_conflict_choice_t conflict_choice;
@@ -2119,8 +2119,8 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 
 #if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool,
-		  svn_wc_resolved_conflict4(path, admobj->adm, resolve_text,
-										resolve_props, resolve_tree, depth,
+		  svn_wc_resolved_conflict4(path, admobj->adm, resolve_text?TRUE:FALSE,
+										resolve_props?TRUE:FALSE, resolve_tree?TRUE:FALSE, depth,
 										conflict_choice, py_wc_notify_func,
 									   (void *)notify_func, py_cancel_check,
 									   NULL, temp_pool));
@@ -2132,8 +2132,8 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 		return NULL;
 	} else {
 		RUN_SVN_WITH_POOL(temp_pool,
-			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text,
-											resolve_props, depth,
+			  svn_wc_resolved_conflict3(path, admobj->adm, resolve_text?TRUE:FALSE,
+											resolve_props?TRUE:FALSE, depth,
 											conflict_choice, py_wc_notify_func,
 										   (void *)notify_func, py_cancel_check,
 										   NULL, temp_pool));
@@ -2156,8 +2156,8 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
 		return NULL;
 	} else {
 		RUN_SVN_WITH_POOL(temp_pool,
-			  svn_wc_resolved_conflict2(path, admobj->adm, resolve_text,
-											resolve_props,
+			  svn_wc_resolved_conflict2(path, admobj->adm, resolve_text?TRUE:FALSE,
+											resolve_props?TRUE:FALSE,
 											(depth == svn_depth_infinity),
 											py_wc_notify_func,
 										   (void *)notify_func, py_cancel_check,
@@ -2431,9 +2431,9 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	char *path;
 	AdmObject *admobj;
 	PyObject *py_wcprop_changes = Py_None;
-	svn_boolean_t remove_lock = FALSE, remove_changelist = FALSE;
+	bool remove_lock = false, remove_changelist = false;
 	char *md5_digest = NULL, *sha1_digest = NULL;
-	svn_boolean_t recurse = FALSE;
+	bool recurse = false;
 	apr_pool_t *temp_pool;
 	apr_array_header_t *wcprop_changes;
 	int md5_digest_len, sha1_digest_len;
@@ -2501,14 +2501,14 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		svn_checksum_p = NULL;
 	}
 	RUN_SVN_WITH_POOL(temp_pool,
-		svn_wc_queue_committed2(self->queue, path, admobj->adm, recurse,
-							   wcprop_changes, remove_lock, remove_changelist,
+		svn_wc_queue_committed2(self->queue, path, admobj->adm, recurse?TRUE:FALSE,
+							   wcprop_changes, remove_lock?TRUE:FALSE, remove_changelist?TRUE:FALSE,
 							   svn_checksum_p, temp_pool));
 	}
 #else
 	RUN_SVN_WITH_POOL(temp_pool,
-		svn_wc_queue_committed(&self->queue, path, admobj->adm, recurse,
-							   wcprop_changes, remove_lock, remove_changelist,
+		svn_wc_queue_committed(&self->queue, path, admobj->adm, recurse?TRUE:FALSE,
+							   wcprop_changes, remove_lock?TRUE:FALSE, remove_changelist?TRUE:FALSE,
 							   (unsigned char *)md5_digest, temp_pool));
 #endif
 

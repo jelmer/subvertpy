@@ -958,7 +958,7 @@ static PyObject *stream_init(PyTypeObject *type, PyObject *args, PyObject *kwarg
 	if (ret->pool == NULL)
 		return NULL;
 	ret->stream = svn_stream_empty(ret->pool);
-	ret->closed = FALSE;
+	ret->closed = false;
 
 	return (PyObject *)ret;
 }
@@ -967,7 +967,7 @@ static PyObject *stream_close(StreamObject *self)
 {
 	if (!self->closed) {
 		svn_stream_close(self->stream);
-		self->closed = TRUE;
+		self->closed = true;
 	}
 	Py_RETURN_NONE;
 }
@@ -1032,7 +1032,7 @@ static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 							   self->stream,
 							   temp_pool,
 							   temp_pool));
-		self->closed = TRUE;
+		self->closed = true;
 		ret = PyBytes_FromStringAndSize(result->data, result->len);
 		apr_pool_destroy(temp_pool);
 		return ret;
