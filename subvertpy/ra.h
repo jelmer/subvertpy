@@ -21,7 +21,7 @@
 #define _BZR_SVN_RA_H_
 
 typedef struct {
-	PyObject_HEAD
+    PyObject_HEAD
     svn_auth_baton_t *auth_baton;
     apr_pool_t *pool;
     PyObject *providers;
