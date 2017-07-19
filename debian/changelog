@@ -1,4 +1,4 @@
-subvertpy (0.10.1-1) UNRELEASED; urgency=medium
+subvertpy (0.10.1-1) unstable; urgency=medium
 
   * New upstream release.
    + Fixes bigendian issues. Closes: #868770
