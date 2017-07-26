@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Debian Python Modules Team <python-modules-team@lists.alioth.debian.org>
 Uploaders: Jelmer Vernooĳ <jelmer@debian.org>
 Homepage: https://www.jelmer.uk/subvertpy
-Build-Depends: debhelper (>= 9),
+Build-Depends: debhelper (>= 9.20151004),
                libsvn-dev,
                python (>= 2.6.6-3),
                python-all-dbg (>= 2.6.6-3),
