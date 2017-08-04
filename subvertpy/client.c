@@ -70,6 +70,22 @@ typedef struct {
     apr_pool_t *pool;
 } InfoObject;
 
+#define INVOKE_COMMIT_CALLBACK(pool, commit_info, callback) \
+    { \
+        PyObject *py_commit_info = py_commit_info_tuple(commit_info); \
+        if (py_commit_info == NULL) { \
+            apr_pool_destroy(pool); \
+            return NULL; \
+        } \
+        ret = PyObject_CallFunction(py_commit_callback2, "O", py_commit_info); \
+        Py_DECREF(py_commit_info); \
+        if (ret == NULL) { \
+            apr_pool_destroy(pool); \
+            return NULL; \
+        } \
+    } \
+
+
 static int client_set_auth(PyObject *self, PyObject *auth, void *closure);
 static int client_set_config(PyObject *self, PyObject *auth, void *closure);
 
@@ -430,7 +446,7 @@ static svn_error_t *py_log_msg_func2(const char **log_msg, const char **tmp_file
     return NULL;
 }
 
-static PyObject *py_commit_info_tuple(svn_commit_info_t *ci)
+static PyObject *py_commit_info_tuple(const svn_commit_info_t *ci)
 {
     if (ci == NULL)
         Py_RETURN_NONE;
@@ -858,18 +874,7 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 #endif
 
 #if ONLY_BEFORE_SVN(1, 8)
-    {
-        PyObject *py_commit_info = py_commit_info_tuple(commit_info);
-        if (py_commit_info == NULL) {
-            apr_pool_destroy(temp_pool);
-            return NULL;
-        }
-        ret = PyObject_CallFunction(py_commit_callback2, "O", py_commit_info);
-        Py_DECREF(py_commit_info);
-        if (ret == NULL) {
-            apr_pool_destroy(temp_pool);
-            return NULL;
-        }
+    INVOKE_COMMIT_CALLBACK(temp_pool, commit_info, callback);
 #endif
 
     apr_pool_destroy(temp_pool);
@@ -1004,13 +1009,16 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
     PyObject *paths;
     bool force=false, keep_local=false;
     apr_pool_t *temp_pool;
+#if ONLY_BEFORE_SVN(1, 7)
     svn_commit_info_t *commit_info = NULL;
+#endif
     PyObject *ret, *py_revprops;
     apr_array_header_t *apr_paths;
     ClientObject *client = (ClientObject *)self;
     apr_hash_t *hash_revprops;
+    PyObject *callback = Py_None;
 
-    if (!PyArg_ParseTuple(args, "O|bbO", &paths, &force, &keep_local, &py_revprops))
+    if (!PyArg_ParseTuple(args, "O|bbOO", &paths, &force, &keep_local, &py_revprops, &callback))
         return NULL;
 
     temp_pool = Pool(NULL);
@@ -1031,7 +1039,10 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
         hash_revprops = NULL;
     }
 
-#if ONLY_SINCE_SVN(1, 5)
+#if ONLY_SINCE_SVN(1, 7)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_delete4(
+        apr_paths, force, keep_local, hash_revprops, py_commit_callback2, callback, client->client, temp_pool));
+#elif ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_delete3(
         &commit_info, apr_paths, force, keep_local, hash_revprops, client->client, temp_pool));
 #else
@@ -1052,7 +1063,9 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
         &commit_info, apr_paths, force, client->client, temp_pool));
 #endif
 
-    ret = py_commit_info_tuple(commit_info);
+#if ONLY_BEFORE_SVN(1, 7)
+    INVOKE_COMMIT_CALLBACK(temp_pool, commit_info, callback);
+#endif
 
     apr_pool_destroy(temp_pool);
 
