@@ -1018,9 +1018,37 @@ static PyObject *py_wc_context_locked(PyObject *self, PyObject *args)
     return Py_BuildValue("(bb)", locked_here?true:false, locked?true:false);
 }
 
+static PyObject *py_wc_context_check_wc(PyObject *self, PyObject *args)
+{
+    PyObject* py_path;
+    const char *path;
+    apr_pool_t *pool;
+    svn_wc_context_t *wc_context = ((ContextObject *)self)->context;
+    int wc_format;
+
+    if (!PyArg_ParseTuple(args, "O", &py_path))
+        return NULL;
+
+    pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, pool);
+    if (path == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(pool, svn_wc_check_wc2(&wc_format, wc_context, path, pool));
+
+    apr_pool_destroy(pool);
+
+    return PyInt_FromLong(wc_format);
+}
+
 static PyMethodDef context_methods[] = {
 	{ "locked", py_wc_context_locked, METH_VARARGS, "locked(path) -> (locked_here, locked)\n"
 		"Check whether a patch is locked."},
+    { "check_wc", py_wc_context_check_wc, METH_VARARGS, "check_wc(path) -> wc_format\n"
+        "Check format version of a working copy." },
     { NULL }
 };
 

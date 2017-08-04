@@ -329,3 +329,8 @@ class ContextTests(SubversionTestCase):
         context = wc.Context()
         self.make_client("repos", "checkout")
         self.assertEqual((False, False), context.locked("checkout"))
+
+    def test_check_wc(self):
+        context = wc.Context()
+        self.make_client("repos", "checkout")
+        self.assertIsInstance(context.check_wc("checkout"), int)
