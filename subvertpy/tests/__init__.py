@@ -313,10 +313,13 @@ class SubversionTestCase(TestCaseInTempDir):
         olddir = os.path.abspath('.')
         self.next_message = message
         os.chdir(dir)
-        info = self.client_ctx.commit(["."], recursive, False)
+        info = []
+        def add_info(*args):
+            info.append(args)
+        self.client_ctx.commit(["."], recursive, False, callback=add_info)
         os.chdir(olddir)
-        assert info is not None
-        return info
+        assert len(info) == 1
+        return info[0]
 
     def client_add(self, relpath, recursive=True):
         """Add specified files to working copy.
