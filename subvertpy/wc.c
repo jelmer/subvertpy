@@ -1098,6 +1098,33 @@ static PyObject *py_wc_context_props_modified_p2(PyObject *self, PyObject *args)
     return PyBool_FromLong(modified);
 }
 
+static PyObject *py_wc_context_conflicted(PyObject *self, PyObject *args)
+{
+    PyObject* py_path;
+    const char *path;
+    apr_pool_t *pool;
+    svn_wc_context_t *wc_context = ((ContextObject *)self)->context;
+    svn_boolean_t text_conflicted, props_conflicted, tree_conflicted;
+
+    if (!PyArg_ParseTuple(args, "O", &py_path))
+        return NULL;
+
+    pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, pool);
+    if (path == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(pool, svn_wc_conflicted_p3(
+         &text_conflicted, &props_conflicted, &tree_conflicted, wc_context,
+         path, pool));
+
+    apr_pool_destroy(pool);
+
+    return Py_BuildValue("(bbb)", text_conflicted, props_conflicted, tree_conflicted);
+}
 
 static PyMethodDef context_methods[] = {
 	{ "locked", py_wc_context_locked, METH_VARARGS, "locked(path) -> (locked_here, locked)\n"
@@ -1108,6 +1135,9 @@ static PyMethodDef context_methods[] = {
         "Check whether text of a file is modified against base." },
     { "props_modified", py_wc_context_props_modified_p2, METH_VARARGS, "props_modified(path) -> bool\n"
         "Check whether props of a file are modified against base." },
+    { "conflicted", py_wc_context_conflicted, METH_VARARGS,
+        "conflicted(path) -> (text_conflicted, prop_conflicted, tree_conflicted)\n"
+        "Check whether a path is conflicted." },
     { NULL }
 };
 
