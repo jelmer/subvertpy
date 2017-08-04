@@ -1000,6 +1000,8 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     RUN_SVN_WITH_POOL(temp_pool, svn_client_cat2(stream, path,
         &c_peg_rev, &c_rev, client->client, temp_pool));
+    ret = Py_None;
+    Py_INCREF(ret);
 #endif
 
     apr_pool_destroy(temp_pool);
