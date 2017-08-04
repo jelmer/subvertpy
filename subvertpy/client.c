@@ -77,7 +77,12 @@ typedef struct {
             apr_pool_destroy(pool); \
             return NULL; \
         } \
-        ret = PyObject_CallFunction(py_commit_callback2, "O", py_commit_info); \
+        if (callback != Py_None) { \
+            ret = PyObject_CallFunction(callback, "O", py_commit_info); \
+        } else { \
+            ret = Py_None; \
+            Py_INCREF(ret); \
+        } \
         Py_DECREF(py_commit_info); \
         if (ret == NULL) { \
             apr_pool_destroy(pool); \
@@ -1072,7 +1077,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
     return ret;
 }
 
-static PyObject *client_mkdir(PyObject *self, PyObject *args)
+static PyObject *client_mkdir(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject *paths, *revprops = NULL;
     bool make_parents = false;
@@ -1082,8 +1087,10 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args)
     apr_array_header_t *apr_paths;
     apr_hash_t *hash_revprops;
     ClientObject *client = (ClientObject *)self;
+    PyObject *callback = Py_None;
+    char *kwnames[] = { "path", "make_parents", "revprops", "callback", NULL };
 
-    if (!PyArg_ParseTuple(args, "O|bO", &paths, &make_parents, &revprops))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bOO", kwnames, &paths, &make_parents, &revprops, &callback))
         return NULL;
 
     temp_pool = Pool(NULL);
@@ -1111,9 +1118,15 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args)
         hash_revprops = NULL;
     }
 
+#if ONLY_SINCE_SVN(1, 7)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_mkdir4(apr_paths,
+                make_parents?TRUE:FALSE, hash_revprops, py_commit_callback2, callback,
+                client->client, temp_pool));
+#else
     RUN_SVN_WITH_POOL(temp_pool, svn_client_mkdir3(&commit_info,
                                                     apr_paths,
                 make_parents?TRUE:FALSE, hash_revprops, client->client, temp_pool));
+#endif
 #else
     if (make_parents) {
         PyErr_SetString(PyExc_ValueError,
@@ -1133,14 +1146,12 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args)
                 client->client, temp_pool));
 #endif
 
-    ret = py_commit_info_tuple(commit_info);
+    INVOKE_COMMIT_CALLBACK(temp_pool, commit_info, callback);
 
     apr_pool_destroy(temp_pool);
 
     return ret;
 }
-
-
 
 static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 {
@@ -1937,7 +1948,7 @@ static PyMethodDef client_methods[] = {
     { "update", (PyCFunction)client_update, METH_VARARGS|METH_KEYWORDS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
     { "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.list(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
     { "diff", (PyCFunction)client_diff, METH_VARARGS|METH_KEYWORDS, "S.diff(rev1, rev2, path1=None, path2=None, relative_to_dir=None, diffopts=[], encoding=\"utf-8\", ignore_ancestry=True, no_diff_deleted=True, ignore_content_type=False) -> unified diff as a string" },
-    { "mkdir", (PyCFunction)client_mkdir, METH_VARARGS|METH_KEYWORDS, "S.mkdir(paths, make_parents=False, revprops=None) -> (revnum, date, author)" },
+    { "mkdir", (PyCFunction)client_mkdir, METH_VARARGS|METH_KEYWORDS, "S.mkdir(paths, make_parents=False, revprops=None, callback=None)" },
     { "log", (PyCFunction)client_log, METH_VARARGS|METH_KEYWORDS,
         "S.log(callback, paths, start_rev=None, end_rev=None, limit=0, peg_revision=None, discover_changed_paths=False, strict_node_history=False, include_merged_revisions=False, revprops=None)" },
     { "info", (PyCFunction)client_info, METH_VARARGS|METH_KEYWORDS,
