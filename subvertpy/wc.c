@@ -34,6 +34,8 @@
 #define T_BOOL T_BYTE
 #endif
 
+static PyTypeObject Context_Type;
+
 #if ONLY_BEFORE_SVN(1, 5)
 struct svn_wc_committed_queue_t
 {
@@ -982,7 +984,120 @@ PyTypeObject CommittedQueue_Type = {
 	committed_queue_init, /*	newfunc tp_new;	*/
 };
 
+#if ONLY_SINCE_SVN(1, 7)
 
+typedef struct {
+    PyObject_VAR_HEAD
+    apr_pool_t *pool;
+    svn_wc_context_t *context;
+} ContextObject;
+
+static PyMethodDef context_methods[] = {
+    { NULL }
+};
+
+static void context_dealloc(PyObject *self)
+{
+    ContextObject *context_obj = (ContextObject *)self;
+    svn_wc_context_destroy(context_obj->context);
+    apr_pool_destroy(context_obj->pool);
+    PyObject_Del(self);
+}
+
+static PyObject *context_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
+{
+    ContextObject *ret;
+    char *kwnames[] = { NULL };
+    svn_config_t *config = NULL;
+
+    // TODO(jelmer): Support passing in config
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwnames))
+        return NULL;
+
+    ret = PyObject_New(ContextObject, &Context_Type);
+    if (ret == NULL)
+        return NULL;
+
+    ret->pool = Pool(NULL);
+    if (ret->pool == NULL)
+        return NULL;
+    RUN_SVN_WITH_POOL(ret->pool, svn_wc_context_create(&ret->context, config,
+                                                       ret->pool, ret->pool));
+
+    return (PyObject *)ret;
+}
+
+static PyTypeObject Context_Type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+	"wc.Context", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(ContextObject),
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+
+	/* Methods to implement standard operations */
+
+	context_dealloc, /*	destructor tp_dealloc;	*/
+	NULL, /*	printfunc tp_print;	*/
+	NULL, /*	getattrfunc tp_getattr;	*/
+	NULL, /*	setattrfunc tp_setattr;	*/
+	NULL, /*	cmpfunc tp_compare;	*/
+	NULL, /*	reprfunc tp_repr;	*/
+
+	/* Method suites for standard classes */
+
+	NULL, /*	PyNumberMethods *tp_as_number;	*/
+	NULL, /*	PySequenceMethods *tp_as_sequence;	*/
+	NULL, /*	PyMappingMethods *tp_as_mapping;	*/
+
+	/* More standard operations (here for binary compatibility) */
+
+	NULL, /*	hashfunc tp_hash;	*/
+	NULL, /*	ternaryfunc tp_call;	*/
+	NULL, /*	reprfunc tp_str;	*/
+	NULL, /*	getattrofunc tp_getattro;	*/
+	NULL, /*	setattrofunc tp_setattro;	*/
+
+	/* Functions to access object as input/output buffer */
+	NULL, /*	PyBufferProcs *tp_as_buffer;	*/
+
+	/* Flags to define presence of optional/expanded features */
+	0, /*	long tp_flags;	*/
+
+	"Context", /*	const char *tp_doc;  Documentation string */
+
+	/* Assigned meaning in release 2.0 */
+	/* call function for all accessible objects */
+	NULL, /*	traverseproc tp_traverse;	*/
+
+	/* delete references to contained objects */
+	NULL, /*	inquiry tp_clear;	*/
+
+	/* Assigned meaning in release 2.1 */
+	/* rich comparisons */
+	NULL, /*	richcmpfunc tp_richcompare;	*/
+
+	/* weak reference enabler */
+	0, /*	Py_ssize_t tp_weaklistoffset;	*/
+
+	/* Added in release 2.2 */
+	/* Iterators */
+	NULL, /*	getiterfunc tp_iter;	*/
+	NULL, /*	iternextfunc tp_iternext;	*/
+
+	/* Attribute descriptor and subclassing stuff */
+	context_methods, /*	struct PyMethodDef *tp_methods;	*/
+	NULL, /*	struct PyMemberDef *tp_members;	*/
+	NULL, /*	struct PyGetSetDef *tp_getset;	*/
+	NULL, /*	struct _typeobject *tp_base;	*/
+	NULL, /*	PyObject *tp_dict;	*/
+	NULL, /*	descrgetfunc tp_descr_get;	*/
+	NULL, /*	descrsetfunc tp_descr_set;	*/
+	0, /*	Py_ssize_t tp_dictoffset;	*/
+	NULL, /*	initproc tp_init;	*/
+	NULL, /*	allocfunc tp_alloc;	*/
+	context_init, /*	newfunc tp_new;	*/
+};
+
+#endif
 
 static PyObject *
 moduleinit(void)
@@ -997,6 +1112,11 @@ moduleinit(void)
 
 	if (PyType_Ready(&Adm_Type) < 0)
 		return NULL;
+
+#if ONLY_SINCE_SVN(1, 7)
+	if (PyType_Ready(&Context_Type) < 0)
+		return NULL;
+#endif
 
 	if (PyType_Ready(&Editor_Type) < 0)
 		return NULL;
@@ -1096,6 +1216,11 @@ moduleinit(void)
 
 	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
 	Py_INCREF(&CommittedQueue_Type);
+
+#if ONLY_SINCE_SVN(1, 7)
+	PyModule_AddObject(mod, "Context", (PyObject *)&Context_Type);
+	Py_INCREF(&Context_Type);
+#endif
 
 	return mod;
 }
