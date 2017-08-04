@@ -17,7 +17,6 @@
 
 from io import BytesIO
 import os
-from unittest import SkipTest
 
 import subvertpy
 from subvertpy import (

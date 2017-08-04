@@ -314,6 +314,7 @@ class SubversionTestCase(TestCaseInTempDir):
         self.next_message = message
         os.chdir(dir)
         info = []
+
         def add_info(*args):
             info.append(args)
         self.client_ctx.commit(["."], recursive, False, callback=add_info)
