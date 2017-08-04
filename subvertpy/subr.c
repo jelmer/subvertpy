@@ -36,7 +36,7 @@ static PyObject *py_uri_canonicalize(PyObject *self, PyObject *args)
 
     pool = Pool(NULL);
     uri = py_object_to_svn_uri(py_uri, pool);
-    ret = PyString_FromString(uri);
+    ret = PyUnicode_FromString(uri);
     apr_pool_destroy(pool);
 
     return ret;
