@@ -410,7 +410,12 @@ def subvertpy_modules():
             "subvertpy.wc",
             [source_path(n) for n in
                 ["wc.c", "wc_adm.c", "util.c", "editor.c"]],
-            libraries=["svn_wc-1", "svn_subr-1"])
+            libraries=["svn_wc-1", "svn_subr-1"]),
+        SvnExtension(
+            "subvertpy.subr",
+            [source_path(n)
+                for n in ["util.c", "subr.c"]],
+            libraries=["svn_subr-1"]),
         ]
 
 

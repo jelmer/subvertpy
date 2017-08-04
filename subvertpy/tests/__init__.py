@@ -442,6 +442,7 @@ def test_suite():
         'ra',
         'repos',
         'server',
+        'subr',
         'wc',
         ]
     module_names = ['subvertpy.tests.test_' + name for name in names]
