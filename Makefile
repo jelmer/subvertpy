@@ -12,6 +12,9 @@ all: build build-inplace
 build::
 	$(SETUP) build
 
+build-nodeprecated:
+	$(MAKE) build CFLAGS+=-Wno-deprecated-declarations
+
 build-inplace::
 	$(SETUP) build_ext --inplace
 
