@@ -1643,7 +1643,7 @@ static PyObject *wc_status(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_adm_abspath(py_path, self, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;

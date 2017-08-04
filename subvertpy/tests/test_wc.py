@@ -68,7 +68,7 @@ class AdmTests(TestCase):
         if wc.api_version() < (1, 5):
             self.assertRaises(
                 NotImplementedError, wc.match_ignore_list, "foo", [])
-            return  # Skip test
+            self.skipTest("match_ignore_list not supported with svn < 1.5")
         self.assertTrue(wc.match_ignore_list("foo", ["f*"]))
         self.assertTrue(wc.match_ignore_list("foo", ["foo"]))
         self.assertFalse(wc.match_ignore_list("foo", []))
@@ -90,13 +90,9 @@ class WcTests(SubversionTestCase):
 
 class AdmObjTests(SubversionTestCase):
 
-    def setUp(self):
-        super(AdmObjTests, self).setUp()
-        if getattr(wc, "WorkingCopy", None) is None:
-            raise SkipTest(
-                "Subversion 1.7 API for WorkingCopy not yet supported")
-
     def test_has_binary_prop(self):
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"\x00 \x01"})
         self.client_add('checkout/bar')
@@ -122,6 +118,8 @@ class AdmObjTests(SubversionTestCase):
         adm.close()
 
     def test_add_repos_file(self):
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         adm = wc.Adm(None, "checkout", True)
         adm.add_repos_file("checkout/bar", BytesIO(b"basecontents"),
@@ -130,6 +128,8 @@ class AdmObjTests(SubversionTestCase):
                          wc.get_pristine_contents("checkout/bar").read())
 
     def test_mark_missing_deleted(self):
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"\x00 \x01"})
         self.client_add('checkout/bar')
@@ -152,6 +152,8 @@ class AdmObjTests(SubversionTestCase):
         adm.relocate("checkout", "file://", "http://")
 
     def test_translated_stream(self):
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"My id: $Id$"})
         self.client_add('checkout/bar')
@@ -195,8 +197,6 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual(adm.prop_get("aprop", "checkout/bar"), None)
 
     def test_committed_queue(self):
-        if getattr(wc, "CommittedQueue", None) is None:
-            raise SkipTest("CommittedQueue not available")
         cq = wc.CommittedQueue()
         self.make_client("repos", "checkout")
         adm = wc.Adm(None, "checkout", True)
@@ -248,6 +248,8 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual(wc.STATUS_NORMAL, adm.status('bar').status)
 
     def test_transmit_text_deltas(self):
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", ".")
         self.build_tree({"bar": b"blala"})
         self.client_add('bar')
@@ -290,6 +292,8 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual(1, bar.revision)
 
     def test_process_committed_queue(self):
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"la"})
         self.client_add('checkout/bar')
