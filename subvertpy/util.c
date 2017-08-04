@@ -96,6 +96,42 @@ const char *py_object_to_svn_path_or_url(PyObject *obj, apr_pool_t *pool)
     return ret;
 }
 
+const char *py_object_to_svn_abspath(PyObject *obj, apr_pool_t *pool)
+{
+    const char *ret;
+    PyObject *bytes_obj = NULL;
+
+    if (PyUnicode_Check(obj)) {
+        bytes_obj = obj = PyUnicode_AsUTF8String(obj);
+        if (obj == NULL) {
+            return NULL;
+        }
+    }
+
+    if (!PyBytes_Check(obj)) {
+        PyErr_SetString(PyExc_TypeError,
+                        "URIs need to be UTF-8 bytestrings or unicode strings");
+        Py_XDECREF(bytes_obj);
+        return NULL;
+    }
+
+    ret = PyBytes_AsString(obj);
+    ret = apr_pstrdup(pool, ret);
+    Py_XDECREF(obj);
+    if (ret == NULL) {
+        return NULL;
+    }
+    if (svn_dirent_is_absolute(ret)) {
+        return ret;
+    } else {
+        const char *absolute;
+        RUN_SVN_WITH_POOL(pool, svn_dirent_get_absolute(&absolute, ret, pool));
+        return absolute;
+    }
+}
+
+
+
 const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool)
 {
     const char *ret;

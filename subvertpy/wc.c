@@ -992,7 +992,35 @@ typedef struct {
     svn_wc_context_t *context;
 } ContextObject;
 
+static PyObject *py_wc_context_locked(PyObject *self, PyObject *args)
+{
+    PyObject* py_path;
+    const char *path;
+    apr_pool_t *pool;
+    svn_wc_context_t *wc_context = ((ContextObject *)self)->context;
+    svn_boolean_t locked_here, locked;
+
+    if (!PyArg_ParseTuple(args, "O", &py_path))
+        return NULL;
+
+    pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, pool);
+    if (path == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(pool, svn_wc_locked2(&locked_here, &locked, wc_context, path, pool));
+
+    apr_pool_destroy(pool);
+
+    return Py_BuildValue("(bb)", locked_here?true:false, locked?true:false);
+}
+
 static PyMethodDef context_methods[] = {
+	{ "locked", py_wc_context_locked, METH_VARARGS, "locked(path) -> (locked_here, locked)\n"
+		"Check whether a patch is locked."},
     { NULL }
 };
 
