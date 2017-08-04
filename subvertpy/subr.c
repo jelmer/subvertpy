@@ -25,49 +25,68 @@
 
 #include "util.h"
 
+static PyObject *py_uri_canonicalize(PyObject *self, PyObject *args)
+{
+    const char *uri;
+    PyObject *py_uri, *ret;
+    apr_pool_t *pool;
+
+    if (!PyArg_ParseTuple(args, "O", &py_uri))
+        return NULL;
+
+    pool = Pool(NULL);
+    uri = py_object_to_svn_uri(py_uri, pool);
+    ret = PyString_FromString(uri);
+    apr_pool_destroy(pool);
+
+    return ret;
+}
+
 static PyMethodDef subr_methods[] = {
+    { "uri_canonicalize", py_uri_canonicalize, METH_VARARGS, "uri_canonicalize(uri) -> uri\n"
+        "Canonicalize a URI."},
     { NULL }
 };
 
 static PyObject *
 moduleinit(void)
 {
-	PyObject *mod;
+    PyObject *mod;
 
-	apr_initialize();
+    apr_initialize();
 
 #if PY_MAJOR_VERSION >= 3
-	static struct PyModuleDef moduledef = {
-	  PyModuleDef_HEAD_INIT,
-	  "subr",         /* m_name */
-	  "subr", /* m_doc */
-	  -1,              /* m_size */
-	  subr_methods, /* m_methods */
-	  NULL,            /* m_reload */
-	  NULL,            /* m_traverse */
-	  NULL,            /* m_clear*/
-	  NULL,            /* m_free */
-	};
-	mod = PyModule_Create(&moduledef);
+    static struct PyModuleDef moduledef = {
+      PyModuleDef_HEAD_INIT,
+      "subr",         /* m_name */
+      "subr", /* m_doc */
+      -1,              /* m_size */
+      subr_methods, /* m_methods */
+      NULL,            /* m_reload */
+      NULL,            /* m_traverse */
+      NULL,            /* m_clear*/
+      NULL,            /* m_free */
+    };
+    mod = PyModule_Create(&moduledef);
 #else
-	mod = Py_InitModule3("subr", subr_methods, "Subversion subr");
+    mod = Py_InitModule3("subr", subr_methods, "Subversion subr");
 #endif
-	if (mod == NULL)
-		return NULL;
+    if (mod == NULL)
+        return NULL;
 
-	return mod;
+    return mod;
 }
 
 #if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC
 PyInit_subr(void)
 {
-	return moduleinit();
+    return moduleinit();
 }
 #else
 PyMODINIT_FUNC
 initsubr(void)
 {
-	moduleinit();
+    moduleinit();
 }
 #endif

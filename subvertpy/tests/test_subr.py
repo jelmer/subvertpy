@@ -15,4 +15,17 @@
 
 """Subversion subr library tests."""
 
-from unittest import SkipTest
+from unittest import TestCase
+
+from subvertpy.subr import uri_canonicalize
+
+
+class UriCanonicalizeTests(TestCase):
+
+    def test_canonicalize(self):
+        self.assertEqual('https://www.example.com',
+                uri_canonicalize('https://www.example.com/'))
+        self.assertEqual('https://www.example.com(bla)',
+                uri_canonicalize('https://www.example.com(bla)'))
+        self.assertEqual('https://www.example.com/(bla)',
+                uri_canonicalize('https://www.example.com/(bla%29'))

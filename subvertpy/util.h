@@ -49,7 +49,7 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props);
 svn_error_t *py_svn_log_wrapper(
     void *baton, apr_hash_t *changed_paths, long revision, const char *author,
     const char *date, const char *message, apr_pool_t *pool);
-svn_error_t *py_svn_error(void);
+__attribute__((warn_unused_result)) svn_error_t *py_svn_error(void);
 void PyErr_SetSubversionException(svn_error_t *error);
 PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void);
 
