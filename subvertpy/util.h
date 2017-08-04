@@ -144,11 +144,16 @@ svn_uri_canonicalize(const char *uri,
 const char *
 svn_relpath_canonicalize(const char *relpath,
                          apr_pool_t *result_pool);
+
+const char *
+svn_dirent_canonicalize(const char *dirent,
+                        apr_pool_t *result_pool);
 #endif
 
 const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool);
+const char *py_object_to_svn_path_or_url(PyObject *obj, apr_pool_t *pool);
 char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool);
 #define py_object_from_svn_abspath PyBytes_FromString
 
