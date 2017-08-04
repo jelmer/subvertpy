@@ -41,6 +41,8 @@ extern PyTypeObject CommittedQueue_Type;
 
 /* Provided by wc_adm.h */
 extern PyTypeObject Adm_Type;
+extern PyTypeObject Entry_Type;
+extern PyTypeObject Status_Type;
 svn_wc_adm_access_t *PyObject_GetAdmAccess(PyObject *obj);
 
 #ifdef __GNUC__

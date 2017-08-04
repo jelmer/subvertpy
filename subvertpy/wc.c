@@ -34,9 +34,6 @@
 #define T_BOOL T_BYTE
 #endif
 
-static PyTypeObject Entry_Type;
-static PyTypeObject Status_Type;
-
 #if ONLY_BEFORE_SVN(1, 5)
 struct svn_wc_committed_queue_t
 {

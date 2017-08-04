@@ -1000,9 +1000,6 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     RUN_SVN_WITH_POOL(temp_pool, svn_client_cat2(stream, path,
         &c_peg_rev, &c_rev, client->client, temp_pool));
-
-    ret = Py_None;
-    Py_INCREF(ret);
 #endif
 
     apr_pool_destroy(temp_pool);
@@ -1017,7 +1014,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 #if ONLY_BEFORE_SVN(1, 7)
     svn_commit_info_t *commit_info = NULL;
 #endif
-    PyObject *ret, *py_revprops;
+    PyObject *py_revprops;
     apr_array_header_t *apr_paths;
     ClientObject *client = (ClientObject *)self;
     apr_hash_t *hash_revprops;
@@ -1074,7 +1071,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 
     apr_pool_destroy(temp_pool);
 
-    return ret;
+    Py_RETURN_NONE;
 }
 
 static PyObject *client_mkdir(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -1085,7 +1082,6 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args, PyObject *kwargs)
 #if ONLY_BEFORE_SVN(1, 7)
     svn_commit_info_t *commit_info = NULL;
 #endif
-    PyObject *ret;
     apr_array_header_t *apr_paths;
     apr_hash_t *hash_revprops;
     ClientObject *client = (ClientObject *)self;
@@ -1154,7 +1150,7 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args, PyObject *kwargs)
 
     apr_pool_destroy(temp_pool);
 
-    return ret;
+    Py_RETURN_NONE;
 }
 
 static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -1167,7 +1163,6 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     apr_pool_t *temp_pool;
     svn_opt_revision_t c_src_rev;
     bool copy_as_child = true, make_parents = false;
-    PyObject *ret;
     apr_hash_t *revprops;
     bool ignore_externals = false;
     bool metadata_only = false;
@@ -1291,7 +1286,8 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     INVOKE_COMMIT_CALLBACK(temp_pool, commit_info, callback);
 #endif
     apr_pool_destroy(temp_pool);
-    return ret;
+
+    Py_RETURN_NONE;
 }
 
 static PyObject *client_propset(PyObject *self, PyObject *args)

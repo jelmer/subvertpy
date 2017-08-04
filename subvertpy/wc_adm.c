@@ -31,10 +31,7 @@
 #include "wc.h"
 
 static svn_wc_entry_callbacks2_t py_wc_entry_callbacks2;
-static PyTypeObject Entry_Type;
 static PyObject *py_entry(const svn_wc_entry_t *entry);
-
-PyTypeObject Adm_Type;
 
 typedef struct {
     PyObject_VAR_HEAD
@@ -1786,7 +1783,7 @@ static PyMemberDef entry_members[] = {
 	{ NULL, }
 };
 
-static PyTypeObject Entry_Type = {
+PyTypeObject Entry_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.Entry", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(EntryObject),
@@ -1897,7 +1894,7 @@ static PyMemberDef status_members[] = {
 	{ NULL, }
 };
 
-static PyTypeObject Status_Type = {
+PyTypeObject Status_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.Status", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
 	sizeof(StatusObject),
