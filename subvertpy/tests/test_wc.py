@@ -334,3 +334,11 @@ class ContextTests(SubversionTestCase):
         context = wc.Context()
         self.make_client("repos", "checkout")
         self.assertIsInstance(context.check_wc("checkout"), int)
+
+    def test_text_modified(self):
+        context = wc.Context()
+        self.make_client("repos", "checkout")
+        with open('checkout/bla.txt', 'w') as f:
+            f.write("modified")
+        self.client_add("checkout/bla.txt")
+        self.assertTrue(context.text_modified("checkout/bla.txt"))
