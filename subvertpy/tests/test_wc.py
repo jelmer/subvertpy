@@ -360,3 +360,21 @@ class ContextTests(SubversionTestCase):
         self.assertEqual(
             (False, False, False),
             context.conflicted("checkout/bla.txt"))
+
+    def test_crawl_revisions(self):
+        context = wc.Context()
+        self.make_client("repos", "checkout")
+        with open('checkout/bla.txt', 'w') as f:
+            f.write("modified")
+        self.client_add("checkout/bla.txt")
+        ret = []
+
+        class Reporter(object):
+            def set_path(self, *args):
+                ret.append(args)
+
+            def finish(self):
+                pass
+        context.crawl_revisions("checkout", Reporter())
+
+        self.assertEqual(ret, [('', 0, 0, None, 3)])

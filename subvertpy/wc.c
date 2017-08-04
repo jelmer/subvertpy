@@ -1126,6 +1126,48 @@ static PyObject *py_wc_context_conflicted(PyObject *self, PyObject *args)
     return Py_BuildValue("(bbb)", text_conflicted, props_conflicted, tree_conflicted);
 }
 
+static PyObject *py_wc_context_crawl_revisions(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject* py_path, *py_reporter;
+    const char *path;
+    apr_pool_t *pool;
+    svn_wc_context_t *wc_context = ((ContextObject *)self)->context;
+    char *kwnames[] = { "path", "reporter", "restore_files", "depth",
+        "honor_depth_exclude", "depth_compatibility_trick", "use_commit_time",
+        "cancel", "notify", NULL };
+    bool restore_files = false;
+    int depth = svn_depth_infinity;
+    bool honor_depth_exclude = true;
+    bool depth_compatibility_trick = false;
+    bool use_commit_time = false;
+    PyObject *notify = Py_None;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|bibbbO", kwnames,
+                                     &py_path, &py_reporter, &restore_files,
+                                     &depth, &honor_depth_exclude,
+                                     &depth_compatibility_trick,
+                                     &use_commit_time, &notify)) {
+        return NULL;
+    }
+
+    pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, pool);
+    if (path == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(pool, svn_wc_crawl_revisions5(
+         wc_context, path, &py_ra_reporter3, py_reporter, restore_files,
+         depth, honor_depth_exclude, depth_compatibility_trick,
+         use_commit_time, py_cancel_check, NULL, py_wc_notify_func, notify, pool));
+
+    apr_pool_destroy(pool);
+
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef context_methods[] = {
 	{ "locked", py_wc_context_locked, METH_VARARGS, "locked(path) -> (locked_here, locked)\n"
 		"Check whether a patch is locked."},
@@ -1138,6 +1180,9 @@ static PyMethodDef context_methods[] = {
     { "conflicted", py_wc_context_conflicted, METH_VARARGS,
         "conflicted(path) -> (text_conflicted, prop_conflicted, tree_conflicted)\n"
         "Check whether a path is conflicted." },
+    { "crawl_revisions", (PyCFunction)py_wc_context_crawl_revisions, METH_VARARGS|METH_KEYWORDS,
+        "crawl_revisions(path, reporter, restore_files, depth, honor_depth_exclude, depth_compatibility_trick, use_commit_time, notify)\n"
+        "Do a depth-first crawl of the working copy." },
     { NULL }
 };
 
