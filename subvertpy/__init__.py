@@ -1,4 +1,4 @@
-# Copyright (C) 2006-2008 Jelmer Vernooij <jelmer@jelmer.uk>
+# Copyright (C) 2006-2017 Jelmer Vernooij <jelmer@jelmer.uk>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -17,7 +17,7 @@
 """Python bindings for Subversion."""
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
-__version__ = (0, 10, 2)
+__version__ = (0, 11, 0)
 
 NODE_DIR = 2
 NODE_FILE = 1
