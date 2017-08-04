@@ -30,6 +30,12 @@
 #include "editor.h"
 #include "wc.h"
 
+/* Suppress warnings for this specific file, as it
+ * provides backwards compatibility with svn < 1.7
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 static svn_wc_entry_callbacks2_t py_wc_entry_callbacks2;
 static PyObject *py_entry(const svn_wc_entry_t *entry);
 
@@ -2032,3 +2038,5 @@ static svn_wc_entry_callbacks_t py_wc_entry_callbacks = {
 	py_wc_found_entry
 };
 #endif
+
+#pragma GCC diagnostic pop
