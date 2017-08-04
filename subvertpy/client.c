@@ -1082,7 +1082,9 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *paths, *revprops = NULL;
     bool make_parents = false;
     apr_pool_t *temp_pool;
+#if ONLY_BEFORE_SVN(1, 7)
     svn_commit_info_t *commit_info = NULL;
+#endif
     PyObject *ret;
     apr_array_header_t *apr_paths;
     apr_hash_t *hash_revprops;
@@ -1146,7 +1148,9 @@ static PyObject *client_mkdir(PyObject *self, PyObject *args, PyObject *kwargs)
                 client->client, temp_pool));
 #endif
 
+#if ONLY_BEFORE_SVN(1, 7)
     INVOKE_COMMIT_CALLBACK(temp_pool, commit_info, callback);
+#endif
 
     apr_pool_destroy(temp_pool);
 
@@ -1157,16 +1161,25 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     char *src_path, *dst_path;
     PyObject *src_rev = Py_None;
+#if ONLY_BEFORE_SVN(1, 7)
     svn_commit_info_t *commit_info = NULL;
+#endif
     apr_pool_t *temp_pool;
     svn_opt_revision_t c_src_rev;
     bool copy_as_child = true, make_parents = false;
     PyObject *ret;
     apr_hash_t *revprops;
     bool ignore_externals = false;
+    bool metadata_only = false;
     ClientObject *client = (ClientObject *)self;
+    PyObject *callback = Py_None;
+    bool pin_externals = false;
+#if ONLY_SINCE_SVN(1, 9)
+    apr_hash_t *pinned_externals = NULL;
+#endif
     char *kwnames[] = { "src_path", "dst_path", "src_rev", "copy_as_child",
-        "make_parents", "ignore_externals", "revprpos", NULL };
+        "make_parents", "ignore_externals", "revprops", "metadata_only",
+        "pin_externals", "callback", NULL };
 
 #if ONLY_SINCE_SVN(1, 4)
     PyObject *py_revprops = Py_None;
@@ -1176,9 +1189,10 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     svn_client_copy_source_t src;
 #endif
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|ObbbO", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|ObbbbOOO", kwnames,
              &src_path, &dst_path, &src_rev, &copy_as_child, &make_parents,
-             &ignore_externals, &py_revprops))
+             &ignore_externals, &py_revprops, &metadata_only, &pin_externals,
+             &callback))
         return NULL;
     if (!to_opt_revision(src_rev, &c_src_rev))
         return NULL;
@@ -1224,6 +1238,21 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 #endif
+#if ONLY_BEFORE_SVN(1, 9)
+    if (metadata_only) {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "metadata_only not supported in svn < 1.9");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+    if (pin_externals != Py_None) {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "pin_externals not supported in svn < 1.9");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+    // TODO(jelmer): Set pinned_externals
+#endif
 #if ONLY_SINCE_SVN(1, 5)
     src.path = src_path;
     src.revision = src.peg_revision = &c_src_rev;
@@ -1235,7 +1264,18 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     APR_ARRAY_IDX(src_paths, 0, svn_client_copy_source_t *) = &src;
 #endif
-#if ONLY_SINCE_SVN(1, 6)
+#if ONLY_SINCE_SVN(1, 9)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_copy7(src_paths,
+                dst_path, copy_as_child, make_parents,
+                ignore_externals, metadata_only, pin_externals,
+                pinned_externals, revprops, py_commit_callback2,
+                callback, client->client, temp_pool));
+#elif ONLY_SINCE_SVN(1, 7)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_copy6(src_paths,
+                dst_path, copy_as_child, make_parents,
+                ignore_externals, revprops, py_commit_callback2, callback,
+                client->client, temp_pool));
+#elif ONLY_SINCE_SVN(1, 6)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_copy5(&commit_info, src_paths,
                 dst_path, copy_as_child, make_parents,
                 ignore_externals, revprops, client->client, temp_pool));
@@ -1247,7 +1287,9 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_copy2(&commit_info, src_path,
                 &c_src_rev, dst_path, client->client, temp_pool));
 #endif
-    ret = py_commit_info_tuple(commit_info);
+#if ONLY_BEFORE_SVN(1, 7)
+    INVOKE_COMMIT_CALLBACK(temp_pool, commit_info, callback);
+#endif
     apr_pool_destroy(temp_pool);
     return ret;
 }
