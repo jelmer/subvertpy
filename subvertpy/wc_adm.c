@@ -126,6 +126,44 @@ static PyObject *adm_access_path(PyObject *self)
     return py_object_from_svn_abspath(svn_wc_adm_access_path(admobj->adm));
 }
 
+static const char *py_object_to_adm_abspath(PyObject *obj, PyObject *adm, apr_pool_t *pool)
+{
+    const char *ret;
+    PyObject *bytes_obj = NULL;
+    AdmObject *admobj = (AdmObject *)adm;
+    ADM_CHECK_CLOSED(admobj);
+
+    if (PyUnicode_Check(obj)) {
+        bytes_obj = obj = PyUnicode_AsUTF8String(obj);
+        if (obj == NULL) {
+            return NULL;
+        }
+    }
+
+    if (!PyBytes_Check(obj)) {
+        PyErr_SetString(PyExc_TypeError,
+                        "URIs need to be UTF-8 bytestrings or unicode strings");
+        Py_XDECREF(bytes_obj);
+        return NULL;
+    }
+
+    ret = PyBytes_AsString(obj);
+    ret = apr_pstrdup(pool, ret);
+    Py_XDECREF(obj);
+    if (ret == NULL) {
+        return NULL;
+    }
+#if ONLY_SINCE_SVN(1, 7)
+    if (svn_dirent_is_absolute(ret)) {
+        return ret;
+    } else {
+        return svn_dirent_join(svn_wc_adm_access_path(admobj->adm), ret, pool);
+    }
+#else
+    return ret;
+#endif
+}
+
 static PyObject *adm_locked(PyObject *self)
 {
     AdmObject *admobj = (AdmObject *)self;
@@ -896,6 +934,7 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
         "notify", NULL };
     AdmObject *admobj = (AdmObject *)self;
     apr_pool_t *temp_pool;
+    PyObject *py_dst_path;
     char *dst_path, *copyfrom_url = NULL;
     svn_revnum_t copyfrom_rev = -1;
     PyObject *py_new_base_contents, *py_new_contents, *py_new_base_props,
@@ -903,8 +942,8 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
     svn_stream_t *new_contents, *new_base_contents;
     apr_hash_t *new_props, *new_base_props;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOOOO|zlO", kwnames,
-                                     &dst_path, &py_new_base_contents, &py_new_contents, &py_new_base_props,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOOOO|zlO", kwnames,
+                                     &py_dst_path, &py_new_base_contents, &py_new_contents, &py_new_base_props,
                                      &py_new_props, &copyfrom_url, &copyfrom_rev, &notify))
         return NULL;
 
@@ -921,6 +960,8 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
     new_base_contents = new_py_stream(temp_pool, py_new_base_contents);
 
     new_contents = new_py_stream(temp_pool, py_new_contents);
+
+    dst_path = py_object_to_svn_dirent(py_dst_path, temp_pool);
 
 #if ONLY_SINCE_SVN(1, 6)
     RUN_SVN_WITH_POOL(temp_pool, svn_wc_add_repos_file3(dst_path, admobj->adm,
@@ -1583,7 +1624,7 @@ static PyObject *conflicted(PyObject *self, PyObject *args)
  *
  * :return: A status object.
  */
-static PyObject *ra_status(PyObject *self, PyObject *args)
+static PyObject *wc_status(PyObject *self, PyObject *args)
 {
     const char *path;
     svn_wc_status2_t *st;
@@ -1679,7 +1720,7 @@ static PyMethodDef adm_methods[] = {
         "S.conflicted(path) -> (text_conflicted, prop_conflicted, tree_conflicted)" },
     { "resolved_conflict", (PyCFunction)resolved_conflict, METH_VARARGS,
         "S.resolved_conflict(path, resolve_text, resolve_props, resolve_tree, depth, conflict_choice, notify_func=None, cancel=None)" },
-    { "status", (PyCFunction)ra_status, METH_VARARGS, "status(wc_path) -> Status" },
+    { "status", (PyCFunction)wc_status, METH_VARARGS, "status(wc_path) -> Status" },
     { NULL, }
 };
 

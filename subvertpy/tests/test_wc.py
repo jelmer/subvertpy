@@ -88,10 +88,10 @@ class WcTests(SubversionTestCase):
         self.assertEqual((0, 0, 0, 0), ret)
 
 
-class AdmTests(SubversionTestCase):
+class AdmObjTests(SubversionTestCase):
 
     def setUp(self):
-        super(AdmTests, self).setUp()
+        super(AdmObjTests, self).setUp()
         if getattr(wc, "WorkingCopy", None) is None:
             raise SkipTest(
                 "Subversion 1.7 API for WorkingCopy not yet supported")
