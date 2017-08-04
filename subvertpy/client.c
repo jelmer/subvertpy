@@ -1552,15 +1552,19 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *ret;
     int i = 0;
     ClientObject *client = (ClientObject *)self;
-    bool allow_unver_obstructions = false,
-                  depth_is_sticky = false;
+    bool allow_unver_obstructions = false;
+    bool depth_is_sticky = false;
+    bool adds_as_modification = true;
+    bool make_parents = false;
     char *kwnames[] =
         { "path", "revision", "recurse", "ignore_externals", "depth_is_sticky",
-            "allow_unver_obstructions", NULL };
+            "allow_unver_obstructions", "adds_as_modification", "make_parents",
+            NULL };
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|Obbbb", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|Obbbbb", kwnames,
             &paths, &rev, &recurse, &ignore_externals,
-            &depth_is_sticky, &allow_unver_obstructions))
+            &depth_is_sticky, &allow_unver_obstructions, &adds_as_modification,
+            &make_parents))
         return NULL;
 
     if (!to_opt_revision(rev, &c_rev))
@@ -1572,7 +1576,30 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
         apr_pool_destroy(temp_pool);
         return NULL;
     }
-#if ONLY_SINCE_SVN(1, 5)
+
+#if ONLY_BEFORE_SVN(1, 7)
+    if (!adds_as_modification) {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "!adds_as_modification not supported before svn 1.7");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+    if (make_parents) {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "make_parents not supported before svn 1.7");
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+#endif
+
+#if ONLY_SINCE_SVN(1, 7)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_update4(&result_revs,
+        apr_paths, &c_rev, recurse?svn_depth_infinity:svn_depth_files,
+        depth_is_sticky?TRUE:FALSE, ignore_externals, allow_unver_obstructions?TRUE:FALSE,
+        adds_as_modification?TRUE:FALSE, make_parents?TRUE:FALSE,
+        client->client, temp_pool));
+#elif ONLY_SINCE_SVN(1, 5)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_update3(&result_revs,
         apr_paths, &c_rev, recurse?svn_depth_infinity:svn_depth_files,
         depth_is_sticky?TRUE:FALSE, ignore_externals, allow_unver_obstructions?TRUE:FALSE,
