@@ -342,3 +342,11 @@ class ContextTests(SubversionTestCase):
             f.write("modified")
         self.client_add("checkout/bla.txt")
         self.assertTrue(context.text_modified("checkout/bla.txt"))
+
+    def test_props_modified(self):
+        context = wc.Context()
+        self.make_client("repos", "checkout")
+        with open('checkout/bla.txt', 'w') as f:
+            f.write("modified")
+        self.client_add("checkout/bla.txt")
+        self.assertFalse(context.props_modified("checkout/bla.txt"))
