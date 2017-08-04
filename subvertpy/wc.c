@@ -1041,7 +1041,11 @@ static PyObject *py_wc_context_check_wc(PyObject *self, PyObject *args)
 
     apr_pool_destroy(pool);
 
+#if PY_MAJOR_VERSION >= 3
+    return PyLong_FromLong(wc_format);
+#else
     return PyInt_FromLong(wc_format);
+#endif
 }
 
 static PyObject *py_wc_context_text_modified_p2(PyObject *self, PyObject *args)
