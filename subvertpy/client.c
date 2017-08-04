@@ -734,22 +734,72 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     return PyLong_FromLong(result_rev);
 }
 
+static svn_error_t *py_commit_callback2(const svn_commit_info_t *commit_info,
+                                        void *callback, apr_pool_t *pool) {
+    PyObject *py_callback = callback;
+    PyObject *py_commit_info;
+    PyObject *ret;
+
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    py_commit_info  = py_commit_info_tuple(commit_info);
+
+    if (py_commit_info == NULL) {
+        PyGILState_Release(state);
+        return py_svn_error();
+    }
+
+    if (py_callback != Py_None) {
+        ret = PyObject_CallFunction(py_callback, "O", py_commit_info);
+    } else {
+        ret = Py_None;
+        Py_INCREF(ret);
+    }
+    Py_DECREF(py_commit_info);
+
+    PyGILState_Release(state);
+
+    if (ret == NULL) {
+        return py_svn_error();
+    }
+
+    return NULL;
+}
+
 static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject *targets;
     ClientObject *client = (ClientObject *)self;
     bool recurse=true, keep_locks=true;
     apr_pool_t *temp_pool;
+#if ONLY_BEFORE_SVN(1, 8)
     svn_commit_info_t *commit_info = NULL;
-    PyObject *ret;
+#endif
     apr_array_header_t *apr_targets;
+    bool include_file_externals = false;
+    bool include_dir_externals = false;
+    bool keep_changelist = false;
+    bool commit_as_operations = false;
+    const apr_array_header_t *changelists = NULL;
     PyObject *revprops = Py_None;
-    char *kwnames[] = { "targets", "recurse", "keep_locks", "revprops", NULL };
+    PyObject *callback = Py_None;
+    char *kwnames[] = {
+        "targets", "recurse", "keep_locks", "revprops",
+        "keep_changelist", "commit_as_operations", "include_file_externals",
+        "include_dir_externals", "callback", NULL };
 #if ONLY_SINCE_SVN(1, 5)
     apr_hash_t *hash_revprops;
 #endif
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bbO", kwnames, &targets, &recurse, &keep_locks, &revprops))
+    /* TODO(jelmer): Support changelists */
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bbObbbbO", kwnames,
+                                     &targets, &recurse, &keep_locks,
+                                     &revprops, &keep_changelist,
+                                     &commit_as_operations,
+                                     &include_file_externals,
+                                     &include_dir_externals,
+                                     &callback)) {
         return NULL;
+    }
     temp_pool = Pool(NULL);
     if (temp_pool == NULL) {
         return NULL;
@@ -765,9 +815,16 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
-
-#if ONLY_SINCE_SVN(1, 5)
     if (revprops != Py_None) {
+#if ONLY_BEFORE_SVN(1, 5)
+        if (PyDict_Size(revprops) > 0) {
+            PyErr_SetString(PyExc_NotImplementedError,
+                    "Setting revision properties only supported on svn >= 1.5");
+            apr_pool_destroy(temp_pool);
+            return NULL;
+        }
+#endif
+
         hash_revprops = prop_dict_to_hash(temp_pool, revprops);
         if (hash_revprops == NULL) {
             apr_pool_destroy(temp_pool);
@@ -777,26 +834,47 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
         hash_revprops = NULL;
     }
 
-    /* FIXME: Support keep_changelist and changelists */
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_commit4(&commit_info,
-                                                    apr_targets, recurse?svn_depth_infinity:svn_depth_files,
-                                                    keep_locks, false, NULL, hash_revprops,
-                                                    client->client, temp_pool));
+#if ONLY_SINCE_SVN(1, 8)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_commit6(
+        apr_targets, recurse?svn_depth_infinity:svn_depth_files,
+        keep_locks, keep_changelist, commit_as_operations,
+        include_file_externals, include_dir_externals, changelists,
+        hash_revprops, py_commit_callback2, callback, client->client, temp_pool));
+#elif ONLY_SINCE_SVN(1, 5)
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_commit4(
+        &commit_info, apr_targets, recurse?svn_depth_infinity:svn_depth_files,
+        keep_locks, keep_changelist, changelists, hash_revprops,
+        client->client, temp_pool));
 #else
-    if (revprops != Py_None && PyDict_Size(revprops) > 0) {
-        PyErr_SetString(PyExc_NotImplementedError,
-                "Setting revision properties only supported on svn >= 1.5");
+    if (commit_as_operations) {
+        PyErr_SetString(PyExc_NotImplementedError, "commit_as_operations only support on svn >= 1.8");
         apr_pool_destroy(temp_pool);
         return NULL;
     }
+
     RUN_SVN_WITH_POOL(temp_pool, svn_client_commit3(&commit_info,
                 apr_targets,
                recurse, keep_locks, client->client, temp_pool));
 #endif
-    ret = py_commit_info_tuple(commit_info);
+
+#if ONLY_BEFORE_SVN(1, 8)
+    {
+        PyObject *py_commit_info = py_commit_info_tuple(commit_info);
+        if (py_commit_info == NULL) {
+            apr_pool_destroy(temp_pool);
+            return NULL;
+        }
+        ret = PyObject_CallFunction(py_commit_callback2, "O", py_commit_info);
+        Py_DECREF(py_commit_info);
+        if (ret == NULL) {
+            apr_pool_destroy(temp_pool);
+            return NULL;
+        }
+#endif
+
     apr_pool_destroy(temp_pool);
 
-    return ret;
+    Py_RETURN_NONE;
 }
 
 static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -1836,7 +1914,7 @@ static PyMethodDef client_methods[] = {
         "S.export(from, to, rev=None, peg_rev=None, recurse=True, ignore_externals=False, overwrite=False, native_eol=None)" },
     { "cat", (PyCFunction)client_cat, METH_VARARGS|METH_KEYWORDS,
         "S.cat(path, output_stream, revision=None, peg_revision=None)" },
-    { "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True, revprops=None) -> (revnum, date, author)" },
+    { "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True, revprops=None, keep_changelist=False, commit_as_operations=False, include_file_externals=False, include_dir_externals=False, callback=None) -> (revnum, date, author)" },
     { "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
     { "copy", (PyCFunction)client_copy, METH_VARARGS|METH_KEYWORDS, "S.copy(src_path, dest_path, srv_rev=None)" },
     { "propset", client_propset, METH_VARARGS, "S.propset(name, value, target, recurse=True, skip_checks=False)" },
