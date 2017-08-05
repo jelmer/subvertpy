@@ -935,7 +935,8 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
     AdmObject *admobj = (AdmObject *)self;
     apr_pool_t *temp_pool;
     PyObject *py_dst_path;
-    char *dst_path, *copyfrom_url = NULL;
+    const char *dst_path;
+    char *copyfrom_url = NULL;
     svn_revnum_t copyfrom_rev = -1;
     PyObject *py_new_base_contents, *py_new_contents, *py_new_base_props,
              *py_new_props, *notify = Py_None;

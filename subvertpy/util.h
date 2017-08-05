@@ -87,6 +87,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error);
 apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool);
 void PyErr_SetAprStatus(apr_status_t status);
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
+PyObject *dirent_hash_to_dict(apr_hash_t *dirents, unsigned int dirent_fields, apr_pool_t *temp_pool);
 PyObject *PyOS_tmpfile(void);
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool);
 bool pyify_log_message(

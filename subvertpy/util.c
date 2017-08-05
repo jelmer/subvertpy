@@ -1137,3 +1137,42 @@ PyTypeObject Stream_Type = {
 
 	.tp_new = stream_init, /* tp_new tp_new */
 };
+
+PyObject *dirent_hash_to_dict(apr_hash_t *dirents, unsigned int dirent_fields, apr_pool_t *temp_pool)
+{
+    svn_dirent_t *dirent;
+    apr_ssize_t klen;
+    const char *key;
+    apr_hash_index_t *idx;
+    PyObject *py_dirents = PyDict_New();
+
+    if (py_dirents == NULL) {
+        return NULL;
+    }
+    idx = apr_hash_first(temp_pool, dirents);
+    while (idx != NULL) {
+        PyObject *item, *pykey;
+        apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
+        item = py_dirent(dirent, dirent_fields);
+        if (item == NULL) {
+            Py_DECREF(py_dirents);
+            return NULL;
+        }
+        if (key == NULL) {
+            pykey = Py_None;
+            Py_INCREF(pykey);
+        } else {
+            pykey = PyUnicode_FromString((char *)key);
+        }
+        if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
+            Py_DECREF(item);
+            Py_DECREF(pykey);
+            Py_DECREF(py_dirents);
+            return NULL;
+        }
+        Py_DECREF(pykey);
+        Py_DECREF(item);
+        idx = apr_hash_next(idx);
+    }
+    return py_dirents;
+}

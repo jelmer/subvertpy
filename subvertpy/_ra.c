@@ -1475,18 +1475,14 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	apr_pool_t *temp_pool;
 	apr_hash_t *dirents;
-	apr_hash_index_t *idx;
 	apr_hash_t *props;
 	svn_revnum_t fetch_rev;
-	const char *key;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	svn_dirent_t *dirent;
-	apr_ssize_t klen;
 	const char *path;
 	PyObject *py_path;
 	svn_revnum_t revision = -1;
 	unsigned int dirent_fields = 0;
-	PyObject *py_dirents, *py_props;
+	PyObject *py_dirents = NULL, *py_props;
 	char *kwnames[] = { "path", "revision", "fields", NULL };
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|lI:get_dir", kwnames,
@@ -1517,45 +1513,21 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 		py_dirents = Py_None;
 		Py_INCREF(py_dirents);
 	} else {
-		py_dirents = PyDict_New();
-		if (py_dirents == NULL) {
-			goto fail;
-		}
-		idx = apr_hash_first(temp_pool, dirents);
-		while (idx != NULL) {
-			PyObject *item, *pykey;
-			apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
-			item = py_dirent(dirent, dirent_fields);
-			if (item == NULL) {
-				goto fail_dirents;
-			}
-			if (key == NULL) {
-				pykey = Py_None;
-				Py_INCREF(pykey);
-			} else {
-				pykey = PyUnicode_FromString((char *)key);
-			}
-			if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
-				Py_DECREF(item);
-				Py_DECREF(pykey);
-				goto fail_dirents;
-			}
-			Py_DECREF(pykey);
-			Py_DECREF(item);
-			idx = apr_hash_next(idx);
-		}
+        py_dirents = dirent_hash_to_dict(dirents, dirent_fields, temp_pool);
+        if (py_dirents == NULL) {
+            goto fail;
+        }
 	}
 
 	py_props = prop_hash_to_dict(props);
 	if (py_props == NULL) {
-		goto fail_dirents;
+		goto fail;
 	}
 	apr_pool_destroy(temp_pool);
 	return Py_BuildValue("(NlN)", py_dirents, fetch_rev, py_props);
 
-fail_dirents:
-	Py_DECREF(py_dirents);
 fail:
+	Py_XDECREF(py_dirents);
 	apr_pool_destroy(temp_pool);
 	return NULL;
 }
