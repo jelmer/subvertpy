@@ -90,14 +90,12 @@ class WcTests(SubversionTestCase):
 class AdmObjTests(SubversionTestCase):
 
     def test_has_binary_prop(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"\x00 \x01"})
         self.client_add('checkout/bar')
+        self.client_set_prop('checkout/bar', 'svn:mime-type', 'text/bar')
         adm = wc.Adm(None, "checkout")
-        path = os.path.join(self.test_dir, "checkout/bar")
-        self.assertFalse(adm.has_binary_prop(path))
+        self.assertFalse(adm.has_binary_prop("checkout/bar"))
         adm.close()
 
     def test_get_ancestry(self):
