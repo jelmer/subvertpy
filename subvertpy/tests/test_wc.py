@@ -44,13 +44,13 @@ class VersionTest(TestCase):
 class AdmTests(TestCase):
 
     def test_get_adm_dir(self):
-        self.assertEqual(b".svn", wc.get_adm_dir())
+        self.assertEqual(".svn", wc.get_adm_dir())
 
     def test_set_adm_dir(self):
         old_dir_name = wc.get_adm_dir()
         try:
             wc.set_adm_dir(b"_svn")
-            self.assertEqual(b"_svn", wc.get_adm_dir())
+            self.assertEqual("_svn", wc.get_adm_dir())
         finally:
             wc.set_adm_dir(old_dir_name)
 
@@ -189,7 +189,7 @@ class AdmObjTests(SubversionTestCase):
         self.client_add('checkout/bar')
         adm = wc.Adm(None, "checkout", True)
         adm.prop_set("aprop", "avalue", "checkout/bar")
-        self.assertEqual(adm.prop_get("aprop", "checkout/bar"), "avalue")
+        self.assertEqual(adm.prop_get("aprop", "checkout/bar"), b"avalue")
         adm.prop_set("aprop", None, "checkout/bar")
         self.assertEqual(adm.prop_get("aprop", "checkout/bar"), None)
 
