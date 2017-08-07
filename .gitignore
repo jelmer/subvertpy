@@ -12,3 +12,4 @@ apidocs
 *.so
 *~
 .tox/
+.pybuild
