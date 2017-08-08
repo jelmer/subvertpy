@@ -379,3 +379,9 @@ class ContextTests(SubversionTestCase):
         context.crawl_revisions("checkout", Reporter())
 
         self.assertEqual(ret, [('', 0, 0, None, 3)])
+
+    def test_get_update_editor(self):
+        repos_url = self.make_client("repos", "checkout")
+        context = wc.Context()
+        editor = context.get_update_editor("checkout", "")
+        editor.close()

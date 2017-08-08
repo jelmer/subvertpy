@@ -1137,20 +1137,20 @@ static PyObject *py_wc_context_crawl_revisions(PyObject *self, PyObject *args, P
     apr_pool_t *pool;
     svn_wc_context_t *wc_context = ((ContextObject *)self)->context;
     char *kwnames[] = { "path", "reporter", "restore_files", "depth",
-        "honor_depth_exclude", "depth_compatibility_trick", "use_commit_time",
+        "honor_depth_exclude", "depth_compatibility_trick", "use_commit_times",
         "cancel", "notify", NULL };
     bool restore_files = false;
     int depth = svn_depth_infinity;
     bool honor_depth_exclude = true;
     bool depth_compatibility_trick = false;
-    bool use_commit_time = false;
+    bool use_commit_times = false;
     PyObject *notify = Py_None;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|bibbbO", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|bibbbOO", kwnames,
                                      &py_path, &py_reporter, &restore_files,
                                      &depth, &honor_depth_exclude,
                                      &depth_compatibility_trick,
-                                     &use_commit_time, &notify)) {
+                                     &use_commit_times, &notify)) {
         return NULL;
     }
 
@@ -1165,28 +1165,156 @@ static PyObject *py_wc_context_crawl_revisions(PyObject *self, PyObject *args, P
     RUN_SVN_WITH_POOL(pool, svn_wc_crawl_revisions5(
          wc_context, path, &py_ra_reporter3, py_reporter, restore_files,
          depth, honor_depth_exclude, depth_compatibility_trick,
-         use_commit_time, py_cancel_check, NULL, py_wc_notify_func, notify, pool));
+         use_commit_times, py_cancel_check, NULL, py_wc_notify_func, notify, pool));
 
     apr_pool_destroy(pool);
 
     Py_RETURN_NONE;
 }
 
+static void context_done_handler(void *self)
+{
+    PyObject *selfobj = (PyObject *)self;
+
+    Py_DECREF(selfobj);
+}
+
+static PyObject *py_wc_context_get_update_editor(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    char *kwnames[] = {
+        "anchor_abspath", "target_basename", "use_commit_times", "depth",
+        "depth_is_sticky", "allow_unver_obstructions", "adds_as_modification",
+        "server_performs_filtering", "clean_checkout", "diff3_cmd",
+        "preserved_exts", "dirents_func", "conflict_func", "external_func",
+        "notify_func", NULL };
+    const svn_delta_editor_t *editor;
+    void *edit_baton;
+    char *anchor_abspath;
+    char *target_basename;
+    char *diff3_cmd = NULL;
+    svn_wc_context_t *wc_context = ((ContextObject *)self)->context;
+    bool use_commit_times = false;
+    int depth = svn_depth_infinity;
+    bool depth_is_sticky = false;
+    bool allow_unver_obstructions = true;
+    bool adds_as_modification = false;
+    bool server_performs_filtering = false;
+    bool clean_checkout = false;
+    apr_array_header_t *preserved_exts = NULL;
+    PyObject *py_preserved_exts = Py_None;
+    PyObject *dirents_func = Py_None;
+    PyObject *conflict_func = Py_None;
+    PyObject *external_func = Py_None;
+    PyObject *notify_func = Py_None;
+    PyObject *py_anchor_abspath;
+    apr_pool_t *result_pool, *scratch_pool;
+    svn_error_t *err;
+    svn_revnum_t target_revision;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|bibbbbbzOOOOO", kwnames,
+                                     &py_anchor_abspath, &target_basename,
+                                     &use_commit_times, &depth,
+                                     &depth_is_sticky,
+                                     &allow_unver_obstructions,
+                                     &adds_as_modification,
+                                     &server_performs_filtering,
+                                     &clean_checkout, &py_preserved_exts,
+                                     &dirents_func, &conflict_func,
+                                     &external_func, &notify_func)) {
+        return NULL;
+    }
+
+    if (conflict_func != Py_None) {
+        // TODO
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "conflict_func is not currently supported");
+        return NULL;
+    }
+
+    if (external_func != Py_None) {
+        // TODO
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "external_func is not currently supported");
+        return NULL;
+    }
+
+    if (dirents_func != Py_None) {
+        // TODO
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "dirents_func is not currently supported");
+        return NULL;
+    }
+
+    scratch_pool = Pool(NULL);
+
+    anchor_abspath = py_object_to_svn_abspath(py_anchor_abspath, scratch_pool);
+
+    if (py_preserved_exts != Py_None) {
+        if (!string_list_to_apr_array(scratch_pool, py_preserved_exts, &preserved_exts)) {
+            apr_pool_destroy(scratch_pool);
+            return NULL;
+        }
+    }
+
+    result_pool = Pool(NULL);
+
+    Py_BEGIN_ALLOW_THREADS
+    err = svn_wc_get_update_editor4(
+             &editor, &edit_baton, &target_revision, wc_context,
+             anchor_abspath, target_basename, use_commit_times, depth,
+             depth_is_sticky, allow_unver_obstructions, adds_as_modification,
+             server_performs_filtering, clean_checkout, diff3_cmd,
+             preserved_exts, NULL, dirents_func, NULL, conflict_func, NULL,
+             external_func, py_cancel_check, NULL, py_wc_notify_func,
+             notify_func, result_pool, scratch_pool);
+    Py_END_ALLOW_THREADS
+
+    apr_pool_destroy(scratch_pool);
+
+    if (err != NULL) {
+        handle_svn_error(err);
+        svn_error_clear(err);
+        apr_pool_destroy(result_pool);
+        return NULL;
+    }
+
+    /* TODO: Also return target_revision ? */
+    Py_INCREF(self);
+    return new_editor_object(NULL, editor, edit_baton, result_pool, &Editor_Type,
+                             context_done_handler, self, NULL);
+}
+
 static PyMethodDef context_methods[] = {
-	{ "locked", py_wc_context_locked, METH_VARARGS, "locked(path) -> (locked_here, locked)\n"
-		"Check whether a patch is locked."},
-    { "check_wc", py_wc_context_check_wc, METH_VARARGS, "check_wc(path) -> wc_format\n"
+    { "locked", py_wc_context_locked, METH_VARARGS,
+        "locked(path) -> (locked_here, locked)\n"
+        "Check whether a patch is locked."},
+    { "check_wc", py_wc_context_check_wc, METH_VARARGS,
+        "check_wc(path) -> wc_format\n"
         "Check format version of a working copy." },
-    { "text_modified", py_wc_context_text_modified_p2, METH_VARARGS, "text_modified(path) -> bool\n"
+    { "text_modified", py_wc_context_text_modified_p2, METH_VARARGS,
+        "text_modified(path) -> bool\n"
         "Check whether text of a file is modified against base." },
-    { "props_modified", py_wc_context_props_modified_p2, METH_VARARGS, "props_modified(path) -> bool\n"
+    { "props_modified", py_wc_context_props_modified_p2, METH_VARARGS,
+        "props_modified(path) -> bool\n"
         "Check whether props of a file are modified against base." },
     { "conflicted", py_wc_context_conflicted, METH_VARARGS,
-        "conflicted(path) -> (text_conflicted, prop_conflicted, tree_conflicted)\n"
+        "conflicted(path) -> (text_conflicted, prop_conflicted, "
+            "tree_conflicted)\n"
         "Check whether a path is conflicted." },
-    { "crawl_revisions", (PyCFunction)py_wc_context_crawl_revisions, METH_VARARGS|METH_KEYWORDS,
-        "crawl_revisions(path, reporter, restore_files, depth, honor_depth_exclude, depth_compatibility_trick, use_commit_time, notify)\n"
+    { "crawl_revisions", (PyCFunction)py_wc_context_crawl_revisions,
+        METH_VARARGS|METH_KEYWORDS,
+        "crawl_revisions(path, reporter, restore_files, depth, "
+            "honor_depth_exclude, depth_compatibility_trick, "
+            "use_commit_time, notify)\n"
         "Do a depth-first crawl of the working copy." },
+    { "get_update_editor",
+        (PyCFunction)py_wc_context_get_update_editor,
+        METH_VARARGS|METH_KEYWORDS,
+        "get_update_editor(anchor_abspath, target_basename, use_commit_time, "
+            "depth, depth_is_sticky, allow_unver_obstructions, "
+            "adds_as_modification, server_performs_filtering, clean_checkout, "
+            "diff3_cmd, dirent_func=None, conflict_func=None, "
+            "external_func=None) -> target_revnum" },
     { NULL }
 };
 
