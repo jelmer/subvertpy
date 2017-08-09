@@ -1337,6 +1337,132 @@ static PyObject *py_wc_context_ensure_adm(PyObject *self, PyObject *args,
     Py_RETURN_NONE;
 }
 
+typedef struct {
+    PyObject_VAR_HEAD
+    apr_pool_t *pool;
+    svn_wc_status3_t status;
+} Status3Object;
+
+static void status_dealloc(PyObject *self)
+{
+    apr_pool_t *pool = ((Status3Object *)self)->pool;
+    if (pool != NULL)
+        apr_pool_destroy(pool);
+    PyObject_Del(self);
+}
+
+static PyMemberDef status_members[] = {
+    { "kind", T_INT, offsetof(Status3Object, status.kind), READONLY,
+        "The kind of node as recorded in the working copy." },
+    { "depth", T_INT, offsetof(Status3Object, status.depth), READONLY,
+        "The depth of the node as recorded in the working copy." },
+    { "filesize", T_LONG, offsetof(Status3Object, status.filesize), READONLY,
+        "The actual size of the working file on disk, or SVN_INVALID_FILESIZE"
+        "if unknown (or if the item isn't a file at all)" },
+    { "versioned", T_BOOL, offsetof(Status3Object, status.versioned), READONLY,
+        "If the path is under version control, versioned is TRUE, "
+        "otherwise FALSE." },
+    /* TODO */
+    { NULL }
+};
+
+static PyTypeObject Status3_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "wc.Status", /*   const char *tp_name;  For printing, in format "<module>.<name>" */
+    sizeof(Status3Object),
+    0,/*    Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+
+    /* Methods to implement standard operations */
+
+    status_dealloc, /*    destructor tp_dealloc;  */
+    NULL, /*    printfunc tp_print; */
+    NULL, /*    getattrfunc tp_getattr; */
+    NULL, /*    setattrfunc tp_setattr; */
+    NULL, /*    cmpfunc tp_compare; */
+    NULL, /*    reprfunc tp_repr;   */
+
+    /* Method suites for standard classes */
+
+    NULL, /*    PyNumberMethods *tp_as_number;  */
+    NULL, /*    PySequenceMethods *tp_as_sequence;  */
+    NULL, /*    PyMappingMethods *tp_as_mapping;    */
+
+    /* More standard operations (here for binary compatibility) */
+
+    NULL, /*    hashfunc tp_hash;   */
+    NULL, /*    ternaryfunc tp_call;    */
+    NULL, /*    reprfunc tp_str;    */
+    NULL, /*    getattrofunc tp_getattro;   */
+    NULL, /*    setattrofunc tp_setattro;   */
+
+    /* Functions to access object as input/output buffer */
+    NULL, /*    PyBufferProcs *tp_as_buffer;    */
+
+    /* Flags to define presence of optional/expanded features */
+    0, /*   long tp_flags;  */
+
+    NULL, /*    const char *tp_doc;  Documentation string */
+
+    /* Assigned meaning in release 2.0 */
+    /* call function for all accessible objects */
+    NULL, /*    traverseproc tp_traverse;   */
+
+    /* delete references to contained objects */
+    NULL, /*    inquiry tp_clear;   */
+
+    /* Assigned meaning in release 2.1 */
+    /* rich comparisons */
+    NULL, /*    richcmpfunc tp_richcompare; */
+
+    /* weak reference enabler */
+    0, /*   Py_ssize_t tp_weaklistoffset;   */
+
+    /* Added in release 2.2 */
+    /* Iterators */
+    NULL, /*    getiterfunc tp_iter;    */
+    NULL, /*    iternextfunc tp_iternext;   */
+
+    /* Attribute descriptor and subclassing stuff */
+    NULL, /*    struct PyMethodDef *tp_methods; */
+    status_members, /*    struct PyMemberDef *tp_members; */
+    NULL, /* struct PyGetSetDef *tp_getsetters; */
+};
+
+static PyObject *py_wc_status(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ContextObject *context_obj = (ContextObject *)self;
+    char *kwnames[] = {"path", NULL};
+    PyObject *py_path;
+    Status3Object *ret;
+    const char *path;
+    apr_pool_t *scratch_pool, *result_pool;
+    svn_wc_status3_t* status;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwnames, &py_path)) {
+        return NULL;
+    }
+
+    result_pool = Pool(NULL);
+    scratch_pool = Pool(result_pool);
+
+    path = py_object_to_svn_abspath(py_path, scratch_pool);
+
+    RUN_SVN_WITH_POOL(result_pool,
+                      svn_wc_status3(&status, context_obj->context, path,
+                                     result_pool, scratch_pool));
+
+    apr_pool_destroy(scratch_pool);
+
+    ret = PyObject_New(Status3Object, &Status3_Type);
+    if (ret == NULL) {
+        apr_pool_destroy(result_pool);
+        return NULL;
+    }
+    ret->pool = result_pool;
+    ret->status = *status;
+    return (PyObject *)ret;
+}
+
 static PyMethodDef context_methods[] = {
     { "locked", py_wc_context_locked, METH_VARARGS,
         "locked(path) -> (locked_here, locked)\n"
@@ -1372,6 +1498,10 @@ static PyMethodDef context_methods[] = {
         (PyCFunction)py_wc_context_ensure_adm,
         METH_VARARGS|METH_KEYWORDS,
         "ensure_adm(local_abspath, url, repos_root_url, repos_uuid, revnum, depth)" },
+    { "status",
+        (PyCFunction)py_wc_status,
+        METH_VARARGS|METH_KEYWORDS,
+        "status(path) -> status" },
     { NULL }
 };
 
@@ -1486,7 +1616,7 @@ moduleinit(void)
 	if (PyType_Ready(&Entry_Type) < 0)
 		return NULL;
 
-	if (PyType_Ready(&Status_Type) < 0)
+	if (PyType_Ready(&Status2_Type) < 0)
 		return NULL;
 
 	if (PyType_Ready(&Adm_Type) < 0)
@@ -1513,6 +1643,9 @@ moduleinit(void)
 		return NULL;
 
 	if (PyType_Ready(&CommittedQueue_Type) < 0)
+		return NULL;
+
+	if (PyType_Ready(&Status3_Type) < 0)
 		return NULL;
 
 	apr_initialize();

@@ -20,6 +20,7 @@ import os
 
 import subvertpy
 from subvertpy import (
+    NODE_DIR,
     NODE_FILE,
     wc,
     )
@@ -385,3 +386,9 @@ class ContextTests(SubversionTestCase):
         context = wc.Context()
         editor = context.get_update_editor("checkout", "")
         editor.close()
+
+    def test_status(self):
+        self.make_client("repos", "checkout")
+        context = wc.Context()
+        status = context.status("checkout")
+        self.assertEqual(NODE_DIR, status.kind)

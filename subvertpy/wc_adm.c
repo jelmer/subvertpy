@@ -1913,39 +1913,39 @@ typedef struct {
 	apr_pool_t *pool;
 	svn_wc_status2_t status;
 	PyObject *entry;
-} StatusObject;
+} Status2Object;
 
 static void status_dealloc(PyObject *self)
 {
-	apr_pool_destroy(((StatusObject *)self)->pool);
-	Py_XDECREF(((StatusObject *)self)->entry);
+	apr_pool_destroy(((Status2Object *)self)->pool);
+	Py_XDECREF(((Status2Object *)self)->entry);
 	PyObject_Del(self);
 }
 
 static PyMemberDef status_members[] = {
-	{ "entry", T_OBJECT, offsetof(StatusObject, entry), READONLY,
+	{ "entry", T_OBJECT, offsetof(Status2Object, entry), READONLY,
 		"Can be NULL if not under version control." },
-	{ "locked", T_BOOL, offsetof(StatusObject, status.locked), READONLY,
+	{ "locked", T_BOOL, offsetof(Status2Object, status.locked), READONLY,
 		"a directory can be 'locked' if a working copy update was interrupted." },
-	{ "copied", T_BOOL, offsetof(StatusObject, status.copied), READONLY,
+	{ "copied", T_BOOL, offsetof(Status2Object, status.copied), READONLY,
 		"a file or directory can be 'copied' if it's scheduled for addition-with-history (or part of a subtree that is scheduled as such.)." },
-	{ "switched", T_BOOL, offsetof(StatusObject, status.switched), READONLY,
+	{ "switched", T_BOOL, offsetof(Status2Object, status.switched), READONLY,
 		"a file or directory can be 'switched' if the switch command has been used." },
-	{ "url", T_STRING, offsetof(StatusObject, status.url), READONLY,
+	{ "url", T_STRING, offsetof(Status2Object, status.url), READONLY,
 		"URL (actual or expected) in repository" },
-	{ "revision", T_LONG, offsetof(StatusObject, status.ood_last_cmt_rev), READONLY,
+	{ "revision", T_LONG, offsetof(Status2Object, status.ood_last_cmt_rev), READONLY,
 		"Set to the youngest committed revision, or SVN_INVALID_REVNUM if not out of date.", },
-	{ "kind", T_INT, offsetof(StatusObject, status.ood_kind), READONLY,
+	{ "kind", T_INT, offsetof(Status2Object, status.ood_kind), READONLY,
 		"Set to the node kind of the youngest commit, or svn_node_none if not out of date.", },
-	{ "status", T_INT, offsetof(StatusObject, status.text_status), READONLY,
+	{ "status", T_INT, offsetof(Status2Object, status.text_status), READONLY,
 		"The status of the entry.", },
 	{ NULL, }
 };
 
-PyTypeObject Status_Type = {
+PyTypeObject Status2_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	"wc.Status", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
-	sizeof(StatusObject),
+	sizeof(Status2Object),
 	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
 
 	/* Methods to implement standard operations */
@@ -2006,10 +2006,10 @@ PyTypeObject Status_Type = {
 
 PyObject *py_wc_status2(const svn_wc_status2_t *status)
 {
-	StatusObject *ret;
+	Status2Object *ret;
 	svn_wc_status2_t *dup_status;
 
-	ret = PyObject_New(StatusObject, &Status_Type);
+	ret = PyObject_New(Status2Object, &Status2_Type);
 	if (ret == NULL)
 		return NULL;
 
