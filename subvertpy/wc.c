@@ -1362,6 +1362,12 @@ static PyMemberDef status_members[] = {
     { "versioned", T_BOOL, offsetof(Status3Object, status.versioned), READONLY,
         "If the path is under version control, versioned is TRUE, "
         "otherwise FALSE." },
+    { "repos_uuid", T_STRING, offsetof(Status3Object, status.repos_uuid), READONLY,
+        "UUID of repository" },
+    { "repos_root_url", T_STRING, offsetof(Status3Object, status.repos_root_url), READONLY,
+        "Repository root URL" },
+    { "repos_relpath", T_STRING, offsetof(Status3Object, status.repos_relpath), READONLY,
+        "Relative path in repository" },
     /* TODO */
     { NULL }
 };
@@ -1445,7 +1451,7 @@ static PyObject *py_wc_status(PyObject *self, PyObject *args, PyObject *kwargs)
     result_pool = Pool(NULL);
     scratch_pool = Pool(result_pool);
 
-    path = py_object_to_svn_abspath(py_path, scratch_pool);
+    path = py_object_to_svn_dirent(py_path, scratch_pool);
 
     RUN_SVN_WITH_POOL(result_pool,
                       svn_wc_status3(&status, context_obj->context, path,
