@@ -1189,7 +1189,7 @@ static PyObject *py_wc_context_get_update_editor(PyObject *self, PyObject *args,
         "notify_func", NULL };
     const svn_delta_editor_t *editor;
     void *edit_baton;
-    char *anchor_abspath;
+    const char *anchor_abspath;
     char *target_basename;
     char *diff3_cmd = NULL;
     svn_wc_context_t *wc_context = ((ContextObject *)self)->context;
@@ -1284,6 +1284,39 @@ static PyObject *py_wc_context_get_update_editor(PyObject *self, PyObject *args,
                              context_done_handler, self, NULL);
 }
 
+static PyObject *py_wc_context_ensure_adm(PyObject *self, PyObject *args,
+                                          PyObject *kwargs)
+{
+    ContextObject *context_obj = (ContextObject *)self;
+    char *kwnames[] = {
+        "local_abspath", "url", "repos_root_url", "repos_uuid",
+        "revnum", "depth", NULL };
+    char *local_abspath;
+    char *url;
+    char *repos_root_url;
+    char *repos_uuid;
+    int revnum;
+    int depth;
+    apr_pool_t *pool;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ssssii", kwnames,
+                                     &local_abspath, &url, &repos_root_url,
+                                     &repos_uuid, &revnum, &depth)) {
+        return NULL;
+    }
+
+    pool = Pool(NULL);
+
+    RUN_SVN_WITH_POOL(pool, svn_wc_ensure_adm4(context_obj->context,
+                                               local_abspath, url,
+                                               repos_root_url, repos_uuid,
+                                               revnum, depth, pool));
+
+    apr_pool_destroy(pool);
+
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef context_methods[] = {
     { "locked", py_wc_context_locked, METH_VARARGS,
         "locked(path) -> (locked_here, locked)\n"
@@ -1315,6 +1348,10 @@ static PyMethodDef context_methods[] = {
             "adds_as_modification, server_performs_filtering, clean_checkout, "
             "diff3_cmd, dirent_func=None, conflict_func=None, "
             "external_func=None) -> target_revnum" },
+    { "ensure_adm",
+        (PyCFunction)py_wc_context_ensure_adm,
+        METH_VARARGS|METH_KEYWORDS,
+        "ensure_adm(local_abspath, url, repos_root_url, repos_uuid, revnum, depth)" },
     { NULL }
 };
 
