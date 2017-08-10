@@ -1627,6 +1627,51 @@ static PyObject *py_wc_remove_lock(PyObject *self, PyObject *args, PyObject *kwa
                                           scratch_pool));
 
     apr_pool_destroy(scratch_pool);
+    Py_RETURN_NONE;
+}
+
+static PyObject *py_wc_add_from_disk(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ContextObject *context_obj = (ContextObject *)self;
+    char *kwnames[] = {"path", "props", "skip_checks", "notify", NULL };
+    PyObject *py_path;
+    const char *path;
+    bool skip_checks = false;
+    PyObject *py_props = Py_None;
+    PyObject *notify_func = Py_None;
+    apr_pool_t *pool;
+    apr_hash_t *props;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|ObO", kwnames,
+                                     &py_path, &py_props, &skip_checks, &notify_func)) {
+        return NULL;
+    }
+
+    pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, pool);
+    if (path == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    if (py_props == Py_None) {
+        props = NULL;
+    } else {
+        props = prop_dict_to_hash(pool, py_props);
+        if (props == NULL) {
+            apr_pool_destroy(pool);
+            return NULL;
+        }
+    }
+
+    RUN_SVN_WITH_POOL(
+            pool, svn_wc_add_from_disk3(
+                    context_obj->context, path, props, skip_checks,
+                    notify_func == Py_None?NULL:py_wc_notify_func,
+                    notify_func, pool));
+
+    apr_pool_destroy(pool);
 
     Py_RETURN_NONE;
 }
@@ -1683,6 +1728,10 @@ static PyMethodDef context_methods[] = {
         (PyCFunction)py_wc_remove_lock,
         METH_VARARGS|METH_KEYWORDS,
         "remove_lock(path)" },
+    { "add_from_disk",
+        (PyCFunction)py_wc_add_from_disk,
+        METH_VARARGS|METH_KEYWORDS,
+        "add_from_disk(local_abspath, props=None, skip_checks=False, notify=None)" },
     { NULL }
 };
 

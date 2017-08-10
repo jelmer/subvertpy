@@ -414,3 +414,10 @@ class ContextTests(SubversionTestCase):
         context = wc.Context()
         context.add_lock("checkout/bla.txt", ())
         context.remove_lock("checkout/bla.txt")
+
+    def test_add_from_disk(self):
+        self.make_client("repos", "checkout")
+        with open('checkout/bla.txt', 'w') as f:
+            f.write("modified")
+        context = wc.Context()
+        context.add_from_disk('checkout/bla.txt')
