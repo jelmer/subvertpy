@@ -407,20 +407,31 @@ class ContextTests(SubversionTestCase):
                  os.path.abspath("checkout/bla.txt")})
 
     def test_locking(self):
+        self.skipTest("needs wc locking, but there is no function to do that")
         self.make_client("repos", "checkout")
         with open('checkout/bla.txt', 'w') as f:
             f.write("modified")
         self.client_add("checkout/bla.txt")
         context = wc.Context()
-        context.add_lock("checkout/bla.txt", ())
+        context.add_lock("checkout/bla.txt",
+                (None, "sometoken", None, None, False, None, None))
         context.remove_lock("checkout/bla.txt")
 
     def test_add_from_disk(self):
+        self.skipTest("needs wc locking, but there is no function to do that")
         self.make_client("repos", "checkout")
         with open('checkout/bla.txt', 'w') as f:
             f.write("modified")
         context = wc.Context()
         context.add_from_disk('checkout/bla.txt')
+
+    def test_add(self):
+        self.skipTest("needs wc locking, but there is no function to do that")
+        self.make_client("repos", "checkout")
+        with open('checkout/bla.txt', 'w') as f:
+            f.write("modified")
+        context = wc.Context()
+        context.add('checkout/bla.txt')
 
     def test_get_prop_diffs(self):
         self.make_client("repos", "checkout")

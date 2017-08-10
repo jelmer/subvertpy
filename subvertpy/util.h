@@ -158,7 +158,7 @@ const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_path_or_url(PyObject *obj, apr_pool_t *pool);
 char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_abspath(PyObject *obj, apr_pool_t *pool);
-svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool);
+svn_lock_t *unwrap_lock(PyObject *py_lock, apr_pool_t *pool);
 #define py_object_from_svn_abspath PyUnicode_FromString
 PyObject *propchanges_to_list(const apr_array_header_t *propchanges);
 

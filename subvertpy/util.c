@@ -787,7 +787,7 @@ svn_error_t *py_svn_error()
 
 PyObject *wrap_lock(svn_lock_t *lock)
 {
-	return Py_BuildValue("(zzzbzz)", lock->path, lock->token, lock->owner,
+	return Py_BuildValue("(zzzbzzz)", lock->path, lock->token, lock->owner,
 						 lock->comment, lock->is_dav_comment,
 						 lock->creation_date, lock->expiration_date);
 }
@@ -1175,12 +1175,17 @@ PyObject *dirent_hash_to_dict(apr_hash_t *dirents, unsigned int dirent_fields, a
     return py_dirents;
 }
 
-svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
+svn_lock_t *unwrap_lock(PyObject *py_lock, apr_pool_t *pool)
 {
-    svn_lock_t *ret = svn_lock_create(pool);
+    svn_lock_t *lock = svn_lock_create(pool);
 
-    /* TODO */
-    return ret;
+    if (!PyArg_ParseTuple(py_lock, "zzzzbzz", &lock->path, &lock->token,
+                         &lock->owner, &lock->comment, &lock->is_dav_comment,
+                         &lock->creation_date, &lock->expiration_date)) {
+        return NULL;
+    }
+
+    return lock;
 }
 
 PyObject *propchanges_to_list(const apr_array_header_t *propchanges)

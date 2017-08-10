@@ -1576,7 +1576,8 @@ static PyObject *py_wc_add_lock(PyObject *self, PyObject *args, PyObject *kwargs
     const char *path;
     apr_pool_t *scratch_pool;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwnames, &py_path, &py_lock)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwnames, &py_path,
+                                     &py_lock)) {
         return NULL;
     }
 
@@ -1588,7 +1589,7 @@ static PyObject *py_wc_add_lock(PyObject *self, PyObject *args, PyObject *kwargs
         return NULL;
     }
 
-    lock = py_object_to_svn_lock(py_lock, scratch_pool);
+    lock = unwrap_lock(py_lock, scratch_pool);
     if (lock == NULL) {
         apr_pool_destroy(scratch_pool);
         return NULL;
@@ -1668,6 +1669,52 @@ static PyObject *py_wc_add_from_disk(PyObject *self, PyObject *args, PyObject *k
     RUN_SVN_WITH_POOL(
             pool, svn_wc_add_from_disk3(
                     context_obj->context, path, props, skip_checks,
+                    notify_func == Py_None?NULL:py_wc_notify_func,
+                    notify_func, pool));
+
+    apr_pool_destroy(pool);
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *py_wc_add(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ContextObject *context_obj = (ContextObject *)self;
+    char *kwnames[] = {"path", "depth", "copyfrom_url", "copyfrom_rev",
+                       "notify_func", NULL };
+    PyObject *py_path, *py_copyfrom_url;
+    const char *path;
+    const char *copyfrom_url;
+    int depth = svn_depth_infinity;
+    long copyfrom_rev = -1;
+    PyObject *notify_func = Py_None;
+    apr_pool_t *pool;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|iOiO", kwnames,
+                                     &py_path, &depth, &py_copyfrom_url,
+                                     &copyfrom_rev, &notify_func)) {
+        return NULL;
+    }
+
+    pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, pool);
+    if (path == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    if (py_copyfrom_url == Py_None) {
+        copyfrom_url = NULL;
+    } else {
+        copyfrom_url = py_object_to_svn_uri(py_copyfrom_url, pool);
+    }
+
+    RUN_SVN_WITH_POOL(
+            pool, svn_wc_add4(
+                    context_obj->context, path, depth, copyfrom_url,
+                    copyfrom_rev,
+                    py_cancel_check, NULL,
                     notify_func == Py_None?NULL:py_wc_notify_func,
                     notify_func, pool));
 
@@ -1777,6 +1824,10 @@ static PyMethodDef context_methods[] = {
         (PyCFunction)py_wc_add_from_disk,
         METH_VARARGS|METH_KEYWORDS,
         "add_from_disk(local_abspath, props=None, skip_checks=False, notify=None)" },
+    { "add",
+        (PyCFunction)py_wc_add,
+        METH_VARARGS|METH_KEYWORDS,
+        "add(path, depth=DEPTH_INFINITY, copyfrom_url=None, copyfrom_rev=1, notify_func=None)" },
     { "get_prop_diffs",
         (PyCFunction)py_wc_get_prop_diffs,
         METH_VARARGS|METH_KEYWORDS,
