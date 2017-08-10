@@ -392,3 +392,16 @@ class ContextTests(SubversionTestCase):
         context = wc.Context()
         status = context.status("checkout")
         self.assertEqual(NODE_DIR, status.kind)
+
+    def test_walk_status(self):
+        self.make_client("repos", "checkout")
+        with open('checkout/bla.txt', 'w') as f:
+            f.write("modified")
+        self.client_add("checkout/bla.txt")
+        context = wc.Context()
+        result = {}
+        context.walk_status("checkout", result.__setitem__)
+        self.assertEqual(
+                set(result.keys()),
+                {os.path.abspath("checkout"),
+                 os.path.abspath("checkout/bla.txt")})

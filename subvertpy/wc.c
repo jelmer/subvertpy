@@ -758,42 +758,45 @@ static PyObject *match_ignore_list(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef wc_methods[] = {
-	{ "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> version\n"
-		"Check whether path contains a Subversion working copy\n"
-		"return the workdir version"},
-	{ "cleanup", (PyCFunction)cleanup_wc, METH_VARARGS|METH_KEYWORDS, "cleanup(path, diff3_cmd=None)\n" },
-	{ "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS,
-		"ensure_adm(path, uuid, url, repos=None, rev=None)" },
-	{ "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS,
-		"get_adm_dir() -> name" },
-	{ "set_adm_dir", (PyCFunction)set_adm_dir, METH_VARARGS,
-		"set_adm_dir(name)" },
-	{ "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS,
-		"get_pristine_copy_path(path) -> path" },
-	{ "get_pristine_contents", get_pristine_contents, METH_VARARGS,
-		"get_pristine_contents(path) -> stream" },
-	{ "is_adm_dir", is_adm_dir, METH_VARARGS,
-		"is_adm_dir(name) -> bool" },
-	{ "is_normal_prop", is_normal_prop, METH_VARARGS,
-		"is_normal_prop(name) -> bool" },
-	{ "is_entry_prop", is_entry_prop, METH_VARARGS,
-		"is_entry_prop(name) -> bool" },
-	{ "is_wc_prop", is_wc_prop, METH_VARARGS,
-		"is_wc_prop(name) -> bool" },
-	{ "revision_status", (PyCFunction)revision_status, METH_KEYWORDS|METH_VARARGS, "revision_status(wc_path, trail_url=None, committed=False) -> (min_rev, max_rev, switched, modified)" },
-	{ "version", (PyCFunction)version, METH_NOARGS,
-		"version() -> (major, minor, patch, tag)\n\n"
-		"Version of libsvn_wc currently used."
-	},
-	{ "api_version", (PyCFunction)api_version, METH_NOARGS,
-		"api_version() -> (major, minor, patch, tag)\n\n"
-		"Version of libsvn_wc Subvertpy was compiled against."
-	},
-	{ "match_ignore_list", (PyCFunction)match_ignore_list, METH_VARARGS,
-		"match_ignore_list(str, patterns) -> bool" },
-	{ "get_actual_target", (PyCFunction)get_actual_target, METH_VARARGS,
-		"get_actual_target(path) -> (anchor, target)" },
-	{ NULL, }
+    { "check_wc", check_wc, METH_VARARGS, "check_wc(path) -> version\n"
+        "Check whether path contains a Subversion working copy\n"
+            "return the workdir version"},
+    { "cleanup", (PyCFunction)cleanup_wc,
+        METH_VARARGS|METH_KEYWORDS, "cleanup(path, diff3_cmd=None)\n" },
+    { "ensure_adm", (PyCFunction)ensure_adm, METH_KEYWORDS|METH_VARARGS,
+        "ensure_adm(path, uuid, url, repos=None, rev=None)" },
+    { "get_adm_dir", (PyCFunction)get_adm_dir, METH_NOARGS,
+        "get_adm_dir() -> name" },
+    { "set_adm_dir", (PyCFunction)set_adm_dir, METH_VARARGS,
+        "set_adm_dir(name)" },
+    { "get_pristine_copy_path", get_pristine_copy_path, METH_VARARGS,
+        "get_pristine_copy_path(path) -> path" },
+    { "get_pristine_contents", get_pristine_contents, METH_VARARGS,
+        "get_pristine_contents(path) -> stream" },
+    { "is_adm_dir", is_adm_dir, METH_VARARGS,
+        "is_adm_dir(name) -> bool" },
+    { "is_normal_prop", is_normal_prop, METH_VARARGS,
+        "is_normal_prop(name) -> bool" },
+    { "is_entry_prop", is_entry_prop, METH_VARARGS,
+        "is_entry_prop(name) -> bool" },
+    { "is_wc_prop", is_wc_prop, METH_VARARGS,
+        "is_wc_prop(name) -> bool" },
+    { "revision_status", (PyCFunction)revision_status,
+        METH_KEYWORDS|METH_VARARGS,
+        "revision_status(wc_path, trail_url=None, committed=False)"
+            "-> (min_rev, max_rev, switched, modified)" },
+    { "version", (PyCFunction)version, METH_NOARGS,
+        "version() -> (major, minor, patch, tag)\n\n"
+            "Version of libsvn_wc currently used."
+    },
+    { "api_version", (PyCFunction)api_version, METH_NOARGS,
+        "api_version() -> (major, minor, patch, tag)\n\n"
+            "Version of libsvn_wc Subvertpy was compiled against." },
+    { "match_ignore_list", (PyCFunction)match_ignore_list, METH_VARARGS,
+        "match_ignore_list(str, patterns) -> bool" },
+    { "get_actual_target", (PyCFunction)get_actual_target, METH_VARARGS,
+        "get_actual_target(path) -> (anchor, target)" },
+    { NULL, }
 };
 
 static void committed_queue_dealloc(PyObject *self)
@@ -1451,7 +1454,7 @@ static PyObject *py_wc_status(PyObject *self, PyObject *args, PyObject *kwargs)
     result_pool = Pool(NULL);
     scratch_pool = Pool(result_pool);
 
-    path = py_object_to_svn_dirent(py_path, scratch_pool);
+    path = py_object_to_svn_abspath(py_path, scratch_pool);
 
     RUN_SVN_WITH_POOL(result_pool,
                       svn_wc_status3(&status, context_obj->context, path,
@@ -1467,6 +1470,92 @@ static PyObject *py_wc_status(PyObject *self, PyObject *args, PyObject *kwargs)
     ret->pool = result_pool;
     ret->status = *status;
     return (PyObject *)ret;
+}
+
+static svn_error_t *py_status_receiver(void *baton, const char *local_abspath,
+                                       const svn_wc_status3_t *status,
+                                       apr_pool_t *scratch_pool)
+{
+    Status3Object *py_status;
+    PyObject *ret;
+    PyGILState_STATE state;
+
+    if (baton == Py_None)
+        return NULL;
+
+    state = PyGILState_Ensure();
+
+    py_status = PyObject_New(Status3Object, &Status3_Type);
+    if (py_status == NULL) {
+        PyGILState_Release(state);
+        return py_svn_error();
+    }
+    py_status->pool = Pool(NULL);
+    py_status->status = *svn_wc_dup_status3(status, py_status->pool);
+
+    ret = PyObject_CallFunction((PyObject *)baton, "sO", local_abspath, py_status);
+    Py_DECREF(py_status);
+
+    if (ret == NULL) {
+        PyGILState_Release(state);
+        return py_svn_error();
+    }
+
+    Py_DECREF(ret);
+    PyGILState_Release(state);
+
+    return NULL;
+}
+
+static PyObject *py_wc_walk_status(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ContextObject *context_obj = (ContextObject *)self;
+    char *kwnames[] = {"path", "receiver", "depth", "get_all", "no_ignore",
+        "ignore_text_mode", "ignore_patterns", NULL};
+    PyObject *py_path;
+    const char *path;
+    int depth = svn_depth_infinity;
+    bool get_all = true;
+    bool no_ignore = false;
+    bool ignore_text_mode = false;
+    PyObject *py_ignore_patterns = Py_None;
+    PyObject *status_func;
+    apr_array_header_t *ignore_patterns;
+    apr_pool_t *pool;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|ibbbOO", kwnames,
+                                     &py_path, &status_func, &depth, &get_all, &no_ignore,
+                                     &ignore_text_mode, &py_ignore_patterns)) {
+        return NULL;
+    }
+
+    pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, pool);
+    if (path == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    if (py_ignore_patterns == Py_None) {
+        ignore_patterns = NULL;
+    } else {
+        if (!string_list_to_apr_array(pool, py_ignore_patterns, &ignore_patterns)) {
+            apr_pool_destroy(pool);
+            return NULL;
+        }
+    }
+
+    RUN_SVN_WITH_POOL(pool,
+                      svn_wc_walk_status(context_obj->context, path, depth,
+                                         get_all, no_ignore, ignore_text_mode,
+                                         ignore_patterns, py_status_receiver,
+                                         status_func, py_cancel_check, NULL,
+                                         pool));
+
+    apr_pool_destroy(pool);
+
+    Py_RETURN_NONE;
 }
 
 static PyMethodDef context_methods[] = {
@@ -1508,6 +1597,11 @@ static PyMethodDef context_methods[] = {
         (PyCFunction)py_wc_status,
         METH_VARARGS|METH_KEYWORDS,
         "status(path) -> status" },
+    { "walk_status",
+        (PyCFunction)py_wc_walk_status,
+        METH_VARARGS|METH_KEYWORDS,
+        "walk_status(path, receiver, depth=DEPTH_INFINITY, get_all=True, "
+            "no_ignore=False, ignore_text_mode=False, ignore_patterns=None)\n" },
     { NULL }
 };
 
