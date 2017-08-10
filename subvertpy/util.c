@@ -1182,3 +1182,33 @@ svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
     /* TODO */
     return ret;
 }
+
+PyObject *propchanges_to_list(const apr_array_header_t *propchanges)
+{
+    int i;
+    svn_prop_t el;
+    PyObject *py_propchanges = PyList_New(propchanges->nelts);
+    PyObject *pyval;
+    if (py_propchanges == NULL) {
+        return NULL;
+    }
+    for (i = 0; i < propchanges->nelts; i++) {
+        el = APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+        if (el.value != NULL)
+            pyval = Py_BuildValue("(sz#)", el.name, el.value->data, el.value->len);
+        else
+            pyval = Py_BuildValue("(sO)", el.name, Py_None);
+        if (pyval == NULL) {
+            Py_DECREF(py_propchanges);
+            return NULL;
+        }
+        if (PyList_SetItem(py_propchanges, i, pyval) != 0) {
+            Py_DECREF(py_propchanges);
+            return NULL;
+        }
+    }
+
+    return py_propchanges;
+}
+
+

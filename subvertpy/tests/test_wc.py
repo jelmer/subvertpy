@@ -421,3 +421,10 @@ class ContextTests(SubversionTestCase):
             f.write("modified")
         context = wc.Context()
         context.add_from_disk('checkout/bla.txt')
+
+    def test_get_prop_diffs(self):
+        self.make_client("repos", "checkout")
+        context = wc.Context()
+        (orig_props, propdelta) = context.get_prop_diffs("checkout")
+        self.assertEqual({}, orig_props)
+        self.assertEqual([], propdelta)

@@ -395,9 +395,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
     apr_hash_t *original_props;
     PyObject *py_path;
     AdmObject *admobj = (AdmObject *)self;
-    svn_prop_t el;
-    int i;
-    PyObject *py_propchanges, *py_orig_props, *pyval;
+    PyObject *py_propchanges, *py_orig_props;
 
     if (!PyArg_ParseTuple(args, "O", &py_path))
         return NULL;
@@ -416,27 +414,10 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
     }
     RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_prop_diffs(&propchanges, &original_props,
                                                        path, admobj->adm, temp_pool));
-    py_propchanges = PyList_New(propchanges->nelts);
+    py_propchanges = propchanges_to_list(propchanges);
     if (py_propchanges == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
-    }
-    for (i = 0; i < propchanges->nelts; i++) {
-        el = APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-        if (el.value != NULL)
-            pyval = Py_BuildValue("(sz#)", el.name, el.value->data, el.value->len);
-        else
-            pyval = Py_BuildValue("(sO)", el.name, Py_None);
-        if (pyval == NULL) {
-            apr_pool_destroy(temp_pool);
-            Py_DECREF(py_propchanges);
-            return NULL;
-        }
-        if (PyList_SetItem(py_propchanges, i, pyval) != 0) {
-            Py_DECREF(py_propchanges);
-            apr_pool_destroy(temp_pool);
-            return NULL;
-        }
     }
     py_orig_props = prop_hash_to_dict(original_props);
     apr_pool_destroy(temp_pool);

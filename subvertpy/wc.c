@@ -1676,6 +1676,51 @@ static PyObject *py_wc_add_from_disk(PyObject *self, PyObject *args, PyObject *k
     Py_RETURN_NONE;
 }
 
+static PyObject *py_wc_get_prop_diffs(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ContextObject *context_obj = (ContextObject *)self;
+    PyObject *py_path, *py_orig_props, *py_propchanges;
+    apr_pool_t *pool;
+    char *kwnames[] = {"path", NULL};
+    apr_hash_t *original_props;
+    apr_array_header_t *propchanges;
+    const char *path;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwnames, &py_path)) {
+        return NULL;
+    }
+
+    pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, pool);
+    if (path == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(pool, svn_wc_get_prop_diffs2(&propchanges,
+                                                   &original_props,
+                                                   context_obj->context,
+                                                   path, pool, pool));
+
+    py_orig_props = prop_hash_to_dict(original_props);
+    if (py_orig_props == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    py_propchanges = propchanges_to_list(propchanges);
+    if (py_propchanges == NULL) {
+        apr_pool_destroy(pool);
+        Py_DECREF(py_propchanges);
+        return NULL;
+    }
+
+    apr_pool_destroy(pool);
+
+    return Py_BuildValue("NN", py_orig_props, py_propchanges);
+}
+
 static PyMethodDef context_methods[] = {
     { "locked", py_wc_context_locked, METH_VARARGS,
         "locked(path) -> (locked_here, locked)\n"
@@ -1732,6 +1777,10 @@ static PyMethodDef context_methods[] = {
         (PyCFunction)py_wc_add_from_disk,
         METH_VARARGS|METH_KEYWORDS,
         "add_from_disk(local_abspath, props=None, skip_checks=False, notify=None)" },
+    { "get_prop_diffs",
+        (PyCFunction)py_wc_get_prop_diffs,
+        METH_VARARGS|METH_KEYWORDS,
+        "get_prop_diffs(path) -> (changes orig_props)" },
     { NULL }
 };
 
