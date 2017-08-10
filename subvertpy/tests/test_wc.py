@@ -413,7 +413,8 @@ class ContextTests(SubversionTestCase):
             f.write("modified")
         self.client_add("checkout/bla.txt")
         context = wc.Context()
-        context.add_lock("checkout/bla.txt",
+        context.add_lock(
+                "checkout/bla.txt",
                 (None, "sometoken", None, None, False, None, None))
         context.remove_lock("checkout/bla.txt")
 
