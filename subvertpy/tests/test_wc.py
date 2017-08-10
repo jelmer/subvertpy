@@ -405,3 +405,12 @@ class ContextTests(SubversionTestCase):
                 set(result.keys()),
                 {os.path.abspath("checkout"),
                  os.path.abspath("checkout/bla.txt")})
+
+    def test_locking(self):
+        self.make_client("repos", "checkout")
+        with open('checkout/bla.txt', 'w') as f:
+            f.write("modified")
+        self.client_add("checkout/bla.txt")
+        context = wc.Context()
+        context.add_lock("checkout/bla.txt", ())
+        context.remove_lock("checkout/bla.txt")

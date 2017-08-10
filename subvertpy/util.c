@@ -1174,3 +1174,11 @@ PyObject *dirent_hash_to_dict(apr_hash_t *dirents, unsigned int dirent_fields, a
     }
     return py_dirents;
 }
+
+svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
+{
+    svn_lock_t *ret = svn_lock_create(pool);
+
+    /* TODO */
+    return ret;
+}

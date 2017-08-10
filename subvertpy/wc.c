@@ -1567,6 +1567,70 @@ static PyObject *py_wc_walk_status(PyObject *self, PyObject *args, PyObject *kwa
     Py_RETURN_NONE;
 }
 
+static PyObject *py_wc_add_lock(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ContextObject *context_obj = (ContextObject *)self;
+    PyObject *py_path, *py_lock;
+    svn_lock_t *lock;
+    char *kwnames[] = { "path", "lock", NULL };
+    const char *path;
+    apr_pool_t *scratch_pool;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwnames, &py_path, &py_lock)) {
+        return NULL;
+    }
+
+    scratch_pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, scratch_pool);
+    if (path == NULL) {
+        apr_pool_destroy(scratch_pool);
+        return NULL;
+    }
+
+    lock = py_object_to_svn_lock(py_lock, scratch_pool);
+    if (lock == NULL) {
+        apr_pool_destroy(scratch_pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(scratch_pool,
+                      svn_wc_add_lock2(context_obj->context, path, lock, scratch_pool));
+
+    apr_pool_destroy(scratch_pool);
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *py_wc_remove_lock(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    ContextObject *context_obj = (ContextObject *)self;
+    char *kwnames[] = { "path", NULL };
+    PyObject *py_path;
+    const char *path;
+    apr_pool_t *scratch_pool;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwnames, &py_path)) {
+        return NULL;
+    }
+
+    scratch_pool = Pool(NULL);
+
+    path = py_object_to_svn_abspath(py_path, scratch_pool);
+    if (path == NULL) {
+        apr_pool_destroy(scratch_pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(scratch_pool,
+                      svn_wc_remove_lock2(context_obj->context, path,
+                                          scratch_pool));
+
+    apr_pool_destroy(scratch_pool);
+
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef context_methods[] = {
     { "locked", py_wc_context_locked, METH_VARARGS,
         "locked(path) -> (locked_here, locked)\n"
@@ -1611,6 +1675,14 @@ static PyMethodDef context_methods[] = {
         METH_VARARGS|METH_KEYWORDS,
         "walk_status(path, receiver, depth=DEPTH_INFINITY, get_all=True, "
             "no_ignore=False, ignore_text_mode=False, ignore_patterns=None)\n" },
+    { "add_lock",
+        (PyCFunction)py_wc_add_lock,
+        METH_VARARGS|METH_KEYWORDS,
+        "add_lock(path, lock)" },
+    { "remove_lock",
+        (PyCFunction)py_wc_remove_lock,
+        METH_VARARGS|METH_KEYWORDS,
+        "remove_lock(path)" },
     { NULL }
 };
 
