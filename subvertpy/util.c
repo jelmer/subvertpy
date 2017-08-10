@@ -122,15 +122,13 @@ const char *py_object_to_svn_abspath(PyObject *obj, apr_pool_t *pool)
         return NULL;
     }
     if (svn_dirent_is_absolute(ret)) {
-        return ret;
+        return svn_dirent_canonicalize(ret, pool);
     } else {
         const char *absolute;
         RUN_SVN_WITH_POOL(pool, svn_dirent_get_absolute(&absolute, ret, pool));
-        return absolute;
+        return svn_dirent_canonicalize(absolute, pool);
     }
 }
-
-
 
 const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool)
 {
