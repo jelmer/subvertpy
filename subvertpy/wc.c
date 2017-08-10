@@ -1812,6 +1812,9 @@ static PyMethodDef context_methods[] = {
         METH_VARARGS|METH_KEYWORDS,
         "walk_status(path, receiver, depth=DEPTH_INFINITY, get_all=True, "
             "no_ignore=False, ignore_text_mode=False, ignore_patterns=None)\n" },
+#if 0
+    /* Currently disabled, because these need a write lock and there is
+     * no public function to obtain a write lock */
     { "add_lock",
         (PyCFunction)py_wc_add_lock,
         METH_VARARGS|METH_KEYWORDS,
@@ -1828,6 +1831,7 @@ static PyMethodDef context_methods[] = {
         (PyCFunction)py_wc_add,
         METH_VARARGS|METH_KEYWORDS,
         "add(path, depth=DEPTH_INFINITY, copyfrom_url=None, copyfrom_rev=1, notify_func=None)" },
+#endif
     { "get_prop_diffs",
         (PyCFunction)py_wc_get_prop_diffs,
         METH_VARARGS|METH_KEYWORDS,
