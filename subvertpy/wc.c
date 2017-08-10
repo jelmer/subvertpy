@@ -290,11 +290,13 @@ void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_pool_t *p
 		return;
 
 	if (notify->err != NULL) {
+        PyGILState_STATE state = PyGILState_Ensure();
 		PyObject *excval = PyErr_NewSubversionException(notify->err);
 		ret = PyObject_CallFunction(func, "O", excval);
 		Py_DECREF(excval);
 		Py_XDECREF(ret);
 		/* If ret was NULL, the cancel func should abort the operation. */
+        PyGILState_Release(state);
 	}
 }
 bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_array_header_t **ret)
@@ -339,18 +341,21 @@ bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_array_heade
 svn_error_t *wc_validator3(void *baton, const char *uuid, const char *url, const char *root_url, apr_pool_t *pool)
 {
 	PyObject *py_validator = baton, *ret;
+    PyGILState_STATE state;
 
 	if (py_validator == Py_None) {
 		return NULL;
 	}
-
+    state = PyGILState_Ensure();
 	ret = PyObject_CallFunction(py_validator, "sss", uuid, url, root_url);
 	if (ret == NULL) {
+        PyGILState_Release(state);
 		return py_svn_error();
 	}
 
 	Py_DECREF(ret);
 
+    PyGILState_Release(state);
 	return NULL;
 }
 
@@ -359,17 +364,21 @@ svn_error_t *wc_validator3(void *baton, const char *uuid, const char *url, const
 svn_error_t *wc_validator2(void *baton, const char *uuid, const char *url, svn_boolean_t root, apr_pool_t *pool)
 {
 	PyObject *py_validator = baton, *ret;
+    PyGILState_STATE state;
 
 	if (py_validator == Py_None) {
 		return NULL;
 	}
 
+    state = PyGILState_Ensure();
 	ret = PyObject_CallFunction(py_validator, "ssO", uuid, url, Py_None);
 	if (ret == NULL) {
+        PyGILState_Release(state);
 		return py_svn_error();
 	}
 
 	Py_DECREF(ret);
+    PyGILState_Release(state);
 
 	return NULL;
 }
