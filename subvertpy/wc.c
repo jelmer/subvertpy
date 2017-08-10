@@ -636,13 +636,13 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	const char *path;
-	char *uuid, *url;
+	char *uuid, *url = NULL;
 	PyObject *py_path;
-	char *repos=NULL;
-	svn_revnum_t rev=-1;
+	char *repos = NULL;
+	long rev = -1;
 	apr_pool_t *pool;
 	char *kwnames[] = { "path", "uuid", "url", "repos", "rev", "depth", NULL };
-	svn_depth_t depth = svn_depth_infinity;
+	int depth = svn_depth_infinity;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Oss|sli", kwnames,
 									 &py_path, &uuid, &url, &repos, &rev, &depth))
@@ -1328,10 +1328,10 @@ static PyObject *py_wc_context_ensure_adm(PyObject *self, PyObject *args,
     char *repos_root_url;
     char *repos_uuid;
     int revnum;
-    int depth;
+    int depth = svn_depth_infinity;
     apr_pool_t *pool;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ssssii", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ssssi|i", kwnames,
                                      &local_abspath, &url, &repos_root_url,
                                      &repos_uuid, &revnum, &depth)) {
         return NULL;
