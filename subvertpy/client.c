@@ -1259,7 +1259,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
         apr_pool_destroy(temp_pool);
         return NULL;
     }
-    APR_ARRAY_IDX(src_paths, 0, svn_client_copy_source_t *) = &src;
+    APR_ARRAY_PUSH(src_paths, svn_client_copy_source_t *) = &src;
 #endif
 #if ONLY_SINCE_SVN(1, 9)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_copy7(src_paths,
