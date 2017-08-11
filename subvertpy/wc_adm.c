@@ -652,13 +652,13 @@ static PyObject *adm_get_switch_editor(PyObject *self, PyObject *args, PyObject 
     bool depth_is_sticky = false;
     int depth = svn_depth_infinity;
     char *switch_url;
-    PyObject *py_target;
+    PyObject *py_target, *py_switch_url;
     char *kwnames[] = {
         "target", "switch_url", "use_commit_times", "depth", "notify_func",
         "diff3_cmd", "depth_is_sticky", "allow_unver_obstructions", NULL };
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|biOzbb", kwnames,
-                                     &py_target, &switch_url, &use_commit_times,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|biOzbb", kwnames,
+                                     &py_target, &py_switch_url, &use_commit_times,
                                      &depth, &notify_func, &diff3_cmd,
                                      &depth_is_sticky,
                                      &allow_unver_obstructions))
@@ -675,6 +675,13 @@ static PyObject *adm_get_switch_editor(PyObject *self, PyObject *args, PyObject 
         apr_pool_destroy(pool);
         return NULL;
     }
+
+    switch_url = py_object_to_svn_uri(py_switch_url, pool);
+    if (switch_url == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
     latest_revnum = (svn_revnum_t *)apr_palloc(pool, sizeof(svn_revnum_t));
     Py_BEGIN_ALLOW_THREADS
 #if ONLY_SINCE_SVN(1, 5)
