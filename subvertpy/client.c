@@ -1016,7 +1016,7 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
 #if ONLY_BEFORE_SVN(1, 7)
     svn_commit_info_t *commit_info = NULL;
 #endif
-    PyObject *py_revprops;
+    PyObject *py_revprops = Py_None;
     apr_array_header_t *apr_paths;
     ClientObject *client = (ClientObject *)self;
     apr_hash_t *hash_revprops;
@@ -1259,7 +1259,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
         apr_pool_destroy(temp_pool);
         return NULL;
     }
-    APR_ARRAY_IDX(src_paths, 0, svn_client_copy_source_t *) = &src;
+    APR_ARRAY_PUSH(src_paths, svn_client_copy_source_t *) = &src;
 #endif
 #if ONLY_SINCE_SVN(1, 9)
     RUN_SVN_WITH_POOL(temp_pool, svn_client_copy7(src_paths,
@@ -1366,9 +1366,9 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
     PyObject *peg_revision = Py_None;
     PyObject *revision;
     ClientObject *client = (ClientObject *)self;
-    PyObject *ret;
+    PyObject *ret, *py_target;
 
-    if (!PyArg_ParseTuple(args, "ssO|Ob", &propname, &target, &peg_revision,
+    if (!PyArg_ParseTuple(args, "sOO|Ob", &propname, &py_target, &peg_revision,
                           &revision, &recurse))
         return NULL;
     if (!to_opt_revision(peg_revision, &c_peg_rev))
@@ -1378,6 +1378,11 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
+    target = py_object_to_svn_abspath(py_target, temp_pool);
+    if (target == NULL) {
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
 #if ONLY_SINCE_SVN(1, 8)
     /* FIXME: Support changelists */
     /* FIXME: Support actual_revnum */

@@ -431,16 +431,17 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     const char *path;
-    char *copyfrom_url=NULL;
+    const char *copyfrom_url = NULL;
     svn_revnum_t copyfrom_rev=-1;
     char *kwnames[] = { "path", "copyfrom_url", "copyfrom_rev", "notify_func", "depth", NULL };
     PyObject *notify_func=Py_None, *py_path;
     AdmObject *admobj = (AdmObject *)self;
     apr_pool_t *temp_pool;
     svn_depth_t depth = svn_depth_infinity;
+    PyObject *py_copyfrom_url = Py_None;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|zlOi", kwnames, &py_path,
-                                     &copyfrom_url, &copyfrom_rev, &notify_func, &depth))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OlOi", kwnames, &py_path,
+                                     &py_copyfrom_url, &copyfrom_rev, &notify_func, &depth))
         return NULL;
 
     ADM_CHECK_CLOSED(admobj);
@@ -456,10 +457,20 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
+    if (py_copyfrom_url != Py_None) {
+        copyfrom_url = py_object_to_svn_uri(py_copyfrom_url, temp_pool);
+        if (copyfrom_url == NULL) {
+            apr_pool_destroy(temp_pool);
+            return NULL;
+        }
+    } else {
+        copyfrom_url = NULL;
+    }
+
 #if ONLY_SINCE_SVN(1, 6)
     RUN_SVN_WITH_POOL(temp_pool, svn_wc_add3(
                                              path, admobj->adm,
-                                             depth, svn_uri_canonicalize(copyfrom_url, temp_pool),
+                                             depth, copyfrom_url,
                                              copyfrom_rev, py_cancel_check, NULL,
                                              py_wc_notify_func,
                                              (void *)notify_func,
@@ -568,7 +579,9 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
     svn_wc_traversal_info_t *traversal_info;
     bool depth_compatibility_trick = false;
     bool honor_depth_exclude = false;
-    char *kwnames[] = { "path", "reporter", "restore_files", "recurse", "use_commit_times", "notify_func", "depth_compatibility_trick", "honor_depth_exclude,", NULL };
+    char *kwnames[] = { "path", "reporter", "restore_files", "recurse",
+        "use_commit_times", "notify_func", "depth_compatibility_trick",
+        "honor_depth_exclude,", NULL };
     PyObject *py_path;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|bbbObb", kwnames, &py_path,
@@ -623,10 +636,10 @@ static void wc_done_handler(void *self)
     Py_DECREF(admobj);
 }
 
-static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
+static PyObject *adm_get_switch_editor(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     char *target;
-    bool use_commit_times=true, recurse=true;
+    bool use_commit_times=true;
     PyObject * notify_func=Py_None;
     char *diff3_cmd=NULL;
     const svn_delta_editor_t *editor;
@@ -637,10 +650,18 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
     svn_error_t *err;
     bool allow_unver_obstructions = false;
     bool depth_is_sticky = false;
+    int depth = svn_depth_infinity;
+    char *switch_url;
+    PyObject *py_target, *py_switch_url;
+    char *kwnames[] = {
+        "target", "switch_url", "use_commit_times", "depth", "notify_func",
+        "diff3_cmd", "depth_is_sticky", "allow_unver_obstructions", NULL };
 
-    if (!PyArg_ParseTuple(args, "s|bbOzbb", &target, &use_commit_times,
-                          &recurse, &notify_func, &diff3_cmd, &depth_is_sticky,
-                          &allow_unver_obstructions))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|biOzbb", kwnames,
+                                     &py_target, &py_switch_url, &use_commit_times,
+                                     &depth, &notify_func, &diff3_cmd,
+                                     &depth_is_sticky,
+                                     &allow_unver_obstructions))
         return NULL;
 
     ADM_CHECK_CLOSED(admobj);
@@ -648,14 +669,108 @@ static PyObject *adm_get_update_editor(PyObject *self, PyObject *args)
     pool = Pool(NULL);
     if (pool == NULL)
         return NULL;
+
+    target = py_object_to_svn_string(py_target, pool);
+    if (target == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    switch_url = py_object_to_svn_uri(py_switch_url, pool);
+    if (switch_url == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
     latest_revnum = (svn_revnum_t *)apr_palloc(pool, sizeof(svn_revnum_t));
     Py_BEGIN_ALLOW_THREADS
 #if ONLY_SINCE_SVN(1, 5)
-        /* FIXME: Support all values of depth */
+        /* FIXME: Support fetch_func */
+        /* FIXME: Support conflict func */
+        err = svn_wc_get_switch_editor3(latest_revnum, admobj->adm, target, switch_url,
+                                        use_commit_times, depth,
+                                        depth_is_sticky?TRUE:FALSE, allow_unver_obstructions?TRUE:FALSE,
+                                        py_wc_notify_func, (void *)notify_func,
+                                        py_cancel_check, NULL,
+                                        NULL, NULL, diff3_cmd, NULL, &editor,
+                                        &edit_baton, NULL, pool);
+#else
+    if (allow_unver_obstructions) {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "allow_unver_obstructions is not supported in svn < 1.5");
+        apr_pool_destroy(pool);
+        PyEval_RestoreThread(_save);
+        return NULL;
+    }
+    if (depth_is_sticky) {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "depth_is_sticky is not supported in svn < 1.5");
+        apr_pool_destroy(pool);
+        PyEval_RestoreThread(_save);
+        return NULL;
+    }
+    err = svn_wc_get_switch_editor2(latest_revnum, admobj->adm, target, switch_url,
+                                    use_commit_times, recurse, py_wc_notify_func, (void *)notify_func,
+                                    py_cancel_check, NULL, diff3_cmd, &editor, &edit_baton,
+                                    NULL, pool);
+#endif
+    Py_END_ALLOW_THREADS
+        if (err != NULL) {
+            handle_svn_error(err);
+            svn_error_clear(err);
+            apr_pool_destroy(pool);
+            return NULL;
+        }
+    Py_INCREF(admobj);
+    return new_editor_object(NULL, editor, edit_baton, pool, &Editor_Type,
+                             wc_done_handler, admobj, NULL);
+}
+
+static PyObject *adm_get_update_editor(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    char *target;
+    bool use_commit_times=true;
+    PyObject * notify_func=Py_None;
+    char *diff3_cmd=NULL;
+    const svn_delta_editor_t *editor;
+    AdmObject *admobj = (AdmObject *)self;
+    void *edit_baton;
+    apr_pool_t *pool;
+    svn_revnum_t *latest_revnum;
+    svn_error_t *err;
+    bool allow_unver_obstructions = false;
+    bool depth_is_sticky = false;
+    int depth = svn_depth_infinity;
+    PyObject *py_target;
+    char *kwnames[] = {
+        "target", "use_commit_times", "depth", "notify_func",
+        "diff3_cmd", "depth_is_sticky", "allow_unver_obstructions", NULL };
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|biOzbb", kwnames,
+                                     &py_target, &use_commit_times,
+                                     &depth, &notify_func, &diff3_cmd,
+                                     &depth_is_sticky,
+                                     &allow_unver_obstructions))
+        return NULL;
+
+    ADM_CHECK_CLOSED(admobj);
+
+    pool = Pool(NULL);
+    if (pool == NULL)
+        return NULL;
+
+    target = py_object_to_svn_string(py_target, pool);
+    if (target == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+    latest_revnum = (svn_revnum_t *)apr_palloc(pool, sizeof(svn_revnum_t));
+    Py_BEGIN_ALLOW_THREADS
+#if ONLY_SINCE_SVN(1, 5)
         /* FIXME: Support fetch_func */
         /* FIXME: Support conflict func */
         err = svn_wc_get_update_editor3(latest_revnum, admobj->adm, target,
-                                        use_commit_times, recurse?svn_depth_infinity:svn_depth_files,
+                                        use_commit_times, depth,
                                         depth_is_sticky?TRUE:FALSE, allow_unver_obstructions?TRUE:FALSE,
                                         py_wc_notify_func, (void *)notify_func,
                                         py_cancel_check, NULL,
@@ -1660,7 +1775,10 @@ static PyMethodDef adm_methods[] = {
     { "delete", (PyCFunction)adm_delete, METH_VARARGS|METH_KEYWORDS, "S.delete(path, notify_func=None, keep_local=False)" },
     { "crawl_revisions", (PyCFunction)adm_crawl_revisions, METH_VARARGS|METH_KEYWORDS,
         "S.crawl_revisions(path, reporter, restore_files=True, recurse=True, use_commit_times=True, notify_func=None) -> None" },
-    { "get_update_editor", adm_get_update_editor, METH_VARARGS, NULL },
+    { "get_update_editor", (PyCFunction)adm_get_update_editor,
+        METH_VARARGS|METH_KEYWORDS, NULL },
+    { "get_switch_editor", (PyCFunction)adm_get_switch_editor,
+        METH_VARARGS|METH_KEYWORDS, NULL },
     { "close", (PyCFunction)adm_close, METH_NOARGS,
         "S.close()" },
     { "entry", (PyCFunction)adm_entry, METH_VARARGS,

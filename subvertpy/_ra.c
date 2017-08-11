@@ -1044,10 +1044,11 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	void *report_baton;
 	apr_pool_t *temp_pool, *result_pool;
 	ReporterObject *ret;
+    PyObject *py_switch_url;
 	svn_error_t *err;
 
-	if (!PyArg_ParseTuple(args, "lsbsO|bb:do_switch", &revision_to_update_to, &update_target,
-						  &recurse, &switch_url, &update_editor, &send_copyfrom_args, &ignore_ancestry))
+	if (!PyArg_ParseTuple(args, "lsbOO|bb:do_switch", &revision_to_update_to, &update_target,
+						  &recurse, &py_switch_url, &update_editor, &send_copyfrom_args, &ignore_ancestry))
 		return NULL;
 	if (ra_check_busy(ra))
 		return NULL;
@@ -1057,6 +1058,13 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 		ra->busy = false;
 		return NULL;
 	}
+
+    switch_url = py_object_to_svn_uri(py_switch_url, temp_pool);
+    if (switch_url == NULL) {
+        apr_pool_destroy(temp_pool);
+        ra->busy = false;
+        return NULL;
+    }
 
 	result_pool = Pool(NULL);
 	if (result_pool == NULL) {
