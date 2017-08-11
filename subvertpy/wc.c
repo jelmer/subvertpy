@@ -1665,11 +1665,32 @@ static PyObject *py_wc_add_from_disk(PyObject *self, PyObject *args, PyObject *k
         }
     }
 
+#if ONLY_SINCE_SVN(1, 9)
     RUN_SVN_WITH_POOL(
             pool, svn_wc_add_from_disk3(
                     context_obj->context, path, props, skip_checks,
                     notify_func == Py_None?NULL:py_wc_notify_func,
                     notify_func, pool));
+#else
+    if (props != NULL) {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "props argument only supported on svn >= 1.9");
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+
+    if (skip_checks) {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "skip_checks argument only supported on svn >= 1.9");
+        apr_pool_destroy(pool);
+        return NULL;
+    }
+    RUN_SVN_WITH_POOL(
+            pool, svn_wc_add_from_disk(
+                    context_obj->context, path,
+                    notify_func == Py_None?NULL:py_wc_notify_func,
+                    notify_func, pool));
+#endif
 
     apr_pool_destroy(pool);
 
