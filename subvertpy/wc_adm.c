@@ -431,16 +431,17 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
 static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     const char *path;
-    char *copyfrom_url=NULL;
+    const char *copyfrom_url = NULL;
     svn_revnum_t copyfrom_rev=-1;
     char *kwnames[] = { "path", "copyfrom_url", "copyfrom_rev", "notify_func", "depth", NULL };
     PyObject *notify_func=Py_None, *py_path;
     AdmObject *admobj = (AdmObject *)self;
     apr_pool_t *temp_pool;
     svn_depth_t depth = svn_depth_infinity;
+    PyObject *py_copyfrom_url = Py_None;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|zlOi", kwnames, &py_path,
-                                     &copyfrom_url, &copyfrom_rev, &notify_func, &depth))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OlOi", kwnames, &py_path,
+                                     &py_copyfrom_url, &copyfrom_rev, &notify_func, &depth))
         return NULL;
 
     ADM_CHECK_CLOSED(admobj);
@@ -456,10 +457,20 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
+    if (py_copyfrom_url != Py_None) {
+        copyfrom_url = py_object_to_svn_uri(py_copyfrom_url, temp_pool);
+        if (copyfrom_url == NULL) {
+            apr_pool_destroy(temp_pool);
+            return NULL;
+        }
+    } else {
+        copyfrom_url = NULL;
+    }
+
 #if ONLY_SINCE_SVN(1, 6)
     RUN_SVN_WITH_POOL(temp_pool, svn_wc_add3(
                                              path, admobj->adm,
-                                             depth, svn_uri_canonicalize(copyfrom_url, temp_pool),
+                                             depth, copyfrom_url,
                                              copyfrom_rev, py_cancel_check, NULL,
                                              py_wc_notify_func,
                                              (void *)notify_func,
