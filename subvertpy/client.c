@@ -1362,7 +1362,7 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
     bool recurse = false;
     char *propname;
     apr_pool_t *temp_pool;
-    char *target;
+    const char *target;
     PyObject *peg_revision = Py_None;
     PyObject *revision;
     ClientObject *client = (ClientObject *)self;

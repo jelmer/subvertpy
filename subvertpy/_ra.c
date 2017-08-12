@@ -1038,7 +1038,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	bool recurse;
 	bool send_copyfrom_args = false;
 	bool ignore_ancestry = true;
-	char *switch_url;
+	const char *switch_url;
 	PyObject *update_editor;
 	const REPORTER_T *reporter;
 	void *report_baton;

@@ -651,7 +651,7 @@ static PyObject *adm_get_switch_editor(PyObject *self, PyObject *args, PyObject 
     bool allow_unver_obstructions = false;
     bool depth_is_sticky = false;
     int depth = svn_depth_infinity;
-    char *switch_url;
+    const char *switch_url;
     PyObject *py_target, *py_switch_url;
     char *kwnames[] = {
         "target", "switch_url", "use_commit_times", "depth", "notify_func",
