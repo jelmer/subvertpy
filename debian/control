@@ -19,6 +19,7 @@ X-Python-Version: >= 2.7
 X-Python3-Version: >= 3.3
 Vcs-Git: https://salsa.debian.org/python-team/modules/subvertpy.git
 XS-Testsuite: autopkgtest
+Vcs-Browser: https://salsa.debian.org/python-team/modules/subvertpy
 
 Package: python-subvertpy
 Architecture: any
