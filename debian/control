@@ -17,7 +17,7 @@ Build-Depends: debhelper (>= 9.20151004),
 Standards-Version: 4.0.0
 X-Python-Version: >= 2.7
 X-Python3-Version: >= 3.3
-Vcs-Git: git://anonscm.debian.org/python-modules/packages/subvertpy.git
+Vcs-Git: https://salsa.debian.org/python-team/modules/subvertpy.git
 XS-Testsuite: autopkgtest
 
 Package: python-subvertpy
