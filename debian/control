@@ -16,7 +16,6 @@ Build-Depends: debhelper (>= 9.20151004),
                python-pydoctor (>= 0.5+git20151204),
                python-testtools
 Standards-Version: 4.0.0
-X-Python3-Version: >= 3.3
 Vcs-Git: https://salsa.debian.org/python-team/modules/subvertpy.git
 Vcs-Browser: https://salsa.debian.org/python-team/modules/subvertpy
 
