@@ -47,7 +47,7 @@ const char *
 svn_uri_canonicalize(const char *uri,
                      apr_pool_t *result_pool)
 {
-	return svn_path_canonicalize(uri, result_pool);
+	return svn_path_uri_from_iri(uri, result_pool);
 }
 
 const char *

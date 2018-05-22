@@ -28,20 +28,20 @@ from subvertpy.tests import TestCase
 class TestMarshalling(TestCase):
 
     def test_literal_txt(self):
-        l = literal("foo")
-        self.assertEqual("foo", l.txt)
+        line = literal("foo")
+        self.assertEqual("foo", line.txt)
 
     def test_literal_str(self):
-        l = literal("foo bar")
-        self.assertEqual("foo bar", l.__str__())
+        line = literal("foo bar")
+        self.assertEqual("foo bar", line.__str__())
 
     def test_literal_rep(self):
-        l = literal("foo bar")
-        self.assertEqual("foo bar", l.__repr__())
+        line = literal("foo bar")
+        self.assertEqual("foo bar", line.__repr__())
 
     def test_marshall_error(self):
-        e = MarshallError("bla bla")
-        self.assertEqual("bla bla", e.__str__())
+        err = MarshallError("bla bla")
+        self.assertEqual("bla bla", err.__str__())
 
     def test_marshall_int(self):
         self.assertEqual(b"1 ", marshall(1))

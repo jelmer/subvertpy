@@ -745,7 +745,7 @@ class SVNClient(SVNConnection):
             self.send_msg([literal("switch"), args])
             self._recv_ack()
             return Reporter(self, update_editor)
-        except:
+        except BaseException:
             self.busy = False
             raise
 
@@ -766,7 +766,7 @@ class SVNClient(SVNConnection):
             self.send_msg([literal("update"), args])
             self._recv_ack()
             return Reporter(self, update_editor)
-        except:
+        except BaseException:
             self.busy = False
             raise
 
@@ -787,7 +787,7 @@ class SVNClient(SVNConnection):
             self.send_msg([literal("diff"), args])
             self._recv_ack()
             return Reporter(self, diff_editor)
-        except:
+        except BaseException:
             self.busy = False
             raise
 

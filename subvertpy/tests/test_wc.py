@@ -160,7 +160,10 @@ class AdmObjTests(SubversionTestCase):
         adm = wc.Adm(None, "checkout", True)
         path = os.path.join(self.test_dir, "checkout/bar")
         stream = adm.translated_stream(path, path, wc.TRANSLATE_TO_NF)
-        self.assertTrue(stream.read().startswith(b"My id: $Id: "))
+        if wc.api_version() < (1, 6):
+            self.assertRaises(NotImplementedError, stream.read)
+        else:
+            self.assertTrue(stream.read().startswith(b"My id: $Id: "))
 
     def test_text_modified(self):
         self.make_client("repos", "checkout")
@@ -322,6 +325,11 @@ class AdmObjTests(SubversionTestCase):
 
 
 class ContextTests(SubversionTestCase):
+
+    def setUp(self):
+        super(ContextTests, self).setUp()
+        if wc.api_version() < (1, 7):
+            self.skipTest("context API not available on Subversion < 1.7")
 
     def test_create(self):
         context = wc.Context()

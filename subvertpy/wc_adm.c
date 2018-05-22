@@ -2007,6 +2007,10 @@ static PyObject *py_entry(const svn_wc_entry_t *entry)
 {
 	EntryObject *ret;
 
+	if (entry == NULL) {
+		Py_RETURN_NONE;
+	}
+
 	ret = PyObject_New(EntryObject, &Entry_Type);
 	if (ret == NULL)
 		return NULL;

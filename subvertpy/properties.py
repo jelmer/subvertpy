@@ -85,10 +85,10 @@ def parse_externals_description(base_url, val):
     def is_url(u):
         return ("://" in u)
     ret = {}
-    for l in val.splitlines():
-        if l == "" or l[0] == "#":
+    for line in val.splitlines():
+        if line == "" or line[0] == "#":
             continue
-        pts = l.rsplit(None, 3)
+        pts = line.rsplit(None, 3)
         if len(pts) == 4:
             if pts[0] == "-r":  # -r X URL DIR
                 revno = int(pts[1])
@@ -137,8 +137,8 @@ def parse_mergeinfo_property(text):
     :param text: Property contents
     """
     ret = {}
-    for l in text.splitlines():
-        (path, ranges) = l.rsplit(":", 1)
+    for line in text.splitlines():
+        (path, ranges) = line.rsplit(":", 1)
         assert path.startswith("/")
         ret[path] = []
         for range in ranges.split(","):
