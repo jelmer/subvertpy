@@ -3,7 +3,7 @@ dist: trusty
 addons:
   apt:
     update: true
-    packages: libapr1-dev apache2-dev libaprutil1-dev libdb5.3-dev liblz4-dev libsasl2-dev libperl-dev libserf-dev libsqlite3-dev libtool python-all-dev libneon27-gnutls-dev
+    packages: libapr1-dev libaprutil1-dev libdb5.3-dev liblz4-dev libsasl2-dev libperl-dev libserf-dev libsqlite3-dev libtool python-all-dev libneon27-gnutls-dev
 python:
   - "2.7"
   - "3.4"
