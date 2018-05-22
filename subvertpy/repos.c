@@ -39,7 +39,7 @@ typedef struct {
 
 static PyObject *repos_create(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *config=Py_None, *fs_config=Py_None, *py_path;
 	svn_repos_t *repos = NULL;
 	apr_pool_t *pool;
@@ -499,6 +499,7 @@ static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+#if ONLY_SINCE_SVN(1, 6)
 static svn_error_t *py_pack_notify(void *baton, apr_int64_t shard, svn_fs_pack_notify_action_t action, apr_pool_t *pool)
 {
 	PyObject *ret;
@@ -527,6 +528,7 @@ static PyObject *repos_pack(RepositoryObject *self, PyObject *args)
 
 	Py_RETURN_NONE;
 }
+#endif
 
 static PyMethodDef repos_methods[] = {
 	{ "load_fs", (PyCFunction)repos_load_fs, METH_VARARGS|METH_KEYWORDS, NULL },
@@ -534,7 +536,9 @@ static PyMethodDef repos_methods[] = {
 	{ "has_capability", (PyCFunction)repos_has_capability, METH_VARARGS, NULL },
 	{ "verify_fs", (PyCFunction)repos_verify, METH_VARARGS,
 		"S.verify_repos(feedback_stream, start_revnum, end_revnum)" },
+#if ONLY_SINCE_SVN(1, 6)
 	{ "pack_fs", (PyCFunction)repos_pack, METH_VARARGS, NULL },
+#endif
 	{ NULL, }
 };
 

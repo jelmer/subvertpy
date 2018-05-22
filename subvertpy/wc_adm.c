@@ -484,6 +484,7 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
     RUN_SVN_WITH_POOL(temp_pool, svn_wc_add2(
                                              path, admobj->adm, copyfrom_url,
                                              copyfrom_rev, py_cancel_check,
+                                             NULL,
                                              py_wc_notify_func,
                                              (void *)notify_func,
                                              temp_pool));
@@ -1031,13 +1032,15 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
     AdmObject *admobj = (AdmObject *)self;
     apr_pool_t *temp_pool;
     PyObject *py_dst_path;
-    const char *dst_path;
     char *copyfrom_url = NULL;
     svn_revnum_t copyfrom_rev = -1;
     PyObject *py_new_base_contents, *py_new_contents, *py_new_base_props,
              *py_new_props, *notify = Py_None;
+#if ONLY_SINCE_SVN(1, 6)
+    const char *dst_path;
     svn_stream_t *new_contents, *new_base_contents;
     apr_hash_t *new_props, *new_base_props;
+#endif
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOOOO|zlO", kwnames,
                                      &py_dst_path, &py_new_base_contents, &py_new_contents, &py_new_base_props,
@@ -1050,6 +1053,7 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
     if (temp_pool == NULL)
         return NULL;
 
+#if ONLY_SINCE_SVN(1, 6)
     new_base_props = prop_dict_to_hash(temp_pool, py_new_base_props);
 
     new_props = prop_dict_to_hash(temp_pool, py_new_props);
@@ -1060,7 +1064,6 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
 
     dst_path = py_object_to_svn_dirent(py_dst_path, temp_pool);
 
-#if ONLY_SINCE_SVN(1, 6)
     RUN_SVN_WITH_POOL(temp_pool, svn_wc_add_repos_file3(dst_path, admobj->adm,
                                                         new_base_contents,
                                                         new_contents,
@@ -1072,7 +1075,6 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
 #else
     PyErr_SetString(PyExc_NotImplementedError,
                     "add_repos_file3 not supported on svn < 1.6");
-    apr_pool_destroy(temp_pool);
 #endif
 
     apr_pool_destroy(temp_pool);
@@ -1177,7 +1179,9 @@ static PyObject *crop_tree(PyObject *self, PyObject *args)
     char *target;
     svn_depth_t depth;
     PyObject *notify;
+#if ONLY_SINCE_SVN(1, 6)
     apr_pool_t *temp_pool;
+#endif
     AdmObject *admobj = (AdmObject *)self;
 
     if (!PyArg_ParseTuple(args, "si|O", &target, &depth, &notify))
@@ -1680,8 +1684,13 @@ static PyObject *conflicted(PyObject *self, PyObject *args)
     apr_pool_t *temp_pool;
     PyObject *ret;
     AdmObject *admobj = (AdmObject *)self;
-    svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+    svn_boolean_t text_conflicted, prop_conflicted;
     PyObject *py_path;
+#if ONLY_BEFORE_SVN(1, 6)
+    const svn_wc_entry_t *entry;
+#else
+    svn_boolean_t tree_conflicted;
+#endif
 
     if (!PyArg_ParseTuple(args, "O", &py_path))
         return NULL;
@@ -1705,8 +1714,10 @@ static PyObject *conflicted(PyObject *self, PyObject *args)
 
     ret = Py_BuildValue("(bbb)", text_conflicted, prop_conflicted, tree_conflicted);
 #else
+    RUN_SVN_WITH_POOL(temp_pool, svn_wc_entry(&entry, path, admobj->adm, TRUE, temp_pool));
+
     RUN_SVN_WITH_POOL(temp_pool, svn_wc_conflicted_p(&text_conflicted,
-                                                     &prop_conflicted, path, admobj->adm, temp_pool));
+                                                     &prop_conflicted, path, entry, temp_pool));
 
     ret = Py_BuildValue("(bbO)", text_conflicted, prop_conflicted, Py_None);
 #endif
@@ -2103,7 +2114,7 @@ PyTypeObject Status2_Type = {
 
 };
 
-PyObject *py_wc_status2(const svn_wc_status2_t *status)
+PyObject *py_wc_status2(svn_wc_status2_t *status)
 {
 	Status2Object *ret;
 	svn_wc_status2_t *dup_status;

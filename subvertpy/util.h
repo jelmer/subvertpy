@@ -150,6 +150,8 @@ svn_relpath_canonicalize(const char *relpath,
 const char *
 svn_dirent_canonicalize(const char *dirent,
                         apr_pool_t *result_pool);
+#define svn_dirent_get_absolute svn_path_get_absolute
+#define svn_dirent_is_absolute svn_path_is_url
 #endif
 
 const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool);

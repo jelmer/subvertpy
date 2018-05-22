@@ -34,8 +34,6 @@
 #define T_BOOL T_BYTE
 #endif
 
-static PyTypeObject Context_Type;
-
 #if ONLY_BEFORE_SVN(1, 5)
 struct svn_wc_committed_queue_t
 {
@@ -577,8 +575,8 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	apr_pool_t *temp_pool;
 	PyObject *py_path;
 #if ONLY_SINCE_SVN(1, 6)
-	apr_pool_t *stream_pool;
 	StreamObject *ret;
+	apr_pool_t *stream_pool;
 	svn_stream_t *stream;
 #else
 	PyObject *ret;
@@ -598,6 +596,12 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 		apr_pool_destroy(stream_pool);
 		return NULL;
 	}
+#else
+	temp_pool = Pool(NULL);
+	if (temp_pool == NULL) {
+		return NULL;
+	}
+#endif
 
 	path = py_object_to_svn_dirent(py_path, temp_pool);
 	if (path == NULL) {
@@ -605,6 +609,7 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+#if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(stream_pool, svn_wc_get_pristine_contents(&stream, path, stream_pool, temp_pool));
 	apr_pool_destroy(temp_pool);
 
@@ -1017,6 +1022,7 @@ PyTypeObject CommittedQueue_Type = {
 };
 
 #if ONLY_SINCE_SVN(1, 7)
+static PyTypeObject Context_Type;
 
 typedef struct {
     PyObject_VAR_HEAD
@@ -1945,8 +1951,10 @@ moduleinit(void)
 	if (PyType_Ready(&CommittedQueue_Type) < 0)
 		return NULL;
 
+#if ONLY_SINCE_SVN(1, 7)
 	if (PyType_Ready(&Status3_Type) < 0)
 		return NULL;
+#endif
 
 	apr_initialize();
 

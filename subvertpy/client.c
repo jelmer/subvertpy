@@ -72,6 +72,7 @@ typedef struct {
 
 #define INVOKE_COMMIT_CALLBACK(pool, commit_info, callback) \
     { \
+        PyObject *ret; \
         PyObject *py_commit_info = py_commit_info_tuple(commit_info); \
         if (py_commit_info == NULL) { \
             apr_pool_destroy(pool); \
@@ -755,6 +756,7 @@ static PyObject *client_checkout(PyObject *self, PyObject *args, PyObject *kwarg
     return PyLong_FromLong(result_rev);
 }
 
+#if ONLY_SINCE_SVN(1, 7)
 static svn_error_t *py_commit_callback2(const svn_commit_info_t *commit_info,
                                         void *callback, apr_pool_t *pool) {
     PyObject *py_callback = callback;
@@ -786,6 +788,7 @@ static svn_error_t *py_commit_callback2(const svn_commit_info_t *commit_info,
 
     return NULL;
 }
+#endif
 
 static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
 {
@@ -954,7 +957,6 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
     svn_stream_t *stream;
     bool expand_keywords = true;
     PyObject *py_stream, *py_path, *ret;
-    apr_hash_t *props = NULL;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OOb", kwnames, &py_path, &py_stream, &rev, &peg_rev, &expand_keywords))
         return NULL;
@@ -982,6 +984,8 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
 #if ONLY_SINCE_SVN(1, 9)
+    {
+    apr_hash_t *props = NULL;
     RUN_SVN_WITH_POOL(temp_pool, svn_client_cat3(
         &props, stream, path, &c_peg_rev, &c_rev, expand_keywords,
         client->client, temp_pool, temp_pool));
@@ -990,6 +994,7 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
     if (ret == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
+    }
     }
 #else
     if (!expand_keywords) {
@@ -1186,7 +1191,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     svn_client_copy_source_t src;
 #endif
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|ObbbbOOO", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|ObbbObbO", kwnames,
              &src_path, &dst_path, &src_rev, &copy_as_child, &make_parents,
              &ignore_externals, &py_revprops, &metadata_only, &pin_externals,
              &callback))
@@ -1242,7 +1247,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
         apr_pool_destroy(temp_pool);
         return NULL;
     }
-    if (pin_externals != Py_None) {
+    if (pin_externals) {
         PyErr_SetString(PyExc_NotImplementedError,
                         "pin_externals not supported in svn < 1.9");
         apr_pool_destroy(temp_pool);

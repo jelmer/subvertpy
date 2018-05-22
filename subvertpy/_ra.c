@@ -1432,8 +1432,10 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	int vallen, oldvallen = -2;
 	apr_pool_t *temp_pool;
 	svn_string_t *val_string;
+#if ONLY_SINCE_SVN(1, 7)
 	const svn_string_t *old_val_string;
 	const svn_string_t *const *old_val_string_p;
+#endif
 
 	if (!PyArg_ParseTuple(args, "lss#|z#:change_rev_prop", &rev, &name, &value,
 			&vallen, &oldvalue, &oldvallen))
@@ -3301,7 +3303,9 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 	return pylist;
 #else
 	PyObject *pylist = PyList_New(0);
+#if defined(WIN32) || defined(__CYGWIN__) || defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
 	PyObject *provider = NULL;
+#endif
 
 	if (pylist == NULL) {
 		Py_DECREF(pylist);

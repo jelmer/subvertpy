@@ -26,7 +26,7 @@
 
 bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_array_header_t **ret);
 void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool);
-PyObject *py_wc_status2(const svn_wc_status2_t *status);
+PyObject *py_wc_status2(svn_wc_status2_t *status);
 #if ONLY_SINCE_SVN(1, 5)
 extern const svn_ra_reporter3_t py_ra_reporter3;
 #endif
