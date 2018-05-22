@@ -22,7 +22,7 @@ script:
 install:
     - travis_retry pip install -U pip coverage codecov flake8
 before_install:
-    - wget http://www-eu.apache.org/dist/subversion/subversion-${SVN_VERSION}.tar.gz
+    - wget https://archive.apache.org/dist/subversion/subversion-${SVN_VERSION}.tar.gz
     - tar xvfz subversion-${SVN_VERSION}.tar.gz
     - cd subversion-${SVN_VERSION}
     - ./configure
