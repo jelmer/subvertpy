@@ -157,6 +157,9 @@ static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
         char *text;
         if (PyUnicode_Check(arg)) {
             arg = PyUnicode_AsUTF8String(arg);
+            if (arg == NULL) {
+                return false;
+            }
         } else {
             Py_INCREF(arg);
         }

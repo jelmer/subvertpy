@@ -306,7 +306,7 @@ class AdmObjTests(SubversionTestCase):
         self.client_add('checkout/bar')
         adm = wc.Adm(None, "checkout", True)
         cq = wc.CommittedQueue()
-        cq.queue(os.path.join(self.test_dir, "checkout/bar"), adm)
+        cq.queue("checkout/bar", adm)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z",
                                     "jelmer")
         bar = adm.entry("checkout/bar")

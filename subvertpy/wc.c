@@ -895,7 +895,7 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		return NULL;
 	}
 
-	path = py_object_to_svn_abspath(py_path, self->pool);
+	path = py_object_to_svn_dirent(py_path, self->pool);
 	if (path == NULL) {
 		apr_pool_destroy(temp_pool);
 		return NULL;

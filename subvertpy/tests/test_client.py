@@ -217,7 +217,7 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: commit_msg_1
         self.client.commit(["dc"])
         commit_1_dt = datetime.utcnow()
-        self.client.log(cb, "dc/foo")
+        self.client.log(cb, "dc/foo", start_rev="HEAD", end_rev=1)
         self.assertEqual(1, len(log_entries))
         self.assertEqual(None, log_entries[0]["changed_paths"])
         self.assertEqual(1, log_entries[0]["revision"])
@@ -232,7 +232,8 @@ class TestClient(SubversionTestCase):
         self.client.commit(["dc"])
         commit_2_dt = datetime.utcnow()
         log_entries = []
-        self.client.log(cb, "dc/foo", discover_changed_paths=True)
+        self.client.log(cb, "dc/foo", start_rev="HEAD", end_rev=1,
+                discover_changed_paths=True)
         self.assertEqual(2, len(log_entries))
         self.assertLogEntryChangedPathsEquals(["/foo", "/bar"], log_entries[0])
         self.assertEqual(2, log_entries[0]["revision"])
