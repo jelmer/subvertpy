@@ -554,7 +554,7 @@ static PyObject *get_pristine_copy_path(PyObject *self, PyObject *args)
 	if (pool == NULL)
 		return NULL;
 
-	path = py_object_to_svn_dirent(py_path, pool);
+	path = py_object_to_svn_abspath(py_path, pool);
 	if (path == NULL) {
 		apr_pool_destroy(pool);
 		return NULL;
@@ -603,7 +603,7 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	}
 #endif
 
-	path = py_object_to_svn_dirent(py_path, temp_pool);
+	path = py_object_to_svn_abspath(py_path, temp_pool);
 	if (path == NULL) {
 		apr_pool_destroy(temp_pool);
 		return NULL;

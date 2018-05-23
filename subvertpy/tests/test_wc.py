@@ -118,6 +118,8 @@ class AdmObjTests(SubversionTestCase):
     def test_add_repos_file(self):
         if wc.api_version() >= (1, 7):
             self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+        if wc.api_version() < (1, 6):
+            self.skipTest("doesn't work with svn < 1.6")
         self.make_client("repos", "checkout")
         adm = wc.Adm(None, "checkout", True)
         adm.add_repos_file("checkout/bar", BytesIO(b"basecontents"),
@@ -243,10 +245,14 @@ class AdmObjTests(SubversionTestCase):
         self.build_tree({"checkout/bar": b"text"})
         self.client_add('checkout/bar')
         adm = wc.Adm(None, "checkout")
-        self.assertEqual(wc.STATUS_ADDED, adm.status('bar').status)
+        self.assertEqual(
+                wc.STATUS_ADDED,
+                adm.status('checkout/bar').status)
         self.client_commit("checkout", "foo")
         adm = wc.Adm(None, "checkout")
-        self.assertEqual(wc.STATUS_NORMAL, adm.status('bar').status)
+        self.assertEqual(
+                wc.STATUS_NORMAL,
+                adm.status('checkout/bar').status)
 
     def test_transmit_text_deltas(self):
         if wc.api_version() >= (1, 7):

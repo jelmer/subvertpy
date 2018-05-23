@@ -1030,13 +1030,13 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
         "new_base_props", "new_props", "copyfrom_url", "copyfrom_rev",
         "notify", NULL };
     AdmObject *admobj = (AdmObject *)self;
-    apr_pool_t *temp_pool;
     PyObject *py_dst_path;
     char *copyfrom_url = NULL;
     svn_revnum_t copyfrom_rev = -1;
     PyObject *py_new_base_contents, *py_new_contents, *py_new_base_props,
              *py_new_props, *notify = Py_None;
 #if ONLY_SINCE_SVN(1, 6)
+    apr_pool_t *temp_pool;
     const char *dst_path;
     svn_stream_t *new_contents, *new_base_contents;
     apr_hash_t *new_props, *new_base_props;
@@ -1049,11 +1049,11 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
 
     ADM_CHECK_CLOSED(admobj);
 
+#if ONLY_SINCE_SVN(1, 6)
     temp_pool = Pool(NULL);
     if (temp_pool == NULL)
         return NULL;
 
-#if ONLY_SINCE_SVN(1, 6)
     new_base_props = prop_dict_to_hash(temp_pool, py_new_base_props);
 
     new_props = prop_dict_to_hash(temp_pool, py_new_props);
@@ -1072,14 +1072,16 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
                                                         copyfrom_url, copyfrom_rev,
                                                         py_cancel_check, NULL,
                                                         py_wc_notify_func, notify, temp_pool));
-#else
-    PyErr_SetString(PyExc_NotImplementedError,
-                    "add_repos_file3 not supported on svn < 1.6");
-#endif
 
     apr_pool_destroy(temp_pool);
 
     Py_RETURN_NONE;
+
+#else
+    PyErr_SetString(PyExc_NotImplementedError,
+                    "add_repos_file3 not supported on svn < 1.6");
+    return NULL;
+#endif
 }
 
 static PyObject *mark_missing_deleted(PyObject *self, PyObject *args)
