@@ -27,6 +27,12 @@ check:: build-inplace
 gdb-check::
 	$(MAKE) check DEBUGGER="gdb --args"
 
+valgrind-check-python3:
+	PYTHONMALLOC=malloc $(MAKE) check PYTHON=python DEBUGGER="valgrind --suppressions=/usr/lib/valgrind/python3.supp"
+
+valgrind-check-python2:
+	PYTHONMALLOC=malloc $(MAKE) check PYTHON=python3 DEBUGGER="valgrind --suppressions=/usr/lib/valgrind/python.supp"
+
 check-one::
 	$(MAKE) check TEST_OPTIONS=-f
 
