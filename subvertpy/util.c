@@ -296,9 +296,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 	if (error->child != NULL) {
 		PyTypeObject *cls = PyErr_GetSubversionExceptionTypeObject();
 		PyObject *args = PyErr_NewSubversionException(error->child);
-		child = cls->tp_new(cls, args, NULL);
-		if (cls->tp_init != NULL)
-			cls->tp_init(child, args, NULL);
+		child = PyObject_CallObject(cls, args);
 		Py_DECREF(cls);
 		Py_DECREF(args);
 	} else {
@@ -307,7 +305,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 	}
 
 #if ONLY_SINCE_SVN(1, 4)
-	message = svn_err_best_message(error, buf, sizeof(buf));
+	message = svn_err_best_message(error, buf, sizeof(buf)-1);
 #else
 	message = error->message;
 #endif
