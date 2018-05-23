@@ -15,9 +15,14 @@
 
 """Subversion subr library tests."""
 
+import os
 from unittest import TestCase
 
-from subvertpy.subr import uri_canonicalize
+from subvertpy.subr import (
+    uri_canonicalize,
+    dirent_canonicalize,
+    abspath,
+    )
 
 
 class UriCanonicalizeTests(TestCase):
@@ -32,3 +37,28 @@ class UriCanonicalizeTests(TestCase):
         self.assertEqual(
                 'https://www.example.com/(bla)',
                 uri_canonicalize('https://www.example.com/(bla%29'))
+
+
+class DirentCanonicalizeTests(TestCase):
+
+    def test_canonicalize(self):
+        self.assertEqual(
+                '/foo/bar',
+                dirent_canonicalize('/foo/bar'))
+        self.assertEqual(
+                '/foo/bar',
+                dirent_canonicalize('/foo//bar'))
+
+
+class AbspathTests(TestCase):
+
+    def test_abspath(self):
+        self.assertEqual(
+                '/foo/bar',
+                abspath('/foo//bar'))
+        self.assertEqual(
+                os.path.join(os.getcwd(), 'bar'),
+                abspath('bar'))
+        self.assertEqual(
+                os.path.join(os.getcwd(), 'bar', 'foo'),
+                abspath('bar/foo'))
