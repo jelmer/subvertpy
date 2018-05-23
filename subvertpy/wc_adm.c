@@ -129,21 +129,22 @@ static PyObject *adm_access_path(PyObject *self)
 static const char *py_object_to_adm_abspath(PyObject *obj, PyObject *adm, apr_pool_t *pool)
 {
     const char *ret;
-    PyObject *bytes_obj = NULL;
     AdmObject *admobj = (AdmObject *)adm;
     ADM_CHECK_CLOSED(admobj);
 
     if (PyUnicode_Check(obj)) {
-        bytes_obj = obj = PyUnicode_AsUTF8String(obj);
+        obj = PyUnicode_AsUTF8String(obj);
         if (obj == NULL) {
             return NULL;
         }
+    } else {
+        Py_INCREF(obj);
     }
 
     if (!PyBytes_Check(obj)) {
         PyErr_SetString(PyExc_TypeError,
                         "URIs need to be UTF-8 bytestrings or unicode strings");
-        Py_XDECREF(bytes_obj);
+        Py_DECREF(obj);
         return NULL;
     }
 

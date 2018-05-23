@@ -1481,9 +1481,20 @@ static PyObject *py_wc_status(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
     result_pool = Pool(NULL);
+    if (result_pool == NULL) {
+        return NULL;
+    }
     scratch_pool = Pool(result_pool);
+    if (scratch_pool == NULL) {
+        apr_pool_destroy(result_pool);
+        return NULL;
+    }
 
     path = py_object_to_svn_abspath(py_path, scratch_pool);
+    if (path == NULL) {
+        apr_pool_destroy(result_pool);
+        return NULL;
+    }
 
     RUN_SVN_WITH_POOL(result_pool,
                       svn_wc_status3(&status, context_obj->context, path,
