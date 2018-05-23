@@ -503,7 +503,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 			py_key = Py_None;
 			Py_INCREF(py_key);
 		} else {
-			py_key = PyBytes_FromStringAndSize(key, klen);
+			py_key = PyUnicode_FromStringAndSize(key, klen);
 		}
 		if (PyDict_SetItem(py_props, py_key, py_val) != 0) {
 			Py_DECREF(py_key);
@@ -1160,7 +1160,7 @@ PyObject *dirent_hash_to_dict(apr_hash_t *dirents, unsigned int dirent_fields, a
             pykey = Py_None;
             Py_INCREF(pykey);
         } else {
-            pykey = PyUnicode_FromString((char *)key);
+            pykey = PyUnicode_FromStringAndSize(key, klen);
         }
         if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
             Py_DECREF(item);
