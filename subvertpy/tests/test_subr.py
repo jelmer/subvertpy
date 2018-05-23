@@ -24,7 +24,7 @@ class UriCanonicalizeTests(TestCase):
 
     def test_canonicalize(self):
         self.assertEqual(
-                'https://www.example.com/',
+                'https://www.example.com',
                 uri_canonicalize('https://www.example.com/'))
         self.assertEqual(
                 'https://www.example.com(bla)',

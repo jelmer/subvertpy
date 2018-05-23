@@ -1059,12 +1059,12 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-    switch_url = py_object_to_svn_uri(py_switch_url, temp_pool);
-    if (switch_url == NULL) {
-        apr_pool_destroy(temp_pool);
-        ra->busy = false;
-        return NULL;
-    }
+	switch_url = py_object_to_svn_uri(py_switch_url, temp_pool);
+	if (switch_url == NULL) {
+		apr_pool_destroy(temp_pool);
+		ra->busy = false;
+		return NULL;
+	}
 
 	result_pool = Pool(NULL);
 	if (result_pool == NULL) {
