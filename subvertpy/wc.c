@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <apr_md5.h>
 #include <apr_sha1.h>
+#include <fcntl.h>
 
 #include "util.h"
 #include "editor.h"
@@ -579,6 +580,9 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	apr_pool_t *stream_pool;
 	svn_stream_t *stream;
 #else
+#if PY_MAJOR_VERSION >= 3
+	int fd;
+#endif
 	PyObject *ret;
 	const char *pristine_path;
 #endif
@@ -632,7 +636,17 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_pristine_copy_path(path, &pristine_path, temp_pool));
+#if PY_MAJOR_VERSION >= 3
+	fd = open(pristine_path, O_RDONLY);
+	if (fd < 0) {
+		PyErr_SetFromErrno(PyExc_IOError);
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+	ret = PyFile_FromFd(fd, pristine_path, "rb", -1, NULL, NULL, NULL, true);
+#else
 	ret = PyFile_FromString((char *)pristine_path, "rb");
+#endif
 	apr_pool_destroy(temp_pool);
 	return ret;
 #endif
@@ -853,9 +867,9 @@ static PyObject *committed_queue_init(PyTypeObject *self, PyObject *args, PyObje
 
 static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *args, PyObject *kwargs)
 {
-	char *path;
+	const char *path;
 	PyObject *admobj;
-	PyObject *py_wcprop_changes = Py_None;
+	PyObject *py_wcprop_changes = Py_None, *py_path;
     svn_wc_adm_access_t *adm;
 	bool remove_lock = false, remove_changelist = false;
 	char *md5_digest = NULL, *sha1_digest = NULL;
@@ -865,8 +879,8 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	int md5_digest_len, sha1_digest_len;
 	char *kwnames[] = { "path", "adm", "recurse", "wcprop_changes", "remove_lock", "remove_changelist", "md5_digest", "sha1_digest", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sO!|bObbz#z#", kwnames,
-									 &path, &Adm_Type, &admobj,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO!|bObbz#z#", kwnames,
+									 &py_path, &Adm_Type, &admobj,
 						  &recurse, &py_wcprop_changes, &remove_lock,
 						  &remove_changelist, &md5_digest, &md5_digest_len,
 						  &sha1_digest, &sha1_digest_len))
@@ -881,9 +895,9 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		return NULL;
 	}
 
-	path = apr_pstrdup(self->pool, path);
+	path = py_object_to_svn_abspath(py_path, self->pool);
 	if (path == NULL) {
-		PyErr_NoMemory();
+		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
 
