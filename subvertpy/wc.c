@@ -35,6 +35,13 @@
 #define T_BOOL T_BYTE
 #endif
 
+typedef struct {
+    PyObject_HEAD
+    svn_lock_t *lock;
+    apr_pool_t *pool;
+} LockObject;
+extern PyTypeObject Lock_Type;
+
 #if ONLY_BEFORE_SVN(1, 5)
 struct svn_wc_committed_queue_t
 {
@@ -1598,6 +1605,12 @@ static PyObject *py_wc_walk_status(PyObject *self, PyObject *args, PyObject *kwa
     Py_RETURN_NONE;
 }
 
+static svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
+{
+	LockObject* lockobj = (LockObject *)py_lock;
+	return lockobj->lock;
+}
+
 static PyObject *py_wc_add_lock(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     ContextObject *context_obj = (ContextObject *)self;
@@ -1607,7 +1620,8 @@ static PyObject *py_wc_add_lock(PyObject *self, PyObject *args, PyObject *kwargs
     const char *path;
     apr_pool_t *scratch_pool;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwnames, &py_path, &py_lock)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO!", kwnames, &py_path, &Lock_Type,
+                                     &py_lock)) {
         return NULL;
     }
 
@@ -1679,6 +1693,9 @@ static PyObject *py_wc_add_from_disk(PyObject *self, PyObject *args, PyObject *k
     }
 
     pool = Pool(NULL);
+    if (pool == NULL) {
+        return NULL;
+    }
 
     path = py_object_to_svn_abspath(py_path, pool);
     if (path == NULL) {
@@ -1939,6 +1956,52 @@ static PyTypeObject Context_Type = {
 
 #endif
 
+static void lock_dealloc(PyObject *self)
+{
+	LockObject *lockself = (LockObject *)self;
+
+	apr_pool_destroy(lockself->pool);
+
+	PyObject_Del(self);
+}
+
+static PyObject *lock_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+	char *kwnames[] = { NULL };
+	LockObject *ret;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwnames))
+		return NULL;
+
+	ret = PyObject_New(LockObject, &Lock_Type);
+	if (ret == NULL)
+		return NULL;
+
+	ret->pool = Pool(NULL);
+	if (ret->pool == NULL)
+		return NULL;
+	ret->lock = svn_lock_create(ret->pool);
+
+	return (PyObject *)ret;
+}
+
+PyTypeObject Lock_Type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+	"wc.Lock", /*	const char *tp_name;  For printing, in format "<module>.<name>" */
+	sizeof(LockObject),
+	0,/*	Py_ssize_t tp_basicsize, tp_itemsize;  For allocation */
+
+	/* Methods to implement standard operations */
+
+	.tp_dealloc = lock_dealloc, /*	destructor tp_dealloc;	*/
+
+	.tp_doc = "Lock", /*	const char *tp_doc;  Documentation string */
+
+	.tp_methods = NULL, /*	struct PyMethodDef *tp_methods;	*/
+
+	.tp_new = lock_init, /* tp_new tp_new */
+};
+
 static PyObject *
 moduleinit(void)
 {
@@ -1980,6 +2043,9 @@ moduleinit(void)
 	if (PyType_Ready(&Status3_Type) < 0)
 		return NULL;
 #endif
+
+	if (PyType_Ready(&Lock_Type) < 0)
+		return NULL;
 
 	apr_initialize();
 
