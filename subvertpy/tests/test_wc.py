@@ -326,7 +326,7 @@ class AdmObjTests(SubversionTestCase):
             if num != subvertpy.ERR_WC_NOT_WORKING_COPY:
                 raise
         self.assertEqual(
-            "checkout",
+            os.path.abspath("checkout"),
             adm.probe_try(os.path.join("checkout", "bar")).access_path())
 
 

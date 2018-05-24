@@ -108,7 +108,7 @@ svn_error_t *svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
 
 typedef struct {
     PyObject_VAR_HEAD
-        apr_pool_t *pool;
+    apr_pool_t *pool;
     svn_wc_committed_queue_t *queue;
 } CommittedQueueObject;
 
@@ -902,7 +902,7 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		return NULL;
 	}
 
-	path = py_object_to_svn_dirent(py_path, self->pool);
+	path = py_object_to_svn_abspath(py_path, self->pool);
 	if (path == NULL) {
 		apr_pool_destroy(temp_pool);
 		return NULL;

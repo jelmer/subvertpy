@@ -96,7 +96,7 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
         parent_wc = ((AdmObject *)associated)->adm;
     }
 
-    path = py_object_to_svn_dirent(py_path, ret->pool);
+    path = py_object_to_svn_abspath(py_path, ret->pool);
     if (path == NULL) {
         Py_DECREF(ret);
         return NULL;
@@ -109,12 +109,12 @@ static PyObject *adm_init(PyTypeObject *self, PyObject *args, PyObject *kwargs)
                                ret->pool);
     Py_END_ALLOW_THREADS
 
-        if (err != NULL) {
-            handle_svn_error(err);
-            svn_error_clear(err);
-            Py_DECREF(ret);
-            return NULL;
-        }
+    if (err != NULL) {
+        handle_svn_error(err);
+        svn_error_clear(err);
+        Py_DECREF(ret);
+        return NULL;
+    }
 
     return (PyObject *)ret;
 }
@@ -124,45 +124,6 @@ static PyObject *adm_access_path(PyObject *self)
     AdmObject *admobj = (AdmObject *)self;
     ADM_CHECK_CLOSED(admobj);
     return py_object_from_svn_abspath(svn_wc_adm_access_path(admobj->adm));
-}
-
-static const char *py_object_to_adm_abspath(PyObject *obj, PyObject *adm, apr_pool_t *pool)
-{
-    const char *ret;
-    AdmObject *admobj = (AdmObject *)adm;
-    ADM_CHECK_CLOSED(admobj);
-
-    if (PyUnicode_Check(obj)) {
-        obj = PyUnicode_AsUTF8String(obj);
-        if (obj == NULL) {
-            return NULL;
-        }
-    } else {
-        Py_INCREF(obj);
-    }
-
-    if (!PyBytes_Check(obj)) {
-        PyErr_SetString(PyExc_TypeError,
-                        "URIs need to be UTF-8 bytestrings or unicode strings");
-        Py_DECREF(obj);
-        return NULL;
-    }
-
-    ret = PyBytes_AsString(obj);
-    ret = apr_pstrdup(pool, ret);
-    Py_XDECREF(obj);
-    if (ret == NULL) {
-        return NULL;
-    }
-#if ONLY_SINCE_SVN(1, 7)
-    if (svn_dirent_is_absolute(ret)) {
-        return ret;
-    } else {
-        return svn_dirent_join(svn_wc_adm_access_path(admobj->adm), ret, pool);
-    }
-#else
-    return ret;
-#endif
 }
 
 static PyObject *adm_locked(PyObject *self)
@@ -191,7 +152,7 @@ static PyObject *adm_prop_get(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -231,7 +192,7 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -319,7 +280,7 @@ static PyObject *adm_walk_entries(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -369,7 +330,7 @@ static PyObject *adm_entry(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -408,7 +369,7 @@ static PyObject *adm_get_prop_diffs(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -452,7 +413,7 @@ static PyObject *adm_add(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -541,7 +502,7 @@ static PyObject *adm_delete(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -598,7 +559,7 @@ static PyObject *adm_crawl_revisions(PyObject *self, PyObject *args, PyObject *k
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -829,7 +790,7 @@ static PyObject *adm_has_binary_prop(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -873,7 +834,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -960,7 +921,7 @@ static PyObject *adm_remove_lock(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -992,7 +953,7 @@ static PyObject *get_ancestry(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1063,7 +1024,7 @@ static PyObject *add_repos_file(PyObject *self, PyObject *args, PyObject *kwargs
 
     new_contents = new_py_stream(temp_pool, py_new_contents);
 
-    dst_path = py_object_to_svn_dirent(py_dst_path, temp_pool);
+    dst_path = py_object_to_svn_abspath(py_dst_path, temp_pool);
 
     RUN_SVN_WITH_POOL(temp_pool, svn_wc_add_repos_file3(dst_path, admobj->adm,
                                                         new_base_contents,
@@ -1102,7 +1063,7 @@ static PyObject *mark_missing_deleted(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1160,7 +1121,7 @@ static PyObject *relocate(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1269,7 +1230,7 @@ static PyObject *adm_text_modified(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1302,7 +1263,7 @@ static PyObject *adm_props_modified(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1375,7 +1336,7 @@ static PyObject *is_wc_root(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1410,7 +1371,7 @@ static PyObject *transmit_text_deltas(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1459,7 +1420,7 @@ static PyObject *transmit_prop_deltas(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1493,7 +1454,7 @@ static PyObject *retrieve(PyObject *self, PyObject *args)
     if (pool == NULL)
         return NULL;
 
-    path = py_object_to_svn_dirent(py_path, pool);
+    path = py_object_to_svn_abspath(py_path, pool);
     if (path == NULL) {
         apr_pool_destroy(pool);
         return NULL;
@@ -1530,7 +1491,7 @@ static PyObject *probe_retrieve(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, pool);
+    path = py_object_to_svn_abspath(py_path, pool);
     if (path == NULL) {
         apr_pool_destroy(pool);
         return NULL;
@@ -1569,7 +1530,7 @@ static PyObject *probe_try(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, pool);
+    path = py_object_to_svn_abspath(py_path, pool);
     if (path == NULL) {
         apr_pool_destroy(pool);
         return NULL;
@@ -1621,7 +1582,7 @@ static PyObject *resolved_conflict(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1705,7 +1666,7 @@ static PyObject *conflicted(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_svn_dirent(py_path, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
@@ -1754,7 +1715,7 @@ static PyObject *wc_status(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    path = py_object_to_adm_abspath(py_path, self, temp_pool);
+    path = py_object_to_svn_abspath(py_path, temp_pool);
     if (path == NULL) {
         apr_pool_destroy(temp_pool);
         return NULL;
