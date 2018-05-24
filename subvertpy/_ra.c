@@ -1522,10 +1522,10 @@ static PyObject *ra_get_dir(PyObject *self, PyObject *args, PyObject *kwargs)
 		py_dirents = Py_None;
 		Py_INCREF(py_dirents);
 	} else {
-        py_dirents = dirent_hash_to_dict(dirents, dirent_fields, temp_pool);
-        if (py_dirents == NULL) {
-            goto fail;
-        }
+		py_dirents = dirent_hash_to_dict(dirents, dirent_fields, temp_pool);
+		if (py_dirents == NULL) {
+			goto fail;
+		}
 	}
 
 	py_props = prop_hash_to_dict(props);

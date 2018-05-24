@@ -548,8 +548,8 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	}
 
 	while (PyDict_Next(py_props, &idx, &k, &v)) {
-		char *key;
-		Py_ssize_t key_size;
+		char *key, *val;
+		Py_ssize_t key_size, val_size;
 		if (PyUnicode_Check(k)) {
 			k = PyUnicode_AsUTF8String(k);
 		} else {
@@ -571,14 +571,21 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 
 		if (PyBytes_AsStringAndSize(k, &key, &key_size)) {
 			PyErr_SetString(PyExc_TypeError,
+							"property key should be unicode or byte string");
+			Py_DECREF(k);
+			Py_DECREF(v);
+			return NULL;
+		}
+
+		if (PyBytes_AsStringAndSize(v, &val, &val_size)) {
+			PyErr_SetString(PyExc_TypeError,
 							"property value should be unicode or byte string");
 			Py_DECREF(k);
 			Py_DECREF(v);
 			return NULL;
-        }
+		}
 
-		val_string = svn_string_ncreate(PyBytes_AsString(v),
-										PyBytes_Size(v), pool);
+		val_string = svn_string_ncreate(val, val_size, pool);
 		apr_hash_set(hash_props, key, key_size, val_string);
 		Py_DECREF(k);
 		Py_DECREF(v);
@@ -588,11 +595,11 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 }
 
 #if PY_MAJOR_VERSION >= 3
-#define SOURCEPATH_FORMAT3 "(Czl)"
-#define SOURCEPATH_FORMAT4 "(Czli)"
+#define SOURCEPATH_FORMAT3 "(CNl)"
+#define SOURCEPATH_FORMAT4 "(CNli)"
 #else
-#define SOURCEPATH_FORMAT3 "(czl)"
-#define SOURCEPATH_FORMAT4 "(czli)"
+#define SOURCEPATH_FORMAT3 "(cNl)"
+#define SOURCEPATH_FORMAT4 "(cNli)"
 #endif
 
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)
@@ -613,13 +620,21 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 		}
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
+			PyObject *py_copyfrom_path, *py_key;
+
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
+			if (val->copyfrom_path == NULL) {
+				py_copyfrom_path = Py_None;
+				Py_INCREF(Py_None);
+			} else {
+				py_copyfrom_path = PyUnicode_FromString(val->copyfrom_path);
+			}
 			if (node_kind) {
-				pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, val->copyfrom_path,
+				pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, py_copyfrom_path,
 											 val->copyfrom_rev,
 											 svn_node_unknown);
 			} else {
-				pyval = Py_BuildValue(SOURCEPATH_FORMAT3, val->action, val->copyfrom_path,
+				pyval = Py_BuildValue(SOURCEPATH_FORMAT3, val->action, py_copyfrom_path,
 											 val->copyfrom_rev);
 			}
 			if (pyval == NULL) {
@@ -632,11 +647,21 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 				Py_DECREF(py_changed_paths);
 				return NULL;
 			}
-			if (PyDict_SetItemString(py_changed_paths, key, pyval) != 0) {
+
+			py_key = PyUnicode_FromString(key);
+			if (py_key == NULL) {
+				Py_DECREF(pyval);
 				Py_DECREF(py_changed_paths);
+				return NULL;
+			}
+
+			if (PyDict_SetItem(py_changed_paths, py_key, pyval) != 0) {
+				Py_DECREF(py_changed_paths);
+				Py_DECREF(py_key);
 				Py_DECREF(pyval);
 				return NULL;
 			}
+			Py_DECREF(py_key);
 			Py_DECREF(pyval);
 		}
 	}
@@ -663,8 +688,15 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 		}
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
+			PyObject *py_key, *py_copyfrom_path;
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-			pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, val->copyfrom_path,
+			if (val->copyfrom_path == NULL) {
+				py_copyfrom_path = Py_None;
+				Py_INCREF(Py_None);
+			} else {
+				py_copyfrom_path = PyUnicode_FromString(val->copyfrom_path);
+			}
+			pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, py_copyfrom_path,
 										 val->copyfrom_rev, val->node_kind);
 			if (pyval == NULL) {
 				Py_DECREF(py_changed_paths);
@@ -676,11 +708,20 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 				Py_DECREF(pyval);
 				return NULL;
 			}
-			if (PyDict_SetItemString(py_changed_paths, key, pyval) != 0) {
+			py_key = PyUnicode_FromString(key);
+			if (py_key == NULL) {
+				Py_DECREF(py_changed_paths);
 				Py_DECREF(pyval);
+				return NULL;
+			}
+
+			if (PyDict_SetItem(py_changed_paths, py_key, pyval) != 0) {
+				Py_DECREF(pyval);
+				Py_DECREF(py_key);
 				Py_DECREF(py_changed_paths);
 				return NULL;
 			}
+			Py_DECREF(py_key);
 			Py_DECREF(pyval);
 		}
 	}
@@ -1134,41 +1175,41 @@ PyTypeObject Stream_Type = {
 
 PyObject *dirent_hash_to_dict(apr_hash_t *dirents, unsigned int dirent_fields, apr_pool_t *temp_pool)
 {
-    svn_dirent_t *dirent;
-    apr_ssize_t klen;
-    const char *key;
-    apr_hash_index_t *idx;
-    PyObject *py_dirents = PyDict_New();
+	svn_dirent_t *dirent;
+	apr_ssize_t klen;
+	const char *key;
+	apr_hash_index_t *idx;
+	PyObject *py_dirents = PyDict_New();
 
-    if (py_dirents == NULL) {
-        return NULL;
-    }
-    idx = apr_hash_first(temp_pool, dirents);
-    while (idx != NULL) {
-        PyObject *item, *pykey;
-        apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
-        item = py_dirent(dirent, dirent_fields);
-        if (item == NULL) {
-            Py_DECREF(py_dirents);
-            return NULL;
-        }
-        if (key == NULL) {
-            pykey = Py_None;
-            Py_INCREF(pykey);
-        } else {
-            pykey = PyUnicode_FromStringAndSize(key, klen);
-        }
-        if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
-            Py_DECREF(item);
-            Py_DECREF(pykey);
-            Py_DECREF(py_dirents);
-            return NULL;
-        }
-        Py_DECREF(pykey);
-        Py_DECREF(item);
-        idx = apr_hash_next(idx);
-    }
-    return py_dirents;
+	if (py_dirents == NULL) {
+		return NULL;
+	}
+	idx = apr_hash_first(temp_pool, dirents);
+	while (idx != NULL) {
+		PyObject *item, *pykey;
+		apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
+		item = py_dirent(dirent, dirent_fields);
+		if (item == NULL) {
+			Py_DECREF(py_dirents);
+			return NULL;
+		}
+		if (key == NULL) {
+			pykey = Py_None;
+			Py_INCREF(pykey);
+		} else {
+			pykey = PyUnicode_FromStringAndSize(key, klen);
+		}
+		if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
+			Py_DECREF(item);
+			Py_DECREF(pykey);
+			Py_DECREF(py_dirents);
+			return NULL;
+		}
+		Py_DECREF(pykey);
+		Py_DECREF(item);
+		idx = apr_hash_next(idx);
+	}
+	return py_dirents;
 }
 
 svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
