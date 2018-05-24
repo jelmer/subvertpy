@@ -1358,11 +1358,6 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		}
 	}
 
-	if (!PyDict_Check(revprops)) {
-		PyErr_SetString(PyExc_TypeError, "Expected dictionary with revision properties");
-		goto fail_prep;
-	}
-
 	if (ra_check_busy(ra))
 		goto fail_prep;
 
@@ -1371,7 +1366,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 #if ONLY_SINCE_SVN(1, 5)
 	hash_revprops = prop_dict_to_hash(pool, revprops);
 	if (hash_revprops == NULL) {
-		goto fail_prep2;
+		goto fail_prep;
 	}
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_ra_get_commit_editor3(ra->ra, &editor,
@@ -1379,21 +1374,26 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		hash_revprops, py_commit_callback,
 		commit_callback, hash_lock_tokens, keep_locks, pool);
 #else
+	if (!PyDict_Check(revprops)) {
+		PyErr_SetString(PyExc_TypeError, "props should be dictionary");
+		goto fail_prep;
+	}
+
 	/* Check that revprops has only one member named SVN_PROP_REVISION_LOG */
 	if (PyDict_Size(revprops) != 1) {
 		PyErr_SetString(PyExc_ValueError, "Only svn:log can be set with Subversion 1.4");
-		goto fail_prep2;
+		goto fail_prep;
 	}
 
 	py_log_msg = PyDict_GetItemString(revprops, SVN_PROP_REVISION_LOG);
 	if (py_log_msg == NULL) {
 		PyErr_SetString(PyExc_ValueError, "Only svn:log can be set with Subversion 1.4.");
-		goto fail_prep2;
+		goto fail_prep;
 	}
 
 	log_msg = py_object_to_svn_string(py_log_msg, pool);
 	if (log_msg == NULL) {
-		goto fail_prep2;
+		goto fail_prep;
 	}
 
 	Py_BEGIN_ALLOW_THREADS
@@ -1407,17 +1407,16 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	if (err != NULL) {
 		handle_svn_error(err);
 		svn_error_clear(err);
-		goto fail_prep2;
+		goto fail_prep;
 	}
 
 	Py_INCREF(ra);
 	return new_editor_object(NULL, editor, edit_baton, pool,
 			  &Editor_Type, ra_done_handler, ra, commit_callback);
 
-fail_prep2:
+fail_prep:
 	Py_DECREF(commit_callback);
 	ra->busy = false;
-fail_prep:
 	apr_pool_destroy(pool);
 fail_pool:
 	return NULL;
