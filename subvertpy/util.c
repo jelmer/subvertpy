@@ -47,7 +47,18 @@ const char *
 svn_uri_canonicalize(const char *uri,
                      apr_pool_t *result_pool)
 {
-	return svn_path_canonicalize(uri, result_pool);
+    uri = svn_path_canonicalize(uri, result_pool);
+
+    if (uri == NULL) {
+        return NULL;
+    }
+
+    uri = svn_path_uri_decode(uri, result_pool);
+    if (uri == NULL) {
+        return NULL;
+    }
+
+    return svn_path_uri_autoescape(uri, result_pool);
 }
 
 const char *
