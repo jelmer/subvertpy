@@ -2125,6 +2125,9 @@ moduleinit(void)
 	PyModule_AddObject(mod, "Adm", (PyObject *)&Adm_Type);
 	Py_INCREF(&Adm_Type);
 
+	PyModule_AddObject(mod, "Lock", (PyObject *)&Lock_Type);
+	Py_INCREF(&Lock_Type);
+
 	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
 	Py_INCREF(&CommittedQueue_Type);
 
