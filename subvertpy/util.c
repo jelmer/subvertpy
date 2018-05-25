@@ -522,9 +522,7 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 		if (PyDict_SetItem(py_props, py_key, py_val) != 0) {
 			Py_DECREF(py_key);
 			Py_DECREF(py_val);
-			Py_DECREF(py_props);
-			apr_pool_destroy(pool);
-			return NULL;
+			goto fail_item;
 		}
 		Py_DECREF(py_key);
 		Py_DECREF(py_val);
@@ -560,17 +558,10 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 
 	while (PyDict_Next(py_props, &idx, &k, &v)) {
 		char *key, *val;
-		Py_ssize_t key_size, val_size;
-		if (PyUnicode_Check(k)) {
-			k = PyUnicode_AsUTF8String(k);
-		} else {
-			Py_INCREF(k);
-		}
+		Py_ssize_t val_size;
 
-		if (!PyBytes_Check(k)) {
-			PyErr_SetString(PyExc_TypeError,
-							"property name should be unicode or byte string");
-			Py_DECREF(k);
+		key = py_object_to_svn_string(k, pool);
+		if (key == NULL) {
 			return NULL;
 		}
 
@@ -580,26 +571,17 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 			Py_INCREF(v);
 		}
 
-		if (PyBytes_AsStringAndSize(k, &key, &key_size) == -1) {
-			PyErr_SetString(PyExc_TypeError,
-							"property key should be unicode or byte string");
-			Py_DECREF(k);
-			Py_DECREF(v);
-			return NULL;
-		}
-
 		if (PyBytes_AsStringAndSize(v, &val, &val_size) == -1) {
 			PyErr_SetString(PyExc_TypeError,
 							"property value should be unicode or byte string");
-			Py_DECREF(k);
-			Py_DECREF(v);
 			return NULL;
 		}
 
 		val_string = svn_string_ncreate(val, val_size, pool);
-		apr_hash_set(hash_props, key, key_size, val_string);
-		Py_DECREF(k);
+
 		Py_DECREF(v);
+
+		apr_hash_set(hash_props, key, strlen(key), val_string);
 	}
 
 	return hash_props;

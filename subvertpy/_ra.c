@@ -1346,15 +1346,16 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		hash_lock_tokens = NULL;
 	} else {
 		Py_ssize_t idx = 0;
+		char *key, *val;
 		PyObject *k, *v;
 		hash_lock_tokens = apr_hash_make(pool);
 		while (PyDict_Next(lock_tokens, &idx, &k, &v)) {
-			if (!PyBytes_Check(k)) {
-				PyErr_SetString(PyExc_TypeError, "token not bytes");
+			key = py_object_to_svn_string(k, pool);
+			if (key == NULL) {
 				goto fail_prep;
 			}
-			apr_hash_set(hash_lock_tokens, PyBytes_AsString(k),
-						 PyBytes_Size(k), PyBytes_AsString(v));
+			val = apr_pmemdup(pool, PyBytes_AsString(v), PyBytes_Size(v));
+			apr_hash_set(hash_lock_tokens, key, strlen(key), val);
 		}
 	}
 

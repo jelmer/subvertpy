@@ -161,12 +161,9 @@ class AdmObjTests(SubversionTestCase):
         self.client_set_prop("checkout/bar", "svn:keywords", "Id\n")
         self.client_commit("checkout", "foo")
         adm = wc.Adm(None, "checkout", True)
-        path = os.path.join(self.test_dir, "checkout/bar")
-        stream = adm.translated_stream(path, path, wc.TRANSLATE_TO_NF)
-        if wc.api_version() < (1, 6):
-            self.assertRaises(NotImplementedError, stream.read)
-        else:
-            self.assertTrue(stream.read().startswith(b"My id: $Id: "))
+        stream = adm.translated_stream('checkout/bar', 'checkout/bar', wc.TRANSLATE_TO_NF)
+        body = stream.read()
+        self.assertTrue(body.startswith(b"My id: $Id: "), body)
 
     def test_text_modified(self):
         self.make_client("repos", "checkout")
@@ -295,7 +292,7 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual("bar", bar.name)
         self.assertEqual(NODE_FILE, bar.kind)
         self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
-        self.assertIn(bar.checksum, (None, hashlib.md5('blala').hexdigest()))
+        self.assertIn(bar.checksum, (None, hashlib.md5(b'blala').hexdigest()))
         self.assertEqual(1, bar.cmt_rev)
         self.assertEqual(1, bar.revision)
 

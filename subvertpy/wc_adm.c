@@ -1780,7 +1780,7 @@ static PyMethodDef adm_methods[] = {
     { "get_ancestry", (PyCFunction)get_ancestry, METH_VARARGS,
         "S.get_ancestry(path) -> (url, rev)" },
     { "maybe_set_repos_root", (PyCFunction)maybe_set_repos_root, METH_VARARGS, "S.maybe_set_repos_root(path, repos)" },
-    { "add_repos_file", (PyCFunction)add_repos_file, METH_KEYWORDS,
+    { "add_repos_file", (PyCFunction)add_repos_file, METH_KEYWORDS|METH_VARARGS,
         "S.add_repos_file(dst_path, new_base_contents, new_contents, new_base_props, new_props, copyfrom_url=None, copyfrom_rev=-1, notify_func=None)" },
     { "mark_missing_deleted", (PyCFunction)mark_missing_deleted, METH_VARARGS,
         "S.mark_missing_deleted(path)" },
