@@ -302,9 +302,29 @@ class AdmObjTests(SubversionTestCase):
         if wc.api_version() >= (1, 7):
             self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
-        self.build_tree({"checkout/bar": b"la"})
+        self.build_tree({"checkout/bar": b"blala"})
         self.client_add('checkout/bar')
         adm = wc.Adm(None, "checkout", True)
+        class Editor(object):
+            """Editor"""
+
+            def __init__(self):
+                self._windows = []
+
+            def apply_textdelta(self, checksum):
+                def window_handler(window):
+                    self._windows.append(window)
+                return window_handler
+
+            def close(self):
+                pass
+        editor = Editor()
+        (tmpfile, digest) = adm.transmit_text_deltas("checkout/bar", True, editor)
+        self.assertEqual(editor._windows,
+                         [(0, 0, 5, 0, [(2, 0, 5)], b'blala'), None])
+        self.assertIsInstance(tmpfile, str)
+        self.assertEqual(16, len(digest))
+
         cq = wc.CommittedQueue()
         cq.queue("checkout/bar", adm)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z",
@@ -312,7 +332,43 @@ class AdmObjTests(SubversionTestCase):
         bar = adm.entry("checkout/bar")
         self.assertEqual("bar", bar.name)
         self.assertEqual(NODE_FILE, bar.kind)
-        self.assertEqual(wc.SCHEDULE_ADD, bar.schedule)
+        self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
+
+    def test_process_committed(self):
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+        self.make_client("repos", ".")
+        self.build_tree({"bar": b"la"})
+        self.client_add('bar')
+        adm = wc.Adm(None, ".", True)
+        class Editor(object):
+            """Editor"""
+
+            def __init__(self):
+                self._windows = []
+
+            def apply_textdelta(self, checksum):
+                def window_handler(window):
+                    self._windows.append(window)
+                return window_handler
+
+            def close(self):
+                pass
+        editor = Editor()
+        (tmpfile, digest) = adm.transmit_text_deltas("bar", True, editor)
+        self.assertEqual(editor._windows,
+                         [(0, 0, 2, 0, [(2, 0, 2)], b'la'), None])
+        self.assertIsInstance(tmpfile, str)
+        self.assertEqual(16, len(digest))
+        bar = adm.entry("bar")
+        self.assertEqual(-1, bar.cmt_rev)
+        self.assertEqual(0, bar.revision)
+
+        adm.process_committed("bar", False, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
+        bar = adm.entry("bar")
+        self.assertEqual("bar", bar.name)
+        self.assertEqual(NODE_FILE, bar.kind)
+        self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
 
     def test_probe_try(self):
         self.make_client("repos", "checkout")
@@ -437,9 +493,10 @@ class ContextTests(SubversionTestCase):
         with open('checkout/bla.txt', 'w') as f:
             f.write("modified")
         context = wc.Context()
-        context.add_lock("checkout", ())
+        lock = wc.Lock()
+        context.add_lock("checkout", lock)
         context.add_from_disk('checkout/bla.txt')
-        context.remove_lock("checkout")
+        context.remove_lock("checkout", lock)
 
     def test_get_prop_diffs(self):
         self.make_client("repos", "checkout")
