@@ -15,6 +15,7 @@
 
 """Subversion ra library tests."""
 
+import hashlib
 from io import BytesIO
 import os
 
@@ -294,7 +295,7 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual("bar", bar.name)
         self.assertEqual(NODE_FILE, bar.kind)
         self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
-        self.assertEqual('52419dba51d65210e87bf52dc1072145', bar.checksum)
+        self.assertEqual(hashlib.md5('blala').hexdigest(), bar.checksum)
         self.assertEqual(1, bar.cmt_rev)
         self.assertEqual(1, bar.revision)
 
