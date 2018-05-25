@@ -295,7 +295,7 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual("bar", bar.name)
         self.assertEqual(NODE_FILE, bar.kind)
         self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
-        self.assertEqual(hashlib.md5('blala').hexdigest(), bar.checksum)
+        self.assertIn(bar.checksum, (None, hashlib.md5('blala').hexdigest()))
         self.assertEqual(1, bar.cmt_rev)
         self.assertEqual(1, bar.revision)
 
