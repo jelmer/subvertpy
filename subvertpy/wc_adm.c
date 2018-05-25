@@ -1179,17 +1179,30 @@ static PyObject *translated_stream(PyObject *self, PyObject *args)
     svn_stream_t *stream;
     AdmObject *admobj = (AdmObject *)self;
     apr_pool_t *stream_pool;
+    PyObject *py_path, *py_versioned_file;
     int flags;
 
-    if (!PyArg_ParseTuple(args, "ssi", &path, &versioned_file, &flags))
+    if (!PyArg_ParseTuple(args, "OOi", &py_path, &py_versioned_file, &flags))
         return NULL;
 
+#if ONLY_SINCE_SVN(1, 5)
     ADM_CHECK_CLOSED(admobj);
 
-#if ONLY_SINCE_SVN(1, 5)
     stream_pool = Pool(NULL);
     if (stream_pool == NULL)
         return NULL;
+
+    path = py_object_to_svn_abspath(py_path, stream_pool);
+    if (path == NULL) {
+        apr_pool_destroy(stream_pool);
+        return NULL;
+    }
+
+    versioned_file = py_object_to_svn_abspath(py_versioned_file, stream_pool);
+    if (versioned_file == NULL) {
+        apr_pool_destroy(stream_pool);
+        return NULL;
+    }
 
     RUN_SVN_WITH_POOL(stream_pool,
                       svn_wc_translated_stream(&stream, path, versioned_file, admobj->adm,
