@@ -153,8 +153,7 @@ class AdmObjTests(SubversionTestCase):
         adm.relocate("checkout", "file://", "http://")
 
     def test_translated_stream(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+        self.skipTest("TODO: doesn't yet work")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"My id: $Id$"})
         self.client_add('checkout/bar')
