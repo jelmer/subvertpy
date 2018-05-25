@@ -160,7 +160,8 @@ class AdmObjTests(SubversionTestCase):
         self.client_set_prop("checkout/bar", "svn:keywords", "Id\n")
         self.client_commit("checkout", "foo")
         adm = wc.Adm(None, "checkout", True)
-        stream = adm.translated_stream('checkout/bar', 'checkout/bar', wc.TRANSLATE_TO_NF)
+        stream = adm.translated_stream(
+                'checkout/bar', 'checkout/bar', wc.TRANSLATE_TO_NF)
         body = stream.read()
         self.assertTrue(body.startswith(b"My id: $Id: "), body)
 
