@@ -489,9 +489,9 @@ class ContextTests(SubversionTestCase):
         context = wc.Context()
         lock = wc.Lock()
         self.assertEqual((False, False), context.locked("checkout"))
-        context.add_lock("checkout", lock)
+        context.add_lock("checkout/", lock)
         self.assertEqual((True, True), context.locked("checkout"))
-        context.remove_lock("checkout", lock)
+        context.remove_lock("checkout/", lock)
 
     def test_add_from_disk(self):
         self.make_client("repos", "checkout")
@@ -499,9 +499,9 @@ class ContextTests(SubversionTestCase):
             f.write("modified")
         context = wc.Context()
         lock = wc.Lock()
-        context.add_lock("checkout", lock)
+        context.add_lock("checkout/", lock)
         context.add_from_disk('checkout/bla.txt')
-        context.remove_lock("checkout", lock)
+        context.remove_lock("checkout/", lock)
 
     def test_get_prop_diffs(self):
         self.make_client("repos", "checkout")
