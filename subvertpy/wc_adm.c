@@ -1174,7 +1174,7 @@ static PyObject *crop_tree(PyObject *self, PyObject *args)
 
 static PyObject *translated_stream(PyObject *self, PyObject *args)
 {
-    char *path, *versioned_file;
+    const char *path, *versioned_file;
     StreamObject *ret;
     svn_stream_t *stream;
     AdmObject *admobj = (AdmObject *)self;
