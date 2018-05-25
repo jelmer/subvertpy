@@ -141,7 +141,7 @@ extern PyTypeObject Stream_Type;
 
 #if ONLY_BEFORE_SVN(1, 7)
 const char *
-svn_uri_canonicalize(const char *uri,
+_svn_uri_canonicalize(const char *uri,
                      apr_pool_t *result_pool);
 const char *
 svn_relpath_canonicalize(const char *relpath,
@@ -150,6 +150,7 @@ svn_relpath_canonicalize(const char *relpath,
 const char *
 svn_dirent_canonicalize(const char *dirent,
                         apr_pool_t *result_pool);
+#define svn_uri_canonicalize _svn_uri_canonicalize
 #define svn_dirent_get_absolute svn_path_get_absolute
 #define svn_dirent_is_absolute svn_path_is_url
 #endif
