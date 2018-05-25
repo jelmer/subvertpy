@@ -580,7 +580,7 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 			Py_INCREF(v);
 		}
 
-		if (PyBytes_AsStringAndSize(k, &key, &key_size)) {
+		if (PyBytes_AsStringAndSize(k, &key, &key_size) == -1) {
 			PyErr_SetString(PyExc_TypeError,
 							"property key should be unicode or byte string");
 			Py_DECREF(k);
@@ -588,7 +588,7 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 			return NULL;
 		}
 
-		if (PyBytes_AsStringAndSize(v, &val, &val_size)) {
+		if (PyBytes_AsStringAndSize(v, &val, &val_size) == -1) {
 			PyErr_SetString(PyExc_TypeError,
 							"property value should be unicode or byte string");
 			Py_DECREF(k);
