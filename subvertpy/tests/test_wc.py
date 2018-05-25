@@ -305,6 +305,7 @@ class AdmObjTests(SubversionTestCase):
         self.build_tree({"checkout/bar": b"blala"})
         self.client_add('checkout/bar')
         adm = wc.Adm(None, "checkout", True)
+
         class Editor(object):
             """Editor"""
 
@@ -318,8 +319,10 @@ class AdmObjTests(SubversionTestCase):
 
             def close(self):
                 pass
+
         editor = Editor()
-        (tmpfile, digest) = adm.transmit_text_deltas("checkout/bar", True, editor)
+        (tmpfile, digest) = adm.transmit_text_deltas(
+                "checkout/bar", True, editor)
         self.assertEqual(editor._windows,
                          [(0, 0, 5, 0, [(2, 0, 5)], b'blala'), None])
         self.assertIsInstance(tmpfile, str)
@@ -341,6 +344,7 @@ class AdmObjTests(SubversionTestCase):
         self.build_tree({"bar": b"la"})
         self.client_add('bar')
         adm = wc.Adm(None, ".", True)
+
         class Editor(object):
             """Editor"""
 
@@ -364,7 +368,8 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual(-1, bar.cmt_rev)
         self.assertEqual(0, bar.revision)
 
-        adm.process_committed("bar", False, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
+        adm.process_committed(
+            "bar", False, 1, "2010-05-31T08:49:22.430000Z", "jelmer")
         bar = adm.entry("bar")
         self.assertEqual("bar", bar.name)
         self.assertEqual(NODE_FILE, bar.kind)

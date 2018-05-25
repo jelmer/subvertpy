@@ -232,7 +232,8 @@ class TestClient(SubversionTestCase):
         self.client.commit(["dc"])
         commit_2_dt = datetime.utcnow()
         log_entries = []
-        self.client.log(cb, "dc/foo", start_rev="HEAD", end_rev=1,
+        self.client.log(
+                cb, "dc/foo", start_rev="HEAD", end_rev=1,
                 discover_changed_paths=True)
         self.assertEqual(2, len(log_entries))
         self.assertLogEntryChangedPathsEquals(["/foo", "/bar"], log_entries[0])
