@@ -2009,6 +2009,71 @@ static PyObject *client_info(PyObject *self, PyObject *args, PyObject *kwargs)
     return entry_dict;
 }
 
+static PyObject *client_lock(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    char *kwnames[] = {
+        "targets", "comment", "steal_lock",
+        NULL,
+    };
+    apr_array_header_t *targets;
+    apr_pool_t *temp_pool;
+    char *comment;
+    bool steal_lock = false;
+    ClientObject *client = (ClientObject *)self;
+    PyObject *py_targets;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|zb", kwnames,
+                                     &py_targets, &comment, &steal_lock))
+        return NULL;
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+
+    if (!client_list_to_apr_array(temp_pool, py_targets, py_object_to_svn_path_or_url, &targets)) {
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_lock(targets, comment, steal_lock, client->client, temp_pool));
+
+    apr_pool_destroy(temp_pool);
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *client_unlock(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    char *kwnames[] = {
+        "targets", "break_lock",
+        NULL,
+    };
+    apr_array_header_t *targets;
+    apr_pool_t *temp_pool;
+    bool break_lock = false;
+    ClientObject *client = (ClientObject *)self;
+    PyObject *py_targets;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|b", kwnames,
+                                     &py_targets, &break_lock))
+        return NULL;
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+
+    if (!client_list_to_apr_array(temp_pool, py_targets, py_object_to_svn_path_or_url, &targets)) {
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(temp_pool, svn_client_unlock(targets, break_lock, client->client, temp_pool));
+
+    apr_pool_destroy(temp_pool);
+
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef client_methods[] = {
     { "add", (PyCFunction)client_add, METH_VARARGS|METH_KEYWORDS,
         "S.add(path, recursive=True, force=False, no_ignore=False, no_autoprops=False)" },
@@ -2033,6 +2098,10 @@ static PyMethodDef client_methods[] = {
         "S.log(callback, paths, start_rev=None, end_rev=None, limit=0, peg_revision=None, discover_changed_paths=False, strict_node_history=False, include_merged_revisions=False, revprops=None)" },
     { "info", (PyCFunction)client_info, METH_VARARGS|METH_KEYWORDS,
         "S.info(path, revision=None, peg_revision=None, depth=DEPTH_EMPTY) -> dict of info entries" },
+    { "lock", (PyCFunction)client_lock, METH_VARARGS,
+         "S.lock(targets, comment, steal_lock=False)" },
+    { "unlock", (PyCFunction)client_unlock, METH_VARARGS,
+         "S.lock(targets, break_lock=False)" },
     { NULL, }
 };
 
