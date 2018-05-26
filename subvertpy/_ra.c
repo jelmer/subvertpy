@@ -1599,12 +1599,13 @@ static PyObject *ra_get_file(PyObject *self, PyObject *args)
 
 static PyObject *ra_get_lock(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
-	svn_lock_t *lock;
+	svn_lock_t *lock = NULL;
+    PyObject *py_path;
 	apr_pool_t *temp_pool;
 
-	if (!PyArg_ParseTuple(args, "s:get_lock", &path))
+	if (!PyArg_ParseTuple(args, "O:get_lock", &py_path))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1613,10 +1614,22 @@ static PyObject *ra_get_lock(PyObject *self, PyObject *args)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
+
+	path = py_object_to_svn_relpath(py_path, temp_pool);
+	if (path == NULL) {
+		apr_pool_destroy(temp_pool);
+		return NULL;
+	}
+
 	RUN_RA_WITH_POOL(temp_pool, ra,
 				  svn_ra_get_lock(ra->ra, &lock, path, temp_pool));
 	apr_pool_destroy(temp_pool);
-	return wrap_lock(lock);
+
+    if (lock == NULL) {
+        Py_RETURN_NONE;
+    } else {
+        return wrap_lock(lock);
+    }
 }
 
 static PyObject *ra_check_path(PyObject *self, PyObject *args)
