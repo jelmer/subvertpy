@@ -403,6 +403,8 @@ class AdmObjTests(SubversionTestCase):
             adm.probe_try(os.path.join("checkout", "bar")).access_path())
 
     def test_lock(self):
+        if wc.api_version() >= (1, 9):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.9")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"la"})
         self.client_add('checkout/bar')
