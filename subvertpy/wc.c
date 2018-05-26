@@ -1061,6 +1061,16 @@ PyTypeObject CommittedQueue_Type = {
 	committed_queue_init, /*	newfunc tp_new;	*/
 };
 
+svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
+{
+	LockObject* lockobj = (LockObject *)py_lock;
+    if (!PyObject_IsInstance(py_lock, (PyObject *)&Lock_Type)) {
+        PyErr_SetString(PyExc_TypeError, "Expected Lock object");
+        return NULL;
+    }
+	return &lockobj->lock;
+}
+
 #if ONLY_SINCE_SVN(1, 7)
 static PyTypeObject Context_Type;
 
@@ -1616,16 +1626,6 @@ static PyObject *py_wc_walk_status(PyObject *self, PyObject *args, PyObject *kwa
     apr_pool_destroy(pool);
 
     Py_RETURN_NONE;
-}
-
-svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
-{
-	LockObject* lockobj = (LockObject *)py_lock;
-    if (!PyObject_IsInstance(py_lock, (PyObject *)&Lock_Type)) {
-        PyErr_SetString(PyExc_TypeError, "Expected Lock object");
-        return NULL;
-    }
-	return &lockobj->lock;
 }
 
 static PyObject *py_wc_add_lock(PyObject *self, PyObject *args, PyObject *kwargs)
