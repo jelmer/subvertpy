@@ -375,7 +375,7 @@ class AdmObjTests(SubversionTestCase):
                          [(0, 0, 2, 0, [(2, 0, 2)], b'la'), None])
         self.assertIsInstance(tmpfile, str)
         self.assertEqual(16, len(digest))
-        self.assertEqual(hashlib.md5(b'blala').digest(), digest)
+        self.assertEqual(hashlib.md5(b'la').digest(), digest)
         bar = adm.entry("bar")
         self.assertEqual(-1, bar.cmt_rev)
         self.assertEqual(0, bar.revision)
