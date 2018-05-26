@@ -1744,6 +1744,44 @@ static PyObject *wc_status(PyObject *self, PyObject *args)
     return (PyObject*)ret;
 }
 
+static PyObject *wc_add_lock(PyObject *self, PyObject *args)
+{
+    const char *path;
+    apr_pool_t *temp_pool;
+    AdmObject *admobj = (AdmObject *)self;
+    svn_lock_t *lock;
+    PyObject *py_path, *py_lock;
+
+    if (!PyArg_ParseTuple(args, "OO!", &py_path, &Lock_Type, &py_lock))
+        return NULL;
+
+    ADM_CHECK_CLOSED(admobj);
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL) {
+        return NULL;
+    }
+
+    path = py_object_to_svn_abspath(py_path, temp_pool);
+    if (path == NULL) {
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+    lock = py_object_to_svn_lock(py_lock, temp_pool);
+    if (lock == NULL) {
+        apr_pool_destroy(temp_pool);
+        return NULL;
+    }
+
+    RUN_SVN_WITH_POOL(temp_pool,
+                      svn_wc_add_lock(path, lock, admobj->adm, temp_pool));
+
+    apr_pool_destroy(temp_pool);
+
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef adm_methods[] = {
     { "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
     { "access_path", (PyCFunction)adm_access_path, METH_NOARGS,
@@ -1809,6 +1847,7 @@ static PyMethodDef adm_methods[] = {
     { "resolved_conflict", (PyCFunction)resolved_conflict, METH_VARARGS,
         "S.resolved_conflict(path, resolve_text, resolve_props, resolve_tree, depth, conflict_choice, notify_func=None, cancel=None)" },
     { "status", (PyCFunction)wc_status, METH_VARARGS, "status(wc_path) -> Status" },
+    { "add_lock", (PyCFunction)wc_add_lock, METH_VARARGS, "add_lock(path, lock)" },
     { NULL, }
 };
 

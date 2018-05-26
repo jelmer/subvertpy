@@ -37,10 +37,18 @@
 
 typedef struct {
     PyObject_HEAD
-    svn_lock_t *lock;
+    svn_lock_t lock;
     apr_pool_t *pool;
 } LockObject;
-extern PyTypeObject Lock_Type;
+
+#if ONLY_SINCE_SVN(1, 7)
+typedef struct {
+    PyObject_VAR_HEAD
+    apr_pool_t *pool;
+    svn_wc_context_t *context;
+} ContextObject;
+static PyTypeObject Context_Type;
+#endif
 
 #if ONLY_BEFORE_SVN(1, 5)
 struct svn_wc_committed_queue_t
@@ -877,46 +885,36 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	const char *path;
 	PyObject *admobj;
 	PyObject *py_wcprop_changes = Py_None, *py_path;
-    svn_wc_adm_access_t *adm;
+    svn_wc_adm_access_t *adm = NULL;
 	bool remove_lock = false, remove_changelist = false;
 	char *md5_digest = NULL, *sha1_digest = NULL;
 	bool recurse = false;
-	apr_pool_t *temp_pool;
 	apr_array_header_t *wcprop_changes;
 	int md5_digest_len, sha1_digest_len;
+#if ONLY_SINCE_SVN(1, 7)
+	svn_wc_context_t *context = NULL;
+#endif
 	char *kwnames[] = { "path", "adm", "recurse", "wcprop_changes", "remove_lock", "remove_changelist", "md5_digest", "sha1_digest", NULL };
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO!|bObbz#z#", kwnames,
-									 &py_path, &Adm_Type, &admobj,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|bObbz#z#", kwnames,
+									 &py_path, &admobj,
 						  &recurse, &py_wcprop_changes, &remove_lock,
 						  &remove_changelist, &md5_digest, &md5_digest_len,
 						  &sha1_digest, &sha1_digest_len))
 		return NULL;
 
-	temp_pool = Pool(NULL);
-	if (temp_pool == NULL)
-		return NULL;
-
 	if (!py_dict_to_wcprop_changes(py_wcprop_changes, self->pool, &wcprop_changes)) {
-		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
 
 	path = py_object_to_svn_abspath(py_path, self->pool);
 	if (path == NULL) {
-		apr_pool_destroy(temp_pool);
 		return NULL;
 	}
 
 	if (md5_digest != NULL) {
 		if (md5_digest_len != APR_MD5_DIGESTSIZE) {
 			PyErr_SetString(PyExc_ValueError, "Invalid size for md5 digest");
-			apr_pool_destroy(temp_pool);
-			return NULL;
-		}
-		md5_digest = apr_pstrdup(temp_pool, md5_digest);
-		if (md5_digest == NULL) {
-			PyErr_NoMemory();
 			return NULL;
 		}
 	}
@@ -924,44 +922,65 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	if (sha1_digest != NULL) {
 		if (sha1_digest_len != APR_SHA1_DIGESTSIZE) {
 			PyErr_SetString(PyExc_ValueError, "Invalid size for sha1 digest");
-			apr_pool_destroy(temp_pool);
-			return NULL;
-		}
-		sha1_digest = apr_pstrdup(temp_pool, sha1_digest);
-		if (sha1_digest == NULL) {
-			PyErr_NoMemory();
 			return NULL;
 		}
 	}
 
-    adm = PyObject_GetAdmAccess(admobj);
+	if (PyObject_IsInstance(admobj, (PyObject *)&Adm_Type)) {
+		adm = PyObject_GetAdmAccess(admobj);
+#if ONLY_SINCE_SVN(1, 7)
+	} else if (PyObject_IsInstance(admobj, (PyObject *)&Context_Type)) {
+		context = ((ContextObject*)admobj)->context;
+#endif
+	} else {
+		PyErr_SetString(PyExc_TypeError, "Second arguments needs to be Adm or Context");
+		return NULL;
+	}
 
+#if ONLY_SINCE_SVN(1, 7)
+	if (adm != NULL) {
+#endif
 #if ONLY_SINCE_SVN(1, 6)
 	{
-	svn_checksum_t svn_checksum, *svn_checksum_p = &svn_checksum;
+	svn_checksum_t *svn_checksum_p;
 
-	if (sha1_digest != NULL) {
-		svn_checksum.digest = (unsigned char *)sha1_digest;
-		svn_checksum.kind = svn_checksum_sha1;
-	} else if (md5_digest != NULL) {
-		svn_checksum.digest = (unsigned char *)md5_digest;
-		svn_checksum.kind = svn_checksum_md5;
+	if (md5_digest != NULL) {
+		svn_checksum_p  = apr_palloc(self->pool, sizeof(svn_checksum_t));
+        svn_checksum_p->digest = apr_pmemdup(
+            self->pool, (unsigned char *)md5_digest, APR_MD5_DIGESTSIZE);
+		svn_checksum_p->kind = svn_checksum_md5;
 	} else {
 		svn_checksum_p = NULL;
 	}
-	RUN_SVN_WITH_POOL(temp_pool,
+	RUN_SVN(
 		svn_wc_queue_committed2(self->queue, path, adm, recurse?TRUE:FALSE,
 							   wcprop_changes, remove_lock?TRUE:FALSE, remove_changelist?TRUE:FALSE,
-							   svn_checksum_p, temp_pool));
+							   svn_checksum_p, self->pool));
 	}
 #else
-	RUN_SVN_WITH_POOL(temp_pool,
+	RUN_SVN(
 		svn_wc_queue_committed(&self->queue, path, adm, recurse?TRUE:FALSE,
 							   wcprop_changes, remove_lock?TRUE:FALSE, remove_changelist?TRUE:FALSE,
-							   (unsigned char *)md5_digest, temp_pool));
+							   (unsigned char *)md5_digest, self->pool));
 #endif
+#if ONLY_SINCE_SVN(1, 7)
+	} else {
+		svn_checksum_t *svn_checksum_p;
 
-	apr_pool_destroy(temp_pool);
+		if (sha1_digest != NULL) {
+			svn_checksum_p  = apr_palloc(self->pool, sizeof(svn_checksum_t));
+			svn_checksum_p->digest = apr_pmemdup(
+				self->pool, (unsigned char *)sha1_digest, APR_SHA1_DIGESTSIZE);
+			svn_checksum_p->kind = svn_checksum_sha1;
+		} else {
+			svn_checksum_p = NULL;
+		}
+		RUN_SVN(
+			svn_wc_queue_committed3(self->queue, context, path, recurse?TRUE:FALSE,
+								   wcprop_changes, remove_lock?TRUE:FALSE, remove_changelist?TRUE:FALSE,
+								   svn_checksum_p, self->pool));
+	}
+#endif
 
 	Py_RETURN_NONE;
 }
@@ -1044,12 +1063,6 @@ PyTypeObject CommittedQueue_Type = {
 
 #if ONLY_SINCE_SVN(1, 7)
 static PyTypeObject Context_Type;
-
-typedef struct {
-    PyObject_VAR_HEAD
-    apr_pool_t *pool;
-    svn_wc_context_t *context;
-} ContextObject;
 
 static PyObject *py_wc_context_locked(PyObject *self, PyObject *args)
 {
@@ -1605,10 +1618,14 @@ static PyObject *py_wc_walk_status(PyObject *self, PyObject *args, PyObject *kwa
     Py_RETURN_NONE;
 }
 
-static svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
+svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
 {
 	LockObject* lockobj = (LockObject *)py_lock;
-	return lockobj->lock;
+    if (!PyObject_IsInstance(py_lock, (PyObject *)&Lock_Type)) {
+        PyErr_SetString(PyExc_TypeError, "Expected Lock object");
+        return NULL;
+    }
+	return &lockobj->lock;
 }
 
 static PyObject *py_wc_add_lock(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -1626,6 +1643,9 @@ static PyObject *py_wc_add_lock(PyObject *self, PyObject *args, PyObject *kwargs
     }
 
     scratch_pool = Pool(NULL);
+    if (scratch_pool == NULL) {
+        return NULL;
+    }
 
     path = py_object_to_svn_abspath(py_path, scratch_pool);
     if (path == NULL) {
@@ -1790,6 +1810,38 @@ static PyObject *py_wc_get_prop_diffs(PyObject *self, PyObject *args, PyObject *
     return Py_BuildValue("NN", py_orig_props, py_propchanges);
 }
 
+static PyObject *py_wc_context_process_committed_queue(PyObject *self, PyObject *args)
+{
+    apr_pool_t *temp_pool;
+    ContextObject *contextobj = (ContextObject *)self;
+    svn_revnum_t revnum;
+    char *date, *author;
+    PyObject *py_queue;
+
+    if (!PyArg_ParseTuple(args, "O!lss", &CommittedQueue_Type, &py_queue,
+                          &revnum, &date, &author))
+        return NULL;
+
+    temp_pool = Pool(NULL);
+    if (temp_pool == NULL)
+        return NULL;
+
+    svn_wc_committed_queue_t *committed_queue = PyObject_GetCommittedQueue(py_queue);
+
+    RUN_SVN_WITH_POOL(temp_pool,
+                      svn_wc_process_committed_queue2(committed_queue,
+                                                      contextobj->context,
+                                                      revnum, date, author,
+                                                      py_cancel_check, NULL,
+                                                      temp_pool));
+
+    apr_pool_destroy(temp_pool);
+
+    Py_RETURN_NONE;
+}
+
+
+
 static PyMethodDef context_methods[] = {
     { "locked", py_wc_context_locked, METH_VARARGS,
         "locked(path) -> (locked_here, locked)\n"
@@ -1825,6 +1877,10 @@ static PyMethodDef context_methods[] = {
         (PyCFunction)py_wc_context_ensure_adm,
         METH_VARARGS|METH_KEYWORDS,
         "ensure_adm(local_abspath, url, repos_root_url, repos_uuid, revnum, depth)" },
+    { "process_committed_queue",
+        (PyCFunction)py_wc_context_process_committed_queue,
+        METH_VARARGS|METH_KEYWORDS,
+        "" },
     { "status",
         (PyCFunction)py_wc_status,
         METH_VARARGS|METH_KEYWORDS,
@@ -1967,10 +2023,11 @@ static void lock_dealloc(PyObject *self)
 
 static PyObject *lock_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-	char *kwnames[] = { NULL };
+	char *kwnames[] = { "token", NULL };
 	LockObject *ret;
+    char *token = NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwnames))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|z", kwnames, &token))
 		return NULL;
 
 	ret = PyObject_New(LockObject, &Lock_Type);
@@ -1980,10 +2037,68 @@ static PyObject *lock_init(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	ret->pool = Pool(NULL);
 	if (ret->pool == NULL)
 		return NULL;
-	ret->lock = svn_lock_create(ret->pool);
+	ret->lock = *svn_lock_create(ret->pool);
+    if (token != NULL) {
+        ret->lock.token = apr_pstrdup(ret->pool, token);
+    }
 
 	return (PyObject *)ret;
 }
+
+static PyObject *lock_get_path(PyObject *self, void *closure) {
+    LockObject *lock_obj = (LockObject *)self;
+
+    if (lock_obj->lock.path == NULL) {
+        Py_RETURN_NONE;
+    }
+
+    return PyUnicode_FromString(lock_obj->lock.path);
+}
+
+static int lock_set_path(PyObject *self, PyObject *value, void *closure) {
+    LockObject *lock_obj = (LockObject *)self;
+    char *path;
+
+    path = PyBytes_AsString(value);
+    if (path == NULL) {
+        return -1;
+    }
+
+    lock_obj->lock.path = py_object_to_svn_string(value, lock_obj->pool);
+    return 0;
+}
+
+static PyObject *lock_get_token(PyObject *self, void *closure) {
+    LockObject *lock_obj = (LockObject *)self;
+
+    if (lock_obj->lock.token == NULL) {
+        Py_RETURN_NONE;
+    }
+
+    return PyBytes_FromString(lock_obj->lock.token);
+}
+
+static int lock_set_token(PyObject *self, PyObject *value, void *closure) {
+    LockObject *lock_obj = (LockObject *)self;
+    char *token;
+
+    token = PyBytes_AsString(value);
+    if (token == NULL) {
+        PyErr_SetNone(PyExc_TypeError);
+        return -1;
+    }
+
+    lock_obj->lock.token = apr_pstrdup(lock_obj->pool, PyBytes_AsString(value));
+    return 0;
+}
+
+static PyGetSetDef lock_getsetters[] = {
+    { "path", lock_get_path, lock_set_path,
+        "the path this lock applies to"},
+    { "token", lock_get_token, lock_set_token,
+        "unique URI representing lock"},
+    { NULL },
+};
 
 PyTypeObject Lock_Type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
@@ -2000,6 +2115,8 @@ PyTypeObject Lock_Type = {
 	.tp_methods = NULL, /*	struct PyMethodDef *tp_methods;	*/
 
 	.tp_new = lock_init, /* tp_new tp_new */
+
+    .tp_getset = lock_getsetters,
 };
 
 static PyObject *

@@ -117,14 +117,14 @@ class AdmObjTests(SubversionTestCase):
         adm.close()
 
     def test_add_repos_file(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         if wc.api_version() < (1, 6):
             self.skipTest("doesn't work with svn < 1.6")
         self.make_client("repos", "checkout")
         adm = wc.Adm(None, "checkout", True)
         adm.add_repos_file("checkout/bar", BytesIO(b"basecontents"),
                            BytesIO(b"contents"), {}, {})
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.assertEqual(b"basecontents",
                          wc.get_pristine_contents("checkout/bar").read())
 
@@ -265,6 +265,10 @@ class AdmObjTests(SubversionTestCase):
 
             def __init__(self):
                 self._windows = []
+                self._prop = {}
+
+            def change_prop(self, name, value):
+                self._prop[name] = value
 
             def apply_textdelta(self, checksum):
                 def window_handler(window):
@@ -274,18 +278,21 @@ class AdmObjTests(SubversionTestCase):
             def close(self):
                 pass
         editor = Editor()
-        (tmpfile, digest) = adm.transmit_text_deltas("bar", True, editor)
+        (tmpfile, md5_digest) = adm.transmit_text_deltas("bar", True, editor)
         self.assertEqual(editor._windows,
                          [(0, 0, 5, 0, [(2, 0, 5)], b'blala'), None])
         self.assertIsInstance(tmpfile, str)
-        self.assertEqual(16, len(digest))
+        self.assertEqual(16, len(md5_digest))
+        self.assertEqual(hashlib.md5(b'blala').digest(), md5_digest)
 
         bar = adm.entry("bar")
         self.assertEqual(-1, bar.cmt_rev)
         self.assertEqual(0, bar.revision)
+        self.assertIn(bar.checksum, (None, hashlib.md5(b'blala').hexdigest()))
 
         cq = wc.CommittedQueue()
-        cq.queue("bar", adm)
+        cq.queue("bar", adm, wcprop_changes=editor._prop,
+                 md5_digest=md5_digest)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z",
                                     "jelmer")
         bar = adm.entry("bar")
@@ -309,6 +316,10 @@ class AdmObjTests(SubversionTestCase):
 
             def __init__(self):
                 self._windows = []
+                self._prop = {}
+
+            def change_prop(self, name, value):
+                self._prop[name] = value
 
             def apply_textdelta(self, checksum):
                 def window_handler(window):
@@ -319,15 +330,17 @@ class AdmObjTests(SubversionTestCase):
                 pass
 
         editor = Editor()
-        (tmpfile, digest) = adm.transmit_text_deltas(
+        (tmpfile, md5_digest) = adm.transmit_text_deltas(
                 "checkout/bar", True, editor)
         self.assertEqual(editor._windows,
                          [(0, 0, 5, 0, [(2, 0, 5)], b'blala'), None])
         self.assertIsInstance(tmpfile, str)
-        self.assertEqual(16, len(digest))
+        self.assertEqual(16, len(md5_digest))
+        self.assertEqual(hashlib.md5(b'blala').digest(), md5_digest)
 
         cq = wc.CommittedQueue()
-        cq.queue("checkout/bar", adm)
+        cq.queue("checkout/bar", adm, wcprop_changes=editor._prop,
+                 md5_digest=md5_digest)
         adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z",
                                     "jelmer")
         bar = adm.entry("checkout/bar")
@@ -362,6 +375,7 @@ class AdmObjTests(SubversionTestCase):
                          [(0, 0, 2, 0, [(2, 0, 2)], b'la'), None])
         self.assertIsInstance(tmpfile, str)
         self.assertEqual(16, len(digest))
+        self.assertEqual(hashlib.md5(b'blala').digest(), digest)
         bar = adm.entry("bar")
         self.assertEqual(-1, bar.cmt_rev)
         self.assertEqual(0, bar.revision)
@@ -387,6 +401,16 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual(
             os.path.abspath("checkout"),
             adm.probe_try(os.path.join("checkout", "bar")).access_path())
+
+    def test_lock(self):
+        self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": b"la"})
+        self.client_add('checkout/bar')
+        adm = wc.Adm(None, "checkout", True)
+        lock = wc.Lock()
+        lock.token = b"blah"
+        adm.add_lock("checkout", lock)
+        adm.remove_lock("checkout")
 
 
 class ContextTests(SubversionTestCase):
@@ -480,28 +504,31 @@ class ContextTests(SubversionTestCase):
                  os.path.abspath("checkout/bla.txt")})
 
     def test_locking(self):
-        self.skipTest('TODO: locking does not work yet')
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         with open('checkout/bla.txt', 'w') as f:
             f.write("modified")
         self.client_add("checkout/bla.txt")
         context = wc.Context()
-        lock = wc.Lock()
+        lock = wc.Lock(token=b'foo')
         self.assertEqual((False, False), context.locked("checkout"))
         context.add_lock("checkout/", lock)
         self.assertEqual((True, True), context.locked("checkout"))
         context.remove_lock("checkout/", lock)
 
     def test_add_from_disk(self):
-        self.skipTest('TODO: locking does not work yet')
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         with open('checkout/bla.txt', 'w') as f:
             f.write("modified")
         context = wc.Context()
-        lock = wc.Lock()
-        context.add_lock("checkout/", lock)
+        lock = wc.Lock(token=b'foo')
+        lock.path = os.path.abspath('checkout')+"/"
+        context.add_lock("checkout", lock)
         context.add_from_disk('checkout/bla.txt')
-        context.remove_lock("checkout/", lock)
+        context.remove_lock("checkout", lock)
 
     def test_get_prop_diffs(self):
         self.make_client("repos", "checkout")
@@ -509,3 +536,16 @@ class ContextTests(SubversionTestCase):
         (orig_props, propdelta) = context.get_prop_diffs("checkout")
         self.assertEqual({}, orig_props)
         self.assertEqual([], propdelta)
+
+    def test_process_committed_queue(self):
+        if wc.api_version() >= (1, 7):
+            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+        self.make_client("repos", "checkout")
+        adm = wc.Context()
+        self.build_tree({"checkout/bar": b"blala"})
+        self.client_add('checkout/bar')
+        adm.add_lock("checkout", wc.Lock(token=b'foo'))
+        cq = wc.CommittedQueue()
+        cq.queue("checkout/bar", adm)
+        adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z",
+                                    "jelmer")
