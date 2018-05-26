@@ -305,6 +305,12 @@ class SubversionTestCase(TestCaseInTempDir):
         """Resolve a conflict set on a local path."""
         self.client_ctx.resolve(path, depth, choice)
 
+    def client_lock(self, path, comment="A comment", steal_lock=False):
+        self.client_ctx.lock(path, comment, steal_lock)
+
+    def client_unlock(self, path, steal_lock=False):
+        self.client_ctx.unlock(path, steal_lock)
+
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.
 
