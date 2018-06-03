@@ -69,11 +69,11 @@ class AdmTests(TestCase):
         if wc.api_version() < (1, 5):
             self.assertRaises(
                 NotImplementedError, wc.match_ignore_list, "foo", [])
-            self.skipTest("match_ignore_list not supported with svn < 1.5")
-        self.assertTrue(wc.match_ignore_list("foo", ["f*"]))
-        self.assertTrue(wc.match_ignore_list("foo", ["foo"]))
-        self.assertFalse(wc.match_ignore_list("foo", []))
-        self.assertFalse(wc.match_ignore_list("foo", ["bar"]))
+        else:
+            self.assertTrue(wc.match_ignore_list("foo", ["f*"]))
+            self.assertTrue(wc.match_ignore_list("foo", ["foo"]))
+            self.assertFalse(wc.match_ignore_list("foo", []))
+            self.assertFalse(wc.match_ignore_list("foo", ["bar"]))
 
 
 class WcTests(SubversionTestCase):
@@ -117,16 +117,20 @@ class AdmObjTests(SubversionTestCase):
         adm.close()
 
     def test_add_repos_file(self):
-        if wc.api_version() < (1, 6):
-            self.skipTest("doesn't work with svn < 1.6")
         self.make_client("repos", "checkout")
         adm = wc.Adm(None, "checkout", True)
-        adm.add_repos_file("checkout/bar", BytesIO(b"basecontents"),
-                           BytesIO(b"contents"), {}, {})
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
-        self.assertEqual(b"basecontents",
-                         wc.get_pristine_contents("checkout/bar").read())
+        if wc.api_version() < (1, 6):
+            self.assertRaises(
+                    NotImplementedError,
+                    adm.add_repos_file, "checkout/bar",
+                    BytesIO(b"basecontents"), BytesIO(b"contents"), {}, {})
+        else:
+            adm.add_repos_file("checkout/bar", BytesIO(b"basecontents"),
+                               BytesIO(b"contents"), {}, {})
+            if wc.api_version() >= (1, 7):
+                self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+            self.assertEqual(b"basecontents",
+                             wc.get_pristine_contents("checkout/bar").read())
 
     def test_mark_missing_deleted(self):
         if wc.api_version() >= (1, 7):
