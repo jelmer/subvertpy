@@ -237,19 +237,13 @@ class SubversionTestCase(TestCaseInTempDir):
             if sys.platform == 'win32':
                 revprop_hook = os.path.join(
                     abspath, "hooks", "pre-revprop-change.bat")
-                f = open(revprop_hook, 'w')
-                try:
+                with open(revprop_hook, 'w') as f:
                     f.write("exit 0\n")
-                finally:
-                    f.close()
             else:
                 revprop_hook = os.path.join(
                     abspath, "hooks", "pre-revprop-change")
-                f = open(revprop_hook, 'w')
-                try:
+                with open(revprop_hook, 'w') as f:
                     f.write("#!/bin/sh\n")
-                finally:
-                    f.close()
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0o111)
 
         if sys.platform == 'win32':
@@ -344,7 +338,6 @@ class SubversionTestCase(TestCaseInTempDir):
         :return: Dictionary
         """
         r = ra.RemoteAccess(url)
-        assert isinstance(url, str)
         ret = {}
 
         def rcvr(orig_paths, rev, revprops, has_children=None):
@@ -353,7 +346,7 @@ class SubversionTestCase(TestCaseInTempDir):
                     revprops.get(properties.PROP_REVISION_AUTHOR),
                     revprops.get(properties.PROP_REVISION_DATE),
                     revprops.get(properties.PROP_REVISION_LOG))
-        r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True,
+        r.get_log(rcvr, [u""], start_revnum, stop_revnum, 0, True, True,
                   revprops=[properties.PROP_REVISION_AUTHOR,
                             properties.PROP_REVISION_DATE,
                             properties.PROP_REVISION_LOG])
@@ -402,11 +395,8 @@ class SubversionTestCase(TestCaseInTempDir):
                     os.makedirs(os.path.dirname(name))
                 except OSError:
                     pass
-                f = open(name, 'wb')
-                try:
+                with open(name, 'wb') as f:
                     f.write(content)
-                finally:
-                    f.close()
 
     def make_client(self, repospath, clientpath, allow_revprop_changes=True):
         """Create a repository and a checkout. Return the checkout.
