@@ -901,6 +901,16 @@ static PyObject *ra_get_repos_root(PyObject *self)
  */
 static PyObject *ra_get_url(PyObject *self, void *closure)
 {
+	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+
+	return PyUnicode_FromString(ra->url);
+}
+
+/**
+ * Obtain the URL of this repository.
+ */
+static PyObject *ra_get_session_url(PyObject *self)
+{
 	const char *url;
 	apr_pool_t *temp_pool;
 	PyObject *r;
@@ -926,6 +936,8 @@ static PyObject *ra_get_url(PyObject *self, void *closure)
 	return NULL;
 #endif
 }
+
+
 
 static PyObject *ra_do_update(PyObject *self, PyObject *args)
 {
@@ -2234,12 +2246,15 @@ static int ra_set_progress_func(PyObject *self, PyObject *value, void *closure)
 
 static PyGetSetDef ra_getsetters[] = {
 	{ "progress_func", NULL, ra_set_progress_func, NULL },
+    { "url", ra_get_url, NULL, NULL },
 	{ NULL }
 };
 
 #include "_ra_iter_log.c"
 
 static PyMethodDef ra_methods[] = {
+    { "get_session_url", (PyCFunction)ra_get_session_url, METH_NOARGS,
+        "S.get_session_url() -> url" },
 	{ "get_file_revs", ra_get_file_revs, METH_VARARGS,
 		"S.get_file_revs(path, start_rev, end_revs, handler)" },
 	{ "get_locations", ra_get_locations, METH_VARARGS,
@@ -2303,9 +2318,6 @@ static PyMethodDef ra_methods[] = {
 	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_NOARGS,
 		"S.get_repos_root() -> url\n"
 		"Return the URL to the root of the repository." },
-	{ "get_url", (PyCFunction)ra_get_url, METH_NOARGS,
-		"S.get_url() -> url\n"
-		"Return the URL of the repository." },
 	{ "get_log", (PyCFunction)ra_get_log, METH_VARARGS|METH_KEYWORDS,
 		"S.get_log(callback, paths, start, end, limit=0, "
 		"discover_changed_paths=False, strict_node_history=True, "
@@ -2345,8 +2357,6 @@ static PyMethodDef ra_methods[] = {
 static PyMemberDef ra_members[] = {
 	{ "busy", T_BYTE, offsetof(RemoteAccessObject, busy), READONLY,
 		"Whether this connection is in use at the moment" },
-	{ "url", T_STRING, offsetof(RemoteAccessObject, url), READONLY,
-		"URL this connection is to" },
 	{ "corrected_url", T_STRING, offsetof(RemoteAccessObject, corrected_url), READONLY,
 		"Corrected URL" },
 	{ NULL, }
