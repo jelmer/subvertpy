@@ -880,7 +880,7 @@ static PyObject *adm_close(PyObject *self)
             svn_wc_adm_close(admobj->adm);
 #endif
         Py_END_ALLOW_THREADS
-            admobj->adm = NULL;
+        admobj->adm = NULL;
     }
 
     Py_RETURN_NONE;
@@ -1782,6 +1782,27 @@ static PyObject *wc_add_lock(PyObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+static PyObject *wc_enter(PyObject *self)
+{
+    Py_INCREF(self);
+    return self;
+}
+
+static PyObject *wc_exit(PyObject *self, PyObject *args)
+{
+    PyObject *exc_type, *exc_value, *exc_tb, *ret;
+
+    if (!PyArg_ParseTuple(args, "OOO", &exc_type, &exc_value, &exc_tb))
+        return NULL;
+
+    ret = adm_close(self);
+    if (ret == NULL) {
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef adm_methods[] = {
     { "prop_set", adm_prop_set, METH_VARARGS, "S.prop_set(name, value, path, skip_checks=False)" },
     { "access_path", (PyCFunction)adm_access_path, METH_NOARGS,
@@ -1848,6 +1869,8 @@ static PyMethodDef adm_methods[] = {
         "S.resolved_conflict(path, resolve_text, resolve_props, resolve_tree, depth, conflict_choice, notify_func=None, cancel=None)" },
     { "status", (PyCFunction)wc_status, METH_VARARGS, "status(wc_path) -> Status" },
     { "add_lock", (PyCFunction)wc_add_lock, METH_VARARGS, "add_lock(path, lock)" },
+    { "__enter__", (PyCFunction)wc_enter, METH_NOARGS, "__enter__() -> self" },
+    { "__exit__", (PyCFunction)wc_exit, METH_VARARGS, "__exit__(exc_type, exc_value, exc_tb)" },
     { NULL, }
 };
 

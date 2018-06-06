@@ -100,6 +100,14 @@ class AdmObjTests(SubversionTestCase):
         self.assertFalse(adm.has_binary_prop("checkout/bar"))
         adm.close()
 
+    def test_with(self):
+        self.make_client("repos", "checkout")
+        self.build_tree({"checkout/bar": b"\x00 \x01"})
+        self.client_add('checkout/bar')
+        self.client_set_prop('checkout/bar', 'svn:mime-type', 'text/bar')
+        with wc.Adm(None, "checkout") as adm:
+            self.assertFalse(adm.has_binary_prop("checkout/bar"))
+
     def test_get_ancestry(self):
         repos_url = self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"\x00 \x01"})
