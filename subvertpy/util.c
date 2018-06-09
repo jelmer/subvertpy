@@ -572,8 +572,6 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 		}
 
 		if (PyBytes_AsStringAndSize(v, &val, &val_size) == -1) {
-			PyErr_SetString(PyExc_TypeError,
-							"property value should be unicode or byte string");
 			return NULL;
 		}
 
