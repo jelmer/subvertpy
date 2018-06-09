@@ -481,16 +481,22 @@ static PyObject *is_normal_prop(PyObject *self, PyObject *args)
 
 static PyObject *is_adm_dir(PyObject *self, PyObject *args)
 {
-	char *name;
+	const char *name;
+    PyObject *py_name;
 	apr_pool_t *pool;
 	svn_boolean_t ret;
 
-	if (!PyArg_ParseTuple(args, "s", &name))
+	if (!PyArg_ParseTuple(args, "O", &py_name))
 		return NULL;
 
 	pool = Pool(NULL);
 	if (pool == NULL)
 		return NULL;
+
+    name = py_object_to_svn_string(py_name, pool);
+    if (name == NULL) {
+        return NULL;
+    }
 
 	ret = svn_wc_is_adm_dir(name, pool);
 
