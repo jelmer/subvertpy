@@ -198,6 +198,13 @@ class TestCommitEditor(TestDirEditor):
         TestDirEditor.close(self)
         self.editor.close()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.close()
+        return False
+
 
 class SubversionTestCase(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion
