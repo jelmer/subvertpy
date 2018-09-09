@@ -15,6 +15,9 @@ subvertpy (0.10.1-2) UNRELEASED; urgency=medium
   [ Piotr Ożarowski ]
   * Add dh-python to Build-Depends
 
+  [ Jelmer Vernooĳ ]
+  * Add debian/upstream/metadata.
+
  -- Jelmer Vernooĳ <jelmer@debian.org>  Wed, 26 Jul 2017 00:20:36 +0000
 
 subvertpy (0.10.1-1) unstable; urgency=medium
