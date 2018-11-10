@@ -429,15 +429,31 @@ if __name__ == "__main__":
           keywords='svn subvertpy subversion bindings',
           version=subvertpy_version_string,
           url='https://jelmer.uk/subvertpy',
-          download_url="https://jelmer.uk/subvertpy/subvertpy-%s.tar.gz" % (
+          download_url="https://jelmer.uk/subvertpy/tarball/subvertpy-%s/" % (
               subvertpy_version_string, ),
           license='LGPLv2.1 or later',
           author='Jelmer Vernooij',
           author_email='jelmer@jelmer.uk',
           long_description="""
-          Alternative Python bindings for Subversion. The goal is to have
-          complete, portable and "Pythonic" Python bindings.
-          """,
+Alternative Python bindings for Subversion. The goal is to have
+complete, portable and "Pythonic" Python bindings.
+
+Bindings are provided for the working copy, client, delta, remote access and
+repository APIs. A hookable server side implementation of the custom Subversion
+protocol (svn_ra) is also provided.
+
+Differences with similar packages
+---------------------------------
+subvertpy covers more of the APIs than python-svn. It provides a more
+"Pythonic" API than python-subversion, which wraps the Subversion C API pretty
+much directly. Neither provide a hookable server-side.
+
+Dependencies
+------------
+Subvertpy depends on Python 2.7 or 3.5, and Subversion 1.4 or later. It should
+work on Windows as well as most POSIX-based platforms (including Linux, BSDs
+and Mac OS X).
+""",
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
           scripts=['bin/subvertpy-fast-export'],
