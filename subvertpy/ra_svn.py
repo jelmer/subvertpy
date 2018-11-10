@@ -502,19 +502,20 @@ class SVNClient(SVNConnection):
                host, port, socket.AF_UNSPEC,
                socket.SOCK_STREAM, 0, 0)
         self._socket = None
-        err = RuntimeError('no addresses for %s:%s' % (host, port))
+        last_err = RuntimeError('no addresses for %s:%s' % (host, port))
         for (family, socktype, proto, canonname, sockaddr) in sockaddrs:
             try:
                 self._socket = socket.socket(family, socktype, proto)
                 self._socket.connect(sockaddr)
             except socket.error as err:
+                last_err = err
                 if self._socket is not None:
                     self._socket.close()
                 self._socket = None
                 continue
             break
         if self._socket is None:
-            raise err
+            raise last_err
         self._socket.setblocking(True)
         return (self._socket.recv, self._socket.send)
 
