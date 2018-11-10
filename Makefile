@@ -44,4 +44,4 @@ pydoctor:
 	$(PYDOCTOR) $(PYDOCTOR_OPTIONS) --introspect-c-modules -c subvertpy.cfg --make-html
 
 style:
-	$(FLAKE8) --exclude=build,.git,build-pypy,.tox subvertpy bin
+	$(FLAKE8)
