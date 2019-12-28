@@ -12,7 +12,10 @@ python:
   - "3.7"
   - "3.8"
 env:
-  - SVN_VERSION=1.10.0
+  - SVN_VERSION=1.13.0
+  - SVN_VERSION=1.12.2
+  - SVN_VERSION=1.11.1
+  - SVN_VERSION=1.10.6
     SVN_OPTIONS="--with-lz4=internal"
   - SVN_VERSION=1.9.7
   - SVN_VERSION=1.8.19
