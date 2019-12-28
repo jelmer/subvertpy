@@ -9,10 +9,12 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
+  - "3.7"
+  - "3.8"
 env:
 # SVN 1.10 requires libutf8proc, which isn't available on trusty :(
-#  - SVN_VERSION=1.10.0
-#    SVN_OPTIONS="--with-lz4=internal"
+  - SVN_VERSION=1.10.0
+    SVN_OPTIONS="--with-lz4=internal"
   - SVN_VERSION=1.9.7
   - SVN_VERSION=1.8.19
   - SVN_VERSION=1.7.19
