@@ -1,3 +1,16 @@
+0.11.0	UNRELEASED
+
+ API CHANGES
+
+  * ``subvertpy.wc.WorkingCopy`` has been renamed to
+    `` subvertpy.wc.Adm``. (Jelmer Vernooĳ)
+
+  * ``subvertpy.client.mkdir``, ``subvertpy.client.copy``,
+    ``subvertpy.client.delete``, ``subvertpy.client.commit``
+    no longer return the resulting commit but call an
+    optional callback with commit info.
+    (Jelmer Vernooĳ)
+
 0.10.1	2017-07-19
 
  BUG FIXES

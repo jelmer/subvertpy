@@ -44,10 +44,21 @@ void PyErr_SetAprStatus(apr_status_t status)
 
 #if ONLY_BEFORE_SVN(1, 7)
 const char *
-svn_uri_canonicalize(const char *uri,
+_svn_uri_canonicalize(const char *uri,
                      apr_pool_t *result_pool)
 {
-	return svn_path_canonicalize(uri, result_pool);
+    uri = svn_path_canonicalize(uri, result_pool);
+
+    if (uri == NULL) {
+        return NULL;
+    }
+
+    uri = svn_path_uri_decode(uri, result_pool);
+    if (uri == NULL) {
+        return NULL;
+    }
+
+    return svn_path_uri_autoescape(uri, result_pool);
 }
 
 const char *
@@ -57,85 +68,132 @@ svn_relpath_canonicalize(const char *relpath,
 	return svn_path_canonicalize(relpath, result_pool);
 }
 
+const char *
+svn_dirent_canonicalize(const char *dirent,
+                        apr_pool_t *result_pool)
+{
+    return svn_path_canonicalize(dirent, result_pool);
+}
+
 #endif
+
+const char *py_object_to_svn_path_or_url(PyObject *obj, apr_pool_t *pool)
+{
+    const char *ret;
+
+    if (PyUnicode_Check(obj)) {
+        obj = PyUnicode_AsUTF8String(obj);
+        if (obj == NULL) {
+            return NULL;
+        }
+    } else {
+        Py_INCREF(obj);
+    }
+
+    if (!PyBytes_Check(obj)) {
+        PyErr_SetString(PyExc_TypeError,
+                        "URIs need to be UTF-8 bytestrings or unicode strings");
+        Py_DECREF(obj);
+        return NULL;
+    }
+
+    ret = PyBytes_AsString(obj);
+    if (svn_path_is_url(ret)) {
+        ret = svn_uri_canonicalize(ret, pool);
+    } else {
+        ret = svn_dirent_canonicalize(ret, pool);
+    }
+
+    Py_DECREF(obj);
+    return ret;
+}
+
+const char *py_object_to_svn_abspath(PyObject *obj, apr_pool_t *pool)
+{
+    const char *ret;
+
+    if (PyUnicode_Check(obj)) {
+        obj = PyUnicode_AsUTF8String(obj);
+        if (obj == NULL) {
+            return NULL;
+        }
+    } else {
+        Py_INCREF(obj);
+    }
+
+    if (!PyBytes_Check(obj)) {
+        PyErr_SetString(PyExc_TypeError,
+                        "URIs need to be UTF-8 bytestrings or unicode strings");
+        Py_DECREF(obj);
+        return NULL;
+    }
+
+    ret = PyBytes_AsString(obj);
+    ret = apr_pstrdup(pool, ret);
+    Py_DECREF(obj);
+    if (ret == NULL) {
+        return NULL;
+    }
+    if (svn_dirent_is_absolute(ret)) {
+        return svn_dirent_canonicalize(ret, pool);
+    } else {
+        const char *absolute;
+        RUN_SVN(svn_dirent_get_absolute(&absolute, ret, pool))
+        return svn_dirent_canonicalize(absolute, pool);
+    }
+}
 
 const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool)
 {
-	const char *ret;
-	PyObject *bytes_obj = NULL;
+    const char *ret;
 
-	if (PyUnicode_Check(obj)) {
-		bytes_obj = obj = PyUnicode_AsUTF8String(obj);
-		if (obj == NULL) {
-			return NULL;
-		}
-	}
+    if (PyUnicode_Check(obj)) {
+        obj = PyUnicode_AsUTF8String(obj);
+        if (obj == NULL) {
+            return NULL;
+        }
+    } else {
+        Py_INCREF(obj);
+    }
 
-	if (PyBytes_Check(obj)) {
-#if ONLY_SINCE_SVN(1, 7)
-		ret = svn_dirent_canonicalize(PyBytes_AsString(obj), pool);
-#else
-		ret = svn_path_canonicalize(PyBytes_AsString(obj), pool);
-#endif
-		Py_XDECREF(bytes_obj);
-		return ret;
-	} else {
-		PyErr_SetString(PyExc_TypeError,
-						"URIs need to be UTF-8 bytestrings or unicode strings");
-		Py_XDECREF(bytes_obj);
-		return NULL;
-	}
+    if (PyBytes_Check(obj)) {
+        ret = svn_dirent_canonicalize(PyBytes_AsString(obj), pool);
+        Py_DECREF(obj);
+        return ret;
+    } else {
+        PyErr_SetString(PyExc_TypeError,
+                        "URIs need to be UTF-8 bytestrings or unicode strings");
+        Py_DECREF(obj);
+        return NULL;
+    }
 }
 
 char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool)
 {
-	char *ret;
-	PyObject *bytes_obj = NULL;
+    char *ret;
 
-	if (PyUnicode_Check(obj)) {
-		bytes_obj = obj = PyUnicode_AsUTF8String(obj);
-		if (obj == NULL) {
-			return NULL;
-		}
-	}
+    if (PyUnicode_Check(obj)) {
+        obj = PyUnicode_AsUTF8String(obj);
+        if (obj == NULL) {
+            return NULL;
+        }
+    } else {
+        Py_INCREF(obj);
+    }
 
-	if (PyBytes_Check(obj)) {
-		ret = apr_pstrdup(pool, PyBytes_AsString(obj));
-		Py_XDECREF(bytes_obj);
-		return ret;
-	} else {
-		PyErr_SetString(PyExc_TypeError,
-						"URIs need to be UTF-8 bytestrings or unicode strings");
-		Py_XDECREF(bytes_obj);
-		return NULL;
-	}
+    if (PyBytes_Check(obj)) {
+        ret = apr_pstrdup(pool, PyBytes_AsString(obj));
+        Py_DECREF(obj);
+        return ret;
+    } else {
+        PyErr_SetString(PyExc_TypeError,
+                        "URIs need to be UTF-8 bytestrings or unicode strings");
+        Py_DECREF(obj);
+        return NULL;
+    }
 }
 
 const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool)
-{
-	const char *ret;
-	PyObject *bytes_obj = NULL;
-
-	if (PyUnicode_Check(obj)) {
-		bytes_obj = obj = PyUnicode_AsUTF8String(obj);
-		if (obj == NULL) {
-			return NULL;
-		}
-	}
-
-	if (PyBytes_Check(obj)) {
-		ret = svn_uri_canonicalize(PyBytes_AsString(obj), pool);
-		Py_XDECREF(bytes_obj);
-		return ret;
-	} else {
-		PyErr_SetString(PyExc_TypeError,
-						"URIs need to be UTF-8 bytestrings or unicode strings");
-		Py_XDECREF(bytes_obj);
-		return NULL;
-	}
-}
-
-const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool)
 {
 	const char *ret;
 
@@ -145,72 +203,97 @@ const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool)
 			return NULL;
 		}
 	} else {
-		Py_INCREF(obj);
-	}
+        Py_INCREF(obj);
+    }
 
 	if (PyBytes_Check(obj)) {
-		ret = svn_relpath_canonicalize(PyBytes_AsString(obj), pool);
+		ret = svn_uri_canonicalize(PyBytes_AsString(obj), pool);
 		Py_DECREF(obj);
 		return ret;
 	} else {
 		PyErr_SetString(PyExc_TypeError,
-						"relative paths need to be UTF-8 bytestrings or unicode strings");
+						"URIs need to be UTF-8 bytestrings or unicode strings");
 		Py_DECREF(obj);
 		return NULL;
 	}
 }
 
+const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool)
+{
+    const char *ret;
+
+    if (PyUnicode_Check(obj)) {
+        obj = PyUnicode_AsUTF8String(obj);
+        if (obj == NULL) {
+            return NULL;
+        }
+    } else {
+        Py_INCREF(obj);
+    }
+
+    if (PyBytes_Check(obj)) {
+        ret = svn_relpath_canonicalize(PyBytes_AsString(obj), pool);
+        Py_DECREF(obj);
+        return ret;
+    } else {
+        PyErr_SetString(PyExc_TypeError,
+                        "relative paths need to be UTF-8 bytestrings or unicode strings");
+        Py_DECREF(obj);
+        return NULL;
+    }
+}
+
 apr_pool_t *Pool(apr_pool_t *parent)
 {
-	apr_status_t status;
-	apr_pool_t *ret;
-	ret = NULL;
-	status = apr_pool_create(&ret, parent);
-	if (status != 0) {
-		PyErr_SetAprStatus(status);
-		return NULL;
-	}
-	return ret;
+    apr_status_t status;
+    apr_pool_t *ret;
+    ret = NULL;
+    status = apr_pool_create(&ret, parent);
+    if (status != 0) {
+        PyErr_SetAprStatus(status);
+        return NULL;
+    }
+    return ret;
 }
 
 PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void)
 {
-	PyObject *coremod, *excobj;
-	coremod = PyImport_ImportModule("subvertpy");
+    PyObject *coremod, *excobj;
+    coremod = PyImport_ImportModule("subvertpy");
 
-	if (coremod == NULL) {
-		return NULL;
-	}
+    if (coremod == NULL) {
+        return NULL;
+    }
 
-	excobj = PyObject_GetAttrString(coremod, "SubversionException");
-	Py_DECREF(coremod);
+    excobj = PyObject_GetAttrString(coremod, "SubversionException");
+    Py_DECREF(coremod);
 
-	if (excobj == NULL) {
-		PyErr_BadInternalCall();
-		return NULL;
-	}
+    if (excobj == NULL) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
 
-	return (PyTypeObject *)excobj;
+    return (PyTypeObject *)excobj;
 }
 
 PyTypeObject *PyErr_GetGaiExceptionTypeObject(void)
 {
-	PyObject *socketmod, *excobj;
-	socketmod = PyImport_ImportModule("socket");
+    PyObject *socketmod, *excobj;
+    socketmod = PyImport_ImportModule("socket");
 
-	if (socketmod == NULL) {
-		return NULL;
-	}
+    if (socketmod == NULL) {
+        return NULL;
+    }
 
-	excobj = PyObject_GetAttrString(socketmod, "gaierror");
-	Py_DECREF(socketmod);
+    excobj = PyObject_GetAttrString(socketmod, "gaierror");
+    Py_DECREF(socketmod);
 
-	if (excobj == NULL) {
-		PyErr_BadInternalCall();
-		return NULL;
-	}
+    if (excobj == NULL) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
 
-	return (PyTypeObject *)excobj;
+    return (PyTypeObject *)excobj;
 }
 
 PyObject *PyErr_NewSubversionException(svn_error_t *error)
@@ -229,9 +312,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 	if (error->child != NULL) {
 		PyTypeObject *cls = PyErr_GetSubversionExceptionTypeObject();
 		PyObject *args = PyErr_NewSubversionException(error->child);
-		child = cls->tp_new(cls, args, NULL);
-		if (cls->tp_init != NULL)
-			cls->tp_init(child, args, NULL);
+		child = PyObject_CallObject((PyObject *)cls, args);
 		Py_DECREF(cls);
 		Py_DECREF(args);
 	} else {
@@ -240,7 +321,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 	}
 
 #if ONLY_SINCE_SVN(1, 4)
-	message = svn_err_best_message(error, buf, sizeof(buf));
+	message = svn_err_best_message(error, buf, sizeof(buf)-1);
 #else
 	message = error->message;
 #endif
@@ -436,14 +517,12 @@ PyObject *prop_hash_to_dict(apr_hash_t *props)
 			py_key = Py_None;
 			Py_INCREF(py_key);
 		} else {
-			py_key = PyUnicode_FromString(key);
+			py_key = PyUnicode_FromStringAndSize(key, klen);
 		}
 		if (PyDict_SetItem(py_props, py_key, py_val) != 0) {
 			Py_DECREF(py_key);
 			Py_DECREF(py_val);
-			Py_DECREF(py_props);
-			apr_pool_destroy(pool);
-			return NULL;
+			goto fail_item;
 		}
 		Py_DECREF(py_key);
 		Py_DECREF(py_val);
@@ -478,17 +557,11 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	}
 
 	while (PyDict_Next(py_props, &idx, &k, &v)) {
-		char *key;
-		if (PyUnicode_Check(k)) {
-			k = PyUnicode_AsUTF8String(k);
-		} else {
-			Py_INCREF(k);
-		}
+		char *key, *val;
+		Py_ssize_t val_size;
 
-		if (!PyBytes_Check(k)) {
-			PyErr_SetString(PyExc_TypeError,
-							"property name should be unicode or byte string");
-			Py_DECREF(k);
+		key = py_object_to_svn_string(k, pool);
+		if (key == NULL) {
 			return NULL;
 		}
 
@@ -498,39 +571,26 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 			Py_INCREF(v);
 		}
 
-		if (!PyBytes_Check(v)) {
-			PyErr_SetString(PyExc_TypeError,
-							"property value should be unicode or byte string");
-			Py_DECREF(k);
-			Py_DECREF(v);
+		if (PyBytes_AsStringAndSize(v, &val, &val_size) == -1) {
 			return NULL;
 		}
 
-		key = apr_pmemdup(pool, PyBytes_AsString(k), PyBytes_Size(k));
-		if (key == NULL) {
-			PyErr_SetString(PyExc_TypeError,
-							"property value should be unicode or byte string");
-			Py_DECREF(k);
-			Py_DECREF(v);
-			return NULL;
-		}
+		val_string = svn_string_ncreate(val, val_size, pool);
 
-		val_string = svn_string_ncreate(PyBytes_AsString(v),
-										PyBytes_Size(v), pool);
-		apr_hash_set(hash_props, key, PyBytes_Size(k), val_string);
-		Py_DECREF(k);
 		Py_DECREF(v);
+
+		apr_hash_set(hash_props, key, strlen(key), val_string);
 	}
 
 	return hash_props;
 }
 
 #if PY_MAJOR_VERSION >= 3
-#define SOURCEPATH_FORMAT3 "(Czl)"
-#define SOURCEPATH_FORMAT4 "(Czli)"
+#define SOURCEPATH_FORMAT3 "(CNl)"
+#define SOURCEPATH_FORMAT4 "(CNli)"
 #else
-#define SOURCEPATH_FORMAT3 "(czl)"
-#define SOURCEPATH_FORMAT4 "(czli)"
+#define SOURCEPATH_FORMAT3 "(cNl)"
+#define SOURCEPATH_FORMAT4 "(cNli)"
 #endif
 
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)
@@ -551,13 +611,21 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 		}
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
+			PyObject *py_copyfrom_path, *py_key;
+
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
+			if (val->copyfrom_path == NULL) {
+				py_copyfrom_path = Py_None;
+				Py_INCREF(Py_None);
+			} else {
+				py_copyfrom_path = PyUnicode_FromString(val->copyfrom_path);
+			}
 			if (node_kind) {
-				pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, val->copyfrom_path,
+				pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, py_copyfrom_path,
 											 val->copyfrom_rev,
 											 svn_node_unknown);
 			} else {
-				pyval = Py_BuildValue(SOURCEPATH_FORMAT3, val->action, val->copyfrom_path,
+				pyval = Py_BuildValue(SOURCEPATH_FORMAT3, val->action, py_copyfrom_path,
 											 val->copyfrom_rev);
 			}
 			if (pyval == NULL) {
@@ -570,11 +638,21 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 				Py_DECREF(py_changed_paths);
 				return NULL;
 			}
-			if (PyDict_SetItemString(py_changed_paths, key, pyval) != 0) {
+
+			py_key = PyUnicode_FromString(key);
+			if (py_key == NULL) {
+				Py_DECREF(pyval);
 				Py_DECREF(py_changed_paths);
+				return NULL;
+			}
+
+			if (PyDict_SetItem(py_changed_paths, py_key, pyval) != 0) {
+				Py_DECREF(py_changed_paths);
+				Py_DECREF(py_key);
 				Py_DECREF(pyval);
 				return NULL;
 			}
+			Py_DECREF(py_key);
 			Py_DECREF(pyval);
 		}
 	}
@@ -601,8 +679,15 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 		}
 		for (idx = apr_hash_first(pool, changed_paths); idx != NULL;
 			 idx = apr_hash_next(idx)) {
+			PyObject *py_key, *py_copyfrom_path;
 			apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-			pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, val->copyfrom_path,
+			if (val->copyfrom_path == NULL) {
+				py_copyfrom_path = Py_None;
+				Py_INCREF(Py_None);
+			} else {
+				py_copyfrom_path = PyUnicode_FromString(val->copyfrom_path);
+			}
+			pyval = Py_BuildValue(SOURCEPATH_FORMAT4, val->action, py_copyfrom_path,
 										 val->copyfrom_rev, val->node_kind);
 			if (pyval == NULL) {
 				Py_DECREF(py_changed_paths);
@@ -614,11 +699,20 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 				Py_DECREF(pyval);
 				return NULL;
 			}
-			if (PyDict_SetItemString(py_changed_paths, key, pyval) != 0) {
+			py_key = PyUnicode_FromString(key);
+			if (py_key == NULL) {
+				Py_DECREF(py_changed_paths);
 				Py_DECREF(pyval);
+				return NULL;
+			}
+
+			if (PyDict_SetItem(py_changed_paths, py_key, pyval) != 0) {
+				Py_DECREF(pyval);
+				Py_DECREF(py_key);
 				Py_DECREF(py_changed_paths);
 				return NULL;
 			}
+			Py_DECREF(py_key);
 			Py_DECREF(pyval);
 		}
 	}
@@ -840,6 +934,7 @@ static apr_hash_t *get_default_config(void)
 		pool = Pool(NULL);
 		RUN_SVN_WITH_POOL(pool,
 					  svn_config_get_config(&default_config, NULL, pool));
+		/* TODO(jelmer): Deal with pool */
 		initialised = true;
 	}
 
@@ -1068,3 +1163,70 @@ PyTypeObject Stream_Type = {
 
 	.tp_new = stream_init, /* tp_new tp_new */
 };
+
+PyObject *dirent_hash_to_dict(apr_hash_t *dirents, unsigned int dirent_fields, apr_pool_t *temp_pool)
+{
+	svn_dirent_t *dirent;
+	apr_ssize_t klen;
+	const char *key;
+	apr_hash_index_t *idx;
+	PyObject *py_dirents = PyDict_New();
+
+	if (py_dirents == NULL) {
+		return NULL;
+	}
+	idx = apr_hash_first(temp_pool, dirents);
+	while (idx != NULL) {
+		PyObject *item, *pykey;
+		apr_hash_this(idx, (const void **)&key, &klen, (void **)&dirent);
+		item = py_dirent(dirent, dirent_fields);
+		if (item == NULL) {
+			Py_DECREF(py_dirents);
+			return NULL;
+		}
+		if (key == NULL) {
+			pykey = Py_None;
+			Py_INCREF(pykey);
+		} else {
+			pykey = PyUnicode_FromStringAndSize(key, klen);
+		}
+		if (PyDict_SetItem(py_dirents, pykey, item) != 0) {
+			Py_DECREF(item);
+			Py_DECREF(pykey);
+			Py_DECREF(py_dirents);
+			return NULL;
+		}
+		Py_DECREF(pykey);
+		Py_DECREF(item);
+		idx = apr_hash_next(idx);
+	}
+	return py_dirents;
+}
+
+PyObject *propchanges_to_list(const apr_array_header_t *propchanges)
+{
+    int i;
+    svn_prop_t el;
+    PyObject *py_propchanges = PyList_New(propchanges->nelts);
+    PyObject *pyval;
+    if (py_propchanges == NULL) {
+        return NULL;
+    }
+    for (i = 0; i < propchanges->nelts; i++) {
+        el = APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+        if (el.value != NULL)
+            pyval = Py_BuildValue("(sz#)", el.name, el.value->data, el.value->len);
+        else
+            pyval = Py_BuildValue("(sO)", el.name, Py_None);
+        if (pyval == NULL) {
+            Py_DECREF(py_propchanges);
+            return NULL;
+        }
+        if (PyList_SetItem(py_propchanges, i, pyval) != 0) {
+            Py_DECREF(py_propchanges);
+            return NULL;
+        }
+    }
+
+    return py_propchanges;
+}

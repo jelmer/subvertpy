@@ -117,7 +117,10 @@ class TestRepository(TestCaseInTempDir):
 
     def test_pack_fs(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
-        r.pack_fs()
+        if repos.api_version() < (1, 6):
+            self.assertRaises(NotImplementedError, r.pack_fs)
+        else:
+            r.pack_fs()
 
     def test_paths_changed(self):
         repos.create(os.path.join(self.test_dir, "foo"))

@@ -39,7 +39,7 @@ typedef struct {
 
 static PyObject *repos_create(PyObject *self, PyObject *args)
 {
-	char *path;
+	const char *path;
 	PyObject *config=Py_None, *fs_config=Py_None, *py_path;
 	svn_repos_t *repos = NULL;
 	apr_pool_t *pool;
@@ -64,7 +64,7 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	path = py_object_to_svn_string(py_path, pool);
+	path = py_object_to_svn_dirent(py_path, pool);
 	if (path == NULL) {
 		apr_pool_destroy(pool);
 		return NULL;
@@ -499,6 +499,7 @@ static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+#if ONLY_SINCE_SVN(1, 6)
 static svn_error_t *py_pack_notify(void *baton, apr_int64_t shard, svn_fs_pack_notify_action_t action, apr_pool_t *pool)
 {
 	PyObject *ret;
@@ -510,9 +511,11 @@ static svn_error_t *py_pack_notify(void *baton, apr_int64_t shard, svn_fs_pack_n
 	Py_DECREF(ret);
 	return NULL;
 }
+#endif
 
 static PyObject *repos_pack(RepositoryObject *self, PyObject *args)
 {
+#if ONLY_SINCE_SVN(1, 6)
 	apr_pool_t *temp_pool;
 	PyObject *notify_func = Py_None;
 	if (!PyArg_ParseTuple(args, "|O", &notify_func))
@@ -526,6 +529,10 @@ static PyObject *repos_pack(RepositoryObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
+#else
+	PyErr_SetString(PyExc_NotImplementedError, "pack_fs is only supported in Subversion >= 1.6");
+    return NULL;
+#endif
 }
 
 static PyMethodDef repos_methods[] = {
