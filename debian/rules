@@ -17,9 +17,19 @@ pythonpath = $$(ls -d $(CURDIR)/build/lib.*-$(1))
 export PYBUILD_NAME=subvertpy
 export HOME=$(CURDIR)/nonexistent
 
+export PYTHONPATH = debian/fake-python-path
+
 %:
 	CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" \
 	LDFLAGS="$(LDFLAGS)" dh $* --with python2,python3 --buildsystem=pybuild
+
+override_dh_auto_configure:
+	mkdir -p debian/fake-python-path
+	[ ! -d /usr/lib/python2.7/dist-packages/cachecontrol ] && \
+	[ -d /usr/lib/python3/dist-packages/cachecontrol ] && \
+	ln -s /usr/lib/python3/dist-packages/cachecontrol debian/fake-python-path/cachecontrol || \
+	true
+	dh_auto_configure
 
 override_dh_auto_build:
 	dh_auto_build
