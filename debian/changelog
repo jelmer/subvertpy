@@ -2,8 +2,13 @@ subvertpy (0.10.2~git20191228+2423bf1-1) unstable; urgency=medium
 
   * Team upload.
   * New upstream snapshot (Closes: #942678).
+  * Pydoctor needs to depend on cachecontrol, but it doesn’t.
+    Since python-cachecontrol has been removed from the archive,
+    work this around by bringing it into the PYTHONPATH from
+    the Python 3 package.
+  * Tests crash with python*-dbg, disable them temporarily.
 
- -- Andrej Shadura <andrewsh@debian.org>  Sat, 18 Jan 2020 16:37:28 +0100
+ -- Andrej Shadura <andrewsh@debian.org>  Sat, 18 Jan 2020 17:50:11 +0100
 
 subvertpy (0.10.1-3) unstable; urgency=medium
 
