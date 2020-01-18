@@ -397,15 +397,15 @@ static PyObject *py_dir_editor_delete_entry(PyObject *self, PyObject *args)
 
 static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 {
-	PyObject *py_path;
+	PyObject *py_path, *py_copyfrom_path = Py_None;
 	const char *path;
-	char *copyfrom_path = NULL;
+	const char *copyfrom_path = NULL;
 	svn_revnum_t copyfrom_rev = -1;
 	void *child_baton;
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!PyArg_ParseTuple(args, "O|zl", &py_path, &copyfrom_path, &copyfrom_rev))
+	if (!PyArg_ParseTuple(args, "O|Ol", &py_path, &py_copyfrom_path, &copyfrom_rev))
 		return NULL;
 
 	if (editor->done) {
@@ -421,6 +421,13 @@ static PyObject *py_dir_editor_add_directory(PyObject *self, PyObject *args)
 	path = py_object_to_svn_relpath(py_path, editor->pool);
 	if (path == NULL) {
 		return NULL;
+	}
+
+	if (py_copyfrom_path != Py_None) {
+		copyfrom_path = py_object_to_svn_uri(py_copyfrom_path, editor->pool);
+		if (copyfrom_path == NULL) {
+			return NULL;
+		}
 	}
 
 	RUN_SVN(editor->editor->add_directory(
@@ -563,14 +570,14 @@ static PyObject *py_dir_editor_absent_directory(PyObject *self, PyObject *args)
 static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 {
 	const char *path;
-	char *copy_path=NULL;
-	PyObject *py_path;
+	const char *copy_path=NULL;
+	PyObject *py_path, *py_copy_path = Py_None;
 	svn_revnum_t copy_rev=-1;
 	void *file_baton = NULL;
 	EditorObject *editor = (EditorObject *)self;
 	apr_pool_t *subpool;
 
-	if (!PyArg_ParseTuple(args, "O|zl", &py_path, &copy_path, &copy_rev))
+	if (!PyArg_ParseTuple(args, "O|Ol", &py_path, &py_copy_path, &copy_rev))
 		return NULL;
 
 	if (editor->done) {
@@ -588,9 +595,15 @@ static PyObject *py_dir_editor_add_file(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	if (py_copy_path != Py_None) {
+		copy_path = py_object_to_svn_uri(py_copy_path, editor->pool);
+		if (copy_path == NULL) {
+			return NULL;
+		}
+	}
+
 	RUN_SVN(editor->editor->add_file(path, editor->baton,
-		copy_path == NULL?NULL:svn_uri_canonicalize(copy_path, editor->pool),
-		copy_rev, editor->pool, &file_baton));
+		copy_path, copy_rev, editor->pool, &file_baton));
 
 	subpool = Pool(NULL);
 	if (subpool == NULL)

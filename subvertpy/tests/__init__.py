@@ -198,6 +198,13 @@ class TestCommitEditor(TestDirEditor):
         TestDirEditor.close(self)
         self.editor.close()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.close()
+        return False
+
 
 class SubversionTestCase(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion
@@ -237,19 +244,13 @@ class SubversionTestCase(TestCaseInTempDir):
             if sys.platform == 'win32':
                 revprop_hook = os.path.join(
                     abspath, "hooks", "pre-revprop-change.bat")
-                f = open(revprop_hook, 'w')
-                try:
+                with open(revprop_hook, 'w') as f:
                     f.write("exit 0\n")
-                finally:
-                    f.close()
             else:
                 revprop_hook = os.path.join(
                     abspath, "hooks", "pre-revprop-change")
-                f = open(revprop_hook, 'w')
-                try:
+                with open(revprop_hook, 'w') as f:
                     f.write("#!/bin/sh\n")
-                finally:
-                    f.close()
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0o111)
 
         if sys.platform == 'win32':
@@ -305,6 +306,12 @@ class SubversionTestCase(TestCaseInTempDir):
         """Resolve a conflict set on a local path."""
         self.client_ctx.resolve(path, depth, choice)
 
+    def client_lock(self, path, comment="A comment", steal_lock=False):
+        self.client_ctx.lock(path, comment, steal_lock)
+
+    def client_unlock(self, path, steal_lock=False):
+        self.client_ctx.unlock(path, steal_lock)
+
     def client_commit(self, dir, message=None, recursive=True):
         """Commit current changes in specified working copy.
 
@@ -313,10 +320,14 @@ class SubversionTestCase(TestCaseInTempDir):
         olddir = os.path.abspath('.')
         self.next_message = message
         os.chdir(dir)
-        info = self.client_ctx.commit(["."], recursive, False)
+        info = []
+
+        def add_info(*args):
+            info.append(args)
+        self.client_ctx.commit(["."], recursive, False, callback=add_info)
         os.chdir(olddir)
-        assert info is not None
-        return info
+        assert len(info) == 1
+        return info[0]
 
     def client_add(self, relpath, recursive=True):
         """Add specified files to working copy.
@@ -334,7 +345,6 @@ class SubversionTestCase(TestCaseInTempDir):
         :return: Dictionary
         """
         r = ra.RemoteAccess(url)
-        assert isinstance(url, str)
         ret = {}
 
         def rcvr(orig_paths, rev, revprops, has_children=None):
@@ -343,7 +353,7 @@ class SubversionTestCase(TestCaseInTempDir):
                     revprops.get(properties.PROP_REVISION_AUTHOR),
                     revprops.get(properties.PROP_REVISION_DATE),
                     revprops.get(properties.PROP_REVISION_LOG))
-        r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True,
+        r.get_log(rcvr, [u""], start_revnum, stop_revnum, 0, True, True,
                   revprops=[properties.PROP_REVISION_AUTHOR,
                             properties.PROP_REVISION_DATE,
                             properties.PROP_REVISION_LOG])
@@ -392,11 +402,8 @@ class SubversionTestCase(TestCaseInTempDir):
                     os.makedirs(os.path.dirname(name))
                 except OSError:
                     pass
-                f = open(name, 'wb')
-                try:
+                with open(name, 'wb') as f:
                     f.write(content)
-                finally:
-                    f.close()
 
     def make_client(self, repospath, clientpath, allow_revprop_changes=True):
         """Create a repository and a checkout. Return the checkout.
@@ -442,6 +449,7 @@ def test_suite():
         'ra',
         'repos',
         'server',
+        'subr',
         'wc',
         ]
     module_names = ['subvertpy.tests.test_' + name for name in names]

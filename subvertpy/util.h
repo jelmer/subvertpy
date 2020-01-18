@@ -21,6 +21,7 @@
 #define _SUBVERTPY_UTIL_H_
 
 #include <svn_version.h>
+#include <svn_io.h>  /* for svn_stream_t */
 
 #if SVN_VER_MAJOR != 1
 #error "only svn 1.x is supported"
@@ -48,7 +49,7 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props);
 svn_error_t *py_svn_log_wrapper(
     void *baton, apr_hash_t *changed_paths, long revision, const char *author,
     const char *date, const char *message, apr_pool_t *pool);
-svn_error_t *py_svn_error(void);
+__attribute__((warn_unused_result)) svn_error_t *py_svn_error(void);
 void PyErr_SetSubversionException(svn_error_t *error);
 PyTypeObject *PyErr_GetSubversionExceptionTypeObject(void);
 
@@ -86,6 +87,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error);
 apr_hash_t *config_hash_from_object(PyObject *config, apr_pool_t *pool);
 void PyErr_SetAprStatus(apr_status_t status);
 PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields);
+PyObject *dirent_hash_to_dict(apr_hash_t *dirents, unsigned int dirent_fields, apr_pool_t *temp_pool);
 PyObject *PyOS_tmpfile(void);
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool);
 bool pyify_log_message(
@@ -139,18 +141,28 @@ extern PyTypeObject Stream_Type;
 
 #if ONLY_BEFORE_SVN(1, 7)
 const char *
-svn_uri_canonicalize(const char *uri,
+_svn_uri_canonicalize(const char *uri,
                      apr_pool_t *result_pool);
 const char *
 svn_relpath_canonicalize(const char *relpath,
                          apr_pool_t *result_pool);
+
+const char *
+svn_dirent_canonicalize(const char *dirent,
+                        apr_pool_t *result_pool);
+#define svn_uri_canonicalize _svn_uri_canonicalize
+#define svn_dirent_get_absolute svn_path_get_absolute
+#define svn_dirent_is_absolute svn_path_is_url
 #endif
 
 const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_relpath(PyObject *obj, apr_pool_t *pool);
+const char *py_object_to_svn_path_or_url(PyObject *obj, apr_pool_t *pool);
 char *py_object_to_svn_string(PyObject *obj, apr_pool_t *pool);
-#define py_object_from_svn_abspath PyBytes_FromString
+const char *py_object_to_svn_abspath(PyObject *obj, apr_pool_t *pool);
+#define py_object_from_svn_abspath PyUnicode_FromString
+PyObject *propchanges_to_list(const apr_array_header_t *propchanges);
 
 #if PY_MAJOR_VERSION >= 3
 #define PyRepr_FromFormat PyUnicode_FromFormat

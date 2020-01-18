@@ -1,0 +1,15 @@
+build
+_trial_temp
+dist
+sdist
+MANIFEST
+.coverage
+tags
+.testrepository
+.noseids
+apidocs
+*.pyc
+*.so
+*~
+.tox/
+.pybuild

@@ -1,0 +1,41 @@
+language: python
+dist: xenial
+addons:
+  apt:
+    update: true
+    packages: libapr1-dev libaprutil1-dev libdb5.3-dev liblz4-dev libsasl2-dev libperl-dev libserf-dev libsqlite3-dev libtool python-all-dev libneon27-gnutls-dev libutf8proc-dev
+python:
+  - "2.7"
+  - "3.4"
+  - "3.5"
+  - "3.6"
+  - "3.7"
+  - "3.8"
+env:
+  - SVN_VERSION=1.13.0
+  - SVN_VERSION=1.12.2
+  - SVN_VERSION=1.11.1
+  - SVN_VERSION=1.10.6
+    SVN_OPTIONS="--with-lz4=internal"
+  - SVN_VERSION=1.9.7
+  - SVN_VERSION=1.8.19
+  - SVN_VERSION=1.7.19
+  - SVN_VERSION=1.6.21
+  - SVN_VERSION=1.5.9
+script:
+  - make check
+  - make style
+install:
+  - travis_retry pip install -U pip coverage codecov flake8
+before_install:
+  - wget https://archive.apache.org/dist/subversion/subversion-${SVN_VERSION}.tar.gz
+  - tar xvfz subversion-${SVN_VERSION}.tar.gz
+  - cd subversion-${SVN_VERSION}
+  - ./configure ${SVN_OPTIONS}
+  - make
+  - sudo make install
+  - sudo ldconfig -v
+  - cd ..
+after_success:
+  - python -m coverage combine
+  - codecov
