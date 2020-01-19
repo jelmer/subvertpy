@@ -1,3 +1,11 @@
+subvertpy (0.11.0~git20191228+2423bf1-1) unstable; urgency=medium
+
+  * Bump the snapshot’s upstream version according to setup.py.
+  * Add RemoteAccess.get_url() again for backwards compatibility
+    with 0.10 API to unbreak hgsubversion until it’s fixed.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Sun, 19 Jan 2020 13:24:31 +0100
+
 subvertpy (0.10.2~git20191228+2423bf1-1) unstable; urgency=medium
 
   * Team upload.
