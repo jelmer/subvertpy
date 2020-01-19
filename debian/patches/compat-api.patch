@@ -1,0 +1,16 @@
+From: Andrej Shadura <andrewsh@debian.org>
+Date: Sun Jan 18 13:22:04 2020 +0100
+Subject: Add RemoteAccess.get_url() again for backwards compatibility with 0.10 API
+
+--- a/subvertpy/_ra.c
++++ b/subvertpy/_ra.c
+@@ -2255,6 +2255,9 @@
+ static PyMethodDef ra_methods[] = {
+     { "get_session_url", (PyCFunction)ra_get_session_url, METH_NOARGS,
+         "S.get_session_url() -> url" },
++    /* 0.10 compatiblity shim */
++    { "get_url", (PyCFunction)ra_get_session_url, METH_NOARGS,
++        "S.get_url() -> url" },
+ 	{ "get_file_revs", ra_get_file_revs, METH_VARARGS,
+ 		"S.get_file_revs(path, start_rev, end_revs, handler)" },
+ 	{ "get_locations", ra_get_locations, METH_VARARGS,
