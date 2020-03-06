@@ -21,12 +21,10 @@ export HOME=$(CURDIR)/nonexistent
 	CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" \
 	LDFLAGS="$(LDFLAGS)" dh $* --with python2,python3 --buildsystem=pybuild
 
-override_dh_auto_build:
-	dh_auto_build
+execute_after_dh_auto_build:
 	PYTHONHASHSEED=0 $(MAKE) pydoctor
 
-override_dh_auto_install:
-	dh_auto_install
+execute_after_dh_auto_install:
 	mkdir -p debian/python3-subvertpy/usr/share/doc/python3-subvertpy \
 	         debian/python-subvertpy/usr/share/doc/python-subvertpy
 	cp -a apidocs debian/python-subvertpy/usr/share/doc/python-subvertpy/api
