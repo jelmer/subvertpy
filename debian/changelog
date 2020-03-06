@@ -1,3 +1,20 @@
+subvertpy (0.11.0~git20191228+2423bf1-2) unstable; urgency=medium
+
+  * Team upload.
+  * debian/gbp.conf: Remove incorrect debian-branch variable
+    which was set to "unstable" but should actually "master" now.
+  * Bump Standards-Version to 4.5.0 (no change).
+  * Add "Rules-Requires-Root: no" to debian/control.
+  * Remove workaround on installing our own python3-cachecontrol
+    as it is now available and the latest pydoctor does depend on it.
+  * Change build-dependency on python-pydoctor to Python-3-based pydoctor
+  * Add build-dependency on python3-docutils.
+    to parallel the existing dependency on Python-2-based python-docutils
+  * debian/rules: Replace override_* with execute_after_* targets
+    where appropriate.
+
+ -- Anthony Fok <foka@debian.org>  Thu, 05 Mar 2020 19:09:25 -0700
+
 subvertpy (0.11.0~git20191228+2423bf1-1) unstable; urgency=medium
 
   * Bump the snapshot’s upstream version according to setup.py.
