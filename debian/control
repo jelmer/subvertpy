@@ -13,6 +13,7 @@ Build-Depends: dh-python,
                python3-all-dev,
 #               python3-all-dbg,
                python-docutils,
+               python3-docutils,
                pydoctor (>> 19.11.0+git20200303.47424e7),
                debhelper-compat (= 12)
 Standards-Version: 4.5.0
