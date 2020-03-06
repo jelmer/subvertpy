@@ -14,8 +14,6 @@ Build-Depends: dh-python,
 #               python3-all-dbg,
                python-docutils,
                python-pydoctor (>= 0.5+git20151204),
-               python3-cachecontrol | python-cachecontrol,
-               python-lockfile,
                debhelper-compat (= 12)
 Standards-Version: 4.5.0
 Vcs-Git: https://salsa.debian.org/python-team/modules/subvertpy.git
