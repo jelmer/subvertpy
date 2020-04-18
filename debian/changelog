@@ -1,3 +1,9 @@
+subvertpy (0.11.0~git20191228+2423bf1-3) UNRELEASED; urgency=medium
+
+  * Drop python-docutils from b-d, no longer needed
+
+ -- Sandro Tosi <morph@debian.org>  Sat, 18 Apr 2020 00:28:53 -0400
+
 subvertpy (0.11.0~git20191228+2423bf1-2) unstable; urgency=medium
 
   * Team upload.
