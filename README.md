@@ -29,10 +29,14 @@ Installation
 Standard distutils are used - use "setup.py build" to build and "setup.install"
 to install. On most platforms, setup will find the Python and Subversion
 development libraries by itself. On Windows you may have to set various
-environment variables, see the next section for details.
+environment variables.
 
 Build instructions for Windows
 ==============================
+
+(if the URLs change, please check the long upstream instructions
+ at https://svn.apache.org/repos/asf/subversion/trunk/INSTALL for
+ more current locations)
 
 * Install the SVN dev kit ZIP for Windows from
   http://sourceforge.net/projects/win32svn/files/
