@@ -1,5 +1,10 @@
 environment:
 
+  TWINE_USERNAME: "subvertpy-bot"
+  TWINE_PASSWORD:
+    # See https://www.appveyor.com/docs/build-configuration/#secure-variables
+    secure: D7JL5SAIyjMJoTmytKjCPg==
+
   matrix:
 
     - PYTHON: "C:\\Python27"
@@ -91,6 +96,10 @@ after_test:
   # - "python setup.py bdist_wininst"
   - "build.cmd %PYTHON%\\python.exe setup.py bdist_msi"
   - ps: "ls dist"
+
+deploy_script:
+  - if "%APPVEYOR_REPO_TAG%"=="true" pip install twine
+  - if "%APPVEYOR_REPO_TAG%"=="true" twine upload dist\subvertpy-*.whl
 
 artifacts:
   - path: dist\*
