@@ -63,7 +63,6 @@ jobs:
     - name: Build (Mac OS X)
       run: |
         python setup.py build_ext -i
-      env:
       if: "matrix.os == 'macos-latest'"
     - name: Coverage test suite run
       run: |
