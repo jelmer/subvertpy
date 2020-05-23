@@ -30,13 +30,9 @@ jobs:
     - name: Install dependencies (brew)
       run: |
         brew install subversion apr-util apr
-        brew --prefix
-        ls $(brew --prefix)/opt/apr-util
-        ls $(brew --prefix)/opt/apr
-        ls $(brew --prefix)/opt/subversion
-        ls $(brew --prefix)/opt/apr/bin
         echo "::add-path::$(brew --prefix)/opt/subversion/libexec"
-        echo "::add-path::$(brew --prefix)/opt/apr-util/libexec"
+        echo "::add-path::$(brew --prefix)/opt/apr-util/bin"
+        echo "::add-path::$(brew --prefix)/opt/apr/bin"
       if: "matrix.os == 'macos-latest'"
     - name: Install Subversion (Linux)
       run: |
