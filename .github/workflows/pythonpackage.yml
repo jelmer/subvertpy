@@ -8,9 +8,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
-        os: [ubuntu-latest]
-        svn-version: [1.13.0, 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
+        #        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        # os: [ubuntu-latest]
+        # svn-version: [1.13.0, 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
         include:
           - os: macos-latest
             python-version: 2.7
@@ -29,9 +29,9 @@ jobs:
       if: "matrix.os == 'ubuntu-latest'"
     - name: Install dependencies (brew)
       run: |
-        brew install subversion apr-util
+        brew install subversion apr-util apr
         brew --prefix
-        ls $(brew --prefix)
+        ls $(brew --prefix)/opt
         echo "::add-path::$(brew --prefix)/opt/subversion/libexec"
         echo "::add-path::$(brew --prefix)/opt/apr-util/libexec"
       if: "matrix.os == 'macos-latest'"
