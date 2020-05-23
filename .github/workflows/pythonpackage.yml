@@ -8,9 +8,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
-        svn-version: [1.13.0, 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
+        include:
+          os: ubuntu-latest
+          python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+          svn-version: [1.13.0, 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
+        include:
+          os: macos-latest
+          python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
 
     steps:
     - name: Install dependencies (apt)
@@ -18,17 +22,19 @@ jobs:
       if: "matrix.os == 'ubuntu-latest'"
     - name: Install dependencies (brew)
       run: |
-        brew install apr apr-util berkeley-db lz4 perl serf sqlite libtool neon utf8proc wget
-    - name: Install Subversion
+        brew install subversion
+      if: "matrix.os == 'macos-latest'"
+    - name: Install Subversion (Linux)
       run: |
         wget https://archive.apache.org/dist/subversion/subversion-${{ matrix.svn-version }}.tar.gz
-        tar xvfz subversion-${{ matrix.svn-version }}.tar.gz
+        tar xfz subversion-${{ matrix.svn-version }}.tar.gz
         cd subversion-${{ matrix.svn-version }}
         ./configure
         make
         sudo make install
         sudo ldconfig -v
         cd ..
+      if: "matrix.os == 'ubuntu-latest'"
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
