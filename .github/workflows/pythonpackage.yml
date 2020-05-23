@@ -29,7 +29,9 @@ jobs:
       if: "matrix.os == 'ubuntu-latest'"
     - name: Install dependencies (brew)
       run: |
-        brew install subversion
+        brew install subversion apr-util
+        echo '::add-path::$(brew --prefix)/opt/subversion/libexec'
+        echo '::add-path::$(brew --prefix)/opt/apr-util/libexec'
       if: "matrix.os == 'macos-latest'"
     - name: Install Subversion (Linux)
       run: |
@@ -57,11 +59,12 @@ jobs:
     - name: Build (Linux)
       run: |
         python setup.py build_ext -i
+      if: "matrix.os == 'ubuntu-latest'"
     - name: Build (Mac OS X)
       run: |
         python setup.py build_ext -i
       env:
-        PATH: "$PATH:$(brew --prefix)/opt/subversion/libexec:$(brew --prefix)/opt/apr-util/libexec"
+      if: "matrix.os == 'macos-latest'"
     - name: Coverage test suite run
       run: |
         python -m coverage run -p -m unittest subvertpy.tests.test_suite
