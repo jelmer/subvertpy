@@ -8,9 +8,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        #        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
-        # os: [ubuntu-latest]
-        # svn-version: [1.13.0, 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        os: [ubuntu-latest]
+        svn-version: [1.13.0, 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
         include:
           - os: macos-latest
             python-version: 2.7
@@ -36,7 +36,6 @@ jobs:
       if: "matrix.os == 'macos-latest'"
     - name: Install Subversion (Linux)
       run: |
-        echo $PATH
         wget https://archive.apache.org/dist/subversion/subversion-${{ matrix.svn-version }}.tar.gz
         tar xfz subversion-${{ matrix.svn-version }}.tar.gz
         cd subversion-${{ matrix.svn-version }}
