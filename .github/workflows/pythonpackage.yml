@@ -42,17 +42,10 @@ jobs:
         echo "::add-path::$(brew --prefix)/opt/apr-util/bin"
         echo "::add-path::$(brew --prefix)/opt/apr/bin"
       if: "matrix.os == 'macos-latest'"
-    - name: Install vcpkg
-      run: |
-        git clone https://github.com/Microsoft/vcpkg.git
-        cd vcpkg
-        git checkout --force 2020.01
-        ./bootstrap-vcpkg.sh
-      shell: bash
-      if: "matrix.os == 'windows-latest'"
     - name: Install dependencies (Windows)
       run: |
-        ./vcpkg/vcpkg.exe install apr:x64-windows apr-util:x64-windows sqlite3:x64-windows zlib:x64-windows utf8proc:x64-windows openssl:x64-windows berkeleydb:x64-windows lz4:x64-windows python2:x64-windows
+        vcpkg install apr:x64-windows apr-util:x64-windows sqlite3:x64-windows zlib:x64-windows utf8proc:x64-windows openssl:x64-windows berkeleydb:x64-windows lz4:x64-windows python2:x64-windows
+        vcpkg integrate install
       if: "matrix.os == 'windows-latest'"
     - name: Locate & Exec vcvarsall.bat
       run: |
@@ -78,28 +71,28 @@ jobs:
       shell: pwsh
     - name: Install serf (Windows)
       run: |
-        curl https://downloads.apache.org/serf/serf-1.3.9.zip -o serf.zip
+        curl -L https://downloads.apache.org/serf/serf-1.3.9.zip -o serf.zip
         unzip -q serf.zip
         cd serf-1.3.9
         curl -L http://prdownloads.sourceforge.net/scons/scons-local-2.3.0.zip -o scons-local.zip
         unzip -q scons-local.zip
-        python2 ./scons.py
-        python2 ./scons.py install
+        python2 ./scons.py --debug=stacktrace
       if: "matrix.os == 'windows-latest'"
-    - name: Download Subversion (Windows/Linux)
-      run: |
-        curl https://archive.apache.org/dist/subversion/subversion-${{ matrix.svn-version }}.tar.gz -o subversion.tar.gz
-        tar xfz subversion.tar.gz
-        cd subversion-${{ matrix.svn-version }}
-      if: "matrix.os == 'windows-latest' || matrix.os == 'ubuntu-latest'"
+      continue-on-error: true
     - name: Install Subversion (Windows)
       run: |
+        ls $env:VCPKG_INSTALLATION_ROOT/buildtrees
+        curl -L https://downloads.apache.org/subversion/subversion-${{ matrix.svn-version }}.zip -o subversion.zip
+        unzip -q subversion.zip
         cd subversion-${{ matrix.svn-version }}
-        python gen-make.py
+        python2 gen-make.py --vsnet-version=2019 --with-apr="$env:VCPKG_INSTALLATION_ROOT/buildtrees"/apr*
         msbuild subversion_vcnet.sln /t:__MORE__ /p:Configuration=Release
       if: "matrix.os == 'windows-latest'"
     - name: Install Subversion (Linux)
       run: |
+        curl -L https://downloads.apache.org/subversion/subversion-${{ matrix.svn-version }}.tar.gz -o subversion.tar.gz
+        tar xfz subversion.tar.gz
+        cd subversion-${{ matrix.svn-version }}
         ./configure
         make
         sudo make install
