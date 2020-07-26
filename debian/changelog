@@ -1,10 +1,10 @@
-subvertpy (0.11.0~git20191228+2423bf1-5) UNRELEASED; urgency=medium
+subvertpy (0.11.0~git20191228+2423bf1-5) unstable; urgency=medium
 
   * debian/rules
     - install a manpage named subvertpy3-fast-export.1, to match the binary
       name; Closes: #966323
 
- -- Sandro Tosi <morph@debian.org>  Sun, 26 Jul 2020 15:58:05 -0400
+ -- Sandro Tosi <morph@debian.org>  Sun, 26 Jul 2020 15:58:37 -0400
 
 subvertpy (0.11.0~git20191228+2423bf1-4) unstable; urgency=medium
 
