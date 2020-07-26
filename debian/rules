@@ -31,3 +31,8 @@ execute_after_dh_auto_install:
 
 override_dh_strip:
 	dh_strip -p python3-subvertpy
+
+override_dh_installman:
+	cp man/subvertpy-fast-export.1 man/subvertpy3-fast-export.1
+	dh_installman man/subvertpy3-fast-export.1
+	rm -f man/subvertpy3-fast-export.1
