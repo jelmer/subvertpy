@@ -14,8 +14,8 @@ Build-Depends: dh-python,
                pydoctor (>> 19.11.0+git20200303.47424e7),
                debhelper-compat (= 12)
 Standards-Version: 4.5.0
-Vcs-Git: https://salsa.debian.org/python-team/modules/subvertpy.git
-Vcs-Browser: https://salsa.debian.org/python-team/modules/subvertpy
+Vcs-Git: https://salsa.debian.org/python-team/packages/subvertpy.git
+Vcs-Browser: https://salsa.debian.org/python-team/packages/subvertpy
 
 Package: python3-subvertpy
 Architecture: any

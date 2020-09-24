@@ -2,6 +2,8 @@ subvertpy (0.11.0~git20191228+2423bf1-6) UNRELEASED; urgency=medium
 
   * d/control: Update Maintainer field with new Debian Python Team
     contact address.
+  * d/control: Update Vcs-* fields with new Debian Python Team Salsa
+    layout.
 
  -- Ondřej Nový <onovy@debian.org>  Thu, 24 Sep 2020 08:50:09 +0200
 
