@@ -79,11 +79,6 @@ static void py_editor_dealloc(PyObject *self)
 	PyObject_Del(self);
 }
 
-/* paranoia check */
-#if defined(SIZEOF_SIZE_T) && SIZEOF_SIZE_T != SIZEOF_LONG
-#error "Unable to determine PyArg_Parse format for size_t"
-#endif
-
 /* svn_filesize_t is always 64 bits */
 #if SIZEOF_LONG == 8
 #define SVN_FILESIZE_T_PYFMT "k"

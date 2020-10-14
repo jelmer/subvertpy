@@ -2,18 +2,18 @@
 # Setup file for subvertpy
 # Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@jelmer.uk>
 
-from distutils.core import setup, Command
-from distutils.extension import Extension
-from distutils import log
+from setuptools import setup
+from setuptools.extension import Extension
 import errno
 import sys
 import os
 import re
+import shlex
 import subprocess
 
 
 def split_shell_results(line):
-    return [s for s in line.split(" ") if s != ""]
+    return shlex.split(line)
 
 
 def config_value(command, env, args):
@@ -38,27 +38,43 @@ def apu_config(args):
 
 def apr_build_data():
     """Determine the APR header file location."""
-    includedir = apr_config(["--includedir"])
+    try:
+        includedir = os.environ['APR_INCLUDE_DIR']
+    except KeyError:
+        includedir = apr_config(["--includedir"])
     if not os.path.isdir(includedir):
         raise Exception("APR development headers not found")
-    extra_link_flags = apr_config(["--link-ld", "--libs"])
-    return (includedir, split_shell_results(extra_link_flags))
+    try:
+        extra_link_flags = split_shell_results(
+            os.environ['APR_LINK_FLAGS'])
+    except KeyError:
+        extra_link_flags = split_shell_results(
+            apr_config(["--link-ld", "--libs"]))
+    return (includedir, extra_link_flags)
 
 
 def apu_build_data():
     """Determine the APR util header file location."""
-    includedir = apu_config(["--includedir"])
+    try:
+        includedir = os.environ['APU_INCLUDE_DIR']
+    except KeyError:
+        includedir = apu_config(["--includedir"])
     if not os.path.isdir(includedir):
         raise Exception("APR util development headers not found")
-    extra_link_flags = apu_config(["--link-ld", "--libs"])
-    return (includedir, split_shell_results(extra_link_flags))
+    try:
+        extra_link_flags = split_shell_results(
+            os.environ['APU_LINK_FLAGS'])
+    except KeyError:
+        extra_link_flags = split_shell_results(
+            apu_config(["--link-ld", "--libs"]))
+    return (includedir, extra_link_flags)
 
 
 def svn_build_data():
     """Determine the Subversion header file location."""
     if "SVN_HEADER_PATH" in os.environ and "SVN_LIBRARY_PATH" in os.environ:
         return ([os.getenv("SVN_HEADER_PATH")],
-                [os.getenv("SVN_LIBRARY_PATH")], [], [])
+                [os.getenv("SVN_LIBRARY_PATH")], [])
     svn_prefix = os.getenv("SVN_PREFIX")
     if svn_prefix is None:
         basedirs = ["/usr/local", "/usr"]
@@ -69,7 +85,7 @@ def svn_build_data():
                 break
     if svn_prefix is not None:
         return ([os.path.join(svn_prefix, "include/subversion-1")],
-                [os.path.join(svn_prefix, "lib")], [], [])
+                [os.path.join(svn_prefix, "lib")], [])
     raise Exception("Subversion development files not found. "
                     "Please set SVN_PREFIX or (SVN_LIBRARY_PATH and "
                     "SVN_HEADER_PATH) environment variable. ")
@@ -121,7 +137,7 @@ class VersionQuery(object):
 
 (apr_includedir, apr_link_flags) = apr_build_data()
 (apu_includedir, apu_link_flags) = apu_build_data()
-(svn_includedirs, svn_libdirs, svn_link_flags, extra_libs) = svn_build_data()
+(svn_includedirs, svn_libdirs, svn_link_flags) = svn_build_data()
 
 
 class SvnExtension(Extension):
@@ -133,10 +149,9 @@ class SvnExtension(Extension):
         # Note that the apr-util link flags are not included here, as
         # subvertpy only uses some apr util constants but does not use
         # the library directly.
-        kwargs["extra_link_args"] = apr_link_flags + svn_link_flags
+        kwargs["extra_link_args"] = (
+            apr_link_flags + apu_link_flags + svn_link_flags)
         if os.name == 'nt':
-            # on windows, just ignore and overwrite the libraries!
-            kwargs["libraries"] = extra_libs
             # APR needs WIN32 defined.
             kwargs["define_macros"] = [("WIN32", None)]
         if sys.platform == 'darwin':
@@ -151,46 +166,40 @@ class SvnExtension(Extension):
         Extension.__init__(self, name, *args, **kwargs)
 
 
-class TestCommand(Command):
-    """Command for running unittests without install."""
-
-    user_options = [
-        ("args=", None, '''The command args string passed to '''
-                        '''unittest framework, such as --args="-v -f"''')]
-
-    def initialize_options(self):
-        self.args = ''
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        self.run_command('build')
-        bld = self.distribution.get_command_obj('build')
-        # Add build_lib in to sys.path so that unittest can found DLLs and libs
-        sys.path = [os.path.abspath(bld.build_lib)] + sys.path
-        os.chdir(bld.build_lib)
-        log.info("Running unittest without install.")
-
-        import shlex
-        import unittest
-        test_argv0 = [sys.argv[0] + ' test --args=']
-        # For transfering args to unittest, we have to split args
-        # by ourself, so that command like:
-        # python setup.py test --args="-v -f"
-        # can be executed, and the parameter '-v -f' can be
-        # transfering to unittest properly.
-        test_argv = test_argv0 + shlex.split(self.args)
-        unittest.main(module=None, defaultTest='subvertpy.tests.test_suite',
-                      argv=test_argv)
-
-
-cmdclass = {'test': TestCommand}
-
-
 def source_path(filename):
     return os.path.join("subvertpy", filename)
+
+
+subr_deep_deps = [
+    "svn_subr-1",
+    "sqlite3",
+    "zlib",
+    "advapi32",
+    "crypt32",
+    "libexpat",
+    "shell32",
+    "ws2_32",
+    "mswsock",
+    "version",
+    "ole32",
+    ]
+
+
+repos_deep_deps = [
+    "svn_repos-1",
+    "svn_fs-1",
+    "libsvn_fs_util-1",
+    "libsvn_fs_fs-1",
+    "libsvn_fs_x-1",
+    "svn_delta-1",
+    ]
+
+
+ra_deep_deps = [
+    "svn_ra-1",
+    "libsvn_ra_svn-1",
+    "libsvn_ra_local-1",
+    ] + repos_deep_deps
 
 
 def subvertpy_modules():
@@ -200,24 +209,28 @@ def subvertpy_modules():
             [source_path(n)
                 for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c",
                           "wc_adm.c")],
-            libraries=["svn_client-1", "svn_subr-1", "svn_ra-1", "svn_wc-1"]),
+            libraries=["svn_client-1", "svn_diff-1", "svn_delta-1",
+                       "svn_wc-1"] +
+            subr_deep_deps + repos_deep_deps + ra_deep_deps),
         SvnExtension(
             "subvertpy._ra",
             [source_path(n) for n in ("_ra.c", "util.c", "editor.c")],
-            libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
+            libraries=["svn_delta-1"] +
+            subr_deep_deps + repos_deep_deps + ra_deep_deps),
         SvnExtension(
             "subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")],
-            libraries=["svn_repos-1", "svn_subr-1", "svn_fs-1"]),
+            libraries=repos_deep_deps + subr_deep_deps),
         SvnExtension(
             "subvertpy.wc",
             [source_path(n) for n in
                 ["wc.c", "wc_adm.c", "util.c", "editor.c"]],
-            libraries=["svn_wc-1", "svn_subr-1"]),
+            libraries=["svn_wc-1", "svn_diff-1", "svn_delta-1"] +
+            subr_deep_deps),
         SvnExtension(
             "subvertpy.subr",
             [source_path(n)
                 for n in ["util.c", "subr.c"]],
-            libraries=["svn_subr-1"]),
+            libraries=subr_deep_deps),
         ]
 
 
@@ -259,7 +272,6 @@ and Mac OS X).
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
           scripts=['bin/subvertpy-fast-export'],
-          cmdclass=cmdclass,
           classifiers=[
               'Development Status :: 4 - Beta',
               'License :: OSI Approved :: GNU General Public '

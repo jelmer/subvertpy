@@ -114,7 +114,7 @@ static bool client_list_to_apr_array(
         }
         APR_ARRAY_PUSH(*ret, const char *) = path;
     } else if (PyList_Check(l)) {
-        *ret = apr_array_make(pool, PyList_Size(l), sizeof(char *));
+        *ret = apr_array_make(pool, (int)PyList_Size(l), sizeof(char *));
         for (i = 0; i < PyList_GET_SIZE(l); i++) {
             PyObject *item = PyList_GET_ITEM(l, i);
             path = convert(item, pool);
@@ -2273,7 +2273,7 @@ static PyObject *info_get_size(PyObject *_self, void *closure)
     InfoObject *self = (InfoObject *)_self;
     if (self->info.size == SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN)
         Py_RETURN_NONE;
-    return PyLong_FromLong(self->info.size);
+    return PyLong_FromLongLong(self->info.size);
 }
 
 static PyGetSetDef info_getsetters[] = {

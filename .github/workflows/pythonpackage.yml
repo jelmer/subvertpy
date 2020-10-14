@@ -44,8 +44,14 @@ jobs:
       if: "matrix.os == 'macos-latest'"
     - name: Install dependencies (Windows)
       run: |
-        vcpkg install apr:x64-windows apr-util:x64-windows sqlite3:x64-windows zlib:x64-windows utf8proc:x64-windows openssl:x64-windows berkeleydb:x64-windows lz4:x64-windows python2:x64-windows
+        vcpkg install apr:x64-windows apr-util:x64-windows sqlite3:x64-windows zlib:x64-windows utf8proc:x64-windows openssl:x64-windows berkeleydb:x64-windows lz4:x64-windows python2:x64-windows expat:x64-windows
         vcpkg integrate install
+        echo "::set-env name=APR_INCLUDE_DIR::$env:VCPKG_INSTALLATION_ROOT/packages/apr_x64-windows/include"
+        echo "::set-env name=APR_LINK_FLAGS::/LIBPATH:$env:VCPKG_INSTALLATION_ROOT/packages/apr_x64-windows/lib libapr-1.lib"
+        Get-ChildItem -Path "$env:VCPKG_INSTALLATION_ROOT/packages/apr_x64-windows/lib/*" -Recurse -Filter "*.dll" | Copy-Item -Destination "$env:GITHUB_WORKSPACE/subvertpy"
+        echo "::set-env name=APU_INCLUDE_DIR::$env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/include"
+        Get-ChildItem -Path "$env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/lib/*" -Recurse -Filter "*.dll" | Copy-Item -Destination "$env:GITHUB_WORKSPACE/subvertpy"
+        echo "::set-env name=APU_LINK_FLAGS::/LIBPATH:$env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/lib libaprutil-1.lib"
       if: "matrix.os == 'windows-latest'"
     - name: Locate & Exec vcvarsall.bat
       run: |
@@ -81,12 +87,19 @@ jobs:
       continue-on-error: true
     - name: Install Subversion (Windows)
       run: |
-        ls $env:VCPKG_INSTALLATION_ROOT/buildtrees
         curl -L https://downloads.apache.org/subversion/subversion-${{ matrix.svn-version }}.zip -o subversion.zip
         unzip -q subversion.zip
         cd subversion-${{ matrix.svn-version }}
-        python2 gen-make.py --vsnet-version=2019 --with-apr="$env:VCPKG_INSTALLATION_ROOT/buildtrees"/apr*
+        cp $env:VCPKG_INSTALLATION_ROOT/packages/expat_x64-windows/include/* $env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/include
+        cp $env:VCPKG_INSTALLATION_ROOT/packages/expat_x64-windows/lib/* $env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/lib
+        cp $env:VCPKG_INSTALLATION_ROOT/packages/expat_x64-windows/bin/* $env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/bin
+        python2 gen-make.py --debug --vsnet-version=2019 --with-apr=$env:VCPKG_INSTALLATION_ROOT/packages/apr_x64-windows --with-apr-util=$env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows --with-zlib=$env:VCPKG_INSTALLATION_ROOT/packages/zlib_x64-windows --with-sqlite=$env:VCPKG_INSTALLATION_ROOT/packages/sqlite3_x64-windows
         msbuild subversion_vcnet.sln /t:__MORE__ /p:Configuration=Release
+        Copy-Item -Recurse -Path $env:GITHUB_WORKSPACE/subversion-${{ matrix.svn-version }}/subversion/include -Destination $env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/include/subversion-1
+        Get-ChildItem -Path "$env:GITHUB_WORKSPACE/subversion-${{ matrix.svn-version }}/Release/subversion/libsvn_*/*" -Recurse | Copy-Item -Destination "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
+        Get-ChildItem -Path "$env:GITHUB_WORKSPACE/subversion-${{ matrix.svn-version }}/Release/subversion/libsvn_*/*" -Recurse -Filter "*.dll" | Copy-Item -Destination "$env:GITHUB_WORKSPACE/subvertpy"
+        echo "::set-env name=SVN_HEADER_PATH::$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/include/subversion-1"
+        echo "::set-env name=SVN_LIBRARY_PATH::$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
       if: "matrix.os == 'windows-latest'"
     - name: Install Subversion (Linux)
       run: |
@@ -99,7 +112,7 @@ jobs:
         sudo ldconfig -v
         cd ..
       if: "matrix.os == 'ubuntu-latest'"
-    - name: Install dependencies
+    - name: Install other dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -U pip coverage codecov flake8 fastimport
@@ -114,6 +127,11 @@ jobs:
       run: |
         python setup.py build_ext -i
       if: "matrix.os == 'macos-latest'"
+    - name: Build (Windows)
+      run: |
+        python setup.py build_ext -i
+        ls -R $env:GITHUB_WORKSPACE/subvertpy
+        dumpbin /dependents $env:GITHUB_WORKSPACE/subvertpy/client.cp38-win_amd64.pyd
     - name: Coverage test suite run
       run: |
         python -m coverage run -p -m unittest subvertpy.tests.test_suite
