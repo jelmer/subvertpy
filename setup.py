@@ -5,97 +5,52 @@
 from distutils.core import setup, Command
 from distutils.extension import Extension
 from distutils import log
+import errno
 import sys
 import os
 import re
 import subprocess
 
 
-class CommandException(Exception):
-    """Encapsulate exit status of command execution"""
-
-    def __init__(self, msg, cmd, arg, status, val):
-        self.message = msg % (cmd, val)
-        Exception.__init__(self, self.message)
-        self.cmd = cmd
-        self.arg = arg
-        self.status = status
-
-    def not_found(self):
-        return os.WIFEXITED(self.status) and os.WEXITSTATUS(self.status) == 127
-
-
 def split_shell_results(line):
     return [s for s in line.split(" ") if s != ""]
 
 
-def run_cmd(cmd, arg):
-    """Run specified command with given arguments, handling status"""
-    f = os.popen("'%s' %s" % (cmd, arg))
-    dir = f.read().rstrip("\n")
-    status = f.close()
-    if status is None:
-        return dir
-    if os.WIFEXITED(status):
-        code = os.WEXITSTATUS(status)
-        if code == 0:
-            return dir
-        raise CommandException("%s exited with status %d",
-                               cmd, arg, status, code)
-    if os.WIFSIGNALED(status):
-        signal = os.WTERMSIG(status)
-        raise CommandException("%s killed by signal %d",
-                               cmd, arg, status, signal)
-    raise CommandException("%s terminated abnormally (%d)",
-                           cmd, arg, status, status)
+def config_value(command, env, args):
+    command = os.environ.get(env, command)
+    try:
+        return subprocess.check_output([command] + args).strip().decode()
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            raise Exception(
+                "%s not found. Please set %s environment variable" % (
+                    command, env))
+        raise
 
 
-def config_value(command, arg):
-    cmds = [command] + [
-            os.path.join(p, command) for p in
-            ["/usr/local/apr/bin/", "/opt/local/bin/"]]
-    for cmd in cmds:
-        try:
-            return run_cmd(cmd, arg)
-        except CommandException as e:
-            if not e.not_found():
-                raise
-    else:
-        raise Exception("apr-config not found."
-                        " Please set APR_CONFIG environment variable")
+def apr_config(args):
+    return config_value("apr-1-config", "APR_CONFIG", args)
 
 
-def apr_config(arg):
-    config_cmd = os.getenv("APR_CONFIG")
-    if config_cmd is None:
-        return config_value("apr-1-config", arg)
-    else:
-        return run_cmd(config_cmd, arg)
-
-
-def apu_config(arg):
-    config_cmd = os.getenv("APU_CONFIG")
-    if config_cmd is None:
-        return config_value("apu-1-config", arg)
-    else:
-        return run_cmd(config_cmd, arg)
+def apu_config(args):
+    return config_value("apu-1-config", "APU_CONFIG", args)
 
 
 def apr_build_data():
     """Determine the APR header file location."""
-    includedir = apr_config("--includedir")
+    includedir = apr_config(["--includedir"])
     if not os.path.isdir(includedir):
         raise Exception("APR development headers not found")
-    extra_link_flags = apr_config("--link-ld --libs")
+    extra_link_flags = apr_config(["--link-ld", "--libs"])
     return (includedir, split_shell_results(extra_link_flags))
 
 
 def apu_build_data():
     """Determine the APR util header file location."""
-    includedir = apu_config("--includedir")
+    includedir = apu_config(["--includedir"])
     if not os.path.isdir(includedir):
         raise Exception("APR util development headers not found")
-    extra_link_flags = apu_config("--link-ld --libs")
+    extra_link_flags = apu_config(["--link-ld", "--libs"])
     return (includedir, split_shell_results(extra_link_flags))
 
 
