@@ -136,4 +136,4 @@ jobs:
         python setup.py build_ext -i
     - name: Coverage test suite run
       run: |
-        python -m coverage run -p -m unittest subvertpy.tests.test_suite
+        python -m coverage run -p -m unittest -v subvertpy.tests.test_suite
