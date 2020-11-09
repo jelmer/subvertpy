@@ -8,23 +8,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-#        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
-#        os: [ubuntu-latest]
-#        svn-version: [1.13.0, 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        os: [ubuntu-latest]
+        svn-version: [1.13.0]  # 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
         include:
-#          - os: macos-latest
-#            python-version: 2.7
-#          - os: macos-latest
-#            python-version: 3.5
-#          - os: macos-latest
-#            python-version: 3.6
-#          - os: macos-latest
-#            python-version: 3.7
-#          - os: macos-latest
-#            python-version: 3.8
+          - os: macos-latest
+            python-version: 2.7
+          - os: macos-latest
+            python-version: 3.5
+          - os: macos-latest
+            python-version: 3.6
+          - os: macos-latest
+            python-version: 3.7
+          - os: macos-latest
+            python-version: 3.8
           - os: windows-latest
             python-version: 3.8
-            svn-version: 1.13.0
 
     steps:
     - uses: actions/checkout@v2
@@ -130,8 +129,6 @@ jobs:
     - name: Build (Windows)
       run: |
         python setup.py build_ext -i
-        ls -R $env:GITHUB_WORKSPACE/subvertpy
-        dumpbin /dependents $env:GITHUB_WORKSPACE/subvertpy/client.cp38-win_amd64.pyd
     - name: Coverage test suite run
       run: |
         python -m coverage run -p -m unittest subvertpy.tests.test_suite
