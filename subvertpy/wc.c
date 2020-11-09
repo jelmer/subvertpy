@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <apr_general.h>
 #include <svn_wc.h>
@@ -896,7 +897,7 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	char *md5_digest = NULL, *sha1_digest = NULL;
 	bool recurse = false;
 	apr_array_header_t *wcprop_changes;
-	int md5_digest_len, sha1_digest_len;
+	Py_ssize_t md5_digest_len, sha1_digest_len;
 #if ONLY_SINCE_SVN(1, 7)
 	svn_wc_context_t *context = NULL;
 #endif

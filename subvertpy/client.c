@@ -16,6 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
+
+#define PY_SSIZE_T_CLEAN
 #include <stdbool.h>
 #include <Python.h>
 #include <structmember.h>
@@ -1304,7 +1306,7 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
 {
     char *propname;
     svn_string_t c_propval;
-    int vallen;
+    Py_ssize_t vallen;
     int recurse = true;
     int skip_checks = false;
     ClientObject *client = (ClientObject *)self;

@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
+#define PY_SSIZE_T_CLEAN
 #include <stdbool.h>
 #include <Python.h>
 #include <apr_general.h>
@@ -1441,7 +1442,7 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	char *name;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	char *value, *oldvalue = NULL;
-	int vallen, oldvallen = -2;
+	Py_ssize_t vallen, oldvallen = -2;
 	apr_pool_t *temp_pool;
 	svn_string_t *val_string;
 #if ONLY_SINCE_SVN(1, 7)

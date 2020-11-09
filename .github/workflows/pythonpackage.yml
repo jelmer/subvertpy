@@ -10,7 +10,7 @@ jobs:
       matrix:
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
         os: [ubuntu-latest]
-        svn-version: [1.13.0]  # 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
+        svn-version: [1.13.0, 1.12.2, 1.11.1, 1.10.6, 1.9.7, 1.8.19, 1.7.19, 1.6.21, 1.5.9]
         include:
           - os: macos-latest
             python-version: 2.7
@@ -24,6 +24,10 @@ jobs:
             python-version: 3.8
           - os: windows-latest
             python-version: 3.8
+            svn-version: 1.13.0
+          - os: windows-latest
+            python-version: 3.9
+            svn-version: 1.13.0
 
     steps:
     - uses: actions/checkout@v2
@@ -74,6 +78,7 @@ jobs:
           Write-Output "::set-env name=$k::$v"
         }
       shell: pwsh
+      if: "matrix.os == 'windows-latest'"
     - name: Install serf (Windows)
       run: |
         curl -L https://downloads.apache.org/serf/serf-1.3.9.zip -o serf.zip
