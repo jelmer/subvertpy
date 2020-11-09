@@ -10,7 +10,7 @@ jobs:
       matrix:
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
         os: [ubuntu-latest]
-        svn-version: [1.13.0, 1.12.2, 1.10.6, 1.9.12]
+        svn-version: [1.14.0, 1.13.0, 1.10.6, 1.9.12]
         include:
           - os: macos-latest
             python-version: 2.7
