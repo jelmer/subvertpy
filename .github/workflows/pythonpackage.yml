@@ -6,28 +6,37 @@ jobs:
   build:
 
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       matrix:
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
         os: [ubuntu-latest]
         svn-version: [1.14.0, 1.13.0, 1.10.6, 1.9.12]
+        experimental: [false]
         include:
           - os: macos-latest
             python-version: 2.7
+            experimental: false
           - os: macos-latest
             python-version: 3.5
+            experimental: false
           - os: macos-latest
             python-version: 3.6
+            experimental: false
           - os: macos-latest
             python-version: 3.7
+            experimental: false
           - os: macos-latest
             python-version: 3.8
+            experimental: false
           - os: windows-latest
             python-version: 3.8
             svn-version: 1.13.0
+            experimental: true
           - os: windows-latest
             python-version: 3.9
             svn-version: 1.13.0
+            experimental: true
 
     steps:
     - uses: actions/checkout@v2
