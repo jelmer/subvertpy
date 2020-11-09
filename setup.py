@@ -143,6 +143,17 @@ class VersionQuery(object):
 class SvnExtension(Extension):
 
     def __init__(self, name, *args, **kwargs):
+        if sys.platform == 'win32':
+            libraries = kwargs.get('libraries', [])
+            modified = True
+            while modified:
+                modified = False
+                for lib in libraries:
+                    for extra in deep_deps.get(lib, []):
+                        if extra not in libraries:
+                            modified = True
+                            libraries.append(extra)
+            kwargs['libraries'] = libraries
         kwargs["include_dirs"] = ([apr_includedir, apu_includedir] +
                                   svn_includedirs + ["subvertpy"])
         kwargs["library_dirs"] = svn_libdirs
@@ -170,6 +181,7 @@ def source_path(filename):
     return os.path.join("subvertpy", filename)
 
 
+# Urgh. It's a pain having to maintain these manually. But what else can we do?
 subr_deep_deps = [
     "svn_subr-1",
     "sqlite3",
@@ -196,10 +208,17 @@ repos_deep_deps = [
 
 
 ra_deep_deps = [
-    "svn_ra-1",
     "libsvn_ra_svn-1",
     "libsvn_ra_local-1",
-    ] + repos_deep_deps
+    "svn_repos-1",
+    ]
+
+
+deep_deps = {
+    "svn_ra-1": ra_deep_deps,
+    "svn_repos-1": repos_deep_deps,
+    "svn_subr-1": subr_deep_deps,
+}
 
 
 def subvertpy_modules():
@@ -210,28 +229,32 @@ def subvertpy_modules():
                 for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c",
                           "wc_adm.c")],
             libraries=["svn_client-1", "svn_diff-1", "svn_delta-1",
-                       "svn_wc-1"] +
-            subr_deep_deps + repos_deep_deps + ra_deep_deps),
+                       "svn_wc-1", "svn_ra-1", "svn_subr-1"]),
         SvnExtension(
             "subvertpy._ra",
             [source_path(n) for n in ("_ra.c", "util.c", "editor.c")],
-            libraries=["svn_delta-1"] +
-            subr_deep_deps + repos_deep_deps + ra_deep_deps),
+            libraries=["svn_delta-1", "svn_ra-1", "svn_subr-1"]),
         SvnExtension(
             "subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")],
-            libraries=repos_deep_deps + subr_deep_deps),
+            libraries=["svn_repos-1", "svn_subr-1"]),
         SvnExtension(
             "subvertpy.wc",
             [source_path(n) for n in
                 ["wc.c", "wc_adm.c", "util.c", "editor.c"]],
-            libraries=["svn_wc-1", "svn_diff-1", "svn_delta-1"] +
-            subr_deep_deps),
+            libraries=["svn_wc-1", "svn_diff-1", "svn_delta-1", "svn_subr-1"]),
         SvnExtension(
             "subvertpy.subr",
             [source_path(n)
                 for n in ["util.c", "subr.c"]],
-            libraries=subr_deep_deps),
+            libraries=["svn_subr-1"]),
         ]
+
+
+def package_data():
+    if sys.platform == 'win32':
+        return {'subvertpy': ['subvertpy/*.dll']}
+    else:
+        return {}
 
 
 subvertpy_version = (0, 11, 0)
@@ -270,6 +293,7 @@ work on Windows as well as most POSIX-based platforms (including Linux, BSDs
 and Mac OS X).
 """,
           packages=['subvertpy', 'subvertpy.tests'],
+          package_data=package_data(),
           ext_modules=subvertpy_modules(),
           scripts=['bin/subvertpy-fast-export'],
           classifiers=[
