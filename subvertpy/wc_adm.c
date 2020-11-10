@@ -16,6 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
+
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <apr_general.h>
 #include <svn_wc.h>
@@ -176,7 +178,7 @@ static PyObject *adm_prop_set(PyObject *self, PyObject *args)
     AdmObject *admobj = (AdmObject *)self;
     bool skip_checks=false;
     apr_pool_t *temp_pool;
-    int vallen;
+    Py_ssize_t vallen;
     svn_string_t *cvalue;
     PyObject *py_path;
     PyObject *notify_func = Py_None;
@@ -814,7 +816,7 @@ static PyObject *adm_process_committed(PyObject *self, PyObject *args, PyObject 
     apr_array_header_t *wcprop_changes = NULL;
     AdmObject *admobj = (AdmObject *)self;
     apr_pool_t *temp_pool;
-    int digest_len;
+    Py_ssize_t digest_len;
     bool remove_changelist = false;
     char *kwnames[] = { "path", "recurse", "new_revnum", "rev_date", "rev_author",
         "wcprop_changes", "remove_lock", "digest", "remove_changelist", NULL };
