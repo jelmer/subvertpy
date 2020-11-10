@@ -36,13 +36,6 @@ svn_wc_committed_queue_t *PyObject_GetCommittedQueue(PyObject *obj);
 extern PyTypeObject CommittedQueue_Type;
 svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool);
 
-/* Provided by wc_adm.h */
-extern PyTypeObject Adm_Type;
-extern PyTypeObject Entry_Type;
-extern PyTypeObject Status2_Type;
-svn_wc_adm_access_t *PyObject_GetAdmAccess(PyObject *obj);
-extern PyTypeObject Lock_Type;
-
 #ifdef __GNUC__
 #pragma GCC visibility pop
 #endif

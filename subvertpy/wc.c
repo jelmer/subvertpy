@@ -55,6 +55,8 @@ typedef struct {
     svn_wc_committed_queue_t *queue;
 } CommittedQueueObject;
 
+extern PyTypeObject Lock_Type;
+
 svn_wc_committed_queue_t *PyObject_GetCommittedQueue(PyObject *obj)
 {
     return ((CommittedQueueObject *)obj)->queue;
@@ -805,12 +807,10 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		}
 	}
 
-	if (PyObject_IsInstance(admobj, (PyObject *)&Adm_Type)) {
-		adm = PyObject_GetAdmAccess(admobj);
-	} else if (PyObject_IsInstance(admobj, (PyObject *)&Context_Type)) {
+	if (PyObject_IsInstance(admobj, (PyObject *)&Context_Type)) {
 		context = ((ContextObject*)admobj)->context;
 	} else {
-		PyErr_SetString(PyExc_TypeError, "Second arguments needs to be Adm or Context");
+		PyErr_SetString(PyExc_TypeError, "Second arguments needs to be Context");
 		return NULL;
 	}
 
@@ -1966,15 +1966,6 @@ moduleinit(void)
 {
 	PyObject *mod;
 
-	if (PyType_Ready(&Entry_Type) < 0)
-		return NULL;
-
-	if (PyType_Ready(&Status2_Type) < 0)
-		return NULL;
-
-	if (PyType_Ready(&Adm_Type) < 0)
-		return NULL;
-
 	if (PyType_Ready(&Context_Type) < 0)
 		return NULL;
 
@@ -2072,9 +2063,6 @@ moduleinit(void)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_CONFLICT", svn_wc_conflict_choose_theirs_conflict);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_CONFLICT", svn_wc_conflict_choose_mine_conflict);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED", svn_wc_conflict_choose_merged);
-
-	PyModule_AddObject(mod, "Adm", (PyObject *)&Adm_Type);
-	Py_INCREF(&Adm_Type);
 
 	PyModule_AddObject(mod, "Lock", (PyObject *)&Lock_Type);
 	Py_INCREF(&Lock_Type);

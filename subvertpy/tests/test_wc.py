@@ -66,14 +66,10 @@ class AdmTests(TestCase):
         self.assertTrue(wc.is_wc_prop("svn:wc:foo"))
 
     def test_match_ignore_list(self):
-        if wc.api_version() < (1, 5):
-            self.assertRaises(
-                NotImplementedError, wc.match_ignore_list, "foo", [])
-        else:
-            self.assertTrue(wc.match_ignore_list("foo", ["f*"]))
-            self.assertTrue(wc.match_ignore_list("foo", ["foo"]))
-            self.assertFalse(wc.match_ignore_list("foo", []))
-            self.assertFalse(wc.match_ignore_list("foo", ["bar"]))
+        self.assertTrue(wc.match_ignore_list("foo", ["f*"]))
+        self.assertTrue(wc.match_ignore_list("foo", ["foo"]))
+        self.assertFalse(wc.match_ignore_list("foo", []))
+        self.assertFalse(wc.match_ignore_list("foo", ["bar"]))
 
 
 class WcTests(SubversionTestCase):
@@ -127,22 +123,14 @@ class AdmObjTests(SubversionTestCase):
     def test_add_repos_file(self):
         self.make_client("repos", "checkout")
         adm = wc.Adm(None, "checkout", True)
-        if wc.api_version() < (1, 6):
-            self.assertRaises(
-                    NotImplementedError,
-                    adm.add_repos_file, "checkout/bar",
-                    BytesIO(b"basecontents"), BytesIO(b"contents"), {}, {})
-        else:
-            adm.add_repos_file("checkout/bar", BytesIO(b"basecontents"),
-                               BytesIO(b"contents"), {}, {})
-            if wc.api_version() >= (1, 7):
-                self.skipTest("TODO: doesn't yet work with svn >= 1.7")
-            self.assertEqual(b"basecontents",
-                             wc.get_pristine_contents("checkout/bar").read())
+        adm.add_repos_file("checkout/bar", BytesIO(b"basecontents"),
+                           BytesIO(b"contents"), {}, {})
+        # self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+        self.assertEqual(b"basecontents",
+                         wc.get_pristine_contents("checkout/bar").read())
 
     def test_mark_missing_deleted(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+        # self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"\x00 \x01"})
         self.client_add('checkout/bar')
@@ -265,8 +253,7 @@ class AdmObjTests(SubversionTestCase):
                 adm.status('checkout/bar').status)
 
     def test_transmit_text_deltas(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+        # self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", ".")
         self.build_tree({"bar": b"blala"})
         self.client_add('bar')
@@ -316,8 +303,7 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual(1, bar.revision)
 
     def test_process_committed_queue(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+        # self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"blala"})
         self.client_add('checkout/bar')
@@ -361,8 +347,7 @@ class AdmObjTests(SubversionTestCase):
         self.assertEqual(wc.SCHEDULE_NORMAL, bar.schedule)
 
     def test_process_committed(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
+        # self.skipTest("TODO: doesn't yet work with svn >= 1.7")
         self.make_client("repos", ".")
         self.build_tree({"bar": b"la"})
         self.client_add('bar')
@@ -415,8 +400,7 @@ class AdmObjTests(SubversionTestCase):
             adm.probe_try(os.path.join("checkout", "bar")).access_path())
 
     def test_lock(self):
-        if wc.api_version() >= (1, 9):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.9")
+        # self.skipTest("TODO: doesn't yet work with svn >= 1.9")
         self.make_client("repos", "checkout")
         self.build_tree({"checkout/bar": b"la"})
         self.client_add('checkout/bar')
@@ -425,141 +409,3 @@ class AdmObjTests(SubversionTestCase):
         lock.token = b"blah"
         adm.add_lock("checkout", lock)
         adm.remove_lock("checkout")
-
-
-class ContextTests(SubversionTestCase):
-
-    def setUp(self):
-        super(ContextTests, self).setUp()
-        if wc.api_version() < (1, 7):
-            self.skipTest("context API not available on Subversion < 1.7")
-
-    def test_create(self):
-        context = wc.Context()
-        self.assertIsInstance(context, wc.Context)
-
-    def test_locked(self):
-        context = wc.Context()
-        self.make_client("repos", "checkout")
-        self.assertEqual((False, False), context.locked("checkout"))
-
-    def test_check_wc(self):
-        context = wc.Context()
-        self.make_client("repos", "checkout")
-        self.assertIsInstance(context.check_wc("checkout"), int)
-
-    def test_text_modified(self):
-        context = wc.Context()
-        self.make_client("repos", "checkout")
-        with open('checkout/bla.txt', 'w') as f:
-            f.write("modified")
-        self.client_add("checkout/bla.txt")
-        self.assertTrue(context.text_modified("checkout/bla.txt"))
-
-    def test_props_modified(self):
-        context = wc.Context()
-        self.make_client("repos", "checkout")
-        with open('checkout/bla.txt', 'w') as f:
-            f.write("modified")
-        self.client_add("checkout/bla.txt")
-        self.assertFalse(context.props_modified("checkout/bla.txt"))
-
-    def test_conflicted(self):
-        context = wc.Context()
-        self.make_client("repos", "checkout")
-        with open('checkout/bla.txt', 'w') as f:
-            f.write("modified")
-        self.client_add("checkout/bla.txt")
-        self.assertEqual(
-            (False, False, False),
-            context.conflicted("checkout/bla.txt"))
-
-    def test_crawl_revisions(self):
-        context = wc.Context()
-        self.make_client("repos", "checkout")
-        with open('checkout/bla.txt', 'w') as f:
-            f.write("modified")
-        self.client_add("checkout/bla.txt")
-        ret = []
-
-        class Reporter(object):
-            def set_path(self, *args):
-                ret.append(args)
-
-            def finish(self):
-                pass
-        context.crawl_revisions("checkout", Reporter())
-
-        self.assertEqual(ret, [('', 0, 0, None, 3)])
-
-    def test_get_update_editor(self):
-        self.make_client("repos", "checkout")
-        context = wc.Context()
-        editor = context.get_update_editor("checkout", "")
-        editor.close()
-
-    def test_status(self):
-        self.make_client("repos", "checkout")
-        context = wc.Context()
-        status = context.status("checkout")
-        self.assertEqual(NODE_DIR, status.kind)
-
-    def test_walk_status(self):
-        self.make_client("repos", "checkout")
-        with open('checkout/bla.txt', 'w') as f:
-            f.write("modified")
-        self.client_add("checkout/bla.txt")
-        context = wc.Context()
-        result = {}
-        context.walk_status("checkout", result.__setitem__)
-        self.assertEqual(
-                set(result.keys()),
-                {os.path.abspath("checkout"),
-                 os.path.abspath("checkout/bla.txt")})
-
-    def test_locking(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
-        self.make_client("repos", "checkout")
-        with open('checkout/bla.txt', 'w') as f:
-            f.write("modified")
-        self.client_add("checkout/bla.txt")
-        context = wc.Context()
-        lock = wc.Lock(token=b'foo')
-        self.assertEqual((False, False), context.locked("checkout"))
-        context.add_lock("checkout/", lock)
-        self.assertEqual((True, True), context.locked("checkout"))
-        context.remove_lock("checkout/", lock)
-
-    def test_add_from_disk(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
-        self.make_client("repos", "checkout")
-        with open('checkout/bla.txt', 'w') as f:
-            f.write("modified")
-        context = wc.Context()
-        lock = wc.Lock(token=b'foo')
-        lock.path = os.path.abspath('checkout')+"/"
-        context.add_lock("checkout", lock)
-        context.add_from_disk('checkout/bla.txt')
-        context.remove_lock("checkout", lock)
-
-    def test_get_prop_diffs(self):
-        self.make_client("repos", "checkout")
-        context = wc.Context()
-        (orig_props, propdelta) = context.get_prop_diffs("checkout")
-        self.assertEqual({}, orig_props)
-        self.assertEqual([], propdelta)
-
-    def test_process_committed_queue(self):
-        if wc.api_version() >= (1, 7):
-            self.skipTest("TODO: doesn't yet work with svn >= 1.7")
-        self.make_client("repos", "checkout")
-        adm = wc.Context()
-        self.build_tree({"checkout/bar": b"blala"})
-        self.client_add('checkout/bar')
-        adm.add_lock("checkout", wc.Lock(token=b'foo'))
-        cq = wc.CommittedQueue()
-        cq.queue("checkout/bar", adm)
-        adm.process_committed_queue(cq, 1, "2010-05-31T08:49:22.430000Z",
-                                    "jelmer")
