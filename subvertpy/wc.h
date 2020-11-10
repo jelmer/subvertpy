@@ -27,14 +27,10 @@
 bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_array_header_t **ret);
 void py_wc_notify_func(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool);
 PyObject *py_wc_status2(svn_wc_status2_t *status);
-#if ONLY_SINCE_SVN(1, 5)
 extern const svn_ra_reporter3_t py_ra_reporter3;
-#endif
 extern const svn_ra_reporter2_t py_ra_reporter2;
 
-#if ONLY_SINCE_SVN(1, 6)
 svn_error_t *wc_validator3(void *baton, const char *uuid, const char *url, const char *root_url, apr_pool_t *pool);
-#endif
 svn_error_t *wc_validator2(void *baton, const char *uuid, const char *url, svn_boolean_t root, apr_pool_t *pool);
 svn_wc_committed_queue_t *PyObject_GetCommittedQueue(PyObject *obj);
 extern PyTypeObject CommittedQueue_Type;
