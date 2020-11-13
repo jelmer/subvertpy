@@ -98,6 +98,9 @@ jobs:
         python2 ./scons.py --debug=stacktrace
       if: "matrix.os == 'windows-latest'"
       continue-on-error: true
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+      if: "matrix.os == 'windows-latest'"
     - name: Install Subversion (Windows)
       run: |
         curl -L https://downloads.apache.org/subversion/subversion-${{ matrix.svn-version }}.zip -o subversion.zip
