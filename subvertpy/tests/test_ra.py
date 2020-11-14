@@ -18,7 +18,7 @@
 from io import BytesIO
 
 from subvertpy import (
-    NODE_DIR, NODE_NONE, NODE_UNKNOWN,
+    NODE_DIR, NODE_NONE,
     SubversionException,
     ra,
     )
