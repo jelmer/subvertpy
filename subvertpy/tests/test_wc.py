@@ -15,14 +15,7 @@
 
 """Subversion ra library tests."""
 
-import hashlib
-from io import BytesIO
-import os
-
-import subvertpy
 from subvertpy import (
-    NODE_DIR,
-    NODE_FILE,
     wc,
     )
 from subvertpy.tests import (
