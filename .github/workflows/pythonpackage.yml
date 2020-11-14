@@ -34,6 +34,18 @@ jobs:
             svn-version: 1.9.12
             experimental: true
           - os: windows-latest
+            python-version: 3.8
+            svn-version: 1.10.6
+            experimental: true
+          - os: windows-latest
+            python-version: 3.8
+            svn-version: 1.13.0
+            experimental: true
+          - os: windows-latest
+            python-version: 3.8
+            svn-version: 1.14.0
+            experimental: true
+          - os: windows-latest
             python-version: 3.9
             svn-version: 1.9.12
             experimental: true
