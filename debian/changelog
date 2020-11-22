@@ -8,6 +8,8 @@ subvertpy (0.11.0~git20191228+2423bf1-6) UNRELEASED; urgency=medium
 
   [ Debian Janitor ]
   * Re-export upstream signing key without extra signatures.
+  * Fix field name typo in debian/upstream/metadata (Repository-Browser =>
+    Repository-Browse).
 
  -- Ondřej Nový <onovy@debian.org>  Thu, 24 Sep 2020 08:50:09 +0200
 
