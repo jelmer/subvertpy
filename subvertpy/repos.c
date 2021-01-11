@@ -454,7 +454,6 @@ static PyMethodDef repos_module_methods[] = {
 
 static PyObject *repos_has_capability(RepositoryObject *self, PyObject *args)
 {
-#if ONLY_SINCE_SVN(1, 5)
 	char *name;
 	svn_boolean_t has;
 	apr_pool_t *temp_pool;
@@ -467,10 +466,6 @@ static PyObject *repos_has_capability(RepositoryObject *self, PyObject *args)
 		svn_repos_has_capability(self->repos, &has, name, temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(has);
-#else
-	PyErr_SetString(PyExc_NotImplementedError, "has_capability is only supported in Subversion >= 1.5");
-	return NULL;
-#endif
 }
 
 static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
@@ -499,7 +494,6 @@ static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-#if ONLY_SINCE_SVN(1, 6)
 static svn_error_t *py_pack_notify(void *baton, apr_int64_t shard, svn_fs_pack_notify_action_t action, apr_pool_t *pool)
 {
 	PyObject *ret;
@@ -511,11 +505,9 @@ static svn_error_t *py_pack_notify(void *baton, apr_int64_t shard, svn_fs_pack_n
 	Py_DECREF(ret);
 	return NULL;
 }
-#endif
 
 static PyObject *repos_pack(RepositoryObject *self, PyObject *args)
 {
-#if ONLY_SINCE_SVN(1, 6)
 	apr_pool_t *temp_pool;
 	PyObject *notify_func = Py_None;
 	if (!PyArg_ParseTuple(args, "|O", &notify_func))
@@ -529,10 +521,6 @@ static PyObject *repos_pack(RepositoryObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
-#else
-	PyErr_SetString(PyExc_NotImplementedError, "pack_fs is only supported in Subversion >= 1.6");
-    return NULL;
-#endif
 }
 
 static PyMethodDef repos_methods[] = {
@@ -639,47 +627,24 @@ static PyObject *py_string_from_svn_node_id(const svn_fs_id_t *id)
 	return PyBytes_FromStringAndSize(str->data, str->len);
 }
 
-#if ONLY_BEFORE_SVN(1, 6)
-static PyObject *py_fs_path_change(svn_fs_path_change_t *val)
-{
-	PyObject *ret, *py_node_id;
-
-	py_node_id = py_string_from_svn_node_id(val->node_rev_id);
-	if (py_node_id == NULL) {
-		return NULL;
-	}
-	ret = Py_BuildValue("(Oibb)", py_node_id,
-						   val->change_kind, val->text_mod, val->prop_mod);
-	Py_DECREF(py_node_id);
-	if (ret == NULL) {
-		return NULL;
-	}
-
-	return ret;
-}
-
-#else
-
 static PyObject *py_fs_path_change2(svn_fs_path_change2_t *val)
 {
-	PyObject *ret, *py_node_id;
+       PyObject *ret, *py_node_id;
 
-	py_node_id = py_string_from_svn_node_id(val->node_rev_id);
-	if (py_node_id == NULL) {
-		return NULL;
-	}
-	ret = Py_BuildValue("(Oibb)", py_node_id,
-						   val->change_kind, val->text_mod, val->prop_mod);
-	Py_DECREF(py_node_id);
-	if (ret == NULL) {
-		return NULL;
-	}
+       py_node_id = py_string_from_svn_node_id(val->node_rev_id);
+       if (py_node_id == NULL) {
+               return NULL;
+       }
+       ret = Py_BuildValue("(Oibb)", py_node_id, val->change_kind, val->text_mod, val->prop_mod);
+       Py_DECREF(py_node_id);
+       if (ret == NULL) {
+               return NULL;
+       }
 
-	/* FIXME: copyfrom information */
+       /* FIXME: copyfrom information */
 
-	return ret;
+       return ret;
 }
-#endif
 
 static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
 {
@@ -692,13 +657,8 @@ static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-#if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool,
 					  svn_fs_paths_changed2(&changed_paths, self->root, temp_pool));
-#else
-	RUN_SVN_WITH_POOL(temp_pool,
-					  svn_fs_paths_changed(&changed_paths, self->root, temp_pool));
-#endif
 	ret = PyDict_New();
 	if (ret == NULL) {
 		apr_pool_destroy(temp_pool);
@@ -708,17 +668,9 @@ static PyObject *fs_root_paths_changed(FileSystemRootObject *self)
 	for (idx = apr_hash_first(temp_pool, changed_paths); idx != NULL;
 		 idx = apr_hash_next(idx)) {
 		PyObject *py_val;
-#if ONLY_SINCE_SVN(1, 6)
 		svn_fs_path_change2_t *val;
-#else
-		svn_fs_path_change_t *val;
-#endif
 		apr_hash_this(idx, (const void **)&key, &klen, (void **)&val);
-#if ONLY_SINCE_SVN(1, 6)
 		py_val = py_fs_path_change2(val);
-#else
-		py_val = py_fs_path_change(val);
-#endif
 		if (py_val == NULL) {
 			apr_pool_destroy(temp_pool);
 			PyObject_Del(ret);
@@ -816,14 +768,9 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	apr_pool_t *temp_pool;
 	bool force = false;
 	char *path;
-#if ONLY_SINCE_SVN(1, 6)
 	svn_checksum_kind_t kind;
 	const char *cstr;
 	svn_checksum_t *checksum;
-#else
-	int kind;
-	unsigned char checksum[APR_MD5_DIGESTSIZE];
-#endif
 	PyObject *ret;
 
 	if (!PyArg_ParseTuple(args, "s|ib", &path, &kind, &force))
@@ -832,7 +779,6 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-#if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_checksum(
 		&checksum, kind, self->root, path, force?TRUE:FALSE, temp_pool));
 	cstr = svn_checksum_to_cstring(checksum, temp_pool);
@@ -842,17 +788,6 @@ static PyObject *fs_root_file_checksum(FileSystemRootObject *self, PyObject *arg
 	} else {
 		ret = PyUnicode_FromString(cstr);
 	}
-#else
-	if (kind > 0)  {
-		PyErr_SetString(PyExc_ValueError, "Only MD5 checksums allowed with subversion < 1.6");
-		return NULL;
-	}
-
-	RUN_SVN_WITH_POOL(temp_pool, svn_fs_file_md5_checksum(checksum,
-													  self->root,
-											   path, temp_pool));
-	ret = PyBytes_FromStringAndSize((char *)checksum, APR_MD5_DIGESTSIZE);
-#endif
 	apr_pool_destroy(temp_pool);
 	return ret;
 }
@@ -1008,12 +943,8 @@ static PyObject *moduleinit(void)
 	PyModule_AddIntConstant(mod, "PATH_CHANGE_DELETE", svn_fs_path_change_delete);
 	PyModule_AddIntConstant(mod, "PATH_CHANGE_REPLACE", svn_fs_path_change_replace);
 
-#if ONLY_SINCE_SVN(1, 6)
 	PyModule_AddIntConstant(mod, "CHECKSUM_MD5", svn_checksum_md5);
 	PyModule_AddIntConstant(mod, "CHECKSUM_SHA1", svn_checksum_sha1);
-#else
-	PyModule_AddIntConstant(mod, "CHECKSUM_MD5", 0);
-#endif
 
 	PyModule_AddObject(mod, "Repository", (PyObject *)&Repository_Type);
 	Py_INCREF(&Repository_Type);

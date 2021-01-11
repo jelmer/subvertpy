@@ -1,0 +1,30 @@
+Backwards compatibility
+=======================
+
+subvertpy tries to stay compatible with older versions of the Subversion libraries.
+
+The C API will generally add a new numbered function when new arguments are
+added. In subvertpy, this would generally translate to a new optional argument
+being added to the Python function. When that argument is absent, the old behaviour is
+preserved and the old numbered function is called. When the argument is set,
+the new numbered function is called - or if the new numbered function is not available,
+NotImplementedError is raised.
+
+This ensures that Python users of subvertpy can generally get by with not worrying
+too much about newly introduced APIs unless they actually need the
+functionality provided by them.
+
+Coding Style
+============
+
+For Python code, please follow PEP8.
+
+For C code, please use the Linux kernel coding style.
+
+The source code is currently not very consistent and uses a mix of tabs and spaces.
+
+Types
+=====
+
+* UUIDs: str (on both Python 2 and Python 3)
+* URLs: str (on both Python 2 and Python 3)

@@ -1,4 +1,4 @@
-subvertpy (0.11.0~git20191228+2423bf1-6) UNRELEASED; urgency=medium
+subvertpy (0.11.0-1) UNRELEASED; urgency=medium
 
   [ Ondřej Nový ]
   * d/control: Update Maintainer field with new Debian Python Team
@@ -12,7 +12,10 @@ subvertpy (0.11.0~git20191228+2423bf1-6) UNRELEASED; urgency=medium
     Repository-Browse).
   * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository.
 
- -- Ondřej Nový <onovy@debian.org>  Thu, 24 Sep 2020 08:50:09 +0200
+  [ Jelmer Vernooĳ ]
+  * New upstream release.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 11 Jan 2021 02:14:07 +0000
 
 subvertpy (0.11.0~git20191228+2423bf1-5) unstable; urgency=medium
 

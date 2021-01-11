@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
+#define PY_SSIZE_T_CLEAN
 #include <stdbool.h>
 #include <Python.h>
 #include <apr_general.h>
@@ -32,11 +33,7 @@
 #include "util.h"
 #include "ra.h"
 
-#if ONLY_SINCE_SVN(1, 5)
 #define REPORTER_T svn_ra_reporter3_t
-#else
-#define REPORTER_T svn_ra_reporter2_t
-#endif
 
 static PyObject *busy_exc;
 
@@ -152,20 +149,9 @@ static PyObject *reporter_set_path(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-#if ONLY_SINCE_SVN(1, 5)
 	RUN_SVN(reporter->reporter->set_path(reporter->report_baton,
 												  path, revision, depth, start_empty,
 					 lock_token, reporter->pool));
-#else
-	if (depth != svn_depth_infinity) {
-		PyErr_SetString(PyExc_NotImplementedError,
-						"depth != infinity only supported for svn >= 1.5");
-		return NULL;
-	}
-	RUN_SVN(reporter->reporter->set_path(reporter->report_baton,
-												  path, revision, start_empty,
-					 lock_token, reporter->pool));
-#endif
 	Py_RETURN_NONE;
 }
 
@@ -207,18 +193,8 @@ static PyObject *reporter_link_path(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-#if ONLY_SINCE_SVN(1, 5)
 	RUN_SVN(reporter->reporter->link_path(reporter->report_baton, path, url,
 				revision, depth, start_empty, lock_token, reporter->pool));
-#else
-	if (depth != svn_depth_infinity) {
-		PyErr_SetString(PyExc_NotImplementedError,
-						"depth != infinity only supported for svn >= 1.5");
-		return NULL;
-	}
-	RUN_SVN(reporter->reporter->link_path(reporter->report_baton, path, url,
-				revision, start_empty, lock_token, reporter->pool));
-#endif
 
 	Py_RETURN_NONE;
 }
@@ -381,7 +357,6 @@ static PyObject *api_version(PyObject *self)
 						 ver->patch, ver->tag);
 }
 
-#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_boolean_t result_of_merge, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
 {
 	PyObject *fn = (PyObject *)baton, *ret, *py_rev_props;
@@ -403,31 +378,6 @@ static svn_error_t *py_file_rev_handler(void *baton, const char *path, svn_revnu
 	PyGILState_Release(state);
 	return NULL;
 }
-#else
-static svn_error_t *py_ra_file_rev_handler(void *baton, const char *path, svn_revnum_t rev, apr_hash_t *rev_props, svn_txdelta_window_handler_t *delta_handler, void **delta_baton, apr_array_header_t *prop_diffs, apr_pool_t *pool)
-{
-	PyObject *fn = (PyObject *)baton, *ret, *py_rev_props;
-	PyGILState_STATE state = PyGILState_Ensure();
-
-	py_rev_props = prop_hash_to_dict(rev_props);
-	CB_CHECK_PYRETVAL(py_rev_props);
-
-	ret = PyObject_CallFunction(fn, "slO", path, rev, py_rev_props);
-	Py_DECREF(py_rev_props);
-	CB_CHECK_PYRETVAL(ret);
-
-	if (delta_baton != NULL && delta_handler != NULL) {
-		*delta_baton = (void *)ret;
-		*delta_handler = py_txdelta_window_handler;
-	} else {
-		Py_DECREF(ret);
-	}
-	PyGILState_Release(state);
-	return NULL;
-}
-
-
-#endif
 
 static void ra_done_handler(void *_ra)
 {
@@ -464,7 +414,6 @@ static bool ra_check_busy(RemoteAccessObject *raobj)
 	return false;
 }
 
-#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_get_client_string(void *baton, const char **name, apr_pool_t *pool)
 {
 	RemoteAccessObject *self = (RemoteAccessObject *)baton;
@@ -488,7 +437,6 @@ static svn_error_t *py_get_client_string(void *baton, const char **name, apr_poo
 	PyGILState_Release(state);
 	return NULL;
 }
-#endif
 
 /* Based on svn_swig_py_make_file() from Subversion */
 static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
@@ -503,16 +451,8 @@ static svn_error_t *py_open_tmp_file(apr_file_t **fp, void *callback,
 		const char *path;
 
 		SVN_ERR (svn_io_temp_dir (&path, pool));
-#if ONLY_SINCE_SVN(1, 7)
 		path = svn_dirent_join (path, "subvertpy", pool);
-#else
-		path = svn_path_join (path, "subvertpy", pool);
-#endif
-#if ONLY_SINCE_SVN(1, 6)
 		SVN_ERR (svn_io_open_unique_file3(fp, NULL, path, svn_io_file_del_on_pool_cleanup, pool, pool));
-#else
-		SVN_ERR (svn_io_open_unique_file (fp, NULL, path, ".tmp", TRUE, pool));
-#endif
 
 		return NULL;
 	}
@@ -649,31 +589,15 @@ static PyObject *ra_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	callbacks2->auth_baton = auth_baton;
 	callbacks2->open_tmp_file = py_open_tmp_file;
 	callbacks2->cancel_func = py_cancel_check;
-#if ONLY_SINCE_SVN(1, 5)
 	callbacks2->get_client_string = py_get_client_string;
-#endif
 	config_hash = config_hash_from_object(config, ret->pool);
 	if (config_hash == NULL) {
 		Py_DECREF(ret);
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
-#if ONLY_SINCE_SVN(1, 7)
 	err = svn_ra_open4(&ret->ra, &ret->corrected_url, ret->url, uuid,
 			   callbacks2, ret, config_hash, ret->pool);
-#elif ONLY_SINCE_SVN(1, 5)
-	err = svn_ra_open3(&ret->ra, ret->url, uuid,
-			   callbacks2, ret, config_hash, ret->pool);
-#else
-	if (uuid != NULL) {
-		PyErr_SetString(PyExc_TypeError,
-			"uuid argument not supported with svn 1.4");
-		Py_DECREF(ret);
-		return NULL;
-	}
-	err = svn_ra_open2(&ret->ra, ret->url,
-			   callbacks2, ret, config_hash, ret->pool);
-#endif
 	Py_END_ALLOW_THREADS
 	if (err != NULL) {
 		handle_svn_error(err);
@@ -701,11 +625,7 @@ static PyObject *ra_get_uuid(PyObject *self)
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL)
 		return NULL;
-#if ONLY_SINCE_SVN(1, 5)
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid2(ra->ra, &uuid, temp_pool));
-#else
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_uuid(ra->ra, &uuid, temp_pool));
-#endif
 	ret = PyUnicode_FromString(uuid);
 	apr_pool_destroy(temp_pool);
 	return ret;
@@ -773,42 +693,6 @@ apr_array_header_t **apr_paths, apr_array_header_t **apr_revprops)
 		goto fail_prep;
 	}
 
-#if ONLY_BEFORE_SVN(1, 5)
-	if (revprops == Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError,
-			"fetching all revision properties not supported");
-		goto fail_prep;
-	} else if (!PySequence_Check(revprops)) {
-		PyErr_SetString(PyExc_TypeError, "revprops should be a sequence");
-		goto fail_prep;
-	} else {
-		int i;
-		for (i = 0; i < PySequence_Size(revprops); i++) {
-			PyObject *n = PySequence_GetItem(revprops, i);
-			char *ns;
-
-			ns = py_object_to_svn_string(n, *pool);
-			if (ns == NULL) {
-				goto fail_prep;
-			}
-
-			if (strcmp(SVN_PROP_REVISION_LOG, ns) &&
-				strcmp(SVN_PROP_REVISION_AUTHOR, ns) &&
-				strcmp(SVN_PROP_REVISION_DATE, ns)) {
-				PyErr_SetString(PyExc_NotImplementedError,
-								"fetching custom revision properties not supported");
-				goto fail_prep;
-			}
-		}
-	}
-
-	if (include_merged_revisions) {
-		PyErr_SetString(PyExc_NotImplementedError,
-			"include_merged_revisions not supported in Subversion 1.4");
-		goto fail_prep;
-	}
-#endif
-
 	if (!string_list_to_apr_array(*pool, revprops, apr_revprops)) {
 		goto fail_prep;
 	}
@@ -848,7 +732,6 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-#if ONLY_SINCE_SVN(1, 5)
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_log2(ra->ra,
 			apr_paths, start, end, limit,
 			discover_changed_paths, strict_node_history,
@@ -856,12 +739,6 @@ static PyObject *ra_get_log(PyObject *self, PyObject *args, PyObject *kwargs)
 			apr_revprops,
 			py_svn_log_entry_receiver,
 			callback, temp_pool));
-#else
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_log(ra->ra,
-			apr_paths, start, end, limit,
-			discover_changed_paths, strict_node_history, py_svn_log_wrapper,
-			callback, temp_pool));
-#endif
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
@@ -882,13 +759,8 @@ static PyObject *ra_get_repos_root(PyObject *self)
 		temp_pool = Pool(NULL);
 		if (temp_pool == NULL)
 			return NULL;
-#if ONLY_SINCE_SVN(1, 5)
 		RUN_RA_WITH_POOL(temp_pool, ra,
 						  svn_ra_get_repos_root2(ra->ra, &root, temp_pool));
-#else
-		RUN_RA_WITH_POOL(temp_pool, ra,
-						  svn_ra_get_repos_root(ra->ra, &root, temp_pool));
-#endif
 		ra->root = svn_uri_canonicalize(root, ra->pool);
 		apr_pool_destroy(temp_pool);
 	}
@@ -919,7 +791,6 @@ static PyObject *ra_get_session_url(PyObject *self)
 	if (ra_check_busy(ra))
 		return NULL;
 
-#if ONLY_SINCE_SVN(1, 5)
 	temp_pool = Pool(NULL);
 
 	RUN_RA_WITH_POOL(temp_pool, ra,
@@ -930,11 +801,6 @@ static PyObject *ra_get_session_url(PyObject *self)
 	apr_pool_destroy(temp_pool);
 
 	return r;
-#else
-	PyErr_SetString(PyExc_NotImplementedError,
-					"svn_ra_get_session_url only supported for svn >= 1.5");
-	return NULL;
-#endif
 }
 
 
@@ -961,14 +827,6 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	if (ra_check_busy(ra))
 		return NULL;
 
-#if ONLY_BEFORE_SVN(1, 8)
-	if (!ignore_ancestry) {
-		PyErr_SetString(PyExc_NotImplementedError, "ignore_ancestry only supported on svn >= 1.8");
-		ra->busy = false;
-		return NULL;
-	}
-#endif
-
 	temp_pool = Pool(NULL);
 	if (temp_pool == NULL) {
 		ra->busy = false;
@@ -983,7 +841,6 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	}
 
 	Py_INCREF(update_editor);
-#if ONLY_SINCE_SVN(1, 8)
 	Py_BEGIN_ALLOW_THREADS
 	err = svn_ra_do_update3(ra->ra, &reporter,
 												  &report_baton,
@@ -993,31 +850,6 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 												  ignore_ancestry,
 												  &py_editor, update_editor,
 												  result_pool, temp_pool);
-#elif ONLY_SINCE_SVN(1, 5)
-	Py_BEGIN_ALLOW_THREADS
-	err = svn_ra_do_update2(ra->ra, &reporter,
-												  &report_baton,
-												  revision_to_update_to,
-												  update_target, recurse?svn_depth_infinity:svn_depth_files,
-												  send_copyfrom_args,
-												  &py_editor, update_editor,
-												  result_pool);
-#else
-	if (send_copyfrom_args) {
-		PyErr_SetString(PyExc_NotImplementedError, "send_copyfrom_args only supported for svn >= 1.5");
-		apr_pool_destroy(temp_pool);
-		apr_pool_destroy(result_pool);
-		ra->busy = false;
-		return NULL;
-	}
-	Py_BEGIN_ALLOW_THREADS
-	err = svn_ra_do_update(ra->ra, &reporter,
-		&report_baton, revision_to_update_to,
-		update_target, recurse,
-		&py_editor, update_editor,
-		result_pool);
-
-#endif
 	Py_END_ALLOW_THREADS
 	apr_pool_destroy(temp_pool);
 	if (err != NULL) {
@@ -1088,26 +920,12 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	Py_INCREF(update_editor);
 	Py_BEGIN_ALLOW_THREADS
 
-#if ONLY_SINCE_SVN(1, 8)
 	err = svn_ra_do_switch3(
 						ra->ra, &reporter, &report_baton,
 						revision_to_update_to, update_target,
 						recurse?svn_depth_infinity:svn_depth_files, switch_url,
 						send_copyfrom_args, ignore_ancestry,
 						&py_editor, update_editor, result_pool, temp_pool);
-#elif ONLY_SINCE_SVN(1, 5)
-	err = svn_ra_do_switch2(
-						ra->ra, &reporter, &report_baton,
-						revision_to_update_to, update_target,
-						recurse?svn_depth_infinity:svn_depth_files, switch_url, &py_editor,
-						update_editor, result_pool);
-#else
-	err = svn_ra_do_switch(
-						ra->ra, &reporter, &report_baton,
-						revision_to_update_to, update_target,
-						recurse, switch_url, &py_editor,
-						update_editor, result_pool);
-#endif
 
 	Py_END_ALLOW_THREADS
 	apr_pool_destroy(temp_pool);
@@ -1158,7 +976,6 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 
 	Py_INCREF(diff_editor);
 	Py_BEGIN_ALLOW_THREADS
-#if ONLY_SINCE_SVN(1, 5)
 	err = svn_ra_do_diff3(ra->ra, &reporter, &report_baton,
 												  revision_to_update_to,
 												  diff_target, recurse?svn_depth_infinity:svn_depth_files,
@@ -1167,16 +984,6 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 												  versus_url,
 												  &py_editor, diff_editor,
 												  temp_pool);
-#else
-	err = svn_ra_do_diff2(ra->ra, &reporter, &report_baton,
-												  revision_to_update_to,
-												  diff_target, recurse,
-												  ignore_ancestry,
-												  text_deltas,
-												  versus_url,
-												  &py_editor, diff_editor,
-												  temp_pool);
-#endif
 	Py_END_ALLOW_THREADS
 	if (err != NULL) {
 		handle_svn_error(err);
@@ -1225,7 +1032,6 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_revstart_cb(svn_revnum_t revision, void *replay_baton,
    const svn_delta_editor_t **editor, void **edit_baton, apr_hash_t *rev_props, apr_pool_t *pool)
 {
@@ -1264,11 +1070,9 @@ static svn_error_t *py_revfinish_cb(svn_revnum_t revision, void *replay_baton,
 	PyGILState_Release(state);
 	return NULL;
 }
-#endif
 
 static PyObject *ra_replay_range(PyObject *self, PyObject *args)
 {
-#if ONLY_SINCE_SVN(1, 5)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_pool_t *temp_pool;
 	svn_revnum_t start_revision, end_revision, low_water_mark;
@@ -1298,11 +1102,6 @@ static PyObject *ra_replay_range(PyObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 
 	Py_RETURN_NONE;
-#else
-	PyErr_SetString(PyExc_NotImplementedError,
-		"svn_ra_replay not available with Subversion 1.4");
-	return NULL;
-#endif
 }
 
 static PyObject *ra_rev_proplist(PyObject *self, PyObject *args)
@@ -1339,12 +1138,7 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 	void *edit_baton;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_hash_t *hash_lock_tokens;
-#if ONLY_SINCE_SVN(1, 5)
 	apr_hash_t *hash_revprops;
-#else
-	char *log_msg;
-	PyObject *py_log_msg;
-#endif
 	svn_error_t *err;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOb:get_commit_editor",
@@ -1376,7 +1170,6 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 
 	Py_INCREF(commit_callback);
 
-#if ONLY_SINCE_SVN(1, 5)
 	hash_revprops = prop_dict_to_hash(pool, revprops);
 	if (hash_revprops == NULL) {
 		goto fail_prep;
@@ -1386,35 +1179,6 @@ static PyObject *get_commit_editor(PyObject *self, PyObject *args, PyObject *kwa
 		&edit_baton,
 		hash_revprops, py_commit_callback,
 		commit_callback, hash_lock_tokens, keep_locks, pool);
-#else
-	if (!PyDict_Check(revprops)) {
-		PyErr_SetString(PyExc_TypeError, "props should be dictionary");
-		goto fail_prep;
-	}
-
-	/* Check that revprops has only one member named SVN_PROP_REVISION_LOG */
-	if (PyDict_Size(revprops) != 1) {
-		PyErr_SetString(PyExc_ValueError, "Only svn:log can be set with Subversion 1.4");
-		goto fail_prep;
-	}
-
-	py_log_msg = PyDict_GetItemString(revprops, SVN_PROP_REVISION_LOG);
-	if (py_log_msg == NULL) {
-		PyErr_SetString(PyExc_ValueError, "Only svn:log can be set with Subversion 1.4.");
-		goto fail_prep;
-	}
-
-	log_msg = py_object_to_svn_string(py_log_msg, pool);
-	if (log_msg == NULL) {
-		goto fail_prep;
-	}
-
-	Py_BEGIN_ALLOW_THREADS
-	err = svn_ra_get_commit_editor2(ra->ra, &editor,
-		&edit_baton,
-		log_msg, py_commit_callback,
-		commit_callback, hash_lock_tokens, keep_locks, pool);
-#endif
 	Py_END_ALLOW_THREADS
 
 	if (err != NULL) {
@@ -1441,13 +1205,11 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	char *name;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	char *value, *oldvalue = NULL;
-	int vallen, oldvallen = -2;
+	Py_ssize_t vallen, oldvallen = -2;
 	apr_pool_t *temp_pool;
 	svn_string_t *val_string;
-#if ONLY_SINCE_SVN(1, 7)
 	const svn_string_t *old_val_string;
 	const svn_string_t *const *old_val_string_p;
-#endif
 
 	if (!PyArg_ParseTuple(args, "lss#|z#:change_rev_prop", &rev, &name, &value,
 			&vallen, &oldvalue, &oldvallen))
@@ -1459,15 +1221,6 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 	val_string = svn_string_ncreate(value, vallen, temp_pool);
-#if ONLY_BEFORE_SVN(1, 7)
-	if (oldvallen != -2) {
-		PyErr_SetString(PyExc_NotImplementedError,
-						"Atomic revision property updates only supported on svn >= 1.7");
-		ra->busy = false;
-		apr_pool_destroy(temp_pool);
-		return NULL;
-	}
-#else
 	if (oldvallen != -2) {
 		if (oldvalue == NULL) {
 			old_val_string = NULL;
@@ -1478,16 +1231,9 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	} else {
 		old_val_string_p = NULL;
 	}
-#endif
-#if ONLY_SINCE_SVN(1, 7)
 	RUN_RA_WITH_POOL(temp_pool, ra,
 					  svn_ra_change_rev_prop2(ra->ra, rev, name, old_val_string_p, val_string,
 											 temp_pool));
-#else
-	RUN_RA_WITH_POOL(temp_pool, ra,
-					  svn_ra_change_rev_prop(ra->ra, rev, name, val_string,
-											 temp_pool));
-#endif
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
 }
@@ -1716,7 +1462,6 @@ static PyObject *ra_stat(PyObject *self, PyObject *args)
 
 static PyObject *ra_has_capability(PyObject *self, PyObject *args)
 {
-#if ONLY_SINCE_SVN(1, 5)
 	char *capability;
 	apr_pool_t *temp_pool;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
@@ -1735,10 +1480,6 @@ static PyObject *ra_has_capability(PyObject *self, PyObject *args)
 					  svn_ra_has_capability(ra->ra, &has, capability, temp_pool));
 	apr_pool_destroy(temp_pool);
 	return PyBool_FromLong(has);
-#else
-	PyErr_SetString(PyExc_NotImplementedError, "has_capability is only supported in Subversion >= 1.5");
-	return NULL;
-#endif
 }
 
 static PyObject *ra_unlock(PyObject *self, PyObject *args)
@@ -1875,17 +1616,7 @@ static PyObject *ra_get_locks(PyObject *self, PyObject *args)
 	if (ra_check_svn_path(path))
 		return NULL;
 
-#if ONLY_SINCE_SVN(1, 7)
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locks2(ra->ra, &hash_locks, path, depth, temp_pool));
-#else
-	if (depth != svn_depth_infinity) {
-		PyErr_SetString(PyExc_NotImplementedError,
-						"depth != infinity only supported for svn >= 1.7");
-		return NULL;
-	}
-
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_locks(ra->ra, &hash_locks, path, temp_pool));
-#endif
 
 	ret = PyDict_New();
 	if (ret == NULL) {
@@ -1985,7 +1716,6 @@ fail_busy:
 	return NULL;
 }
 
-#if ONLY_SINCE_SVN(1, 5)
 static PyObject *range_to_tuple(svn_merge_range_t *range)
 {
 	return Py_BuildValue("(llb)", range->start, range->end, range->inheritable?true:false);
@@ -2049,11 +1779,9 @@ static PyObject *mergeinfo_to_dict(svn_mergeinfo_t mergeinfo, apr_pool_t *temp_p
 
 	return ret;
 }
-#endif
 
 static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 {
-#if ONLY_SINCE_SVN(1, 5)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_array_header_t *apr_paths;
 	apr_pool_t *temp_pool;
@@ -2116,13 +1844,8 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 
 	return ret;
-#else
-	PyErr_SetString(PyExc_NotImplementedError, "mergeinfo is only supported in Subversion >= 1.5");
-	return NULL;
-#endif
 }
 
-#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_location_segment_receiver(svn_location_segment_t *segment, void *baton, apr_pool_t *pool)
 {
 	PyObject *fn = baton, *ret;
@@ -2134,11 +1857,9 @@ static svn_error_t *py_location_segment_receiver(svn_location_segment_t *segment
 	PyGILState_Release(state);
 	return NULL;
 }
-#endif
 
 static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 {
-#if ONLY_SINCE_SVN(1, 5)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t peg_revision, start_revision, end_revision;
 	const char *path;
@@ -2168,10 +1889,6 @@ static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 
 	apr_pool_destroy(temp_pool);
 	Py_RETURN_NONE;
-#else
-	PyErr_SetString(PyExc_NotImplementedError, "mergeinfo is only supported in Subversion >= 1.5");
-	return NULL;
-#endif
 }
 
 
@@ -2198,21 +1915,10 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 	if (temp_pool == NULL)
 		return NULL;
 
-#if ONLY_SINCE_SVN(1, 5)
 	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs2(ra->ra, path, start, end,
 				include_merged_revisions,
 				py_file_rev_handler, (void *)file_rev_handler,
 					temp_pool));
-#else
-	if (include_merged_revisions) {
-		PyErr_SetString(PyExc_NotImplementedError,
-						"include_merged_revisions only supported with svn >= 1.5");
-		apr_pool_destroy(temp_pool);
-		return NULL;
-	}
-	RUN_RA_WITH_POOL(temp_pool, ra, svn_ra_get_file_revs(ra->ra, path, start, end,
-				py_ra_file_rev_handler, (void *)file_rev_handler, temp_pool));
-#endif
 
 	apr_pool_destroy(temp_pool);
 
@@ -3095,7 +2801,6 @@ static PyObject *get_username_provider(PyObject *self)
 	return (PyObject *)auth;
 }
 
-#if ONLY_SINCE_SVN(1, 6)
 static svn_error_t *py_cb_get_simple_provider_prompt(svn_boolean_t *may_save_plaintext,
                                                      const char *realmstring,
                                                      void *baton,
@@ -3120,7 +2825,6 @@ static svn_error_t *py_cb_get_simple_provider_prompt(svn_boolean_t *may_save_pla
 
     return NULL;
 }
-#endif
 
 static PyObject *get_simple_provider(PyObject *self, PyObject *args)
 {
@@ -3140,22 +2844,10 @@ static PyObject *get_simple_provider(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	auth->pool = pool;
-#if ONLY_SINCE_SVN(1, 6)
 	Py_INCREF(callback);
 	auth->callback = callback;
 	svn_auth_get_simple_provider2(&auth->provider,
 		  py_cb_get_simple_provider_prompt, auth->callback, auth->pool);
-#else
-	auth->callback = NULL;
-	auth->provider = NULL;
-	if (callback != Py_None) {
-		PyErr_SetString(PyExc_NotImplementedError,
-			"callback not supported with svn < 1.6");
-		Py_DECREF(auth);
-		return NULL;
-	}
-	svn_auth_get_simple_provider(&auth->provider, auth->pool);
-#endif
 	return (PyObject *)auth;
 }
 
@@ -3195,11 +2887,7 @@ static PyObject *get_ssl_client_cert_pw_file_provider(PyObject *self)
 	if (auth->pool == NULL)
 		return NULL;
 
-#if ONLY_SINCE_SVN(1, 6)
 	svn_auth_get_ssl_client_cert_pw_file_provider2(&auth->provider, NULL, NULL, auth->pool);
-#else
-	svn_auth_get_ssl_client_cert_pw_file_provider(&auth->provider, auth->pool);
-#endif
 	return (PyObject *)auth;
 }
 
@@ -3241,7 +2929,6 @@ static PyObject *get_windows_simple_provider(PyObject* self)
 	return (PyObject *)auth;
 }
 
-#if ONLY_SINCE_SVN(1, 5)
 static PyObject *get_windows_ssl_server_trust_provider(PyObject *self)
 {
 	AuthProviderObject *auth = PyObject_New(AuthProviderObject, &AuthProvider_Type);
@@ -3254,7 +2941,6 @@ static PyObject *get_windows_ssl_server_trust_provider(PyObject *self)
 	svn_auth_get_windows_ssl_server_trust_provider(&auth->provider, auth->pool);
 	return (PyObject *)auth;
 }
-#endif
 #endif
 
 #if defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
@@ -3274,7 +2960,6 @@ static PyObject *get_keychain_simple_provider(PyObject* self)
 
 static PyObject *get_platform_specific_client_providers(PyObject *self)
 {
-#if ONLY_SINCE_SVN(1, 6)
 	/* svn_auth_get_platform_specific_client_providers() allocates all the
 	 * providers in a single pool, so we can't use it :/ */
 	const char *provider_names[] = {
@@ -3324,43 +3009,6 @@ static PyObject *get_platform_specific_client_providers(PyObject *self)
 	}
 
 	return pylist;
-#else
-	PyObject *pylist = PyList_New(0);
-#if defined(WIN32) || defined(__CYGWIN__) || defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
-	PyObject *provider = NULL;
-#endif
-
-	if (pylist == NULL) {
-		Py_DECREF(pylist);
-		return NULL;
-	}
-
-#if defined(WIN32) || defined(__CYGWIN__)
-	provider = get_windows_simple_provider(self);
-	if (provider == NULL)
-		return NULL;
-	PyList_Append(pylist, provider);
-	Py_DECREF(provider);
-
-#if ONLY_SINCE_SVN(1, 5)
-	provider = get_windows_ssl_server_trust_provider(self);
-	if (provider == NULL)
-		return NULL;
-	PyList_Append(pylist, provider);
-	Py_DECREF(provider);
-#endif /* 1.5 */
-#endif /* WIN32 || __CYGWIN__ */
-
-#if defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
-	provider = get_keychain_simple_provider(self);
-	if (provider == NULL)
-		return NULL;
-	PyList_Append(pylist, provider);
-	Py_DECREF(provider);
-#endif
-
-	return pylist;
-#endif
 }
 
 static PyMethodDef ra_module_methods[] = {
@@ -3377,9 +3025,7 @@ static PyMethodDef ra_module_methods[] = {
 	{ "get_simple_provider", (PyCFunction)get_simple_provider, METH_VARARGS, NULL },
 #if defined(WIN32) || defined(__CYGWIN__)
 	{ "get_windows_simple_provider", (PyCFunction)get_windows_simple_provider, METH_NOARGS, NULL },
-#if ONLY_SINCE_SVN(1, 5)
 	{ "get_windows_ssl_server_trust_provider", (PyCFunction)get_windows_ssl_server_trust_provider, METH_NOARGS, NULL },
-#endif
 #endif
 #if defined(SVN_KEYCHAIN_PROVIDER_AVAILABLE)
 	{ "get_keychain_simple_provider", (PyCFunction)get_keychain_simple_provider, METH_NOARGS, NULL },
@@ -3474,14 +3120,12 @@ moduleinit(void)
 	busy_exc = PyErr_NewException("_ra.BusyException", NULL, NULL);
 	PyModule_AddObject(mod, "BusyException", busy_exc);
 
-#if ONLY_SINCE_SVN(1, 5)
 	PyModule_AddIntConstant(mod, "DEPTH_UNKNOWN", svn_depth_unknown);
 	PyModule_AddIntConstant(mod, "DEPTH_EXCLUDE", svn_depth_exclude);
 	PyModule_AddIntConstant(mod, "DEPTH_EMPTY", svn_depth_empty);
 	PyModule_AddIntConstant(mod, "DEPTH_FILES", svn_depth_files);
 	PyModule_AddIntConstant(mod, "DEPTH_IMMEDIATES", svn_depth_immediates);
 	PyModule_AddIntConstant(mod, "DEPTH_INFINITY", svn_depth_infinity);
-#endif
 
 	PyModule_AddIntConstant(mod, "DIRENT_KIND", SVN_DIRENT_KIND);
 	PyModule_AddIntConstant(mod, "DIRENT_SIZE", SVN_DIRENT_SIZE);
@@ -3491,11 +3135,9 @@ moduleinit(void)
 	PyModule_AddIntConstant(mod, "DIRENT_LAST_AUTHOR", SVN_DIRENT_LAST_AUTHOR);
 	PyModule_AddIntConstant(mod, "DIRENT_ALL", SVN_DIRENT_ALL);
 
-#if ONLY_SINCE_SVN(1, 5)
 	PyModule_AddIntConstant(mod, "MERGEINFO_EXPLICIT", svn_mergeinfo_explicit);
 	PyModule_AddIntConstant(mod, "MERGEINFO_INHERITED", svn_mergeinfo_inherited);
 	PyModule_AddIntConstant(mod, "MERGEINFO_NEAREST_ANCESTOR", svn_mergeinfo_nearest_ancestor);
-#endif
 
 #ifdef SVN_VER_REVISION
 	PyModule_AddIntConstant(mod, "SVN_REVISION", SVN_VER_REVISION);
