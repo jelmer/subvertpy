@@ -94,14 +94,10 @@ bool pyify_log_message(
     apr_hash_t *changed_paths, const char *author,
     const char *date, const char *message, bool node_kind,
     apr_pool_t *pool, PyObject **py_changed_paths, PyObject **revprops);
-#if ONLY_SINCE_SVN(1, 6)
 PyObject *pyify_changed_paths2(apr_hash_t *changed_paths2, apr_pool_t *pool);
-#endif
 apr_file_t *apr_file_from_object(PyObject *object, apr_pool_t *pool);
 
-#if ONLY_SINCE_SVN(1, 5)
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool);
-#endif
 
 #ifdef __GNUC__
 #pragma GCC visibility pop
@@ -138,22 +134,6 @@ typedef struct {
 } StreamObject;
 
 extern PyTypeObject Stream_Type;
-
-#if ONLY_BEFORE_SVN(1, 7)
-const char *
-_svn_uri_canonicalize(const char *uri,
-                     apr_pool_t *result_pool);
-const char *
-svn_relpath_canonicalize(const char *relpath,
-                         apr_pool_t *result_pool);
-
-const char *
-svn_dirent_canonicalize(const char *dirent,
-                        apr_pool_t *result_pool);
-#define svn_uri_canonicalize _svn_uri_canonicalize
-#define svn_dirent_get_absolute svn_path_get_absolute
-#define svn_dirent_is_absolute svn_path_is_url
-#endif
 
 const char *py_object_to_svn_uri(PyObject *obj, apr_pool_t *pool);
 const char *py_object_to_svn_dirent(PyObject *obj, apr_pool_t *pool);

@@ -1,0 +1,40 @@
+Metadata-Version: 1.1
+Name: subvertpy
+Version: 0.11.0
+Summary: Alternative Python bindings for Subversion
+Home-page: https://jelmer.uk/subvertpy
+Author: Jelmer Vernooij
+Author-email: jelmer@jelmer.uk
+License: LGPLv2.1 or later
+Download-URL: https://jelmer.uk/subvertpy/tarball/subvertpy-0.11.0/
+Description: 
+        Alternative Python bindings for Subversion. The goal is to have
+        complete, portable and "Pythonic" Python bindings.
+        
+        Bindings are provided for the working copy, client, delta, remote access and
+        repository APIs. A hookable server side implementation of the custom Subversion
+        protocol (svn_ra) is also provided.
+        
+        Differences with similar packages
+        ---------------------------------
+        subvertpy covers more of the APIs than python-svn. It provides a more
+        "Pythonic" API than python-subversion, which wraps the Subversion C API pretty
+        much directly. Neither provide a hookable server-side.
+        
+        Dependencies
+        ------------
+        Subvertpy depends on Python 2.7 or 3.5, and Subversion 1.4 or later. It should
+        work on Windows as well as most POSIX-based platforms (including Linux, BSDs
+        and Mac OS X).
+        
+Keywords: svn subvertpy subversion bindings
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Operating System :: POSIX
+Classifier: Topic :: Software Development :: Version Control

@@ -1,0 +1,165 @@
+name: Python package
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      matrix:
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        os: [ubuntu-latest]
+        svn-version: [1.14.0, 1.13.0, 1.10.6, 1.9.12]
+        experimental: [false]
+        include:
+          - os: macos-latest
+            python-version: 2.7
+            experimental: false
+          - os: macos-latest
+            python-version: 3.5
+            experimental: false
+          - os: macos-latest
+            python-version: 3.6
+            experimental: false
+          - os: macos-latest
+            python-version: 3.7
+            experimental: false
+          - os: macos-latest
+            python-version: 3.8
+            experimental: false
+          - os: windows-latest
+            python-version: 3.8
+            svn-version: 1.9.12
+            experimental: true
+          - os: windows-latest
+            python-version: 3.8
+            svn-version: 1.10.6
+            experimental: true
+          - os: windows-latest
+            python-version: 3.8
+            svn-version: 1.13.0
+            experimental: true
+          - os: windows-latest
+            python-version: 3.8
+            svn-version: 1.14.0
+            experimental: true
+          - os: windows-latest
+            python-version: 3.9
+            svn-version: 1.9.12
+            experimental: true
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies (apt)
+      run: |
+        sudo apt update
+        sudo apt install libapr1-dev libaprutil1-dev libdb5.3-dev liblz4-dev libsasl2-dev libperl-dev libserf-dev libsqlite3-dev libtool python-all-dev libneon27-gnutls-dev libutf8proc-dev
+      if: "matrix.os == 'ubuntu-latest'"
+    - name: Install dependencies (brew)
+      run: |
+        brew install subversion apr-util apr
+        echo "$(brew --prefix)/opt/subversion/libexec" >> $GITHUB_PATH
+        echo "$(brew --prefix)/opt/apr-util/bin" >> $GITHUB_PATH
+        echo "$(brew --prefix)/opt/apr/bin" >> $GITHUB_PATH
+      if: "matrix.os == 'macos-latest'"
+    - name: Install dependencies (Windows)
+      run: |
+        vcpkg install apr:x64-windows apr-util:x64-windows sqlite3:x64-windows zlib:x64-windows utf8proc:x64-windows openssl:x64-windows berkeleydb:x64-windows lz4:x64-windows python2:x64-windows expat:x64-windows
+        vcpkg integrate install
+        echo "APR_INCLUDE_DIR=$env:VCPKG_INSTALLATION_ROOT/packages/apr_x64-windows/include" >> $env:GITHUB_ENV
+        echo "APR_LINK_FLAGS=/LIBPATH:$env:VCPKG_INSTALLATION_ROOT/packages/apr_x64-windows/lib libapr-1.lib" >> $env:GITHUB_ENV
+        Get-ChildItem -Path "$env:VCPKG_INSTALLATION_ROOT/packages/apr_x64-windows/lib/*" -Recurse -Filter "*.dll" | Copy-Item -Destination "$env:GITHUB_WORKSPACE/subvertpy"
+        echo "APU_INCLUDE_DIR=$env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/include" >> $env:GITHUB_ENV
+        Get-ChildItem -Path "$env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/lib/*" -Recurse -Filter "*.dll" | Copy-Item -Destination "$env:GITHUB_WORKSPACE/subvertpy"
+        echo "APU_LINK_FLAGS=/LIBPATH:$env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/lib libaprutil-1.lib" >> $env:GITHUB_ENV
+      if: "matrix.os == 'windows-latest'"
+    - name: Locate & Exec vcvarsall.bat
+      run: |
+        $VCVarsAll = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find "VC\Auxiliary\Build\vcvarsall.bat"
+        if (-not $VCVarsAll) {
+          Write-Error "vcvarsall.bat not found" -Category NotInstalled
+          exit 1
+        }
+        $Token = "#####ENV#####"
+        $enc = [Console]::OutputEncoding
+        [Console]::OutputEncoding = [Text.Encoding]::Unicode
+        $VCVarsAllResult = cmd /U /C "`"$VCVarsAll`" x64 && echo $TOKEN&& set"
+        [Console]::OutputEncoding = $enc
+        $TokenIndex = $VCVarsAllResult.IndexOf($Token)
+        if ($TokenIndex -eq -1) {
+          Write-Error "vcvarsall failed."
+          exit 1
+        }
+        $VCVarsAllResult | Select-Object -Skip ($TokenIndex + 1) | ForEach-Object {
+          $k, $v = $_ -split "=", 2
+          Write-Output "$k=$v" >> $GITHUB_ENV
+        }
+      shell: pwsh
+      if: "matrix.os == 'windows-latest'"
+    - name: Install serf (Windows)
+      run: |
+        curl -L https://downloads.apache.org/serf/serf-1.3.9.zip -o serf.zip
+        unzip -q serf.zip
+        cd serf-1.3.9
+        curl -L http://prdownloads.sourceforge.net/scons/scons-local-2.3.0.zip -o scons-local.zip
+        unzip -q scons-local.zip
+        python2 ./scons.py --debug=stacktrace
+      if: "matrix.os == 'windows-latest'"
+      continue-on-error: true
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+      if: "matrix.os == 'windows-latest'"
+    - name: Install Subversion (Windows)
+      run: |
+        curl -L https://downloads.apache.org/subversion/subversion-${{ matrix.svn-version }}.zip -o subversion.zip
+        unzip -q subversion.zip
+        cd subversion-${{ matrix.svn-version }}
+        cp $env:VCPKG_INSTALLATION_ROOT/packages/expat_x64-windows/include/* $env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/include
+        cp $env:VCPKG_INSTALLATION_ROOT/packages/expat_x64-windows/lib/* $env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/lib
+        cp $env:VCPKG_INSTALLATION_ROOT/packages/expat_x64-windows/bin/* $env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/bin
+        python2 gen-make.py --debug --vsnet-version=2019 --with-apr=$env:VCPKG_INSTALLATION_ROOT/packages/apr_x64-windows --with-apr-util=$env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows --with-zlib=$env:VCPKG_INSTALLATION_ROOT/packages/zlib_x64-windows --with-sqlite=$env:VCPKG_INSTALLATION_ROOT/packages/sqlite3_x64-windows
+        msbuild subversion_vcnet.sln /t:__MORE__ /p:Configuration=Release
+        Copy-Item -Recurse -Path $env:GITHUB_WORKSPACE/subversion-${{ matrix.svn-version }}/subversion/include -Destination $env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/include/subversion-1
+        Get-ChildItem -Path "$env:GITHUB_WORKSPACE/subversion-${{ matrix.svn-version }}/Release/subversion/libsvn_*/*" -Recurse | Copy-Item -Destination "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
+        Get-ChildItem -Path "$env:GITHUB_WORKSPACE/subversion-${{ matrix.svn-version }}/Release/subversion/libsvn_*/*" -Recurse -Filter "*.dll" | Copy-Item -Destination "$env:GITHUB_WORKSPACE/subvertpy"
+        echo "SVN_HEADER_PATH=$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/include/subversion-1" >> $env:GITHUB_ENV
+        echo "SVN_LIBRARY_PATH=$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib" >> $env:GITHUB_ENV
+      if: "matrix.os == 'windows-latest'"
+    - name: Install Subversion (Linux)
+      run: |
+        curl -L https://downloads.apache.org/subversion/subversion-${{ matrix.svn-version }}.tar.gz -o subversion.tar.gz
+        tar xfz subversion.tar.gz
+        cd subversion-${{ matrix.svn-version }}
+        ./configure
+        make
+        sudo make install
+        sudo ldconfig -v
+        cd ..
+      if: "matrix.os == 'ubuntu-latest'"
+    - name: Install other dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U pip coverage codecov flake8 fastimport
+    - name: Style checks
+      run: |
+        python -m flake8
+    - name: Build (Linux)
+      run: |
+        python setup.py build_ext -i
+      if: "matrix.os == 'ubuntu-latest'"
+    - name: Build (Mac OS X)
+      run: |
+        python setup.py build_ext -i
+      if: "matrix.os == 'macos-latest'"
+    - name: Build (Windows)
+      run: |
+        python setup.py build_ext -i
+    - name: Coverage test suite run
+      run: |
+        python -m coverage run -p -m unittest -v subvertpy.tests.test_suite
