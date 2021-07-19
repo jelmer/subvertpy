@@ -547,13 +547,8 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	return hash_props;
 }
 
-#if PY_MAJOR_VERSION >= 3
 #define SOURCEPATH_FORMAT3 "(CNl)"
 #define SOURCEPATH_FORMAT4 "(CNli)"
-#else
-#define SOURCEPATH_FORMAT3 "(cNl)"
-#define SOURCEPATH_FORMAT4 "(cNli)"
-#endif
 
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)
 {
@@ -915,11 +910,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	if (ret == NULL)
 		return NULL;
 	if (dirent_fields & SVN_DIRENT_KIND) {
-#if PY_MAJOR_VERSION < 3
-		obj = PyInt_FromLong(dirent->kind);
-#else
 		obj = PyLong_FromLong(dirent->kind);
-#endif
 		PyDict_SetItemString(ret, "kind", obj);
 		Py_DECREF(obj);
 	}

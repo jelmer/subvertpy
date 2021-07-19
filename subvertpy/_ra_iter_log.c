@@ -123,11 +123,6 @@ PyTypeObject LogIterator_Type = {
 
 	.tp_dealloc = (destructor)log_iter_dealloc, /*	destructor tp_dealloc;	*/
 
-#if PY_MAJOR_VERSION < 3
-	/* Flags to define presence of optional/expanded features */
-	.tp_flags = Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
-#endif
-
 	/* Iterators */
 	.tp_iter = PyObject_SelfIter,
 	.tp_iternext = (iternextfunc)log_iter_next,

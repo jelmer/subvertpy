@@ -1419,11 +1419,7 @@ static PyObject *ra_check_path(PyObject *self, PyObject *args)
 					  svn_ra_check_path(ra->ra, path, revision, &kind,
 					 temp_pool));
 	apr_pool_destroy(temp_pool);
-#if PY_MAJOR_VERSION < 3
-	return PyInt_FromLong(kind);
-#else
 	return PyLong_FromLong(kind);
-#endif
 }
 
 static PyObject *ra_stat(PyObject *self, PyObject *args)
@@ -2368,10 +2364,6 @@ static PyTypeObject CredentialsIter_Type = {
 
 	.tp_dealloc = (destructor)credentials_iter_dealloc, /*	destructor tp_dealloc;	*/
 
-#if PY_MAJOR_VERSION < 3
-	.tp_flags = Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
-#endif
-
 	.tp_iternext = (iternextfunc)credentials_iter_next, /*	iternextfunc tp_iternext;	*/
 
 };
@@ -3089,7 +3081,6 @@ moduleinit(void)
 	PyEval_InitThreads();
 
 
-#if PY_MAJOR_VERSION >= 3
 	static struct PyModuleDef moduledef = {
 	  PyModuleDef_HEAD_INIT,
 	  "_ra",         /* m_name */
@@ -3102,9 +3093,6 @@ moduleinit(void)
 	  NULL,            /* m_free */
 	};
 	mod = PyModule_Create(&moduledef);
-#else
-	mod = Py_InitModule3("_ra", ra_module_methods, "Remote Access");
-#endif
 	if (mod == NULL)
 		return NULL;
 
@@ -3146,16 +3134,8 @@ moduleinit(void)
 	return mod;
 }
 
-#if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC
 PyInit__ra(void)
 {
 	return moduleinit();
 }
-#else
-PyMODINIT_FUNC
-init_ra(void)
-{
-	moduleinit();
-}
-#endif

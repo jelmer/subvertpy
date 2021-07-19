@@ -915,7 +915,6 @@ static PyObject *moduleinit(void)
 
 	svn_fs_initialize(pool);
 
-#if PY_MAJOR_VERSION >= 3
 	static struct PyModuleDef moduledef = {
 	  PyModuleDef_HEAD_INIT,
 	  "repos",         /* m_name */
@@ -928,9 +927,6 @@ static PyObject *moduleinit(void)
 	  NULL,            /* m_free */
 	};
 	mod = PyModule_Create(&moduledef);
-#else
-	mod = Py_InitModule3("repos", repos_module_methods, "Local repository management");
-#endif
 	if (mod == NULL)
 		return NULL;
 
@@ -955,16 +951,8 @@ static PyObject *moduleinit(void)
 	return mod;
 }
 
-#if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC
 PyInit_repos(void)
 {
 	return moduleinit();
 }
-#else
-PyMODINIT_FUNC
-initrepos(void)
-{
-	moduleinit();
-}
-#endif

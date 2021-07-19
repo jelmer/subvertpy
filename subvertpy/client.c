@@ -130,15 +130,6 @@ static bool to_opt_revision(PyObject *arg, svn_opt_revision_t *ret)
             return false;
         }
         return true;
-#if PY_MAJOR_VERSION < 3
-    } else if (PyInt_Check(arg)) {
-        ret->kind = svn_opt_revision_number;
-        ret->value.number = PyInt_AsLong(arg);
-        if (ret->value.number == -1 && PyErr_Occurred()) {
-            return false;
-        }
-        return true;
-#endif
     } else if (arg == Py_None) {
         ret->kind = svn_opt_revision_unspecified;
         return true;
@@ -2048,7 +2039,6 @@ moduleinit(void)
     /* Make sure APR is initialized */
     apr_initialize();
 
-#if PY_MAJOR_VERSION >= 3
     static struct PyModuleDef moduledef = {
       PyModuleDef_HEAD_INIT,
       "client",         /* m_name */
@@ -2061,9 +2051,6 @@ moduleinit(void)
       NULL,            /* m_free */
     };
     mod = PyModule_Create(&moduledef);
-#else
-    mod = Py_InitModule3("client", client_mod_methods, "Client methods");
-#endif
     if (mod == NULL)
         return NULL;
 
@@ -2085,16 +2072,8 @@ moduleinit(void)
     return mod;
 }
 
-#if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC
 PyInit_client(void)
 {
     return moduleinit();
 }
-#else
-PyMODINIT_FUNC
-initclient(void)
-{
-    moduleinit();
-}
-#endif

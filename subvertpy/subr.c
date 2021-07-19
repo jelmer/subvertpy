@@ -93,7 +93,6 @@ moduleinit(void)
 
     apr_initialize();
 
-#if PY_MAJOR_VERSION >= 3
     static struct PyModuleDef moduledef = {
       PyModuleDef_HEAD_INIT,
       "subr",         /* m_name */
@@ -106,25 +105,14 @@ moduleinit(void)
       NULL,            /* m_free */
     };
     mod = PyModule_Create(&moduledef);
-#else
-    mod = Py_InitModule3("subr", subr_methods, "Subversion subr");
-#endif
     if (mod == NULL)
         return NULL;
 
     return mod;
 }
 
-#if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC
 PyInit_subr(void)
 {
     return moduleinit();
 }
-#else
-PyMODINIT_FUNC
-initsubr(void)
-{
-    moduleinit();
-}
-#endif

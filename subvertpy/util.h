@@ -144,18 +144,9 @@ const char *py_object_to_svn_abspath(PyObject *obj, apr_pool_t *pool);
 #define py_object_from_svn_abspath PyUnicode_FromString
 PyObject *propchanges_to_list(const apr_array_header_t *propchanges);
 
-#if PY_MAJOR_VERSION >= 3
 #define PyRepr_FromFormat PyUnicode_FromFormat
-#else
-#define PyRepr_FromFormat PyString_FromFormat
-#endif
 
-#if PY_MAJOR_VERSION >= 3
 #define py_from_svn_revnum PyLong_FromLong
 #define py_to_svn_revnum PyLong_AsLong
-#else
-#define py_from_svn_revnum PyInt_FromLong
-#define py_to_svn_revnum PyInt_AsLong
-#endif
 
 #endif /* _SUBVERTPY_UTIL_H_ */
