@@ -11,7 +11,7 @@ and Debian-based distributions such as Ubuntu is ``libsvn-dev``.
 Python
 ~~~~~~
 
-At least version 2.7 is required.
+At least version 3.5 is required.
 
 Building
 --------
