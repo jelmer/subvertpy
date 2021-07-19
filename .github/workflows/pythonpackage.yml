@@ -11,7 +11,7 @@ jobs:
       matrix:
         python-version: [3.5, 3.6, 3.7, 3.8]
         os: [ubuntu-latest]
-        svn-version: [1.14.0, 1.13.0, 1.10.6, 1.9.12]
+        svn-version: [1.14.1, 1.10.7]
         experimental: [false]
         include:
           - os: macos-latest
@@ -28,23 +28,11 @@ jobs:
             experimental: false
           - os: windows-latest
             python-version: 3.8
-            svn-version: 1.9.12
+            svn-version: 1.10.7
             experimental: true
           - os: windows-latest
             python-version: 3.8
-            svn-version: 1.10.6
-            experimental: true
-          - os: windows-latest
-            python-version: 3.8
-            svn-version: 1.13.0
-            experimental: true
-          - os: windows-latest
-            python-version: 3.8
-            svn-version: 1.14.0
-            experimental: true
-          - os: windows-latest
-            python-version: 3.9
-            svn-version: 1.9.12
+            svn-version: 1.14.1
             experimental: true
 
     steps:
