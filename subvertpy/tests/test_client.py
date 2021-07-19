@@ -85,6 +85,11 @@ class TestClient(SubversionTestCase):
         self.client.mkdir("dc/bar")
         self.client.mkdir("dc/bla", revprops={"svn:log": "foo"})
 
+    def test_propset(self):
+        self.client.mkdir(["dc/foo"])
+        self.client.propset("someprop", "lala", "dc/foo")
+        self.assertEqual({os.path.abspath('dc/foo'): b'lala'}, self.client.propget("someprop", "dc/foo"))
+
     def test_export(self):
         self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")

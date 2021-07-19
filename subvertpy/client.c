@@ -1021,11 +1021,11 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
     apr_pool_t *temp_pool;
     const char *target;
     PyObject *peg_revision = Py_None;
-    PyObject *revision;
+    PyObject *revision = Py_None;
     ClientObject *client = (ClientObject *)self;
     PyObject *ret, *py_target;
 
-    if (!PyArg_ParseTuple(args, "sOO|Ob", &propname, &py_target, &peg_revision,
+    if (!PyArg_ParseTuple(args, "sO|OOb", &propname, &py_target, &peg_revision,
                           &revision, &recurse))
         return NULL;
     if (!to_opt_revision(peg_revision, &c_peg_rev))
