@@ -256,22 +256,8 @@ def package_data():
         return {}
 
 
-subvertpy_version = (0, 11, 0)
-subvertpy_version_string = ".".join(map(str, subvertpy_version))
-
-
 if __name__ == "__main__":
-    setup(name='subvertpy',
-          description='Alternative Python bindings for Subversion',
-          keywords='svn subvertpy subversion bindings',
-          version=subvertpy_version_string,
-          url='https://jelmer.uk/subvertpy',
-          download_url="https://jelmer.uk/subvertpy/tarball/subvertpy-%s/" % (
-              subvertpy_version_string, ),
-          license='LGPLv2.1 or later',
-          author='Jelmer Vernooij',
-          author_email='jelmer@jelmer.uk',
-          long_description="""
+    setup(long_description="""
 Alternative Python bindings for Subversion. The goal is to have
 complete, portable and "Pythonic" Python bindings.
 
@@ -295,15 +281,4 @@ and Mac OS X).
           package_data=package_data(),
           ext_modules=subvertpy_modules(),
           scripts=['bin/subvertpy-fast-export'],
-          classifiers=[
-              'Development Status :: 4 - Beta',
-              'License :: OSI Approved :: GNU General Public '
-              'License v2 or later (GPLv2+)',
-              'Programming Language :: Python :: 3.4',
-              'Programming Language :: Python :: 3.5',
-              'Programming Language :: Python :: 3.6',
-              'Programming Language :: Python :: Implementation :: CPython',
-              'Operating System :: POSIX',
-              'Topic :: Software Development :: Version Control',
-          ],
           )
