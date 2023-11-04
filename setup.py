@@ -10,6 +10,7 @@ import sys
 import os
 import re
 import subprocess
+from setuptools_rust import RustExtension, Binding, Strip
 
 
 class CommandException(Exception):
@@ -394,12 +395,6 @@ def source_path(filename):
 def subvertpy_modules():
     return [
         SvnExtension(
-            "subvertpy.client",
-            [source_path(n)
-                for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c",
-                          "wc_adm.c")],
-            libraries=["svn_client-1", "svn_subr-1", "svn_ra-1", "svn_wc-1"]),
-        SvnExtension(
             "subvertpy._ra",
             [source_path(n) for n in ("_ra.c", "util.c", "editor.c")],
             libraries=["svn_ra-1", "svn_delta-1", "svn_subr-1"]),
@@ -440,6 +435,7 @@ if __name__ == "__main__":
           """,
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
+          rust_extensions=[RustExtension("subvertpy.client", "client/Cargo.toml")],
           scripts=['bin/subvertpy-fast-export'],
           cmdclass=cmdclass,
           classifiers=[

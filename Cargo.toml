@@ -1,0 +1,12 @@
+[workspace]
+members = [
+	"client",
+]
+
+[workspace.package]
+version = "0.11.0"
+edition = "2021"
+
+[workspace.dependencies]
+pyo3 = { version = "0.20.0", features = ["extension-module"] }
+subversion = { path = "../subversion-rs", features = ["pyo3"] }
