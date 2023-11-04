@@ -656,6 +656,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "subvertpy-client"
+version = "0.1.0"
+dependencies = [
+ "pyo3",
+ "subversion",
+]
+
+[[package]]
 name = "subvertpy-subr"
 version = "0.1.0"
 dependencies = [
