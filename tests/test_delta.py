@@ -26,7 +26,7 @@ from subvertpy.delta import (
     apply_txdelta_handler,
     TXDELTA_NEW, TXDELTA_SOURCE, TXDELTA_TARGET,
     )
-from subvertpy.tests import TestCase
+from tests import TestCase
 
 
 class DeltaTests(TestCase):

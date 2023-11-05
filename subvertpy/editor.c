@@ -15,6 +15,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
+
+#define PY_SSIZE_T_CLEAN
+
 #include <stdbool.h>
 #include <Python.h>
 #include <apr_general.h>
@@ -225,7 +228,7 @@ static PyObject *py_file_editor_change_prop(PyObject *self, PyObject *args)
 	EditorObject *editor = (EditorObject *)self;
 	char *name;
 	svn_string_t c_value;
-	int vallen;
+	Py_ssize_t vallen;
 
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &vallen))
 		return NULL;
@@ -486,7 +489,7 @@ static PyObject *py_dir_editor_change_prop(PyObject *self, PyObject *args)
 	char *name;
 	svn_string_t c_value;
 	EditorObject *editor = (EditorObject *)self;
-	int vallen;
+	Py_ssize_t vallen;
 
 	if (!PyArg_ParseTuple(args, "sz#", &name, &c_value.data, &vallen))
 		return NULL;

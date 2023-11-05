@@ -197,44 +197,6 @@ class SvnExtension(Extension):
         Extension.__init__(self, name, *args, **kwargs)
 
 
-class TestCommand(Command):
-    """Command for running unittests without install."""
-
-    user_options = [
-        ("args=", None, '''The command args string passed to '''
-                        '''unittest framework, such as --args="-v -f"''')]
-
-    def initialize_options(self):
-        self.args = ''
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        self.run_command('build')
-        bld = self.distribution.get_command_obj('build')
-        # Add build_lib in to sys.path so that unittest can found DLLs and libs
-        sys.path = [os.path.abspath(bld.build_lib)] + sys.path
-        os.chdir(bld.build_lib)
-        log.info("Running unittest without install.")
-
-        import shlex
-        import unittest
-        test_argv0 = [sys.argv[0] + ' test --args=']
-        # For transfering args to unittest, we have to split args
-        # by ourself, so that command like:
-        # python setup.py test --args="-v -f"
-        # can be executed, and the parameter '-v -f' can be
-        # transfering to unittest properly.
-        test_argv = test_argv0 + shlex.split(self.args)
-        unittest.main(module=None, defaultTest='subvertpy.tests.test_suite',
-                      argv=test_argv)
-
-
-cmdclass = {'test': TestCommand}
-
-
 def source_path(filename):
     return os.path.join("subvertpy", filename)
 
@@ -293,15 +255,14 @@ much directly. Neither provide a hookable server-side.
 
 Dependencies
 ------------
-Subvertpy depends on Python 2.7 or 3.5, and Subversion 1.4 or later. It should
+Subvertpy depends on Python 3.5, and Subversion 1.4 or later. It should
 work on Windows as well as most POSIX-based platforms (including Linux, BSDs
 and Mac OS X).
 """,
-          packages=['subvertpy', 'subvertpy.tests'],
+          packages=['subvertpy'],
           ext_modules=subvertpy_modules(),
           rust_extensions=[RustExtension("subvertpy.subr", "subr/Cargo.toml")],
           scripts=['bin/subvertpy-fast-export'],
-          cmdclass=cmdclass,
           classifiers=[
               'Development Status :: 4 - Beta',
               'License :: OSI Approved :: GNU General Public '

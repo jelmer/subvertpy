@@ -25,7 +25,7 @@ from subvertpy import (
     NODE_FILE,
     wc,
     )
-from subvertpy.tests import (
+from tests import (
     SubversionTestCase,
     TestCase,
     )

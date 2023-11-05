@@ -13,11 +13,11 @@ dependencies = [
 
 [[package]]
 name = "apr"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f80b1cbdfffe15c5a76baa513a5e838cf18f7dbb5e96945f4ae615622dd65928"
+checksum = "8dc6d7c0cd828ef52a25eae13854be602013896e42475d07d0c96644288210ea"
 dependencies = [
- "bindgen",
+ "bindgen 0.69.1",
  "ctor",
  "pkg-config",
  "system-deps",
@@ -34,6 +34,29 @@ name = "bindgen"
 version = "0.68.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "726e4313eb6ec35d2730258ad4e15b547ee75d6afaa1361a922e78e59b7d8078"
+dependencies = [
+ "bitflags 2.4.1",
+ "cexpr",
+ "clang-sys",
+ "lazy_static",
+ "lazycell",
+ "log",
+ "peeking_take_while",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash",
+ "shlex",
+ "syn 2.0.38",
+ "which",
+]
+
+[[package]]
+name = "bindgen"
+version = "0.69.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ffcebc3849946a7170a05992aac39da343a90676ab392c51a4280981d6379c2"
 dependencies = [
  "bitflags 2.4.1",
  "cexpr",
@@ -619,10 +642,12 @@ checksum = "942b4a808e05215192e39f4ab80813e599068285906cc91aa64f923db842bd5a"
 
 [[package]]
 name = "subversion"
-version = "0.0.2"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03a7375e0c9f39b0e2d386b067e811a4b241f275d128b450120b12b42b8081fb"
 dependencies = [
  "apr",
- "bindgen",
+ "bindgen 0.68.1",
  "ctor",
  "lazy_static",
  "pkg-config",

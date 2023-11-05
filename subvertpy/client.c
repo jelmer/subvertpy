@@ -1305,7 +1305,7 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
 {
     char *propname;
     svn_string_t c_propval;
-    int vallen;
+    Py_ssize_t vallen;
     int recurse = true;
     int skip_checks = false;
     ClientObject *client = (ClientObject *)self;

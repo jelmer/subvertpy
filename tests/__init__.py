@@ -452,7 +452,7 @@ def test_suite():
         'subr',
         'wc',
         ]
-    module_names = ['subvertpy.tests.test_' + name for name in names]
+    module_names = ['tests.test_' + name for name in names]
     result = unittest.TestSuite()
     loader = unittest.TestLoader()
     suite = loader.loadTestsFromNames(module_names)

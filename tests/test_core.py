@@ -16,7 +16,7 @@
 """Subversion core library tests."""
 
 import subvertpy
-from subvertpy.tests import TestCase
+from tests import TestCase
 
 
 class TestCore(TestCase):

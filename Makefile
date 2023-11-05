@@ -22,16 +22,13 @@ install::
 	$(SETUP) install
 
 check:: build-inplace
-	$(RUNTEST) $(TEST_OPTIONS) subvertpy.tests.test_suite
+	$(RUNTEST) $(TEST_OPTIONS) tests.test_suite
 
 gdb-check::
 	$(MAKE) check DEBUGGER="gdb --args"
 
-valgrind-check-python3:
+valgrind-check:
 	PYTHONMALLOC=malloc $(MAKE) check PYTHON=python DEBUGGER="valgrind --suppressions=/usr/lib/valgrind/python3.supp"
-
-valgrind-check-python2:
-	PYTHONMALLOC=malloc $(MAKE) check PYTHON=python3 DEBUGGER="valgrind --suppressions=/usr/lib/valgrind/python.supp"
 
 check-one::
 	$(MAKE) check TEST_OPTIONS=-f

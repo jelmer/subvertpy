@@ -16,6 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
+
+#define PY_SSIZE_T_CLEAN
+
 #include <stdbool.h>
 #include <Python.h>
 #include <apr_general.h>
@@ -1070,7 +1073,7 @@ static PyObject *stream_close(StreamObject *self)
 static PyObject *stream_write(StreamObject *self, PyObject *args)
 {
 	char *buffer;
-	int len;
+	Py_ssize_t len;
 	size_t length;
 	if (!PyArg_ParseTuple(args, "s#", &buffer, &len))
 		return NULL;

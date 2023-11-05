@@ -20,7 +20,7 @@ import os
 import textwrap
 
 from subvertpy import repos, SubversionException
-from subvertpy.tests import TestCaseInTempDir, TestCase
+from tests import TestCaseInTempDir, TestCase
 
 
 class VersionTest(TestCase):
