@@ -1,9 +1,7 @@
-[![Build Status](https://travis-ci.org/jelmer/subvertpy.png?branch=master)](https://travis-ci.org/jelmer/subvertpy)
-
 Subvertpy
 =========
 
-Homepage: https://jelmer.uk/subvertpy/
+Homepage: https://github.com/jelmer/subvertpy/
 
 Python bindings for the Subversion version control system that are aimed to be
 complete, fast and feel native to Python programmers.
