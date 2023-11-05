@@ -276,6 +276,8 @@ and Mac OS X).
           packages=['subvertpy'],
           package_data=package_data(),
           ext_modules=subvertpy_modules(),
-          rust_extensions=[RustExtension("subvertpy.subr", "subr/Cargo.toml", binding=Binding.PyO3)],
+          rust_extensions=[
+              RustExtension(
+                  "subvertpy.subr", "subr/Cargo.toml", binding=Binding.PyO3)],
           scripts=['bin/subvertpy-fast-export'],
           )
