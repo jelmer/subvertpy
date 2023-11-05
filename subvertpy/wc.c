@@ -16,9 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
-
 #define PY_SSIZE_T_CLEAN
-
 #include <Python.h>
 #include <apr_general.h>
 #include <svn_wc.h>
@@ -44,78 +42,12 @@ typedef struct {
     apr_pool_t *pool;
 } LockObject;
 
-#if ONLY_SINCE_SVN(1, 7)
 typedef struct {
     PyObject_VAR_HEAD
     apr_pool_t *pool;
     svn_wc_context_t *context;
 } ContextObject;
 static PyTypeObject Context_Type;
-#endif
-
-#if ONLY_BEFORE_SVN(1, 5)
-struct svn_wc_committed_queue_t
-{
-    apr_pool_t *pool;
-    apr_array_header_t *queue;
-    svn_boolean_t have_recursive;
-};
-
-typedef struct
-{
-    const char *path;
-    svn_wc_adm_access_t *adm_access;
-    svn_boolean_t recurse;
-    svn_boolean_t remove_lock;
-    apr_array_header_t *wcprop_changes;
-    unsigned char *digest;
-} committed_queue_item_t;
-
-svn_wc_committed_queue_t *svn_wc_committed_queue_create(apr_pool_t *pool)
-{
-    svn_wc_committed_queue_t *q;
-
-    q = apr_palloc(pool, sizeof(*q));
-    q->pool = pool;
-    q->queue = apr_array_make(pool, 1, sizeof(committed_queue_item_t *));
-    q->have_recursive = FALSE;
-
-    return q;
-}
-
-svn_error_t *svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        svn_boolean_t recurse,
-                        apr_array_header_t *wcprop_changes,
-                        svn_boolean_t remove_lock,
-                        svn_boolean_t remove_changelist,
-                        const unsigned char *digest,
-                        apr_pool_t *scratch_pool)
-{
-  committed_queue_item_t *cqi;
-
-  (*queue)->have_recursive |= recurse;
-
-  /* Use the same pool as the one QUEUE was allocated in,
-     to prevent lifetime issues.  Intermediate operations
-     should use SCRATCH_POOL. */
-
-  /* Add to the array with paths and options */
-  cqi = apr_palloc((*queue)->pool, sizeof(*cqi));
-  cqi->path = path;
-  cqi->adm_access = adm_access;
-  cqi->recurse = recurse;
-  cqi->remove_lock = remove_lock;
-  cqi->wcprop_changes = wcprop_changes;
-  cqi->digest = digest;
-
-  APR_ARRAY_PUSH((*queue)->queue, committed_queue_item_t *) = cqi;
-
-  return SVN_NO_ERROR;
-}
-
-#endif
 
 typedef struct {
     PyObject_VAR_HEAD
@@ -123,12 +55,13 @@ typedef struct {
     svn_wc_committed_queue_t *queue;
 } CommittedQueueObject;
 
+extern PyTypeObject Lock_Type;
+
 svn_wc_committed_queue_t *PyObject_GetCommittedQueue(PyObject *obj)
 {
     return ((CommittedQueueObject *)obj)->queue;
 }
 
-#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_ra_report3_set_path(void *baton, const char *path,
                                            svn_revnum_t revision,
                                            svn_depth_t depth, int start_empty,
@@ -173,8 +106,6 @@ static svn_error_t *py_ra_report3_link_path(void *report_baton,
     PyGILState_Release(state);
     return NULL;
 }
-
-#endif
 
 static svn_error_t *py_ra_report2_set_path(void *baton, const char *path,
                                            svn_revnum_t revision,
@@ -254,7 +185,6 @@ static svn_error_t *py_ra_report_abort(void *baton, apr_pool_t *pool)
     return NULL;
 }
 
-#if ONLY_SINCE_SVN(1, 5)
 const svn_ra_reporter3_t py_ra_reporter3 = {
     py_ra_report3_set_path,
     py_ra_report_delete_path,
@@ -262,7 +192,6 @@ const svn_ra_reporter3_t py_ra_reporter3 = {
     py_ra_report_finish,
     py_ra_report_abort,
 };
-#endif
 
 const svn_ra_reporter2_t py_ra_reporter2 = {
     py_ra_report2_set_path,
@@ -354,7 +283,6 @@ bool py_dict_to_wcprop_changes(PyObject *dict, apr_pool_t *pool, apr_array_heade
 	return true;
 }
 
-#if ONLY_SINCE_SVN(1, 6)
 svn_error_t *wc_validator3(void *baton, const char *uuid, const char *url, const char *root_url, apr_pool_t *pool)
 {
 	PyObject *py_validator = baton, *ret;
@@ -375,8 +303,6 @@ svn_error_t *wc_validator3(void *baton, const char *uuid, const char *url, const
     PyGILState_Release(state);
 	return NULL;
 }
-
-#endif
 
 svn_error_t *wc_validator2(void *baton, const char *uuid, const char *url, svn_boolean_t root, apr_pool_t *pool)
 {
@@ -599,22 +525,13 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	const char *path;
 	apr_pool_t *temp_pool;
 	PyObject *py_path;
-#if ONLY_SINCE_SVN(1, 6)
 	StreamObject *ret;
 	apr_pool_t *stream_pool;
 	svn_stream_t *stream;
-#else
-#if PY_MAJOR_VERSION >= 3
-	int fd;
-#endif
-	PyObject *ret;
-	const char *pristine_path;
-#endif
 
 	if (!PyArg_ParseTuple(args, "O", &py_path))
 		return NULL;
 
-#if ONLY_SINCE_SVN(1, 6)
 	stream_pool = Pool(NULL);
 	if (stream_pool == NULL)
 		return NULL;
@@ -624,12 +541,6 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 		apr_pool_destroy(stream_pool);
 		return NULL;
 	}
-#else
-	temp_pool = Pool(NULL);
-	if (temp_pool == NULL) {
-		return NULL;
-	}
-#endif
 
 	path = py_object_to_svn_abspath(py_path, temp_pool);
 	if (path == NULL) {
@@ -637,7 +548,6 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-#if ONLY_SINCE_SVN(1, 6)
 	RUN_SVN_WITH_POOL(stream_pool, svn_wc_get_pristine_contents(&stream, path, stream_pool, temp_pool));
 	apr_pool_destroy(temp_pool);
 
@@ -655,25 +565,6 @@ static PyObject *get_pristine_contents(PyObject *self, PyObject *args)
 	ret->stream = stream;
 
 	return (PyObject *)ret;
-#else
-	temp_pool = Pool(NULL);
-	if (temp_pool == NULL)
-		return NULL;
-	RUN_SVN_WITH_POOL(temp_pool, svn_wc_get_pristine_copy_path(path, &pristine_path, temp_pool));
-#if PY_MAJOR_VERSION >= 3
-	fd = open(pristine_path, O_RDONLY);
-	if (fd < 0) {
-		PyErr_SetFromErrno(PyExc_IOError);
-		apr_pool_destroy(temp_pool);
-		return NULL;
-	}
-	ret = PyFile_FromFd(fd, pristine_path, "rb", -1, NULL, NULL, NULL, true);
-#else
-	ret = PyFile_FromString((char *)pristine_path, "rb");
-#endif
-	apr_pool_destroy(temp_pool);
-	return ret;
-#endif
 }
 
 static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -702,21 +593,9 @@ static PyObject *ensure_adm(PyObject *self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-#if ONLY_SINCE_SVN(1, 5)
 	RUN_SVN_WITH_POOL(pool,
 					  svn_wc_ensure_adm3(path,
 										 uuid, url, repos, rev, depth, pool));
-#else
-	if (depth != svn_depth_infinity) {
-		PyErr_SetString(PyExc_NotImplementedError,
-						"depth != infinity not supported with svn < 1.5");
-		apr_pool_destroy(pool);
-		return NULL;
-	}
-	RUN_SVN_WITH_POOL(pool,
-					  svn_wc_ensure_adm2(path,
-										 uuid, url, repos, rev, pool));
-#endif
 	apr_pool_destroy(pool);
 	Py_RETURN_NONE;
 }
@@ -781,7 +660,6 @@ static PyObject *cleanup_wc(PyObject *self, PyObject *args, PyObject *kwargs)
 
 static PyObject *match_ignore_list(PyObject *self, PyObject *args)
 {
-#if ONLY_SINCE_SVN(1, 5)
 	char *str;
 	PyObject *py_list;
 	apr_array_header_t *list;
@@ -803,10 +681,6 @@ static PyObject *match_ignore_list(PyObject *self, PyObject *args)
 	apr_pool_destroy(temp_pool);
 
 	return PyBool_FromLong(ret);
-#else
-	PyErr_SetNone(PyExc_NotImplementedError);
-	return NULL;
-#endif
 }
 
 static PyMethodDef wc_methods[] = {
@@ -900,9 +774,7 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 	bool recurse = false;
 	apr_array_header_t *wcprop_changes;
 	Py_ssize_t md5_digest_len, sha1_digest_len;
-#if ONLY_SINCE_SVN(1, 7)
 	svn_wc_context_t *context = NULL;
-#endif
 	char *kwnames[] = { "path", "adm", "recurse", "wcprop_changes", "remove_lock", "remove_changelist", "md5_digest", "sha1_digest", NULL };
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|bObbz#z#", kwnames,
@@ -935,21 +807,14 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 		}
 	}
 
-	if (PyObject_IsInstance(admobj, (PyObject *)&Adm_Type)) {
-		adm = PyObject_GetAdmAccess(admobj);
-#if ONLY_SINCE_SVN(1, 7)
-	} else if (PyObject_IsInstance(admobj, (PyObject *)&Context_Type)) {
+	if (PyObject_IsInstance(admobj, (PyObject *)&Context_Type)) {
 		context = ((ContextObject*)admobj)->context;
-#endif
 	} else {
-		PyErr_SetString(PyExc_TypeError, "Second arguments needs to be Adm or Context");
+		PyErr_SetString(PyExc_TypeError, "Second arguments needs to be Context");
 		return NULL;
 	}
 
-#if ONLY_SINCE_SVN(1, 7)
 	if (adm != NULL) {
-#endif
-#if ONLY_SINCE_SVN(1, 6)
 	{
 	svn_checksum_t *svn_checksum_p;
 
@@ -966,13 +831,6 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 							   wcprop_changes, remove_lock?TRUE:FALSE, remove_changelist?TRUE:FALSE,
 							   svn_checksum_p, self->pool));
 	}
-#else
-	RUN_SVN(
-		svn_wc_queue_committed(&self->queue, path, adm, recurse?TRUE:FALSE,
-							   wcprop_changes, remove_lock?TRUE:FALSE, remove_changelist?TRUE:FALSE,
-							   (unsigned char *)md5_digest, self->pool));
-#endif
-#if ONLY_SINCE_SVN(1, 7)
 	} else {
 		svn_checksum_t *svn_checksum_p;
 
@@ -989,7 +847,6 @@ static PyObject *committed_queue_queue(CommittedQueueObject *self, PyObject *arg
 								   wcprop_changes, remove_lock?TRUE:FALSE, remove_changelist?TRUE:FALSE,
 								   svn_checksum_p, self->pool));
 	}
-#endif
 
 	Py_RETURN_NONE;
 }
@@ -1080,7 +937,6 @@ svn_lock_t *py_object_to_svn_lock(PyObject *py_lock, apr_pool_t *pool)
 	return &lockobj->lock;
 }
 
-#if ONLY_SINCE_SVN(1, 7)
 static PyTypeObject Context_Type;
 
 static PyObject *py_wc_context_locked(PyObject *self, PyObject *args)
@@ -1132,11 +988,7 @@ static PyObject *py_wc_context_check_wc(PyObject *self, PyObject *args)
 
     apr_pool_destroy(pool);
 
-#if PY_MAJOR_VERSION >= 3
     return PyLong_FromLong(wc_format);
-#else
-    return PyInt_FromLong(wc_format);
-#endif
 }
 
 static PyObject *py_wc_context_text_modified_p2(PyObject *self, PyObject *args)
@@ -1742,32 +1594,11 @@ static PyObject *py_wc_add_from_disk(PyObject *self, PyObject *args, PyObject *k
         }
     }
 
-#if ONLY_SINCE_SVN(1, 9)
     RUN_SVN_WITH_POOL(
             pool, svn_wc_add_from_disk3(
                     context_obj->context, path, props, skip_checks,
                     notify_func == Py_None?NULL:py_wc_notify_func,
                     notify_func, pool));
-#else
-    if (props != NULL) {
-        PyErr_SetString(PyExc_NotImplementedError,
-                        "props argument only supported on svn >= 1.9");
-        apr_pool_destroy(pool);
-        return NULL;
-    }
-
-    if (skip_checks) {
-        PyErr_SetString(PyExc_NotImplementedError,
-                        "skip_checks argument only supported on svn >= 1.9");
-        apr_pool_destroy(pool);
-        return NULL;
-    }
-    RUN_SVN_WITH_POOL(
-            pool, svn_wc_add_from_disk(
-                    context_obj->context, path,
-                    notify_func == Py_None?NULL:py_wc_notify_func,
-                    notify_func, pool));
-#endif
 
     apr_pool_destroy(pool);
 
@@ -2019,8 +1850,6 @@ static PyTypeObject Context_Type = {
 	context_init, /*	newfunc tp_new;	*/
 };
 
-#endif
-
 static void lock_dealloc(PyObject *self)
 {
 	LockObject *lockself = (LockObject *)self;
@@ -2133,19 +1962,8 @@ moduleinit(void)
 {
 	PyObject *mod;
 
-	if (PyType_Ready(&Entry_Type) < 0)
-		return NULL;
-
-	if (PyType_Ready(&Status2_Type) < 0)
-		return NULL;
-
-	if (PyType_Ready(&Adm_Type) < 0)
-		return NULL;
-
-#if ONLY_SINCE_SVN(1, 7)
 	if (PyType_Ready(&Context_Type) < 0)
 		return NULL;
-#endif
 
 	if (PyType_Ready(&Editor_Type) < 0)
 		return NULL;
@@ -2165,17 +1983,14 @@ moduleinit(void)
 	if (PyType_Ready(&CommittedQueue_Type) < 0)
 		return NULL;
 
-#if ONLY_SINCE_SVN(1, 7)
 	if (PyType_Ready(&Status3_Type) < 0)
 		return NULL;
-#endif
 
 	if (PyType_Ready(&Lock_Type) < 0)
 		return NULL;
 
 	apr_initialize();
 
-#if PY_MAJOR_VERSION >= 3
 	static struct PyModuleDef moduledef = {
 	  PyModuleDef_HEAD_INIT,
 	  "wc",         /* m_name */
@@ -2188,9 +2003,6 @@ moduleinit(void)
 	  NULL,            /* m_free */
 	};
 	mod = PyModule_Create(&moduledef);
-#else
-	mod = Py_InitModule3("wc", wc_methods, "Working Copies");
-#endif
 	if (mod == NULL)
 		return NULL;
 
@@ -2199,7 +2011,6 @@ moduleinit(void)
 	PyModule_AddIntConstant(mod, "SCHEDULE_DELETE", 2);
 	PyModule_AddIntConstant(mod, "SCHEDULE_REPLACE", 3);
 
-#if ONLY_SINCE_SVN(1, 5)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_POSTPONE",
 							svn_wc_conflict_choose_postpone);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_BASE",
@@ -2214,7 +2025,6 @@ moduleinit(void)
 							svn_wc_conflict_choose_mine_conflict);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED",
 							svn_wc_conflict_choose_merged);
-#endif
 
 	PyModule_AddIntConstant(mod, "STATUS_NONE", svn_wc_status_none);
 	PyModule_AddIntConstant(mod, "STATUS_UNVERSIONED", svn_wc_status_unversioned);
@@ -2238,7 +2048,6 @@ moduleinit(void)
 	PyModule_AddIntConstant(mod, "TRANSLATE_FORCE_COPY", SVN_WC_TRANSLATE_FORCE_COPY);
 	PyModule_AddIntConstant(mod, "TRANSLATE_USE_GLOBAL_TMP", SVN_WC_TRANSLATE_USE_GLOBAL_TMP);
 
-#if ONLY_SINCE_SVN(1, 5)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_POSTPONE", svn_wc_conflict_choose_postpone);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_BASE", svn_wc_conflict_choose_base);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_FULL", svn_wc_conflict_choose_theirs_full);
@@ -2246,10 +2055,6 @@ moduleinit(void)
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_THEIRS_CONFLICT", svn_wc_conflict_choose_theirs_conflict);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MINE_CONFLICT", svn_wc_conflict_choose_mine_conflict);
 	PyModule_AddIntConstant(mod, "CONFLICT_CHOOSE_MERGED", svn_wc_conflict_choose_merged);
-#endif
-
-	PyModule_AddObject(mod, "Adm", (PyObject *)&Adm_Type);
-	Py_INCREF(&Adm_Type);
 
 	PyModule_AddObject(mod, "Lock", (PyObject *)&Lock_Type);
 	Py_INCREF(&Lock_Type);
@@ -2257,24 +2062,14 @@ moduleinit(void)
 	PyModule_AddObject(mod, "CommittedQueue", (PyObject *)&CommittedQueue_Type);
 	Py_INCREF(&CommittedQueue_Type);
 
-#if ONLY_SINCE_SVN(1, 7)
 	PyModule_AddObject(mod, "Context", (PyObject *)&Context_Type);
 	Py_INCREF(&Context_Type);
-#endif
 
 	return mod;
 }
 
-#if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC
 PyInit_wc(void)
 {
 	return moduleinit();
 }
-#else
-PyMODINIT_FUNC
-initwc(void)
-{
-	moduleinit();
-}
-#endif

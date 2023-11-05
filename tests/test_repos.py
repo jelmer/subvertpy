@@ -45,11 +45,7 @@ class TestRepository(TestCaseInTempDir):
 
     def test_capability(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
-        if repos.api_version() < (1, 5):
-            self.assertRaises(NotImplementedError, r.has_capability,
-                              "mergeinfo")
-        else:
-            self.assertIsInstance(r.has_capability("mergeinfo"), bool)
+        self.assertIsInstance(r.has_capability("mergeinfo"), bool)
 
     def test_verify_fs(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
@@ -117,10 +113,7 @@ class TestRepository(TestCaseInTempDir):
 
     def test_pack_fs(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))
-        if repos.api_version() < (1, 6):
-            self.assertRaises(NotImplementedError, r.pack_fs)
-        else:
-            r.pack_fs()
+        r.pack_fs()
 
     def test_paths_changed(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -148,11 +141,8 @@ class StreamTests(TestCase):
 
     def test_read(self):
         s = repos.Stream()
-        if repos.api_version() < (1, 6):
-            self.assertRaises(NotImplementedError, s.read)
-        else:
-            self.assertEqual(b"", s.read())
-            self.assertEqual(b"", s.read(15))
+        self.assertEqual(b"", s.read())
+        self.assertEqual(b"", s.read(15))
         s.close()
 
     def test_write(self):

@@ -45,41 +45,6 @@ void PyErr_SetAprStatus(apr_status_t status)
 		apr_strerror(status, errmsg, sizeof(errmsg)));
 }
 
-#if ONLY_BEFORE_SVN(1, 7)
-const char *
-_svn_uri_canonicalize(const char *uri,
-                     apr_pool_t *result_pool)
-{
-    uri = svn_path_canonicalize(uri, result_pool);
-
-    if (uri == NULL) {
-        return NULL;
-    }
-
-    uri = svn_path_uri_decode(uri, result_pool);
-    if (uri == NULL) {
-        return NULL;
-    }
-
-    return svn_path_uri_autoescape(uri, result_pool);
-}
-
-const char *
-svn_relpath_canonicalize(const char *relpath,
-                         apr_pool_t *result_pool)
-{
-	return svn_path_canonicalize(relpath, result_pool);
-}
-
-const char *
-svn_dirent_canonicalize(const char *dirent,
-                        apr_pool_t *result_pool)
-{
-    return svn_path_canonicalize(dirent, result_pool);
-}
-
-#endif
-
 const char *py_object_to_svn_path_or_url(PyObject *obj, apr_pool_t *pool)
 {
     const char *ret;
@@ -323,11 +288,7 @@ PyObject *PyErr_NewSubversionException(svn_error_t *error)
 		Py_INCREF(child);
 	}
 
-#if ONLY_SINCE_SVN(1, 4)
 	message = svn_err_best_message(error, buf, sizeof(buf)-1);
-#else
-	message = error->message;
-#endif
 
 	return Py_BuildValue("(siNN)", message, error->apr_err, child, loc);
 }
@@ -588,13 +549,8 @@ apr_hash_t *prop_dict_to_hash(apr_pool_t *pool, PyObject *py_props)
 	return hash_props;
 }
 
-#if PY_MAJOR_VERSION >= 3
 #define SOURCEPATH_FORMAT3 "(CNl)"
 #define SOURCEPATH_FORMAT4 "(CNli)"
-#else
-#define SOURCEPATH_FORMAT3 "(cNl)"
-#define SOURCEPATH_FORMAT4 "(cNli)"
-#endif
 
 PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_pool_t *pool)
 {
@@ -663,7 +619,6 @@ PyObject *pyify_changed_paths(apr_hash_t *changed_paths, bool node_kind, apr_poo
 	return py_changed_paths;
 }
 
-#if ONLY_SINCE_SVN(1, 6)
 PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 {
 	PyObject *py_changed_paths, *pyval;
@@ -722,7 +677,6 @@ PyObject *pyify_changed_paths2(apr_hash_t *changed_paths, apr_pool_t *pool)
 
 	return py_changed_paths;
 }
-#endif
 
 bool pyify_log_message(apr_hash_t *changed_paths, const char *author,
 const char *date, const char *message, bool node_kind, apr_pool_t *pool,
@@ -763,7 +717,6 @@ fail:
 	return false;
 }
 
-#if ONLY_SINCE_SVN(1, 5)
 svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
 	PyObject *revprops, *py_changed_paths, *ret;
@@ -786,7 +739,6 @@ svn_error_t *py_svn_log_entry_receiver(void *baton, svn_log_entry_t *log_entry, 
 	PyGILState_Release(state);
 	return NULL;
 }
-#endif
 
 svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
 {
@@ -960,11 +912,7 @@ PyObject *py_dirent(const svn_dirent_t *dirent, int dirent_fields)
 	if (ret == NULL)
 		return NULL;
 	if (dirent_fields & SVN_DIRENT_KIND) {
-#if PY_MAJOR_VERSION < 3
-		obj = PyInt_FromLong(dirent->kind);
-#else
 		obj = PyLong_FromLong(dirent->kind);
-#endif
 		PyDict_SetItemString(ret, "kind", obj);
 		Py_DECREF(obj);
 	}
@@ -1115,16 +1063,11 @@ static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 			apr_pool_destroy(temp_pool);
 			return NULL;
 		}
-#if ONLY_SINCE_SVN(1, 9)
 		RUN_SVN_WITH_POOL(temp_pool, svn_stream_read_full(self->stream, buffer, &size));
-#else
-		RUN_SVN_WITH_POOL(temp_pool, svn_stream_read(self->stream, buffer, &size));
-#endif
 		ret = PyBytes_FromStringAndSize(buffer, size);
 		apr_pool_destroy(temp_pool);
 		return ret;
 	} else {
-#if ONLY_SINCE_SVN(1, 6)
 		svn_string_t *result;
 		RUN_SVN_WITH_POOL(temp_pool, svn_string_from_stream(&result,
 							   self->stream,
@@ -1134,11 +1077,6 @@ static PyObject *stream_read_full(StreamObject *self, PyObject *args)
 		ret = PyBytes_FromStringAndSize(result->data, result->len);
 		apr_pool_destroy(temp_pool);
 		return ret;
-#else
-		PyErr_SetString(PyExc_NotImplementedError,
-			"Subversion 1.5 does not provide svn_string_from_stream().");
-		return NULL;
-#endif
 	}
 }
 

@@ -15,9 +15,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
-
 #define PY_SSIZE_T_CLEAN
-
 #include <stdbool.h>
 #include <Python.h>
 #include <apr_general.h>
@@ -81,11 +79,6 @@ static void py_editor_dealloc(PyObject *self)
 	}
 	PyObject_Del(self);
 }
-
-/* paranoia check */
-#if defined(SIZEOF_SIZE_T) && SIZEOF_SIZE_T != SIZEOF_LONG
-#error "Unable to determine PyArg_Parse format for size_t"
-#endif
 
 /* svn_filesize_t is always 64 bits */
 #if SIZEOF_LONG == 8

@@ -123,17 +123,11 @@ PyTypeObject LogIterator_Type = {
 
 	.tp_dealloc = (destructor)log_iter_dealloc, /*	destructor tp_dealloc;	*/
 
-#if PY_MAJOR_VERSION < 3
-	/* Flags to define presence of optional/expanded features */
-	.tp_flags = Py_TPFLAGS_HAVE_ITER, /*	long tp_flags;	*/
-#endif
-
 	/* Iterators */
 	.tp_iter = PyObject_SelfIter,
 	.tp_iternext = (iternextfunc)log_iter_next,
 };
 
-#if ONLY_SINCE_SVN(1, 5)
 static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
 	PyObject *revprops, *py_changed_paths, *ret, *tuple;
@@ -143,11 +137,7 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 
 	state = PyGILState_Ensure();
 
-#if ONLY_SINCE_SVN(1, 6)
 	py_changed_paths = pyify_changed_paths2(log_entry->changed_paths2, pool);
-#else
-	py_changed_paths = pyify_changed_paths(log_entry->changed_paths, true, pool);
-#endif
 	if (py_changed_paths == NULL) {
 		PyGILState_Release(state);
 		return py_svn_error();
@@ -182,47 +172,6 @@ static svn_error_t *py_iter_log_entry_cb(void *baton, svn_log_entry_t *log_entry
 
 	return NULL;
 }
-#else
-static svn_error_t *py_iter_log_cb(void *baton, apr_hash_t *changed_paths, svn_revnum_t revision, const char *author, const char *date, const char *message, apr_pool_t *pool)
-{
-	PyObject *revprops, *py_changed_paths, *ret, *tuple;
-	LogIteratorObject *iter = (LogIteratorObject *)baton;
-
-	PyGILState_STATE state;
-
-	state = PyGILState_Ensure();
-
-	if (!pyify_log_message(changed_paths, author, date, message, true,
-	pool, &py_changed_paths, &revprops)) {
-		goto fail;
-	}
-	tuple = Py_BuildValue("NlN", py_changed_paths, revision, revprops);
-	if (tuple == NULL) {
-		goto fail_tuple;
-	}
-
-	ret = py_iter_append(iter, tuple);
-
-	if (ret == NULL) {
-		Py_DECREF(tuple);
-		goto fail;
-	}
-
-	Py_DECREF(ret);
-
-	PyGILState_Release(state);
-
-	return NULL;
-	
-fail_tuple:
-	Py_DECREF(revprops);
-	Py_DECREF(py_changed_paths);
-fail:
-	PyGILState_Release(state);
-	return py_svn_error();
-}
-#endif
-
 
 static void py_iter_log(void *baton)
 {
@@ -230,18 +179,11 @@ static void py_iter_log(void *baton)
 	svn_error_t *error;
 	PyGILState_STATE state;
 
-#if ONLY_SINCE_SVN(1, 5)
 	error = svn_ra_get_log2(iter->ra->ra, 
 			iter->apr_paths, iter->start, iter->end, iter->limit,
 			iter->discover_changed_paths, iter->strict_node_history, 
 			iter->include_merged_revisions, iter->apr_revprops,
 			py_iter_log_entry_cb, iter, iter->pool);
-#else
-	error = svn_ra_get_log(iter->ra->ra, 
-			iter->apr_paths, iter->start, iter->end, iter->limit,
-			iter->discover_changed_paths, iter->strict_node_history, py_iter_log_cb, 
-			iter, iter->pool);
-#endif
 	state = PyGILState_Ensure();
 	if (error != NULL) {
 		iter->exc_type = (PyObject *)PyErr_GetSubversionExceptionTypeObject();
