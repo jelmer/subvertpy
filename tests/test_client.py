@@ -26,7 +26,7 @@ from subvertpy import (
     client,
     ra,
     )
-from subvertpy.tests import (
+from tests import (
     SubversionTestCase,
     TestCase,
     )

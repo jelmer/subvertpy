@@ -22,7 +22,7 @@ from subvertpy.marshall import (
     marshall,
     unmarshall,
     )
-from subvertpy.tests import TestCase
+from tests import TestCase
 
 
 class TestMarshalling(TestCase):

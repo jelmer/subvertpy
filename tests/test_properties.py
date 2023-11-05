@@ -19,7 +19,7 @@ import os
 import time
 from unittest import SkipTest
 from subvertpy import properties
-from subvertpy.tests import (
+from tests import (
     TestCase,
     )
 

@@ -30,7 +30,7 @@ class literal(object):
         return self.txt
 
     def __eq__(self, other):
-        return (type(self) == type(other) and self.txt == other.txt)
+        return (isinstance(self, type(other)) and self.txt == other.txt)
 
 # 1. Syntactic structure
 # ----------------------

@@ -22,7 +22,7 @@ from subvertpy import (
     SubversionException,
     ra,
     )
-from subvertpy.tests import (
+from tests import (
     SubversionTestCase,
     TestCase,
     )
