@@ -16,10 +16,10 @@ jobs:
         include:
           - os: macos-latest
             python-version: 3.7
-            experimental: false
+            experimental: true
           - os: macos-latest
             python-version: 3.8
-            experimental: false
+            experimental: true
           - os: windows-latest
             python-version: 3.8
             svn-version: 1.10.7
@@ -42,10 +42,11 @@ jobs:
       if: "matrix.os == 'ubuntu-latest'"
     - name: Install dependencies (brew)
       run: |
-        brew install subversion apr-util apr
+        brew install subversion apr-util apr pkg-config
         echo "$(brew --prefix)/opt/subversion/libexec" >> $GITHUB_PATH
         echo "$(brew --prefix)/opt/apr-util/bin" >> $GITHUB_PATH
         echo "$(brew --prefix)/opt/apr/bin" >> $GITHUB_PATH
+        echo "$(brew --prefix)/opt/pkg-config/bin" >> $GITHUB_PATH
       if: "matrix.os == 'macos-latest'"
     - name: Install dependencies (Windows)
       run: |
