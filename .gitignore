@@ -13,3 +13,8 @@ apidocs
 *~
 .tox/
 .pybuild
+
+
+# Added by cargo
+
+/target

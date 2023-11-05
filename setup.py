@@ -9,6 +9,7 @@ import sys
 import os
 import re
 import subprocess
+from setuptools_rust import RustExtension, Binding, Strip
 
 
 class CommandException(Exception):
@@ -258,11 +259,6 @@ def subvertpy_modules():
             [source_path(n) for n in
                 ["wc.c", "wc_adm.c", "util.c", "editor.c"]],
             libraries=["svn_wc-1", "svn_subr-1"]),
-        SvnExtension(
-            "subvertpy.subr",
-            [source_path(n)
-                for n in ["util.c", "subr.c"]],
-            libraries=["svn_subr-1"]),
         ]
 
 
@@ -303,6 +299,7 @@ and Mac OS X).
 """,
           packages=['subvertpy', 'subvertpy.tests'],
           ext_modules=subvertpy_modules(),
+          rust_extensions=[RustExtension("subvertpy.subr", "subr/Cargo.toml")],
           scripts=['bin/subvertpy-fast-export'],
           cmdclass=cmdclass,
           classifiers=[
