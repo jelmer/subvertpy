@@ -632,93 +632,6 @@ static PyObject *client_commit(PyObject *self, PyObject *args, PyObject *kwargs)
     Py_RETURN_NONE;
 }
 
-static PyObject *client_delete(PyObject *self, PyObject *args)
-{
-    PyObject *paths;
-    bool force=false, keep_local=false;
-    apr_pool_t *temp_pool;
-    PyObject *py_revprops = Py_None;
-    apr_array_header_t *apr_paths;
-    ClientObject *client = (ClientObject *)self;
-    apr_hash_t *hash_revprops;
-    PyObject *callback = Py_None;
-
-    if (!PyArg_ParseTuple(args, "O|bbOO", &paths, &force, &keep_local, &py_revprops, &callback))
-        return NULL;
-
-    temp_pool = Pool(NULL);
-    if (temp_pool == NULL)
-        return NULL;
-    if (!client_list_to_apr_array(temp_pool, paths, py_object_to_svn_path_or_url, &apr_paths)) {
-        apr_pool_destroy(temp_pool);
-        return NULL;
-    }
-
-    if (py_revprops != Py_None) {
-        hash_revprops = prop_dict_to_hash(temp_pool, py_revprops);
-        if (hash_revprops == NULL) {
-            apr_pool_destroy(temp_pool);
-            return NULL;
-        }
-    } else {
-        hash_revprops = NULL;
-    }
-
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_delete4(
-        apr_paths, force, keep_local, hash_revprops, py_commit_callback2, callback, client->client, temp_pool));
-
-    apr_pool_destroy(temp_pool);
-
-    Py_RETURN_NONE;
-}
-
-static PyObject *client_mkdir(PyObject *self, PyObject *args, PyObject *kwargs)
-{
-    PyObject *paths, *revprops = NULL;
-    bool make_parents = false;
-    apr_pool_t *temp_pool;
-    apr_array_header_t *apr_paths;
-    apr_hash_t *hash_revprops;
-    ClientObject *client = (ClientObject *)self;
-    PyObject *callback = Py_None;
-    char *kwnames[] = { "path", "make_parents", "revprops", "callback", NULL };
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bOO", kwnames, &paths, &make_parents, &revprops, &callback))
-        return NULL;
-
-    temp_pool = Pool(NULL);
-    if (temp_pool == NULL)
-        return NULL;
-    if (!client_list_to_apr_array(temp_pool, paths, py_object_to_svn_path_or_url, &apr_paths)) {
-        apr_pool_destroy(temp_pool);
-        return NULL;
-    }
-
-    if (revprops != NULL && !PyDict_Check(revprops)) {
-        apr_pool_destroy(temp_pool);
-        PyErr_SetString(PyExc_TypeError, "Expected dictionary with revision properties");
-        return NULL;
-    }
-
-    if (revprops != NULL && revprops != Py_None) {
-        hash_revprops = prop_dict_to_hash(temp_pool, revprops);
-        if (hash_revprops == NULL) {
-            apr_pool_destroy(temp_pool);
-            return NULL;
-        }
-    } else {
-        hash_revprops = NULL;
-    }
-
-    RUN_SVN_WITH_POOL(temp_pool, svn_client_mkdir4(apr_paths,
-                make_parents?TRUE:FALSE, hash_revprops, py_commit_callback2, callback,
-                client->client, temp_pool));
-
-    apr_pool_destroy(temp_pool);
-
-    Py_RETURN_NONE;
-}
-
 static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     char *src_path, *dst_path;
@@ -870,48 +783,6 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
     ret = prop_hash_to_dict(hash_props);
     apr_pool_destroy(temp_pool);
     return ret;
-}
-
-static PyObject *client_proplist(PyObject *self, PyObject *args,
-                                 PyObject *kwargs)
-{
-    char *kwnames[] = { "target", "peg_revision", "depth", "revision", NULL };
-    svn_opt_revision_t c_peg_rev;
-    svn_opt_revision_t c_rev;
-    int depth;
-    apr_pool_t *temp_pool;
-    char *target;
-    PyObject *peg_revision = Py_None, *revision = Py_None;
-    ClientObject *client = (ClientObject *)self;
-    PyObject *prop_list;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOi|O", kwnames,
-                                     &target, &peg_revision, &depth, &revision))
-        return NULL;
-    if (!to_opt_revision(peg_revision, &c_peg_rev))
-        return NULL;
-    if (!to_opt_revision(revision, &c_rev))
-        return NULL;
-    temp_pool = Pool(NULL);
-    if (temp_pool == NULL)
-        return NULL;
-
-    prop_list = PyList_New(0);
-    if (prop_list == NULL) {
-        apr_pool_destroy(temp_pool);
-        return NULL;
-    }
-
-    RUN_SVN_WITH_POOL(temp_pool,
-                      svn_client_proplist4(target, &c_peg_rev, &c_rev,
-                                           depth, NULL,
-                                           false, /* TODO(jelmer): Support get_target_inherited_props */
-                                           proplist_receiver2, prop_list,
-                                           client->client, temp_pool));
-
-    apr_pool_destroy(temp_pool);
-
-    return prop_list;
 }
 
 static PyObject *client_resolve(PyObject *self, PyObject *args)
@@ -1342,12 +1213,6 @@ static PyObject *client_unlock(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyMethodDef client_methods[] = {
-    { "checkout", (PyCFunction)client_checkout, METH_VARARGS|METH_KEYWORDS,
-        "S.checkout(url, path, rev=None, peg_rev=None, recurse=True, ignore_externals=False, allow_unver_obstructions=False)" },
-    { "export", (PyCFunction)client_export, METH_VARARGS|METH_KEYWORDS,
-        "S.export(from, to, rev=None, peg_rev=None, recurse=True, ignore_externals=False, overwrite=False, native_eol=None)" },
-    { "cat", (PyCFunction)client_cat, METH_VARARGS|METH_KEYWORDS,
-        "S.cat(path, output_stream, revision=None, peg_revision=None)" },
     { "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True, revprops=None, keep_changelist=False, commit_as_operations=False, include_file_externals=False, include_dir_externals=False, callback=None) -> (revnum, date, author)" },
     { "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
     { "copy", (PyCFunction)client_copy, METH_VARARGS|METH_KEYWORDS, "S.copy(src_path, dest_path, srv_rev=None)" },
@@ -1358,7 +1223,6 @@ static PyMethodDef client_methods[] = {
     { "update", (PyCFunction)client_update, METH_VARARGS|METH_KEYWORDS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
     { "list", (PyCFunction)client_list, METH_VARARGS|METH_KEYWORDS, "S.list(path, peg_revision, depth, dirents=ra.DIRENT_ALL, revision=None) -> list of directory entries" },
     { "diff", (PyCFunction)client_diff, METH_VARARGS|METH_KEYWORDS, "S.diff(rev1, rev2, path1=None, path2=None, relative_to_dir=None, diffopts=[], encoding=\"utf-8\", ignore_ancestry=True, no_diff_deleted=True, ignore_content_type=False) -> unified diff as a string" },
-    { "mkdir", (PyCFunction)client_mkdir, METH_VARARGS|METH_KEYWORDS, "S.mkdir(paths, make_parents=False, revprops=None, callback=None)" },
     { "log", (PyCFunction)client_log, METH_VARARGS|METH_KEYWORDS,
         "S.log(callback, paths, start_rev=None, end_rev=None, limit=0, peg_revision=None, discover_changed_paths=False, strict_node_history=False, include_merged_revisions=False, revprops=None)" },
     { "info", (PyCFunction)client_info, METH_VARARGS|METH_KEYWORDS,
