@@ -10,7 +10,7 @@ import os
 import re
 import shlex
 import subprocess
-from setuptools_rust import RustExtension, Binding, Strip
+from setuptools_rust import RustExtension, Binding
 
 
 def split_shell_results(line):
@@ -242,11 +242,6 @@ def subvertpy_modules():
             [source_path(n) for n in
                 ["wc.c", "util.c", "editor.c"]],
             libraries=["svn_wc-1", "svn_diff-1", "svn_delta-1", "svn_subr-1"]),
-        SvnExtension(
-            "subvertpy.subr",
-            [source_path(n)
-                for n in ["util.c", "subr.c"]],
-            libraries=["svn_subr-1"]),
         ]
 
 
@@ -274,21 +269,13 @@ much directly. Neither provide a hookable server-side.
 
 Dependencies
 ------------
-<<<<<<< HEAD
-Subvertpy depends on Python 3.5, and Subversion 1.4 or later. It should
-work on Windows as well as most POSIX-based platforms (including Linux, BSDs
-and Mac OS X).
-""",
-          packages=['subvertpy'],
-=======
 Subvertpy depends on Python 3.5, and Subversion 1.10 or later. It should
 work on Windows as well as most POSIX-based platforms (including Linux, BSDs
 and Mac OS X).
 """,
-          packages=['subvertpy', 'subvertpy.tests'],
+          packages=['subvertpy'],
           package_data=package_data(),
->>>>>>> 9a3d963e6cea8480e3efa06d78c50980769ce486
           ext_modules=subvertpy_modules(),
-          rust_extensions=[RustExtension("subvertpy.subr", "subr/Cargo.toml")],
+          rust_extensions=[RustExtension("subvertpy.subr", "subr/Cargo.toml", binding=Binding.PyO3)],
           scripts=['bin/subvertpy-fast-export'],
           )
