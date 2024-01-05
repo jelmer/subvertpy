@@ -866,7 +866,7 @@ PyTypeObject CommittedQueue_Type = {
 	/* Methods to implement standard operations */
 
 	committed_queue_dealloc, /*	destructor tp_dealloc;	*/
-	NULL, /*	printfunc tp_print;	*/
+	0, /* Py_ssize_t tp_vectorcall_offset; */
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
@@ -1304,7 +1304,7 @@ static PyTypeObject Status3_Type = {
     /* Methods to implement standard operations */
 
     status_dealloc, /*    destructor tp_dealloc;  */
-    NULL, /*    printfunc tp_print; */
+    0, /* Py_ssize_t tp_vectorcall_offset; */
     NULL, /*    getattrfunc tp_getattr; */
     NULL, /*    setattrfunc tp_setattr; */
     NULL, /*    cmpfunc tp_compare; */
@@ -1789,7 +1789,7 @@ static PyTypeObject Context_Type = {
 	/* Methods to implement standard operations */
 
 	context_dealloc, /*	destructor tp_dealloc;	*/
-	NULL, /*	printfunc tp_print;	*/
+	0, /* Py_ssize_t tp_vectorcall_offset; */
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
