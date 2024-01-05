@@ -279,7 +279,7 @@ static PyTypeObject Reporter_Type = {
 	/* Methods to implement standard operations */
 
 	reporter_dealloc, /*	destructor tp_dealloc;	*/
-	NULL, /*	printfunc tp_print;	*/
+	0, /* Py_ssize_t tp_vectorcall_offset; */
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
@@ -2073,7 +2073,7 @@ static PyTypeObject RemoteAccess_Type = {
 	/* Methods to implement standard operations */
 
 	ra_dealloc, /*	destructor tp_dealloc;	*/
-	NULL, /*	printfunc tp_print;	*/
+	0, /* Py_ssize_t tp_vectorcall_offset; */
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
@@ -2397,7 +2397,7 @@ static PyTypeObject Auth_Type = {
 	/* Methods to implement standard operations */
 
 	auth_dealloc, /*	destructor tp_dealloc;	*/
-	NULL, /*	printfunc tp_print;	*/
+	0, /* Py_ssize_t tp_vectorcall_offset; */
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/

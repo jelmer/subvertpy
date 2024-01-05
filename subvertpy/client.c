@@ -1616,7 +1616,7 @@ PyTypeObject Config_Type = {
     /* Methods to implement standard operations */
 
     (destructor)config_dealloc, /*    destructor tp_dealloc;    */
-    NULL, /*    printfunc tp_print;    */
+    0, /* Py_ssize_t tp_vectorcall_offset; */
     NULL, /*    getattrfunc tp_getattr;    */
     NULL, /*    setattrfunc tp_setattr;    */
     NULL, /*    cmpfunc tp_compare;    */
@@ -1738,7 +1738,7 @@ PyTypeObject Info_Type = {
     /* Methods to implement standard operations */
 
     info_dealloc, /*    destructor tp_dealloc;  */
-    NULL, /*    printfunc tp_print; */
+    0, /* Py_ssize_t tp_vectorcall_offset; */
     NULL, /*    getattrfunc tp_getattr; */
     NULL, /*    setattrfunc tp_setattr; */
     NULL, /*    cmpfunc tp_compare; */
@@ -1825,7 +1825,7 @@ PyTypeObject WCInfo_Type = {
     /* Methods to implement standard operations */
 
     wcinfo_dealloc, /*    destructor tp_dealloc;  */
-    NULL, /*    printfunc tp_print; */
+    0, /* Py_ssize_t tp_vectorcall_offset; */
     NULL, /*    getattrfunc tp_getattr; */
     NULL, /*    setattrfunc tp_setattr; */
     NULL, /*    cmpfunc tp_compare; */
@@ -1888,7 +1888,7 @@ PyTypeObject Client_Type = {
     /* Methods to implement standard operations */
 
     client_dealloc, /*    destructor tp_dealloc;    */
-    NULL, /*    printfunc tp_print;    */
+    0, /* Py_ssize_t tp_vectorcall_offset; */
     NULL, /*    getattrfunc tp_getattr;    */
     NULL, /*    setattrfunc tp_setattr;    */
     NULL, /*    cmpfunc tp_compare;    */
