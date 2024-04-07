@@ -54,7 +54,7 @@ from subvertpy.marshall import (
     marshall,
     unmarshall,
 )
-from subvertpy.ra import (
+from subvertpy._ra import (
     DIRENT_CREATED_REV,
     DIRENT_HAS_PROPS,
     DIRENT_KIND,
