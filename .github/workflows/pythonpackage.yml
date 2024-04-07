@@ -115,12 +115,12 @@ jobs:
       run: |
         curl -L https://downloads.apache.org/subversion/subversion-${{ matrix.svn-version }}.tar.gz -o subversion.tar.gz
         tar xfz subversion.tar.gz
-        cd subversion-${{ matrix.svn-version }}
+        pushd subversion-${{ matrix.svn-version }}
         ./configure
         make
         sudo make install
         sudo ldconfig -v
-        cd ..
+        popd
       if: "matrix.os == 'ubuntu-latest'"
     - name: Install other dependencies
       run: |
@@ -132,6 +132,8 @@ jobs:
       continue-on-error: true
     - name: Build (Linux)
       run: |
+        pkg-config --cflags --libs apr-1 apr-util-1
+        pkg-config --cflags --libs libsvn_client
         python setup.py build_ext -i
       if: "matrix.os == 'ubuntu-latest'"
     - name: Build (Mac OS X)
