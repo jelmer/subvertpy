@@ -19,10 +19,10 @@ import os
 from unittest import TestCase
 
 from subvertpy.subr import (
-    uri_canonicalize,
-    dirent_canonicalize,
     abspath,
-    )
+    dirent_canonicalize,
+    uri_canonicalize,
+)
 
 
 class UriCanonicalizeTests(TestCase):

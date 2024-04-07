@@ -1,5 +1,5 @@
 PYTHON = python3
-FLAKE8 ?= flake8
+RUFF ?= ruff
 PYDOCTOR = pydoctor
 PYDOCTOR_OPTIONS ?=
 SETUP = $(PYTHON) setup.py
@@ -41,4 +41,4 @@ pydoctor:
 	$(PYDOCTOR) $(PYDOCTOR_OPTIONS) --introspect-c-modules -c subvertpy.cfg --make-html
 
 style:
-	$(FLAKE8)
+	$(RUFF) check .

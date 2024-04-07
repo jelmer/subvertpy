@@ -15,21 +15,21 @@
 
 """Subversion client library tests."""
 
-from datetime import datetime, timedelta
 import os
-from io import BytesIO
 import shutil
 import tempfile
+from datetime import datetime, timedelta
+from io import BytesIO
 
 from subvertpy import (
     SubversionException,
     client,
     ra,
-    )
+)
 from tests import (
     SubversionTestCase,
     TestCase,
-    )
+)
 
 
 class VersionTest(TestCase):
@@ -48,13 +48,13 @@ class TestClient(SubversionTestCase):
 
     def setUp(self):
 
-        super(TestClient, self).setUp()
+        super().setUp()
         self.repos_url = self.make_client("d", "dc")
         self.client = client.Client(auth=ra.Auth([ra.get_username_provider()]))
 
     def tearDown(self):
         del self.client
-        super(TestClient, self).tearDown()
+        super().tearDown()
 
     def test_add(self):
         self.build_tree({"dc/foo": None})
@@ -122,7 +122,7 @@ class TestClient(SubversionTestCase):
             ignores = config.get_default_ignores()
             self.assertTrue(
                 base_dir_basename.encode('utf-8') in ignores,
-                "no %r in %r" % (base_dir_basename, ignores))
+                f"no {base_dir_basename!r} in {ignores!r}")
         finally:
             shutil.rmtree(base_dir)
 

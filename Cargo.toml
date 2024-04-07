@@ -9,5 +9,5 @@ edition = "2021"
 
 [workspace.dependencies]
 pyo3 = { version = ">=0.19", features = ["extension-module"] }
-subversion = { verrsion = "0.0.3", features = ["pyo3"] }
+subversion = { verrsion = ">=0.0.4", features = ["pyo3"] }
 pyo3-file = { git = "https://github.com/omerbenamram/pyo3-file" }

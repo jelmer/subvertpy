@@ -12,10 +12,10 @@ for (changed_paths, rev, revprops, has_children) in conn.iter_log(
     print("%d:" % rev)
     print("Revision properties:")
     for entry in revprops.items():
-        print("  %s: %s" % entry)
+        print("  {}: {}".format(*entry))
     print("")
 
     print("Changed paths")
     for path, (action, from_path, from_rev, node_kind) in (
             changed_paths.items()):
-        print("  %s (%s)" % (path, action))
+        print(f"  {path} ({action})")

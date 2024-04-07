@@ -18,16 +18,17 @@
 import os
 import time
 from unittest import SkipTest
+
 from subvertpy import properties
 from tests import (
     TestCase,
-    )
+)
 
 
 class TestProperties(TestCase):
 
     def setUp(self):
-        super(TestProperties, self).setUp()
+        super().setUp()
 
     def test_time_from_cstring(self):
         self.assertEqual(

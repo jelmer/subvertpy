@@ -3,8 +3,9 @@
 
 import os
 from io import BytesIO
+
 from subvertpy import delta, repos
-from subvertpy.ra import RemoteAccess, Auth, get_username_provider
+from subvertpy.ra import Auth, RemoteAccess, get_username_provider
 
 # Create a repository
 repos.create("tmprepo")

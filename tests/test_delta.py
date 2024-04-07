@@ -18,21 +18,23 @@
 from io import BytesIO
 
 from subvertpy.delta import (
+    TXDELTA_NEW,
+    TXDELTA_SOURCE,
+    TXDELTA_TARGET,
+    apply_txdelta_handler,
     decode_length,
     encode_length,
     pack_svndiff0,
     send_stream,
     unpack_svndiff0,
-    apply_txdelta_handler,
-    TXDELTA_NEW, TXDELTA_SOURCE, TXDELTA_TARGET,
-    )
+)
 from tests import TestCase
 
 
 class DeltaTests(TestCase):
 
     def setUp(self):
-        super(DeltaTests, self).setUp()
+        super().setUp()
         self.windows = []
 
     def storing_window_handler(self, window):
@@ -73,7 +75,7 @@ class MarshallTests(TestCase):
         self.assertEqual(bytearray(b"\x81\x02"), encode_length(130))
 
     def test_roundtrip_length(self):
-        self.assertEqual((42, bytes()), decode_length(encode_length(42)))
+        self.assertEqual((42, b""), decode_length(encode_length(42)))
 
     def test_roundtrip_window(self):
         mywindow = (0, 0, 3, 1, [(2, 0, 3)], b'foo')

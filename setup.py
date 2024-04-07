@@ -2,15 +2,16 @@
 # Setup file for subvertpy
 # Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@jelmer.uk>
 
-from setuptools import setup
-from setuptools.extension import Extension
 import errno
-import sys
 import os
 import re
 import shlex
 import subprocess
-from setuptools_rust import RustExtension, Binding
+import sys
+
+from setuptools import setup
+from setuptools.extension import Extension
+from setuptools_rust import Binding, RustExtension
 
 
 def split_shell_results(line):
@@ -20,12 +21,11 @@ def split_shell_results(line):
 def config_value(command, env, args):
     command = os.environ.get(env, command)
     try:
-        return subprocess.check_output([command] + args).strip().decode()
+        return subprocess.check_output([command, *args]).strip().decode()
     except OSError as e:
         if e.errno == errno.ENOENT:
             raise Exception(
-                "%s not found. Please set %s environment variable" % (
-                    command, env))
+                f"{command} not found. Please set {env} environment variable")
         raise
 
 
@@ -93,8 +93,7 @@ def svn_build_data():
 
 
 def is_keychain_provider_available():
-    """
-    Checks for the availability of the Keychain simple authentication provider
+    """Checks for the availability of the Keychain simple authentication provider
     in Subversion by compiling a simple test program.
     """
     abd = apr_build_data()
@@ -116,7 +115,7 @@ int main(int argc, const char* arv[]) {
     return (gcc.returncode == 0)
 
 
-class VersionQuery(object):
+class VersionQuery:
 
     def __init__(self, filename):
         self.filename = filename
@@ -127,12 +126,11 @@ class VersionQuery(object):
             f.close()
 
     def grep(self, what):
-        m = re.search(r"^#define\s+%s\s+(\d+)\s*$" % (what,), self.text,
+        m = re.search(rf"^#define\s+{what}\s+(\d+)\s*$", self.text,
                       re.MULTILINE)
         if not m:
             raise Exception(
-                    "Definition for %s was not found in file %s." %
-                    (what, self.filename))
+                    f"Definition for {what} was not found in file {self.filename}.")
         return int(m.group(1))
 
 
@@ -155,8 +153,7 @@ class SvnExtension(Extension):
                             modified = True
                             libraries.append(extra)
             kwargs['libraries'] = libraries
-        kwargs["include_dirs"] = ([apr_includedir, apu_includedir] +
-                                  svn_includedirs + ["subvertpy"])
+        kwargs["include_dirs"] = ([apr_includedir, apu_includedir, *svn_includedirs, "subvertpy"])
         kwargs["library_dirs"] = svn_libdirs
         # Note that the apr-util link flags are not included here, as
         # subvertpy only uses some apr util constants but does not use

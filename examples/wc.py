@@ -2,6 +2,7 @@
 # Demonstrates how to do access the working tree using subvertpy
 
 import os
+
 from subvertpy import client, repos, wc
 from subvertpy.ra import Auth, get_username_provider
 

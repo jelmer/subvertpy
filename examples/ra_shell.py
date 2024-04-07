@@ -1,9 +1,10 @@
 #!/usr/bin/python
 
 import cmd
+import sys
+
 import subvertpy
 from subvertpy.ra import RemoteAccess
-import sys
 
 if len(sys.argv) == 1:
     print("Usage: %s <url>" % sys.argv)
@@ -18,14 +19,14 @@ def log_printer(changed_paths, rev, revprops, has_children=None):
     print("%d:" % rev)
     print("Revision properties:")
     for entry in revprops.items():
-        print("  %s: %s" % entry)
+        print("  {}: {}".format(*entry))
     print("")
 
     if changed_paths is None:
         return
     print("Changed paths:")
     for path, (action, from_path, from_rev) in changed_paths.items():
-        print("  %s (%s)" % (path, action))
+        print(f"  {path} ({action})")
 
 
 class RaCmd(cmd.Cmd):
@@ -40,7 +41,7 @@ class RaCmd(cmd.Cmd):
         elif len(args) == 2:
             return args[0], int(args[1])
         else:
-            raise Exception("Too much arguments (%r), expected 2" % (args,))
+            raise Exception(f"Too much arguments ({args!r}), expected 2")
 
     def do_help(self, args):
         for name in sorted(self.__class__.__dict__):
@@ -74,7 +75,7 @@ class RaCmd(cmd.Cmd):
 
     def do_revprops(self, args):
         for item in conn.rev_proplist(int(args)).items():
-            print("%s: %s" % item)
+            print("{}: {}".format(*item))
 
     def do_check_path(self, args):
         path, revnum = self.parse_path_revnum(args)

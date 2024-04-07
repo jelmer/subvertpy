@@ -100,7 +100,7 @@ SSL_OTHER = 0x40000000
 
 
 class SubversionException(Exception):
-    """A Subversion exception"""
+    """A Subversion exception."""
 
     def __init__(self, msg, num, child=None, location=None):
         self.args = (msg, num)
@@ -124,7 +124,7 @@ def _check_mtime(m):
 
 
 try:
-    from subvertpy import client, _ra, repos, wc
+    from subvertpy import _ra, client, repos, wc
     for x in client, _ra, repos, wc:
         if not _check_mtime(x):
             from warnings import warn

@@ -18,14 +18,15 @@
 from io import BytesIO
 
 from subvertpy import (
-    NODE_DIR, NODE_NONE,
+    NODE_DIR,
+    NODE_NONE,
     SubversionException,
     ra,
-    )
+)
 from tests import (
     SubversionTestCase,
     TestCase,
-    )
+)
 
 
 class VersionTest(TestCase):
@@ -49,14 +50,14 @@ class TestRemoteAccessUnknown(TestCase):
 class TestRemoteAccess(SubversionTestCase):
 
     def setUp(self):
-        super(TestRemoteAccess, self).setUp()
+        super().setUp()
         self.repos_url = self.make_repository("d")
         self.ra = ra.RemoteAccess(
             self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
 
     def tearDown(self):
         del self.ra
-        super(TestRemoteAccess, self).tearDown()
+        super().tearDown()
 
     def commit_editor(self):
         return self.get_commit_editor(self.repos_url)

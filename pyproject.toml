@@ -1,3 +1,52 @@
 [build-system]
 requires = ["setuptools", "setuptools_rust"]
 build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+environment = {PATH="$HOME/.cargo/bin:$PATH"}
+before-build = "pip install -U setuptools-rust && curl https://sh.rustup.rs -sSf | sh -s -- --profile=minimal -y && rustup show"
+
+[tool.ruff.lint]
+select = [
+    "ANN",
+    "D",
+    "E",
+    "F",
+    "I",
+    "PIE",
+    "UP",
+    "RSE",
+    "RUF",
+]
+ignore = [
+    "ANN001",
+    "ANN002",
+    "ANN003",
+    "ANN101",  # missing-type-self
+    "ANN102",
+    "ANN201",
+    "ANN202",
+    "ANN204",
+    "ANN205",
+    "ANN206",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D107",
+    "D204",
+    "D205",
+    "D417",
+    "E501",  # line too long
+    "E741",  # ambiguous variable name
+]
+
+[tool.ruff]
+target-version = "py37"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+

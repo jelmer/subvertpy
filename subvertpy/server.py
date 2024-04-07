@@ -17,7 +17,7 @@
 """Server backend base classes."""
 
 
-class ServerBackend(object):
+class ServerBackend:
     """A server backend."""
 
     def open_repository(self, location):
@@ -30,7 +30,7 @@ def generate_random_id():
     return str(uuid.uuid4())
 
 
-class ServerRepositoryBackend(object):
+class ServerRepositoryBackend:
 
     def get_uuid(self):
         raise NotImplementedError(self.get_uuid)

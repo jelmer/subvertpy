@@ -15,12 +15,12 @@
 
 """Subversion repository library tests."""
 
-from io import BytesIO
 import os
 import textwrap
+from io import BytesIO
 
-from subvertpy import repos, SubversionException
-from tests import TestCaseInTempDir, TestCase
+from subvertpy import SubversionException, repos
+from tests import TestCase, TestCaseInTempDir
 
 
 class VersionTest(TestCase):
@@ -38,7 +38,7 @@ class VersionTest(TestCase):
 class TestRepository(TestCaseInTempDir):
 
     def setUp(self):
-        super(TestRepository, self).setUp()
+        super().setUp()
 
     def test_create(self):
         repos.create(os.path.join(self.test_dir, "foo"))

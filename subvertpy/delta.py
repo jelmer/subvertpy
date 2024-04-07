@@ -20,8 +20,7 @@ __docformat__ = "restructuredText"
 
 from hashlib import (
     md5,
-    )
-
+)
 
 TXDELTA_SOURCE = 0
 TXDELTA_TARGET = 1
@@ -60,7 +59,7 @@ def apply_txdelta_handler_chunks(source_chunks, target_chunks):
     :param sbuf: Source buffer
     :param target_stream: Target stream
     """
-    sbuf = bytes().join(source_chunks)
+    sbuf = b"".join(source_chunks)
 
     def apply_window(window):
         if window is None:
@@ -107,7 +106,7 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
 
 
 def send_stream(stream, handler, block_size=DELTA_WINDOW_SIZE):
-    """Send txdelta windows that create stream to handler
+    """Send txdelta windows that create stream to handler.
 
     :param stream: file-like object to read the file from
     :param handler: txdelta window handler function
@@ -134,7 +133,7 @@ def encode_length(len):
     """
     # Based on encode_int() in subversion/libsvn_delta/svndiff.c
     assert len >= 0
-    assert isinstance(len, int), "expected int, got %r" % (len,)
+    assert isinstance(len, int), f"expected int, got {len!r}"
 
     # Count number of required bytes
     v = len >> 7
@@ -174,7 +173,7 @@ def decode_length(text):
 
 
 def pack_svndiff_instruction(diff_params):
-    """Pack a SVN diff instruction
+    """Pack a SVN diff instruction.
 
     :param diff_params: (action, offset, length)
     :param action: Action
@@ -193,7 +192,7 @@ def pack_svndiff_instruction(diff_params):
 
 
 def unpack_svndiff_instruction(text):
-    """Unpack a SVN diff instruction
+    """Unpack a SVN diff instruction.
 
     :param text: Text to parse
     :return: tuple with operation, remaining text
