@@ -17,7 +17,7 @@
 """Marshalling for the svn_ra protocol."""
 
 
-class literal(object):
+class literal:
     """A protocol literal."""
 
     def __init__(self, txt):
@@ -65,7 +65,7 @@ def marshall(x):
     if isinstance(x, int):
         return ("%d " % x).encode("ascii")
     elif isinstance(x, (list, tuple)):
-        return b"( " + bytes().join(map(marshall, x)) + b") "
+        return b"( " + b"".join(map(marshall, x)) + b") "
     elif isinstance(x, literal):
         return ("%s " % x).encode("ascii")
     elif isinstance(x, bytes):
@@ -107,7 +107,7 @@ def unmarshall(x):
         if len(x) <= 1:
             raise NeedMoreData("Missing whitespace")
 
-        if not x[1] in whitespace:
+        if x[1] not in whitespace:
             raise MarshallError("Expected space, got '%c'" % x[1])
 
         return (x[2:], ret)
@@ -142,7 +142,7 @@ def unmarshall(x):
         if not x:
             raise MarshallError("Expected whitespace, got end of string.")
 
-        if not x[0] in whitespace:
+        if x[0] not in whitespace:
             raise MarshallError("Expected whitespace, got '%c'" % x[0])
 
         return (x[1:], literal(ret.decode("ascii")))

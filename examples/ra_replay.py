@@ -2,7 +2,7 @@
 # Demonstrates how to use the replay function to fetch the
 # changes made in a revision.
 
-from subvertpy.ra import RemoteAccess, Auth, get_username_provider
+from subvertpy.ra import Auth, RemoteAccess, get_username_provider
 
 conn = RemoteAccess("svn://svn.gnome.org/svn/gnome-specimen/trunk",
                     auth=Auth([get_username_provider()]))
@@ -11,7 +11,7 @@ conn = RemoteAccess("svn://svn.gnome.org/svn/gnome-specimen/trunk",
 class MyFileEditor:
 
     def change_prop(self, key, value):
-        print("Change prop: %s -> %r" % (key, value))
+        print(f"Change prop: {key} -> {value!r}")
 
     def apply_textdelta(self, base_checksum):
         # This should return a function that can receive delta windows
@@ -26,24 +26,23 @@ class MyFileEditor:
 class MyDirEditor:
 
     def open_directory(self, *args):
-        print("Open dir: %s (base revnum: %r)" % args)
+        print("Open dir: {} (base revnum: {!r})".format(*args))
         return MyDirEditor()
 
     def add_directory(self, path, copyfrom_path=None, copyfrom_rev=-1):
-        print("Add dir: %s (from %r:%r)" % (path, copyfrom_path, copyfrom_rev))
+        print(f"Add dir: {path} (from {copyfrom_path!r}:{copyfrom_rev!r})")
         return MyDirEditor()
 
     def open_file(self, *args):
-        print("Open file: %s (base revnum: %r)" % args)
+        print("Open file: {} (base revnum: {!r})".format(*args))
         return MyFileEditor()
 
     def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
-        print("Add file: %s (from %r:%r)" %
-              (path, copyfrom_path, copyfrom_rev))
+        print(f"Add file: {path} (from {copyfrom_path!r}:{copyfrom_rev!r})")
         return MyFileEditor()
 
     def change_prop(self, key, value):
-        print("Change prop %s -> %r" % (key, value))
+        print(f"Change prop {key} -> {value!r}")
 
     def delete_entry(self, path, revision):
         print("Delete: %s" % path)

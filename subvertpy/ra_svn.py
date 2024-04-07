@@ -26,6 +26,8 @@ import os
 import socket
 import subprocess
 from errno import EPIPE
+from typing import Any, ClassVar, Dict
+
 try:
     import urlparse
 except ImportError:
@@ -36,22 +38,22 @@ from subvertpy import (
     ERR_UNSUPPORTED_FEATURE,
     NODE_DIR,
     NODE_FILE,
-    NODE_UNKNOWN,
     NODE_NONE,
+    NODE_UNKNOWN,
     SubversionException,
     properties,
-    )
+)
 from subvertpy.delta import (
+    SVNDIFF0_HEADER,
     pack_svndiff0_window,
     unpack_svndiff0,
-    SVNDIFF0_HEADER,
-    )
+)
 from subvertpy.marshall import (
     NeedMoreData,
     literal,
     marshall,
     unmarshall,
-    )
+)
 from subvertpy.ra import (
     DIRENT_CREATED_REV,
     DIRENT_HAS_PROPS,
@@ -59,13 +61,13 @@ from subvertpy.ra import (
     DIRENT_LAST_AUTHOR,
     DIRENT_SIZE,
     DIRENT_TIME,
-    )
+)
 from subvertpy.server import (
     generate_random_id,
-    )
+)
 
 
-class SSHSubprocess(object):
+class SSHSubprocess:
     """A socket-like object that talks to an ssh subprocess via pipes."""
 
     __slots__ = ('proc')
@@ -88,14 +90,14 @@ class SSHSubprocess(object):
         return (self.proc.stdout, self.proc.stdin)
 
 
-class SSHVendor(object):
+class SSHVendor:
 
     def connect_ssh(self, username, password, host, port, command):
         args = ['ssh', '-x']
         if port is not None:
             args.extend(['-p', str(port)])
         if username is not None:
-            host = "%s@%s" % (username, host)
+            host = f"{username}@{host}"
         args.append(host)
         proc = subprocess.Popen(args + command,
                                 stdin=subprocess.PIPE,
@@ -107,7 +109,7 @@ class SSHVendor(object):
 get_ssh_vendor = SSHVendor
 
 
-class SVNConnection(object):
+class SVNConnection:
 
     def __init__(self, recv_fn, send_fn):
         self.inbuffer = ""
@@ -216,7 +218,7 @@ def feed_editor(conn, editor):
     conn._unpack()
 
 
-class Reporter(object):
+class Reporter:
 
     __slots__ = ('conn', 'editor')
 
@@ -262,7 +264,7 @@ class Reporter(object):
         self.conn.busy = False
 
 
-class Editor(object):
+class Editor:
 
     __slots__ = ('conn')
 
@@ -289,7 +291,7 @@ class Editor(object):
         self.conn.send_msg([literal("abort-edit"), []])
 
 
-class DirectoryEditor(object):
+class DirectoryEditor:
 
     __slots__ = ('conn', 'id')
 
@@ -357,7 +359,7 @@ class DirectoryEditor(object):
         self.conn.send_msg([literal("close-dir"), [self.id]])
 
 
-class FileEditor(object):
+class FileEditor:
 
     __slots__ = ('conn', 'id')
 
@@ -454,7 +456,7 @@ class SVNClient(SVNConnection):
             (recv_func, send_func) = self._connect(host)
         else:
             (recv_func, send_func) = self._connect_ssh(host)
-        super(SVNClient, self).__init__(recv_func, send_func)
+        super().__init__(recv_func, send_func)
         (min_version, max_version, _, self._server_capabilities) = (
             self._recv_greeting())
         self.send_msg(
@@ -502,12 +504,12 @@ class SVNClient(SVNConnection):
                host, port, socket.AF_UNSPEC,
                socket.SOCK_STREAM, 0, 0)
         self._socket = None
-        last_err = RuntimeError('no addresses for %s:%s' % (host, port))
+        last_err = RuntimeError(f'no addresses for {host}:{port}')
         for (family, socktype, proto, canonname, sockaddr) in sockaddrs:
             try:
                 self._socket = socket.socket(family, socktype, proto)
                 self._socket.connect(sockaddr)
-            except socket.error as err:
+            except OSError as err:
                 last_err = err
                 if self._socket is not None:
                     self._socket.close()
@@ -896,7 +898,7 @@ class SVNServer(SVNConnection):
         self.backend = backend
         self._stop = False
         self._logf = logf
-        super(SVNServer, self).__init__(recv_fn, send_fn)
+        super().__init__(recv_fn, send_fn)
 
         self.send_success(
             MIN_VERSION, MAX_VERSION, [literal(x) for x in MECHANISMS],
@@ -1042,7 +1044,7 @@ class SVNServer(SVNConnection):
             # Needs to be sent back to the client to display
             self.send_failure(client_result[1][0])
 
-    commands = {
+    commands: ClassVar[Dict[str, Any]] = {
             "get-latest-rev": get_latest_rev,
             "log": log,
             "update": update,
@@ -1123,7 +1125,7 @@ class TCPSVNRequestHandler(StreamRequestHandler):
             self.wfile.write, self._server._logf)
         try:
             server.serve()
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] == EPIPE:
                 return
             raise

@@ -17,11 +17,13 @@
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 
-from subvertpy import SubversionException, ERR_BAD_URL
-
-from subvertpy import _ra
-from subvertpy._ra import *  # noqa: F403,F401
-from subvertpy import ra_svn  # noqa: F401
+from subvertpy import (
+    ERR_BAD_URL,
+    SubversionException,
+    _ra,
+    ra_svn,  # noqa: F401
+)
+from subvertpy._ra import *  # noqa: F403
 
 try:
     from urllib2 import splittype
@@ -40,7 +42,7 @@ url_handlers = {
 
 
 def RemoteAccess(url, *args, **kwargs):
-    """Connect to a remote Subversion server
+    """Connect to a remote Subversion server.
 
     :param url: URL to connect to
     :return: RemoteAccess object

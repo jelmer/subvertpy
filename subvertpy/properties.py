@@ -22,6 +22,7 @@ __docformat__ = "restructuredText"
 import bisect
 import calendar
 import time
+
 try:
     import urlparse
 except ImportError:
@@ -38,7 +39,7 @@ def is_valid_property_name(prop):
     :param prop: Property name
     :return: Whether prop is a valid property name
     """
-    if not prop[0].isalnum() and not prop[0] in ":_":
+    if not prop[0].isalnum() and prop[0] not in ":_":
         return False
     for c in prop[1:]:
         if not c.isalnum() and c not in "-:._":
@@ -99,7 +100,7 @@ def parse_externals_description(base_url, val):
                 path = pts[0]
                 relurl = pts[3]
             else:
-                raise InvalidExternalsDescription()
+                raise InvalidExternalsDescription
         elif len(pts) == 3:
             if pts[1].startswith("-r"):  # DIR -rX URL
                 revno = int(pts[1][2:])
@@ -110,7 +111,7 @@ def parse_externals_description(base_url, val):
                 path = pts[2]
                 relurl = pts[1]
             else:
-                raise InvalidExternalsDescription()
+                raise InvalidExternalsDescription
         elif len(pts) == 2:
             if not is_url(pts[0]):
                 relurl = pts[1]
@@ -120,7 +121,7 @@ def parse_externals_description(base_url, val):
                 path = pts[1]
             revno = None
         else:
-            raise InvalidExternalsDescription()
+            raise InvalidExternalsDescription
         if relurl.startswith("//"):
             raise NotImplementedError(
                 "Relative to the scheme externals not yet supported")
@@ -157,7 +158,7 @@ def parse_mergeinfo_property(text):
 
 
 def generate_mergeinfo_property(merges):
-    """Generate the contents of the svn:mergeinfo property
+    """Generate the contents of the svn:mergeinfo property.
 
     :param merges: dictionary mapping paths to lists of ranges
     :return: Property contents
@@ -174,7 +175,7 @@ def generate_mergeinfo_property(merges):
     text = ""
     for (path, ranges) in merges.items():
         assert path.startswith("/")
-        text += "%s:%s\n" % (path, ",".join(map(formatrange, ranges)))
+        text += "{}:{}\n".format(path, ",".join(map(formatrange, ranges)))
     return text
 
 
@@ -193,7 +194,7 @@ def range_includes_revnum(ranges, revnum):
 
 
 def range_add_revnum(ranges, revnum, inheritable=True):
-    """Add revision number to a list of ranges
+    """Add revision number to a list of ranges.
 
     :param ranges: List of ranges
     :param revnum: Revision number to add
@@ -243,7 +244,7 @@ def mergeinfo_includes_revision(merges, path, revnum):
 
 
 def mergeinfo_add_revision(mergeinfo, path, revnum):
-    """Add a revision to a mergeinfo dictionary
+    """Add a revision to a mergeinfo dictionary.
 
     :param mergeinfo: Merginfo dictionary
     :param path: Merged path to add

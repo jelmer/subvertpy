@@ -19,13 +19,14 @@
 __author__ = 'Jelmer Vernooij <jelmer@jelmer.uk>'
 __docformat__ = 'restructuredText'
 
-from io import BytesIO
 import os
 import shutil
 import stat
 import sys
 import tempfile
 import unittest
+from io import BytesIO
+
 try:
     import urlparse
 except ImportError:
@@ -68,19 +69,18 @@ class TestCase(unittest.TestCase):
     """
 
     def assertIsInstance(self, obj, kls, msg=None):
-        """Fail if obj is not an instance of kls"""
+        """Fail if obj is not an instance of kls."""
         if not isinstance(obj, kls):
             if msg is None:
-                msg = "%r is an instance of %s rather than %s" % (
-                        obj, obj.__class__, kls)
+                msg = f"{obj!r} is an instance of {obj.__class__} rather than {kls}"
             self.fail(msg)
 
     def assertIs(self, left, right, message=None):
-        if not (left is right):
+        if left is not right:
             if message is not None:
                 raise AssertionError(message)
             else:
-                raise AssertionError("%r is not %r." % (left, right))
+                raise AssertionError(f"{left!r} is not {right!r}.")
 
 
 class TestCaseInTempDir(TestCase):
@@ -98,7 +98,7 @@ class TestCaseInTempDir(TestCase):
         rmtree_with_readonly(self.test_dir)
 
 
-class TestFileEditor(object):
+class TestFileEditor:
     """Simple file editor wrapper that doesn't require closing."""
 
     def __init__(self, file):
@@ -120,7 +120,7 @@ class TestFileEditor(object):
         self.file.close()
 
 
-class TestDirEditor(object):
+class TestDirEditor:
     """Simple dir editor wrapper that doesn't require closing."""
 
     def __init__(self, dir, baseurl, revnum):
@@ -208,7 +208,8 @@ class TestCommitEditor(TestDirEditor):
 
 class SubversionTestCase(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion
-    repositories."""
+    repositories.
+    """
 
     def _init_client(self):
         self.client_ctx = client.Client()
@@ -221,12 +222,12 @@ class SubversionTestCase(TestCaseInTempDir):
         # self.client_ctx.notify_func = lambda err: mutter("Error: %s" % err)
 
     def setUp(self):
-        super(SubversionTestCase, self).setUp()
+        super().setUp()
         self._init_client()
 
     def tearDown(self):
         del self.client_ctx
-        super(SubversionTestCase, self).tearDown()
+        super().tearDown()
 
     def log_message_func(self, items):
         return self.next_message
@@ -337,7 +338,7 @@ class SubversionTestCase(TestCaseInTempDir):
         self.client_ctx.add(relpath, recursive, False, False)
 
     def client_log(self, url, start_revnum, stop_revnum):
-        """Fetch the log
+        """Fetch the log.
 
         :param url: URL to log
         :param start_revnum: Start revision of the range to log over
@@ -353,7 +354,7 @@ class SubversionTestCase(TestCaseInTempDir):
                     revprops.get(properties.PROP_REVISION_AUTHOR),
                     revprops.get(properties.PROP_REVISION_DATE),
                     revprops.get(properties.PROP_REVISION_LOG))
-        r.get_log(rcvr, [u""], start_revnum, stop_revnum, 0, True, True,
+        r.get_log(rcvr, [""], start_revnum, stop_revnum, 0, True, True,
                   revprops=[properties.PROP_REVISION_AUTHOR,
                             properties.PROP_REVISION_DATE,
                             properties.PROP_REVISION_LOG])
