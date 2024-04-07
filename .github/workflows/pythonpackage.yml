@@ -2,32 +2,17 @@ name: Python tests
 
 on: [push, pull_request]
 
+env:
+  SVN_VERSION: 1.14.2
+
 jobs:
   build:
 
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.experimental }}
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9, '3.10', '3.11', '3.12']
         os: [ubuntu-latest]
-        svn-version: [1.14.2]
-        experimental: [false]
-        include:
-          - os: macos-latest
-            python-version: 3.7
-            experimental: true
-          - os: macos-latest
-            python-version: 3.8
-            experimental: true
-          - os: windows-latest
-            python-version: 3.8
-            svn-version: 1.10.7
-            experimental: true
-          - os: windows-latest
-            python-version: 3.8
-            svn-version: 1.14.1
-            experimental: true
 
     steps:
     - uses: actions/checkout@v2
@@ -97,25 +82,25 @@ jobs:
       if: "matrix.os == 'windows-latest'"
     - name: Install Subversion (Windows)
       run: |
-        curl -L https://downloads.apache.org/subversion/subversion-${{ matrix.svn-version }}.zip -o subversion.zip
+        curl -L https://downloads.apache.org/subversion/subversion-$env:SVN_VERSION.zip -o subversion.zip
         unzip -q subversion.zip
-        cd subversion-${{ matrix.svn-version }}
+        cd subversion-$env:SVN_VERSION
         cp $env:VCPKG_INSTALLATION_ROOT/packages/expat_x64-windows/include/* $env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/include
         cp $env:VCPKG_INSTALLATION_ROOT/packages/expat_x64-windows/lib/* $env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/lib
         cp $env:VCPKG_INSTALLATION_ROOT/packages/expat_x64-windows/bin/* $env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows/bin
         python2 gen-make.py --debug --vsnet-version=2019 --with-apr=$env:VCPKG_INSTALLATION_ROOT/packages/apr_x64-windows --with-apr-util=$env:VCPKG_INSTALLATION_ROOT/packages/apr-util_x64-windows --with-zlib=$env:VCPKG_INSTALLATION_ROOT/packages/zlib_x64-windows --with-sqlite=$env:VCPKG_INSTALLATION_ROOT/packages/sqlite3_x64-windows
         msbuild subversion_vcnet.sln /t:__MORE__ /p:Configuration=Release
-        Copy-Item -Recurse -Path $env:GITHUB_WORKSPACE/subversion-${{ matrix.svn-version }}/subversion/include -Destination $env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/include/subversion-1
-        Get-ChildItem -Path "$env:GITHUB_WORKSPACE/subversion-${{ matrix.svn-version }}/Release/subversion/libsvn_*/*" -Recurse | Copy-Item -Destination "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
-        Get-ChildItem -Path "$env:GITHUB_WORKSPACE/subversion-${{ matrix.svn-version }}/Release/subversion/libsvn_*/*" -Recurse -Filter "*.dll" | Copy-Item -Destination "$env:GITHUB_WORKSPACE/subvertpy"
+        Copy-Item -Recurse -Path $env:GITHUB_WORKSPACE/subversion-$env::SVN_VERSION/subversion/include -Destination $env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/include/subversion-1
+        Get-ChildItem -Path "$env:GITHUB_WORKSPACE/subversion-$env:SVN_VERSION/Release/subversion/libsvn_*/*" -Recurse | Copy-Item -Destination "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
+        Get-ChildItem -Path "$env:GITHUB_WORKSPACE/subversion-$env:SVN_VERSION/Release/subversion/libsvn_*/*" -Recurse -Filter "*.dll" | Copy-Item -Destination "$env:GITHUB_WORKSPACE/subvertpy"
         echo "SVN_HEADER_PATH=$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/include/subversion-1" >> $env:GITHUB_ENV
         echo "SVN_LIBRARY_PATH=$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib" >> $env:GITHUB_ENV
       if: "matrix.os == 'windows-latest'"
     - name: Install Subversion (Linux)
       run: |
-        curl -L https://downloads.apache.org/subversion/subversion-${{ matrix.svn-version }}.tar.gz -o subversion.tar.gz
+        curl -L https://downloads.apache.org/subversion/subversion-$SVN_VERSION.tar.gz -o subversion.tar.gz
         tar xfz subversion.tar.gz
-        pushd subversion-${{ matrix.svn-version }}
+        pushd subversion-$SVN_VERSION
         ./configure
         make
         sudo make install
