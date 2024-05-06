@@ -115,7 +115,7 @@ def _check_mtime(m):
     """
     import os
     (base, _) = os.path.splitext(m.__file__)
-    c_file = "%s.c" % base
+    c_file = f"{base}.c"
     if not os.path.exists(c_file):
         return True
     if os.path.getmtime(m.__file__) < os.path.getmtime(c_file):
@@ -131,4 +131,4 @@ try:
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
 except ImportError as e:
-    raise ImportError("Unable to load subvertpy extensions: %s" % e)
+    raise ImportError(f"Unable to load subvertpy extensions: {e}")

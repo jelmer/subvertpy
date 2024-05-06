@@ -7,7 +7,7 @@ import subvertpy
 from subvertpy.ra import RemoteAccess
 
 if len(sys.argv) == 1:
-    print("Usage: %s <url>" % sys.argv)
+    print(f"Usage: {sys.argv} <url>")
 
 url = sys.argv[1]
 

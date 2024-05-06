@@ -45,7 +45,7 @@ class MyDirEditor:
         print(f"Change prop {key} -> {value!r}")
 
     def delete_entry(self, path, revision):
-        print("Delete: %s" % path)
+        print(f"Delete: {path}")
 
     def close(self):
         pass

@@ -43,6 +43,14 @@ from subvertpy import (
     SubversionException,
     properties,
 )
+from subvertpy._ra import (
+    DIRENT_CREATED_REV,
+    DIRENT_HAS_PROPS,
+    DIRENT_KIND,
+    DIRENT_LAST_AUTHOR,
+    DIRENT_SIZE,
+    DIRENT_TIME,
+)
 from subvertpy.delta import (
     SVNDIFF0_HEADER,
     pack_svndiff0_window,
@@ -53,14 +61,6 @@ from subvertpy.marshall import (
     literal,
     marshall,
     unmarshall,
-)
-from subvertpy._ra import (
-    DIRENT_CREATED_REV,
-    DIRENT_HAS_PROPS,
-    DIRENT_KIND,
-    DIRENT_LAST_AUTHOR,
-    DIRENT_SIZE,
-    DIRENT_TIME,
 )
 from subvertpy.server import (
     generate_random_id,
@@ -469,7 +469,7 @@ class SVNClient(SVNConnection):
             # FIXME: Support other mechanisms as well
             self.send_msg([literal("ANONYMOUS"),
                           [base64.b64encode(
-                              "anonymous@%s" % socket.gethostname())]])
+                              f"anonymous@{socket.gethostname()}")]])
             self.recv_msg()
         msg = self._unpack()
         if len(msg) > 2:
@@ -487,7 +487,7 @@ class SVNClient(SVNConnection):
             if num == ERR_RA_SVN_UNKNOWN_CMD:
                 raise NotImplementedError(msg)
             raise SubversionException(msg, num)
-        assert msg[0] == "success", "Got: %r" % msg
+        assert msg[0] == "success", f"Got: {msg!r}"
         assert len(msg) == 2
         return msg[1]
 
@@ -916,7 +916,7 @@ class SVNServer(SVNConnection):
     def send_unknown(self, cmd):
         self.send_failure(
             [ERR_RA_SVN_UNKNOWN_CMD,
-             "Unknown command '%s'" % cmd, __file__, 52])
+             f"Unknown command '{cmd}'", __file__, 52])
 
     def get_latest_rev(self):
         self.send_ack()
@@ -1039,8 +1039,7 @@ class SVNServer(SVNConnection):
         if client_result[0] == "success":
             return
         else:
-            self.mutter("Client reported error during update: %r" %
-                        client_result)
+            self.mutter(f"Client reported error during update: {client_result!r}")
             # Needs to be sent back to the client to display
             self.send_failure(client_result[1][0])
 
@@ -1083,8 +1082,8 @@ class SVNServer(SVNConnection):
         self.version = version
         self.url = url
         self.mutter("client supports:")
-        self.mutter("  version %r" % version)
-        self.mutter("  capabilities %r " % capabilities)
+        self.mutter(f"  version {version!r}")
+        self.mutter(f"  capabilities {capabilities!r} ")
         self.send_mechs()
 
         (mech, args) = self.recv_msg()
@@ -1098,7 +1097,7 @@ class SVNServer(SVNConnection):
         while not self._stop:
             (cmd, args) = self.recv_msg()
             if cmd not in self.commands:
-                self.mutter("client used unknown command %r" % cmd)
+                self.mutter(f"client used unknown command {cmd!r}")
                 self.send_unknown(cmd)
                 return
             else:
@@ -1109,7 +1108,7 @@ class SVNServer(SVNConnection):
 
     def mutter(self, text):
         if self._logf is not None:
-            self._logf.write("%s\n" % text)
+            self._logf.write(f"{text}\n")
 
 
 class TCPSVNRequestHandler(StreamRequestHandler):
