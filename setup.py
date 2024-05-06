@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Setup file for subvertpy
 # Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@jelmer.uk>
 
@@ -250,27 +250,7 @@ def package_data():
 
 
 if __name__ == "__main__":
-    setup(long_description="""
-Alternative Python bindings for Subversion. The goal is to have
-complete, portable and "Pythonic" Python bindings.
-
-Bindings are provided for the working copy, client, delta, remote access and
-repository APIs. A hookable server side implementation of the custom Subversion
-protocol (svn_ra) is also provided.
-
-Differences with similar packages
----------------------------------
-subvertpy covers more of the APIs than python-svn. It provides a more
-"Pythonic" API than python-subversion, which wraps the Subversion C API pretty
-much directly. Neither provide a hookable server-side.
-
-Dependencies
-------------
-Subvertpy depends on Python 3.5, and Subversion 1.10 or later. It should
-work on Windows as well as most POSIX-based platforms (including Linux, BSDs
-and Mac OS X).
-""",
-          packages=['subvertpy'],
+    setup(packages=['subvertpy'],
           package_data=package_data(),
           ext_modules=subvertpy_modules(),
           rust_extensions=[
