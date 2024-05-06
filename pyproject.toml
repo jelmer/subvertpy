@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.2", "setuptools_rust"]
+requires = ["setuptools", "setuptools_rust"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
@@ -10,7 +10,7 @@ environment = {PATH="$HOME/.cargo/bin:$PATH"}
 before-build = "pip install -U setuptools-rust && curl https://sh.rustup.rs -sSf | sh -s -- --profile=minimal -y && rustup show"
 
 [tool.cibuildwheel.linux]
-before-build = "yum install -y apr-devel apr-util-devel lz4-devel sqlite-devel zlib-devel sasl2-devel db5-devel neon-devel utf8proc-devel serf-devel subversion-devel"
+before-build = "pip install -U setuptools-rust && curl https://sh.rustup.rs -sSf | sh -s -- --profile=minimal -y && yum install -y apr-devel apr-util-devel lz4-devel sqlite-devel zlib-devel cyrus-sasl-devel neon-devel utf8proc-devel subversion-devel"
 
 [tool.ruff.lint]
 select = [
