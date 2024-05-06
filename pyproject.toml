@@ -9,6 +9,9 @@ dev = ["ruff==0.4.3"]
 environment = {PATH="$HOME/.cargo/bin:$PATH"}
 before-build = "pip install -U setuptools-rust && curl https://sh.rustup.rs -sSf | sh -s -- --profile=minimal -y && rustup show"
 
+[tool.cibuildwheel.linux]
+before-build = "yum install -y apr-devel apr-util-devel lz4-devel sqlite-devel zlib-devel sasl2-devel db5-devel neon-devel utf8proc-devel serf-devel subversion-devel"
+
 [tool.ruff.lint]
 select = [
     "ANN",
