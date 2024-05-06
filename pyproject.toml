@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools_rust"]
+requires = ["setuptools>=61.2", "setuptools_rust"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
@@ -52,4 +52,33 @@ target-version = "py37"
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[project]
+name = "subvertpy"
+description = "Alternative Python bindings for Subversion"
+readme = "README.md"
+keywords = [
+    "svn",
+    "subvertpy",
+    "subversion",
+    "bindings",
+]
+license = {text = "LGPLv2.1 or later"}
+authors = [{name = "Jelmer Vernooĳ", email = "jelmer@jelmer.uk"}]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Programming Language :: Python :: 3.4",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: POSIX",
+    "Topic :: Software Development :: Version Control",
+]
+urls = {Homepage = "https://github.com/jelmer/subvertpy"}
+dynamic = ["version"]
 
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.dynamic]
+version = {attr = "subvertpy.__version__"}
