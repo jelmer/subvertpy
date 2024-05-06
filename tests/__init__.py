@@ -255,9 +255,9 @@ class SubversionTestCase(TestCaseInTempDir):
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0o111)
 
         if sys.platform == 'win32':
-            return 'file:%s' % pathname2url(abspath)
+            return f'file:{pathname2url(abspath)}'
         else:
-            return "file://%s" % abspath
+            return f"file://{abspath}"
 
     def make_checkout(self, repos_url, relpath):
         """Create a new checkout."""

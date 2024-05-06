@@ -67,7 +67,7 @@ def marshall(x):
     elif isinstance(x, (list, tuple)):
         return b"( " + b"".join(map(marshall, x)) + b") "
     elif isinstance(x, literal):
-        return ("%s " % x).encode("ascii")
+        return (f"{x} ").encode("ascii")
     elif isinstance(x, bytes):
         return ("%d:" % len(x)).encode("ascii") + x + b" "
     elif isinstance(x, str):
@@ -78,7 +78,7 @@ def marshall(x):
             return b"true "
         elif x is False:
             return b"false "
-    raise MarshallError("Unable to marshall type %s" % x)
+    raise MarshallError(f"Unable to marshall type {x}")
 
 
 def unmarshall(x):
@@ -123,7 +123,7 @@ def unmarshall(x):
             return (x[1:], num)
         elif x[0:1] == b":":
             if len(x) < num:
-                raise NeedMoreData("Expected string of length %r" % num)
+                raise NeedMoreData(f"Expected string of length {num!r}")
             return (x[num+2:], x[1:num+1])
         elif not x:
             raise MarshallError("Expected whitespace, got end of string.")

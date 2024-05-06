@@ -68,7 +68,7 @@ class TestRemoteAccess(SubversionTestCase):
         dc.close()
 
     def test_repr(self):
-        self.assertEqual("RemoteAccess(\"%s\")" % self.repos_url,
+        self.assertEqual(f"RemoteAccess(\"{self.repos_url}\")",
                          repr(self.ra))
 
     def test_latest_revnum(self):
@@ -278,7 +278,7 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertEqual(
             set(['bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date',
                  'svn:log']),
-            set(revprops.keys()), "result: %r" % revprops)
+            set(revprops.keys()), f"result: {revprops!r}")
 
     def test_get_commit_editor_context_manager(self):
         def mycb(paths, rev, revprops):

@@ -13,7 +13,7 @@ repos.create("tmprepo")
 # Connect to the "remote" repository using the file transport.
 # Note that a username provider needs to be provided, so that Subversion
 # knows who to record as the author of new commits made over this connection.
-repo_url = "file://%s" % os.path.abspath("tmprepo")
+repo_url = "file://{}".format(os.path.abspath("tmprepo"))
 conn = RemoteAccess(repo_url,
                     auth=Auth([get_username_provider()]))
 
@@ -38,7 +38,7 @@ editor.close()
 editor = conn.get_commit_editor({"svn:log": "Commit message"})
 root = editor.open_root()
 # Create a new directory copied from somedir:1
-dir = root.add_directory("new dir name", "%s/somedir" % repo_url, 1)
+dir = root.add_directory("new dir name", f"{repo_url}/somedir", 1)
 dir.close()
 # Remove the original directory
 root.delete_entry("somedir")

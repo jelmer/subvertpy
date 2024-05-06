@@ -51,5 +51,5 @@ def RemoteAccess(url, *args, **kwargs):
         url = url.decode("utf-8")
     (type, opaque) = splittype(url)
     if type not in url_handlers:
-        raise SubversionException("Unknown URL type '%s'" % type, ERR_BAD_URL)
+        raise SubversionException(f"Unknown URL type '{type}'", ERR_BAD_URL)
     return url_handlers[type](url, *args, **kwargs)
