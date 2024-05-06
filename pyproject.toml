@@ -79,6 +79,7 @@ classifiers = [
 ]
 urls = {Homepage = "https://github.com/jelmer/subvertpy"}
 dynamic = ["version"]
+requires-python = ">=3.8"
 
 [tool.setuptools]
 include-package-data = false
