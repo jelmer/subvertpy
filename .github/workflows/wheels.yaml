@@ -27,8 +27,9 @@ jobs:
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: artifact-{{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   build-sdist:
@@ -47,8 +48,9 @@ jobs:
       - name: Build sdist
         run: python -m build --sdist
       - name: Upload sdist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: artifact-source
           path: ./dist/*.tar.gz
 
   test-sdist:
@@ -66,9 +68,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install twine
       - name: Download sdist
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
-          name: artifact
+          name: artifact-source
           path: dist
       - name: Test sdist
         run: twine check dist/*
@@ -90,7 +92,8 @@ jobs:
       - name: Download distributions
         uses: actions/download-artifact@v2
         with:
-          name: artifact
+          pattern: artifact-*
+          merge-multiple: true
           path: dist
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
