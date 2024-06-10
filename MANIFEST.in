@@ -7,3 +7,5 @@ include README.md
 include Makefile
 include subvertpy.cfg
 include man/*.1
+recursive-include subr Cargo.toml *.rs
+include Cargo.lock Cargo.toml
