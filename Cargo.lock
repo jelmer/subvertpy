@@ -469,8 +469,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-file"
-version = "0.8.0"
-source = "git+https://github.com/omerbenamram/pyo3-file#2f0da9bf97755ae6e86f1c5c5298c22b0e7139da"
+version = "0.8.1"
+source = "git+https://github.com/omerbenamram/pyo3-file#12e99957e72921f36fe0a3dd91b8490771a18a5b"
 dependencies = [
  "pyo3",
  "skeptic",
