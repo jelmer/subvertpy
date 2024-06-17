@@ -8,5 +8,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { workspace = true }
-pyo3-file = { workspace = true }
+pyo3-filelike = { workspace = true }
 subversion = { workspace = true }
