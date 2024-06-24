@@ -3,7 +3,7 @@ name: Python tests
 on: [push, pull_request]
 
 env:
-  SVN_VERSION: 1.14.2
+  SVN_VERSION: 1.14.3
 
 jobs:
   build:
