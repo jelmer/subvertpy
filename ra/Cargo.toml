@@ -1,0 +1,13 @@
+[package]
+name = "subvertpy-ra"
+publish = false
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { workspace = true }
+pyo3-filelike = { workspace = true }
+subversion = { workspace = true }
