@@ -31,7 +31,7 @@ fn abspath(path: &str) -> PyResult<String> {
 }
 
 #[pymodule]
-fn subr(_py: Python, m: &PyModule) -> PyResult<()> {
+fn subr(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(uri_canonicalize))?;
     m.add_wrapped(wrap_pyfunction!(dirent_canonicalize))?;
     m.add_wrapped(wrap_pyfunction!(abspath))?;
