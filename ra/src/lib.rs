@@ -1,4 +1,7 @@
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
+use std::collections::HashMap;
+use subversion::delta::{Editor, DirectoryEditor, FileEditor, TextDelta};
 
 #[pyfunction]
 fn version() -> (i32, i32, i32, String) {
@@ -87,6 +90,158 @@ struct RemoteAccess {
     corrected_url: String,
 }
 
+#[pyclass]
+struct PyDirent(subversion::ra::Dirent);
+
+struct PyEditor(PyObject);
+
+impl Editor for PyEditor {
+    fn set_target_revision(&mut self, revision: i64) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method1(py, "set_target_revision", (revision,))?;
+            Ok(())
+        })
+    }
+
+    fn open_root<'a>(
+        &'a mut self,
+        base_revision: i64,
+    ) -> Result<Box<dyn DirectoryEditor + 'a>, crate::Error> {
+        let directory = Python::with_gil(|py| self.0.call_method1(py, "open_root", (base_revision,)))?;
+        Ok(Box::new(PyDirectoryEditor(directory)))
+    }
+
+    fn close(&mut self) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method0(py, "close")?;
+            Ok(())
+        })
+    }
+
+    fn abort(&mut self) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method0(py, "abort")?;
+            Ok(())
+        })
+    }
+}
+
+struct PyDirectoryEditor(PyObject);
+
+impl subversion::delta::DirectoryEditor for PyDirectoryEditor {
+    fn delete_entry(&mut self, path: &str, revision: Option<i64>) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method1(py, "delete_entry", (path, revision))?;
+            Ok(())
+        })
+    }
+
+    fn add_directory<'a>(
+        &'a mut self,
+        path: &str,
+        copyfrom: Option<(&str, i64)>,
+    ) -> Result<Box<dyn DirectoryEditor + 'a>, crate::Error> {
+        let directory = Python::with_gil(|py| self.0.call_method1(py, "add_directory", (path, copyfrom)))?;
+        Ok(Box::new(PyDirectoryEditor(directory)))
+    }
+
+    fn open_directory<'a>(
+        &'a mut self,
+        path: &str,
+        base_revision: Option<i64>,
+    ) -> Result<Box<dyn DirectoryEditor + 'a>, crate::Error> {
+        let directory = Python::with_gil(|py| self.0.call_method1(py, "open_directory", (path, base_revision)))?;
+        Ok(Box::new(PyDirectoryEditor(directory)))
+    }
+
+    fn change_prop(&mut self, name: &str, value: &[u8]) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method1(py, "change_prop", (name, value))?;
+            Ok(())
+        })
+    }
+
+    fn close(&mut self) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method0(py, "close")?;
+            Ok(())
+        })
+    }
+
+    fn absent_directory(&mut self, path: &str) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method1(py, "absent_directory", (path,))?;
+            Ok(())
+        })
+    }
+
+    fn add_file<'a>(
+        &'a mut self,
+        path: &str,
+        copyfrom: Option<(&str, i64)>,
+    ) -> Result<Box<dyn FileEditor + 'a>, crate::Error> {
+        let file = Python::with_gil(|py| self.0.call_method1(py, "add_file", (path, copyfrom)))?;
+        Ok(Box::new(PyFileEditor(file)))
+    }
+
+    fn open_file<'a>(
+        &'a mut self,
+        path: &str,
+        base_revision: Option<i64>,
+    ) -> Result<Box<dyn FileEditor + 'a>, crate::Error> {
+        let file = Python::with_gil(|py| self.0.call_method1(py, "open_file", (path, base_revision)))?;
+        Ok(Box::new(PyFileEditor(file)))
+    }
+
+    fn absent_file(&mut self, path: &str) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method1(py, "absent_file", (path,))?;
+            Ok(())
+        })
+    }
+}
+
+struct PyFileEditor(PyObject);
+
+struct PyTextDelta(PyObject);
+
+impl TextDelta for PyTextDelta {
+    fn apply(&mut self, window: &[u8]) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method1(py, "apply", (window,))?;
+            Ok(())
+        })
+    }
+
+    fn close(&mut self) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method0(py, "close")?;
+            Ok(())
+        })
+    }
+}
+
+impl FileEditor for PyFileEditor {
+    fn apply_textdelta(&mut self, base_checksum: Option<&str>) -> Result<Box<dyn TextDelta + '_>, crate::Error> {
+        let text_delta = Python::with_gil(|py| self.0.call_method1(py, "apply_textdelta", (base_checksum,)))?;
+        Ok(Box::new(PyTextDelta(text_delta)))
+    }
+
+    fn change_prop(&mut self, name: &str, value: &[u8]) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method1(py, "change_prop", (name, value))?;
+            Ok(())
+        })
+    }
+
+    fn close(&mut self, text_checksum: Option<&str>) -> Result<(), crate::Error> {
+        Python::with_gil(|py| {
+            self.0.call_method1(py, "close", (text_checksum,))?;
+            Ok(())
+        })
+    }
+}
+
 #[pymethods]
 impl RemoteAccess {
     #[getter]
@@ -109,8 +264,8 @@ impl RemoteAccess {
         unimplemented!()
     }
 
-    fn get_session_url(&self) -> String {
-        unimplemented!()
+    fn get_session_url(&self) -> Result<String, PyErr> {
+        Ok(self.ra.lock().unwrap().get_session_url().unwrap())
     }
 
     fn get_file_revs(&self, _path: &str, _start_rev: i64, _end_revs: i64, _handler: &Bound<PyAny>) {
@@ -148,16 +303,22 @@ impl RemoteAccess {
         unimplemented!()
     }
 
-    fn has_capability(&self, _name: &str) -> bool {
-        unimplemented!()
+    fn has_capability(&self, name: &str) -> bool {
+        self.ra.lock().unwrap().has_capability(name).unwrap()
     }
 
-    fn check_path(&self, _path: &str, _revnum: i64) -> i64 {
-        unimplemented!()
+    fn check_path(&self, path: &str, revnum: i64) -> i64 {
+        match self.ra.lock().unwrap().check_path(path, revnum).unwrap() {
+            subversion::NodeKind::None => 0,
+            subversion::NodeKind::File => 1,
+            subversion::NodeKind::Dir => 2,
+            subversion::NodeKind::Symlink => 3,
+            subversion::NodeKind::Unknown => 4,
+        }
     }
 
-    fn stat(&self, _path: &str, _revnum: i64) {
-        unimplemented!()
+    fn stat(&self, path: &str, revnum: i64) -> Result<PyDirent, PyErr> {
+        Ok(PyDirent(self.ra.lock().unwrap().stat(path, revnum).unwrap()))
     }
 
     fn get_lock(&self, _path: &str) {
@@ -172,8 +333,9 @@ impl RemoteAccess {
         unimplemented!()
     }
 
-    fn change_rev_prop(&self, _revnum: i64, _name: &str, _value: &str) {
-        unimplemented!()
+    #[pyo3(signature = (revnum, name, old_value, new_value))]
+    fn change_rev_prop(&self, revnum: i64, name: &str, old_value: Option<&[u8]>, new_value: &[u8]) -> Result<(), PyErr> {
+        Ok(self.ra.lock().unwrap().change_revprop(revnum, name, old_value, new_value).unwrap())
     }
 
     fn get_commit_editor(
@@ -186,8 +348,13 @@ impl RemoteAccess {
         unimplemented!()
     }
 
-    fn rev_proplist(&self, _revnum: i64) {
-        unimplemented!()
+    fn rev_proplist(&self, py: Python, revnum: i64) -> Result<HashMap<String, PyObject>, PyErr> {
+        let revprops = self.ra.lock().unwrap().rev_proplist(revnum).unwrap();
+
+        Ok(revprops
+            .into_iter()
+            .map(|(k, v)| (k, PyBytes::new_bound(py, &v).to_object(py)))
+            .collect())
     }
 
     fn replay(
@@ -226,14 +393,25 @@ impl RemoteAccess {
 
     fn do_update(
         &self,
-        _revision_to_update_to: i64,
-        _update_target: &str,
-        _recurse: bool,
-        _update_editor: &Bound<PyAny>,
-        _send_copyfrom_args: bool,
-        _ignore_ancestry: bool,
+        revision_to_update_to: i64,
+        update_target: &str,
+        recurse: bool,
+        update_editor: &Bound<PyAny>,
+        send_copyfrom_args: bool,
+        ignore_ancestry: bool,
     ) {
-        unimplemented!()
+        self.ra
+            .lock()
+            .unwrap()
+            .do_update(
+                revision_to_update_to,
+                update_target,
+                recurse,
+                PyEditor(update_editor),
+                send_copyfrom_args,
+                ignore_ancestry,
+            )
+            .unwrap();
     }
 
     fn do_diff(
@@ -249,8 +427,8 @@ impl RemoteAccess {
         unimplemented!()
     }
 
-    fn get_repos_root(&self) -> String {
-        unimplemented!()
+    fn get_repos_root(&self) -> Result<String, PyErr> {
+        Ok(self.ra.lock().unwrap().get_repos_root().unwrap())
     }
 
     fn get_log(
@@ -282,16 +460,16 @@ impl RemoteAccess {
         unimplemented!()
     }
 
-    fn get_latest_revnum(&self) -> i64 {
-        unimplemented!()
+    fn get_latest_revnum(&self) -> Result<i64, PyErr> {
+        Ok(self.ra.lock().unwrap().get_latest_revnum().unwrap())
     }
 
-    fn reparent(&self, _url: &str) {
-        unimplemented!()
+    fn reparent(&self, url: &str) -> Result<(), PyErr> {
+        Ok(self.ra.lock().unwrap().reparent(url).unwrap())
     }
 
-    fn get_uuid(&self) -> String {
-        unimplemented!()
+    fn get_uuid(&self) -> Result<String, PyErr> {
+        Ok(self.ra.lock().unwrap().get_uuid().unwrap())
     }
 }
 
