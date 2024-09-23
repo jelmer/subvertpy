@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.2", "setuptools_rust"]
+requires = ["setuptools", "setuptools_rust"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
@@ -8,6 +8,9 @@ dev = ["ruff==0.6.5"]
 [tool.cibuildwheel]
 environment = {PATH="$HOME/.cargo/bin:$PATH"}
 before-build = "pip install -U setuptools-rust && curl https://sh.rustup.rs -sSf | sh -s -- --profile=minimal -y && rustup show"
+
+[tool.cibuildwheel.linux]
+before-build = "pip install -U setuptools-rust && curl https://sh.rustup.rs -sSf | sh -s -- --profile=minimal -y && yum install -y apr-devel apr-util-devel lz4-devel sqlite-devel zlib-devel cyrus-sasl-devel neon-devel utf8proc-devel subversion-devel clang clang-devel"
 
 [tool.ruff.lint]
 select = [
@@ -76,6 +79,7 @@ classifiers = [
 ]
 urls = {Homepage = "https://github.com/jelmer/subvertpy"}
 dynamic = ["version"]
+requires-python = ">=3.8"
 
 [tool.setuptools]
 include-package-data = false
