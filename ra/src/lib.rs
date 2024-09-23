@@ -325,8 +325,16 @@ impl RemoteAccess {
         unimplemented!()
     }
 
-    fn get_dir(&self, _path: &str, _revision: i64, _dirent_fields: i64) {
-        unimplemented!()
+    fn get_dir(&self, path: &str, revision: i64, dirent_fields: i64) -> Result<Vec<PyDirent>, PyErr> {
+        Ok(self
+            .ra
+            .lock()
+            .unwrap()
+            .get_dir(path, revision)
+            .unwrap()
+            .into_iter()
+            .map(PyDirent)
+            .collect())
     }
 
     fn get_file(&self, _path: &str, _stream: &Bound<PyAny>, _revnum: i64) {
@@ -380,15 +388,27 @@ impl RemoteAccess {
 
     fn do_switch(
         &self,
-        _revision_to_update_to: i64,
-        _update_target: &str,
-        _recurse: bool,
-        _switch_url: &str,
-        _update_editor: &Bound<PyAny>,
-        _send_copyfrom_args: bool,
-        _ignore_ancestry: bool,
+        revision_to_update_to: i64,
+        update_target: &str,
+        recurse: bool,
+        switch_url: &str,
+        update_editor: &Bound<PyAny>,
+        send_copyfrom_args: bool,
+        ignore_ancestry: bool,
     ) {
-        unimplemented!()
+        self.ra
+            .lock()
+            .unwrap()
+            .do_switch(
+                revision_to_update_to,
+                update_target,
+                recurse,
+                switch_url,
+                PyEditor(update_editor),
+                send_copyfrom_args,
+                ignore_ancestry,
+            )
+            .unwrap();
     }
 
     fn do_update(
@@ -416,15 +436,27 @@ impl RemoteAccess {
 
     fn do_diff(
         &self,
-        _revision_to_update_to: i64,
-        _diff_target: &str,
-        _versus_url: &str,
-        _diff_editor: &Bound<PyAny>,
-        _recurse: bool,
-        _ignore_ancestry: bool,
-        _text_deltas: bool,
+        revision_to_update_to: i64,
+        diff_target: &str,
+        versus_url: &str,
+        diff_editor: &Bound<PyAny>,
+        recurse: bool,
+        ignore_ancestry: bool,
+        text_deltas: bool,
     ) {
-        unimplemented!()
+        self.ra
+            .lock()
+            .unwrap()
+            .do_diff(
+                revision_to_update_to,
+                diff_target,
+                versus_url,
+                PyEditor(diff_editor),
+                recurse,
+                ignore_ancestry,
+                text_deltas,
+            )
+            .unwrap();
     }
 
     fn get_repos_root(&self) -> Result<String, PyErr> {
@@ -478,11 +510,16 @@ pub struct Auth(subversion::auth::AuthBaton);
 
 #[pymethods]
 impl Auth {
-    fn set_parameter(&mut self, _name: &str, _value: &str) {
+    #[new]
+    fn new() -> Self {
+        Auth(subversion::auth::AuthBaton::new())
+    }
+
+    fn set_parameter(&mut self, name: &str, value: &str) {
         unimplemented!()
     }
 
-    fn get_parameter(&self, _name: &str) -> String {
+    fn get_parameter(&self, name: &str) -> String {
         unimplemented!()
     }
 
