@@ -228,10 +228,6 @@ def subvertpy_modules():
             libraries=["svn_client-1", "svn_diff-1", "svn_delta-1",
                        "svn_wc-1", "svn_ra-1", "svn_subr-1"]),
         SvnExtension(
-            "subvertpy._ra",
-            [source_path(n) for n in ("_ra.c", "util.c", "editor.c")],
-            libraries=["svn_delta-1", "svn_ra-1", "svn_subr-1"]),
-        SvnExtension(
             "subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")],
             libraries=["svn_repos-1", "svn_subr-1"]),
         SvnExtension(
@@ -255,6 +251,9 @@ if __name__ == "__main__":
           ext_modules=subvertpy_modules(),
           rust_extensions=[
               RustExtension(
-                  "subvertpy.subr", "subr/Cargo.toml", binding=Binding.PyO3)],
+                  "subvertpy.subr", "subr/Cargo.toml", binding=Binding.PyO3),
+              RustExtension(
+                  "subvertpy._ra", "ra/Cargo.toml", binding=Binding.PyO3),
+          ],
           scripts=['bin/subvertpy-fast-export'],
           )

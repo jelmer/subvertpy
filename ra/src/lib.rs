@@ -995,7 +995,7 @@ impl Auth {
 }
 
 #[pymodule]
-fn ra(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
+fn _ra(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version, m)?)?;
     m.add_function(wrap_pyfunction!(get_ssl_client_cert_pw_file_provider, m)?)?;
     m.add_function(wrap_pyfunction!(get_ssl_client_cert_file_provider, m)?)?;
