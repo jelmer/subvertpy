@@ -1,0 +1,15 @@
+[package]
+name = "subvertpy-ra"
+publish = false
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+apr = "0.1.16"
+common = { path = "../common" }
+pyo3 = { workspace = true }
+pyo3-filelike = { workspace = true }
+subversion = { workspace = true, features = ["ra"] }
