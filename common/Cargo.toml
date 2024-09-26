@@ -1,0 +1,10 @@
+[package]
+name = "common"
+publish = false
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+apr = "0.1.15"
+pyo3.workspace = true
+subversion = { workspace = true, default-features = false }
