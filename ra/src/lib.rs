@@ -1,16 +1,15 @@
+use common::{map_py_err_to_svn_err, map_svn_error_to_py_err};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyType};
 use std::collections::HashMap;
-use subversion::delta::{Editor, DirectoryEditor, FileEditor, TxDeltaWindow};
-use subversion::Revnum;
 use subversion::auth::SimpleCredentials;
-use common::{map_py_err_to_svn_err, map_svn_error_to_py_err};
+use subversion::delta::{DirectoryEditor, Editor, FileEditor, TxDeltaWindow};
+use subversion::Revnum;
 
 #[pyclass]
 struct PyReporter(Box<dyn subversion::ra::Reporter + Send>);
 
-impl PyReporter {
-}
+impl PyReporter {}
 
 #[pyfunction]
 fn version() -> (i32, i32, i32, String) {
@@ -34,17 +33,19 @@ impl AuthProvider {
     }
 }
 
-
 #[pyfunction]
 fn get_ssl_client_cert_pw_file_provider(prompt_func: PyObject) -> AuthProvider {
     let prompt_fn = |realm: &str| -> Result<bool, subversion::Error> {
         Python::with_gil(|py| {
-            let pw = prompt_func.call1(py, (realm,))
+            let pw = prompt_func
+                .call1(py, (realm,))
                 .map_err(map_py_err_to_svn_err)?;
             Ok(pw.extract(py).map_err(map_py_err_to_svn_err)?)
         })
     };
-    AuthProvider(subversion::auth::get_ssl_client_cert_pw_file_provider(&prompt_fn))
+    AuthProvider(subversion::auth::get_ssl_client_cert_pw_file_provider(
+        &prompt_fn,
+    ))
 }
 
 #[pyfunction]
@@ -61,7 +62,11 @@ fn get_ssl_server_trust_file_provider() -> AuthProvider {
 fn get_simple_provider(plaintext_prompt_fn: PyObject) -> AuthProvider {
     let plain_prompt = |realm: &str| -> Result<bool, subversion::Error> {
         Python::with_gil(|py| {
-            let may_save: bool  = plaintext_prompt_fn.call1(py, (realm, )).map_err(map_py_err_to_svn_err)?.extract(py).map_err(map_py_err_to_svn_err)?;
+            let may_save: bool = plaintext_prompt_fn
+                .call1(py, (realm,))
+                .map_err(map_py_err_to_svn_err)?
+                .extract(py)
+                .map_err(map_py_err_to_svn_err)?;
             Ok(may_save)
         })
     };
@@ -69,25 +74,47 @@ fn get_simple_provider(plaintext_prompt_fn: PyObject) -> AuthProvider {
 }
 
 #[pyfunction]
-fn get_username_prompt_provider(username_prompt_func: PyObject, retry_limit: usize) -> AuthProvider {
+fn get_username_prompt_provider(
+    username_prompt_func: PyObject,
+    retry_limit: usize,
+) -> AuthProvider {
     let prompt = |realm: &str, may_save: bool| -> Result<String, subversion::Error> {
         Python::with_gil(|py| {
-            let username: String = username_prompt_func.call1(py, (realm, may_save)).map_err(map_py_err_to_svn_err)?.extract(py).map_err(map_py_err_to_svn_err)?;
+            let username: String = username_prompt_func
+                .call1(py, (realm, may_save))
+                .map_err(map_py_err_to_svn_err)?
+                .extract(py)
+                .map_err(map_py_err_to_svn_err)?;
             Ok(username)
         })
     };
-    AuthProvider(subversion::auth::get_username_prompt_provider(&prompt, retry_limit))
+    AuthProvider(subversion::auth::get_username_prompt_provider(
+        &prompt,
+        retry_limit,
+    ))
 }
 
 #[pyfunction]
 fn get_simple_prompt_provider(simple_prompt_fn: PyObject, retry_limit: usize) -> AuthProvider {
-    let plain_prompt = |realm: &str, username: Option<&str>, may_save: bool| -> Result<SimpleCredentials, subversion::Error> {
+    let plain_prompt = |realm: &str,
+                        username: Option<&str>,
+                        may_save: bool|
+     -> Result<SimpleCredentials, subversion::Error> {
         Python::with_gil(|py| {
-            let (username, password, may_save) = simple_prompt_fn.call1(py, (realm, username, may_save)).map_err(map_py_err_to_svn_err)?.extract(py).map_err(map_py_err_to_svn_err)?;
-            Ok(subversion::auth::SimpleCredentials::new(username, password, may_save))
+            let (username, password, may_save) = simple_prompt_fn
+                .call1(py, (realm, username, may_save))
+                .map_err(map_py_err_to_svn_err)?
+                .extract(py)
+                .map_err(map_py_err_to_svn_err)?;
+            Ok(subversion::auth::SimpleCredentials::new(
+                username, password, may_save,
+            ))
         })
     };
-    AuthProvider(subversion::auth::get_simple_prompt_provider(&plain_prompt, retry_limit))
+    AuthProvider(subversion::auth::get_simple_prompt_provider(
+        &plain_prompt,
+        retry_limit,
+    ))
 }
 
 #[pyclass]
@@ -110,15 +137,25 @@ impl SslServerCertInfo {
 
 #[pyfunction]
 fn get_ssl_server_trust_prompt_provider(prompt_fn: PyObject) -> AuthProvider {
-    let prompt_fn = |realm: &str, failures: usize, cert_info: &subversion::auth::SslServerCertInfo, may_save: bool| -> Result<subversion::auth::SslServerTrust, subversion::Error> {
+    let prompt_fn = |realm: &str,
+                     failures: usize,
+                     cert_info: &subversion::auth::SslServerCertInfo,
+                     may_save: bool|
+     -> Result<subversion::auth::SslServerTrust, subversion::Error> {
         Python::with_gil(|py| {
             let cert_info = SslServerCertInfo(cert_info.dup());
-            let trust: PyRef<SslServerTrust> = prompt_fn.call1(py, (realm, failures, cert_info, may_save)).map_err(map_py_err_to_svn_err)?.extract(py).map_err(map_py_err_to_svn_err)?;
+            let trust: PyRef<SslServerTrust> = prompt_fn
+                .call1(py, (realm, failures, cert_info, may_save))
+                .map_err(map_py_err_to_svn_err)?
+                .extract(py)
+                .map_err(map_py_err_to_svn_err)?;
 
             Ok(trust.as_raw())
         })
     };
-    AuthProvider(subversion::auth::get_ssl_server_trust_prompt_provider(&prompt_fn))
+    AuthProvider(subversion::auth::get_ssl_server_trust_prompt_provider(
+        &prompt_fn,
+    ))
 }
 
 #[pyclass]
@@ -132,20 +169,31 @@ impl SslClientCertCredentials {
 
 #[pyfunction]
 fn get_ssl_client_cert_prompt_provider(prompt_fn: PyObject, retry_limit: usize) -> AuthProvider {
-    let prompt_fn = |realm: &str, may_save: bool| -> Result<subversion::auth::SslClientCertCredentials, subversion::Error> {
+    let prompt_fn = |realm: &str,
+                     may_save: bool|
+     -> Result<subversion::auth::SslClientCertCredentials, subversion::Error> {
         Python::with_gil(|py| {
-            let creds: PyRef<SslClientCertCredentials> = prompt_fn.call1(py, (realm, may_save)).map_err(map_py_err_to_svn_err)?.extract(py).map_err(map_py_err_to_svn_err)?;
+            let creds: PyRef<SslClientCertCredentials> = prompt_fn
+                .call1(py, (realm, may_save))
+                .map_err(map_py_err_to_svn_err)?
+                .extract(py)
+                .map_err(map_py_err_to_svn_err)?;
             Ok(creds.as_raw())
         })
     };
-    AuthProvider(subversion::auth::get_ssl_client_cert_prompt_provider(&prompt_fn, retry_limit))
+    AuthProvider(subversion::auth::get_ssl_client_cert_prompt_provider(
+        &prompt_fn,
+        retry_limit,
+    ))
 }
 
 #[pyfunction]
 fn get_platform_specific_client_providers() -> Result<Vec<AuthProvider>, PyErr> {
     Ok(subversion::auth::get_platform_specific_client_providers()
         .map_err(map_svn_error_to_py_err)?
-        .into_iter().map(AuthProvider).collect())
+        .into_iter()
+        .map(AuthProvider)
+        .collect())
 }
 
 #[pyfunction]
@@ -154,8 +202,14 @@ fn get_username_provider() -> AuthProvider {
 }
 
 #[pyfunction]
-fn get_platform_specific_provider(provider_name: &str, provider_type: &str) -> Result<AuthProvider, PyErr> {
-    Ok(AuthProvider(subversion::auth::get_platform_specific_provider(provider_name, provider_type).map_err(map_svn_error_to_py_err)?))
+fn get_platform_specific_provider(
+    provider_name: &str,
+    provider_type: &str,
+) -> Result<AuthProvider, PyErr> {
+    Ok(AuthProvider(
+        subversion::auth::get_platform_specific_provider(provider_name, provider_type)
+            .map_err(map_svn_error_to_py_err)?,
+    ))
 }
 
 #[pyfunction]
@@ -181,7 +235,9 @@ impl Editor for PyEditor {
     fn set_target_revision(&mut self, revision: Revnum) -> Result<(), subversion::Error> {
         Python::with_gil(|py| {
             let revision = Into::<u64>::into(revision);
-            self.0.call_method1(py, "set_target_revision", (revision,)).map_err(map_py_err_to_svn_err)?;
+            self.0
+                .call_method1(py, "set_target_revision", (revision,))
+                .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
     }
@@ -190,20 +246,28 @@ impl Editor for PyEditor {
         &'a mut self,
         base_revision: Revnum,
     ) -> Result<Box<dyn DirectoryEditor + 'a>, subversion::Error> {
-        let directory = Python::with_gil(|py| self.0.call_method1(py, "open_root", (Into::<i64>::into(base_revision),))).map_err(map_py_err_to_svn_err)?;
+        let directory = Python::with_gil(|py| {
+            self.0
+                .call_method1(py, "open_root", (Into::<i64>::into(base_revision),))
+        })
+        .map_err(map_py_err_to_svn_err)?;
         Ok(Box::new(PyDirectoryEditor(directory)))
     }
 
     fn close(&mut self) -> Result<(), subversion::Error> {
         Python::with_gil(|py| {
-            self.0.call_method0(py, "close").map_err(map_py_err_to_svn_err)?;
+            self.0
+                .call_method0(py, "close")
+                .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
     }
 
     fn abort(&mut self) -> Result<(), subversion::Error> {
         Python::with_gil(|py| {
-            self.0.call_method0(py, "abort").map_err(map_py_err_to_svn_err)?;
+            self.0
+                .call_method0(py, "abort")
+                .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
     }
@@ -212,10 +276,16 @@ impl Editor for PyEditor {
 struct PyDirectoryEditor(PyObject);
 
 impl subversion::delta::DirectoryEditor for PyDirectoryEditor {
-    fn delete_entry(&mut self, path: &str, revision: Option<Revnum>) -> Result<(), subversion::Error> {
+    fn delete_entry(
+        &mut self,
+        path: &str,
+        revision: Option<Revnum>,
+    ) -> Result<(), subversion::Error> {
         let revision: Option<u64> = revision.map(Into::into);
         Python::with_gil(|py| {
-            self.0.call_method1(py, "delete_entry", (path, revision)).map_err(map_py_err_to_svn_err)?;
+            self.0
+                .call_method1(py, "delete_entry", (path, revision))
+                .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
     }
@@ -226,7 +296,9 @@ impl subversion::delta::DirectoryEditor for PyDirectoryEditor {
         copyfrom: Option<(&str, Revnum)>,
     ) -> Result<Box<dyn DirectoryEditor + 'a>, subversion::Error> {
         let copyfrom: Option<(&str, u64)> = copyfrom.map(|(path, rev)| (path, rev.into()));
-        let directory = Python::with_gil(|py| self.0.call_method1(py, "add_directory", (path, copyfrom))).map_err(map_py_err_to_svn_err)?;
+        let directory =
+            Python::with_gil(|py| self.0.call_method1(py, "add_directory", (path, copyfrom)))
+                .map_err(map_py_err_to_svn_err)?;
         Ok(Box::new(PyDirectoryEditor(directory)))
     }
 
@@ -236,27 +308,36 @@ impl subversion::delta::DirectoryEditor for PyDirectoryEditor {
         base_revision: Option<Revnum>,
     ) -> Result<Box<dyn DirectoryEditor + 'a>, subversion::Error> {
         let base_revision: Option<u64> = base_revision.map(Into::into);
-        let directory = Python::with_gil(|py| self.0.call_method1(py, "open_directory", (path, base_revision))).map_err(map_py_err_to_svn_err)?;
+        let directory = Python::with_gil(|py| {
+            self.0
+                .call_method1(py, "open_directory", (path, base_revision))
+        })
+        .map_err(map_py_err_to_svn_err)?;
         Ok(Box::new(PyDirectoryEditor(directory)))
     }
 
     fn change_prop(&mut self, name: &str, value: &[u8]) -> Result<(), subversion::Error> {
         Python::with_gil(|py| {
-            self.0.call_method1(py, "change_prop", (name, value)).map_err(map_py_err_to_svn_err)?;
+            self.0
+                .call_method1(py, "change_prop", (name, value))
+                .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
     }
 
     fn close(&mut self) -> Result<(), subversion::Error> {
         Python::with_gil(|py| {
-            self.0.call_method0(py, "close").map_err(map_py_err_to_svn_err)?;
+            self.0
+                .call_method0(py, "close")
+                .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
     }
 
     fn absent_directory(&mut self, path: &str) -> Result<(), subversion::Error> {
         Python::with_gil(|py| {
-            self.0.call_method1(py, "absent_directory", (path,))
+            self.0
+                .call_method1(py, "absent_directory", (path,))
                 .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
@@ -268,7 +349,8 @@ impl subversion::delta::DirectoryEditor for PyDirectoryEditor {
         copyfrom: Option<(&str, Revnum)>,
     ) -> Result<Box<dyn FileEditor + 'a>, subversion::Error> {
         let copyfrom: Option<(&str, u64)> = copyfrom.map(|(path, rev)| (path, rev.into()));
-        let file = Python::with_gil(|py| self.0.call_method1(py, "add_file", (path, copyfrom))).map_err(map_py_err_to_svn_err)?;
+        let file = Python::with_gil(|py| self.0.call_method1(py, "add_file", (path, copyfrom)))
+            .map_err(map_py_err_to_svn_err)?;
         Ok(Box::new(PyFileEditor(file)))
     }
 
@@ -278,13 +360,16 @@ impl subversion::delta::DirectoryEditor for PyDirectoryEditor {
         base_revision: Option<Revnum>,
     ) -> Result<Box<dyn FileEditor + 'a>, subversion::Error> {
         let base_revision: Option<u64> = base_revision.map(Into::into);
-        let file = Python::with_gil(|py| self.0.call_method1(py, "open_file", (path, base_revision))).map_err(map_py_err_to_svn_err)?;
+        let file =
+            Python::with_gil(|py| self.0.call_method1(py, "open_file", (path, base_revision)))
+                .map_err(map_py_err_to_svn_err)?;
         Ok(Box::new(PyFileEditor(file)))
     }
 
     fn absent_file(&mut self, path: &str) -> Result<(), subversion::Error> {
         Python::with_gil(|py| {
-            self.0.call_method1(py, "absent_file", (path,))
+            self.0
+                .call_method1(py, "absent_file", (path,))
                 .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
@@ -297,12 +382,22 @@ struct PyWindow(TxDeltaWindow);
 struct PyFileEditor(PyObject);
 
 impl FileEditor for PyFileEditor {
-    fn apply_textdelta(&mut self, base_checksum: Option<&str>) -> Result<Box<dyn for<'b> Fn(&'b mut TxDeltaWindow) -> Result<(), subversion::Error>>, subversion::Error> {
-        let text_delta = Python::with_gil(|py| self.0.call_method1(py, "apply_textdelta", (base_checksum,))).map_err(map_py_err_to_svn_err)?;
+    fn apply_textdelta(
+        &mut self,
+        base_checksum: Option<&str>,
+    ) -> Result<
+        Box<dyn for<'b> Fn(&'b mut TxDeltaWindow) -> Result<(), subversion::Error>>,
+        subversion::Error,
+    > {
+        let text_delta =
+            Python::with_gil(|py| self.0.call_method1(py, "apply_textdelta", (base_checksum,)))
+                .map_err(map_py_err_to_svn_err)?;
         Ok(Box::new(move |window| {
             let window = PyWindow(window.dup());
             Python::with_gil(|py| {
-                text_delta.call_method1(py, "apply", (window,)).map_err(map_py_err_to_svn_err)?;
+                text_delta
+                    .call_method1(py, "apply", (window,))
+                    .map_err(map_py_err_to_svn_err)?;
                 Ok(())
             })
         }))
@@ -310,21 +405,35 @@ impl FileEditor for PyFileEditor {
 
     fn change_prop(&mut self, name: &str, value: &[u8]) -> Result<(), subversion::Error> {
         Python::with_gil(|py| {
-            self.0.call_method1(py, "change_prop", (name, value)).map_err(map_py_err_to_svn_err)?;
+            self.0
+                .call_method1(py, "change_prop", (name, value))
+                .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
     }
 
     fn close(&mut self, text_checksum: Option<&str>) -> Result<(), subversion::Error> {
         Python::with_gil(|py| {
-            self.0.call_method1(py, "close", (text_checksum,)).map_err(map_py_err_to_svn_err)?;
+            self.0
+                .call_method1(py, "close", (text_checksum,))
+                .map_err(map_py_err_to_svn_err)?;
             Ok(())
         })
     }
 }
 
 #[pyclass]
+struct PyLock(subversion::Lock);
+
+#[pyclass]
 struct PyCommitInfo(subversion::CommitInfo);
+
+#[pyclass]
+struct PyLocationSegment(subversion::LocationSegment);
+
+#[pyclass]
+struct Mergeinfo(subversion::mergeinfo::Mergeinfo);
+unsafe impl Send for Mergeinfo {}
 
 #[pymethods]
 impl RemoteAccess {
@@ -356,8 +465,26 @@ impl RemoteAccess {
         unimplemented!()
     }
 
-    fn get_locations(&self, _path: &str, _peg_revision: i64, _location_revisions: i64) {
-        unimplemented!()
+    fn get_locations(
+        &self,
+        path: &str,
+        peg_revision: u64,
+        location_revisions: Vec<u64>,
+    ) -> Result<HashMap<u64, String>, PyErr> {
+        self.ra
+            .lock()
+            .unwrap()
+            .get_locations(
+                path,
+                peg_revision.into(),
+                location_revisions
+                    .into_iter()
+                    .map(|r| r.into())
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+            )
+            .map_err(map_svn_error_to_py_err)
+            .map(|locs| locs.into_iter().map(|(k, v)| (k.into(), v)).collect())
     }
 
     fn get_locks(&self, _path: &str, _depth: i64) {
@@ -368,48 +495,132 @@ impl RemoteAccess {
         unimplemented!()
     }
 
-    fn unlock(&self, _path_tokens: &str, _break_lock: bool, _lock_func: &Bound<PyAny>) {
-        unimplemented!()
+    fn unlock(
+        &self,
+        path_tokens: HashMap<String, String>,
+        break_lock: bool,
+        lock_func: &Bound<PyAny>,
+    ) -> Result<(), PyErr> {
+        self.ra
+            .lock()
+            .unwrap()
+            .unlock(&path_tokens, break_lock, &|path: &str,
+                                                steal: bool,
+                                                lock: &subversion::Lock,
+                                                error: Option<
+                &subversion::Error,
+            >|
+             -> Result<
+                (),
+                subversion::Error,
+            > {
+                let path = path.to_string();
+                let error = error.map(|e| e.to_string());
+                let lock = PyLock(lock.dup());
+                lock_func
+                    .call1((path, steal, lock, error))
+                    .map_err(map_py_err_to_svn_err)?;
+                Ok(())
+            })
+            .map_err(map_svn_error_to_py_err)
     }
 
-    fn mergeinfo(&self, _paths: &str, _revision: i64, _inherit: bool, _include_descendants: bool) {
-        unimplemented!()
+    fn mergeinfo(
+        &self,
+        paths: Vec<String>,
+        revision: u64,
+        inherit: bool,
+        include_descendants: bool,
+    ) -> Result<HashMap<String, Mergeinfo>, PyErr> {
+        let paths = paths.iter().map(|p| p.as_str()).collect::<Vec<_>>();
+        self.ra
+            .lock()
+            .unwrap()
+            .get_mergeinfo(
+                paths.as_slice(),
+                revision.into(),
+                if inherit {
+                    subversion::mergeinfo::MergeinfoInheritance::Inherited
+                } else {
+                    subversion::mergeinfo::MergeinfoInheritance::Explicit
+                },
+                include_descendants,
+            )
+            .map_err(map_svn_error_to_py_err)
+            .map(|mi| mi.into_iter().map(|(k, v)| (k, Mergeinfo(v))).collect())
     }
 
     fn get_location_segments(
         &self,
-        _path: &str,
-        _peg_revision: i64,
-        _start_revision: i64,
-        _end_revision: i64,
-        _rcvr: &Bound<PyAny>,
-    ) {
-        unimplemented!()
+        path: &str,
+        peg_revision: u64,
+        start_revision: u64,
+        end_revision: u64,
+        rcvr: &Bound<PyAny>,
+    ) -> Result<(), PyErr> {
+        self.ra
+            .lock()
+            .unwrap()
+            .get_location_segments(
+                path,
+                peg_revision.into(),
+                start_revision.into(),
+                end_revision.into(),
+                &|ls| {
+                    let ls = PyLocationSegment(ls.dup());
+                    rcvr.call1((ls,)).map_err(map_py_err_to_svn_err)?;
+                    Ok(())
+                },
+            )
+            .map_err(map_svn_error_to_py_err)
     }
 
-    fn has_capability(&self, name: &str) -> bool {
-        self.ra.lock().unwrap().has_capability(name).unwrap()
+    fn has_capability(&self, name: &str) -> Result<bool, PyErr> {
+        self.ra
+            .lock()
+            .unwrap()
+            .has_capability(name)
+            .map_err(map_svn_error_to_py_err)
     }
 
-    fn check_path(&self, path: &str, revnum: u64) -> i64 {
-        match self.ra.lock().unwrap().check_path(path, revnum.into()).unwrap() {
-            subversion::NodeKind::None => 0,
-            subversion::NodeKind::File => 1,
-            subversion::NodeKind::Dir => 2,
-            subversion::NodeKind::Symlink => 3,
-            subversion::NodeKind::Unknown => 4,
+    fn check_path(&self, path: &str, revnum: u64) -> Result<i64, PyErr> {
+        match self.ra.lock().unwrap().check_path(path, revnum.into()) {
+            Ok(subversion::NodeKind::None) => Ok(0),
+            Ok(subversion::NodeKind::File) => Ok(1),
+            Ok(subversion::NodeKind::Dir) => Ok(2),
+            Ok(subversion::NodeKind::Symlink) => Ok(3),
+            Ok(subversion::NodeKind::Unknown) => Ok(4),
+            Err(e) => return Err(map_svn_error_to_py_err(e)),
         }
     }
 
     fn stat(&self, path: &str, revnum: u64) -> Result<PyDirent, PyErr> {
-        Ok(PyDirent(self.ra.lock().unwrap().stat(path, revnum.into()).unwrap()))
+        Ok(PyDirent(
+            self.ra
+                .lock()
+                .unwrap()
+                .stat(path, revnum.into())
+                .map_err(map_svn_error_to_py_err)?,
+        ))
     }
 
-    fn get_lock(&self, _path: &str) {
-        unimplemented!()
+    fn get_lock(&self, path: &str) -> Result<PyLock, PyErr> {
+        Ok(PyLock(
+            self.ra
+                .lock()
+                .unwrap()
+                .get_lock(path)
+                .map_err(map_svn_error_to_py_err)?,
+        ))
     }
 
-    fn get_dir(&self, py: Python<'_>, path: &'_ str, revision: u64, dirent_fields: i64) -> Result<(u64, HashMap<String, PyDirent>, HashMap<String, PyObject>), PyErr> {
+    fn get_dir(
+        &self,
+        py: Python<'_>,
+        path: &'_ str,
+        revision: u64,
+        dirent_fields: i64,
+    ) -> Result<(u64, HashMap<String, PyDirent>, HashMap<String, PyObject>), PyErr> {
         let (revnum, dirents, props) = self
             .ra
             .lock()
@@ -417,10 +628,7 @@ impl RemoteAccess {
             .get_dir(path, revision.into())
             .map_err(map_svn_error_to_py_err)?;
 
-        let dirents = dirents
-            .into_iter()
-            .map(|(k, v)| (k, PyDirent(v)))
-            .collect();
+        let dirents = dirents.into_iter().map(|(k, v)| (k, PyDirent(v))).collect();
 
         let props = props
             .into_iter()
@@ -430,19 +638,49 @@ impl RemoteAccess {
         Ok((revnum.into(), dirents, props))
     }
 
-    fn get_file(&self, _path: &str, _stream: &Bound<PyAny>, _revnum: u64) {
-        unimplemented!()
+    fn get_file(
+        &self,
+        py: Python,
+        path: &str,
+        stream: &Bound<PyAny>,
+        revnum: u64,
+    ) -> Result<(u64, HashMap<String, PyObject>), PyErr> {
+        let revnum: Revnum = revnum.into();
+        let mut stream = common::stream_from_object(py, stream.to_object(py))?;
+        let (rev, props) = self
+            .ra
+            .lock()
+            .unwrap()
+            .get_file(path, revnum, &mut stream)
+            .map_err(map_svn_error_to_py_err)?;
+        Ok((
+            rev.into(),
+            props
+                .into_iter()
+                .map(|(k, v)| (k, PyBytes::new_bound(py, &v).to_object(py)))
+                .collect(),
+        ))
     }
 
     #[pyo3(signature = (revnum, name, old_value, new_value))]
-    fn change_rev_prop(&self, revnum: u64, name: &str, old_value: Option<&[u8]>, new_value: &[u8]) -> Result<(), PyErr> {
-        Ok(self.ra.lock().unwrap().change_revprop(revnum.into(), name, old_value, new_value).map_err(map_svn_error_to_py_err)?)
+    fn change_rev_prop(
+        &self,
+        revnum: u64,
+        name: &str,
+        old_value: Option<&[u8]>,
+        new_value: &[u8],
+    ) -> Result<(), PyErr> {
+        Ok(self
+            .ra
+            .lock()
+            .unwrap()
+            .change_revprop(revnum.into(), name, old_value, new_value)
+            .map_err(map_svn_error_to_py_err)?)
     }
 
     #[pyo3(signature = (revprops, commit_callback, lock_tokens=None, keep_locks=false))]
     fn get_commit_editor(
         &self,
-        py: Python,
         revprops: HashMap<String, Vec<u8>>,
         commit_callback: &Bound<PyAny>,
         lock_tokens: Option<HashMap<String, String>>,
@@ -456,10 +694,10 @@ impl RemoteAccess {
                 revprops.into_iter().collect(),
                 &|ci| {
                     let ci = PyCommitInfo(ci.clone());
-                    Python::with_gil(|py| {
-                        commit_callback.call1((ci,)).map_err(map_py_err_to_svn_err)?;
-                        Ok(())
-                    })
+                    commit_callback
+                        .call1((ci,))
+                        .map_err(map_py_err_to_svn_err)?;
+                    Ok(())
                 },
                 lock_tokens.unwrap_or_default(),
                 keep_locks,
@@ -522,7 +760,8 @@ impl RemoteAccess {
                 send_copyfrom_args,
                 ignore_ancestry,
                 &mut PyEditor(update_editor.to_object(py)),
-            ).map_err(map_svn_error_to_py_err)
+            )
+            .map_err(map_svn_error_to_py_err)
             .map(PyReporter)
     }
 
@@ -633,8 +872,14 @@ impl Auth {
     fn open(_type: &Bound<PyType>, providers: Vec<PyRef<AuthProvider>>) -> Result<Auth, PyErr> {
         let mut pool = apr::pool::Pool::new();
         use subversion::auth::AsAuthProvider;
-        let auth_providers = providers.into_iter().map(|p| (*p).0.as_auth_provider(&mut pool)).collect::<Vec<_>>();
-        Ok(Auth(subversion::auth::AuthBaton::open(auth_providers.as_slice()).map_err(map_svn_error_to_py_err)?))
+        let auth_providers = providers
+            .into_iter()
+            .map(|p| (*p).0.as_auth_provider(&mut pool))
+            .collect::<Vec<_>>();
+        Ok(Auth(
+            subversion::auth::AuthBaton::open(auth_providers.as_slice())
+                .map_err(map_svn_error_to_py_err)?,
+        ))
     }
 
     fn set_parameter(&mut self, name: &str, value: &str) {

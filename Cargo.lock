@@ -419,9 +419,9 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
 name = "subversion"
-version = "0.0.6"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84e74bf80807518b22a7fb5897bdb4dfd81ced3503d992f5fc0af2bf268b2c8b"
+checksum = "bd0d1c304780c1b6515f4afae237960f77e80189d218b85512ed65fa2909d886"
 dependencies = [
  "apr",
  "bindgen",
