@@ -11,7 +11,7 @@ edition = "2021"
 
 [workspace.dependencies]
 pyo3 = { version = ">=0.22", features = ["extension-module"] }
-subversion = { version = ">=0.0.7", features = ["pyo3"] }
+subversion = { version = ">=0.0.8", features = ["pyo3"] }
 #subversion = { path = "../subversion-rs", features = ["pyo3"] }
 #subversion = { git = "https://github.com/jelmer/subversion-rs", features = ["pyo3"] }
 #subversion = { path = "../subversion-rs", features = ["pyo3"] }

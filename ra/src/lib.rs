@@ -465,6 +465,7 @@ impl RemoteAccess {
         unimplemented!()
     }
 
+    #[pyo3(signature = (path, peg_revision, location_revisions))]
     fn get_locations(
         &self,
         path: &str,
@@ -487,14 +488,50 @@ impl RemoteAccess {
             .map(|locs| locs.into_iter().map(|(k, v)| (k.into(), v)).collect())
     }
 
-    fn get_locks(&self, _path: &str, _depth: i64) {
-        unimplemented!()
+    #[pyo3(signature = (path, depth=None))]
+    fn get_locks(
+        &self,
+        path: &str,
+        depth: Option<subversion::Depth>,
+    ) -> Result<HashMap<String, PyLock>, PyErr> {
+        self.ra
+            .lock()
+            .unwrap()
+            .get_locks(path, depth.unwrap_or(subversion::Depth::Infinity))
+            .map_err(map_svn_error_to_py_err)
+            .map(|locks| locks.into_iter().map(|(k, v)| (k, PyLock(v))).collect())
     }
 
-    fn lock(&self, _path_revs: &str, _comment: &str, _steal_lock: bool, _lock_func: &Bound<PyAny>) {
-        unimplemented!()
+    #[pyo3(signature = (path_revs, comment, steal_lock, lock_func))]
+    fn lock(
+        &self,
+        path_revs: HashMap<String, u64>,
+        comment: &str,
+        steal_lock: bool,
+        lock_func: &Bound<PyAny>,
+    ) -> Result<(), PyErr> {
+        let path_revs = path_revs.into_iter().map(|(k, v)| (k, v.into())).collect();
+        self.ra
+            .lock()
+            .unwrap()
+            .lock(
+                &path_revs,
+                comment,
+                steal_lock,
+                |path, steal, lock, error| {
+                    let path = path.to_string();
+                    let error = error.map(|e| e.to_string());
+                    let lock = PyLock(lock.dup());
+                    lock_func
+                        .call1((path, steal, lock, error))
+                        .map_err(map_py_err_to_svn_err)?;
+                    Ok(())
+                },
+            )
+            .map_err(map_svn_error_to_py_err)
     }
 
+    #[pyo3(signature = (path_tokens, break_lock, lock_func))]
     fn unlock(
         &self,
         path_tokens: HashMap<String, String>,
@@ -525,6 +562,7 @@ impl RemoteAccess {
             .map_err(map_svn_error_to_py_err)
     }
 
+    #[pyo3(signature = (paths, revision, inherit=false, include_descendants=false))]
     fn mergeinfo(
         &self,
         paths: Vec<String>,
@@ -550,6 +588,7 @@ impl RemoteAccess {
             .map(|mi| mi.into_iter().map(|(k, v)| (k, Mergeinfo(v))).collect())
     }
 
+    #[pyo3(signature = (path, peg_revision, start_revision, end_revision, rcvr))]
     fn get_location_segments(
         &self,
         path: &str,
@@ -575,6 +614,7 @@ impl RemoteAccess {
             .map_err(map_svn_error_to_py_err)
     }
 
+    #[pyo3(signature = (name, ))]
     fn has_capability(&self, name: &str) -> Result<bool, PyErr> {
         self.ra
             .lock()
@@ -583,6 +623,7 @@ impl RemoteAccess {
             .map_err(map_svn_error_to_py_err)
     }
 
+    #[pyo3(signature = (path, revnum))]
     fn check_path(&self, path: &str, revnum: u64) -> Result<i64, PyErr> {
         match self.ra.lock().unwrap().check_path(path, revnum.into()) {
             Ok(subversion::NodeKind::None) => Ok(0),
@@ -594,6 +635,7 @@ impl RemoteAccess {
         }
     }
 
+    #[pyo3(signature = (path, revnum))]
     fn stat(&self, path: &str, revnum: u64) -> Result<PyDirent, PyErr> {
         Ok(PyDirent(
             self.ra
@@ -604,6 +646,7 @@ impl RemoteAccess {
         ))
     }
 
+    #[pyo3(signature = (path, ))]
     fn get_lock(&self, path: &str) -> Result<PyLock, PyErr> {
         Ok(PyLock(
             self.ra
@@ -614,6 +657,7 @@ impl RemoteAccess {
         ))
     }
 
+    #[pyo3(signature = (path, revision, dirent_fields))]
     fn get_dir(
         &self,
         py: Python<'_>,
@@ -638,6 +682,7 @@ impl RemoteAccess {
         Ok((revnum.into(), dirents, props))
     }
 
+    #[pyo3(signature = (path, stream, revnum))]
     fn get_file(
         &self,
         py: Python,
@@ -707,6 +752,7 @@ impl RemoteAccess {
         Ok(WrapEditor(editor))
     }
 
+    #[pyo3(signature = (revnum))]
     fn rev_proplist(&self, py: Python, revnum: u64) -> Result<HashMap<String, PyObject>, PyErr> {
         let revprops = self.ra.lock().unwrap().rev_proplist(revnum.into()).unwrap();
 
@@ -716,25 +762,77 @@ impl RemoteAccess {
             .collect())
     }
 
+    #[pyo3(signature = (revision, low_water_mark, update_editor, send_deltas=false))]
     fn replay(
         &self,
-        _revision: i64,
-        _low_water_mark: i64,
-        _update_editor: &Bound<PyAny>,
-        _send_deltas: bool,
-    ) {
-        unimplemented!()
+        py: Python,
+        revision: u64,
+        low_water_mark: u64,
+        update_editor: &Bound<PyAny>,
+        send_deltas: bool,
+    ) -> Result<(), PyErr> {
+        let mut editor = PyEditor(update_editor.to_object(py));
+        self.ra
+            .lock()
+            .unwrap()
+            .replay(
+                revision.into(),
+                low_water_mark.into(),
+                send_deltas,
+                &mut editor,
+            )
+            .map_err(map_svn_error_to_py_err)
     }
 
+    #[pyo3(signature = (start_rev, end_rev, low_water_mark, cbs, send_deltas=false))]
     fn replay_range(
         &self,
-        _start_rev: i64,
-        _end_rev: i64,
-        _low_water_mark: i64,
-        _cbs: &Bound<PyAny>,
-        _send_deltas: bool,
-    ) {
-        unimplemented!()
+        py: Python,
+        start_rev: u64,
+        end_rev: u64,
+        low_water_mark: u64,
+        cbs: (PyObject, PyObject),
+        send_deltas: bool,
+    ) -> Result<(), PyErr> {
+        let (start_rev_cb, end_rev_cb) = cbs;
+        self.ra
+            .lock()
+            .unwrap()
+            .replay_range(
+                start_rev.into(),
+                end_rev.into(),
+                low_water_mark.into(),
+                send_deltas,
+                &|revnum: Revnum,
+                  props: &'_ HashMap<String, Vec<u8>>|
+                 -> Result<Box<dyn subversion::delta::Editor>, subversion::Error> {
+                    let revnum = Into::<u64>::into(revnum);
+                    let props = props
+                        .into_iter()
+                        .map(|(k, v)| (k, PyBytes::new_bound(py, &v).to_object(py)))
+                        .collect::<HashMap<_, _>>();
+                    let editor = start_rev_cb
+                        .call1(py, (revnum, props))
+                        .map_err(map_py_err_to_svn_err)?;
+                    Ok(Box::new(PyEditor(editor.to_object(py))))
+                },
+                &|revnum: Revnum,
+                  editor: &'_ dyn subversion::delta::Editor,
+                  props: &'_ HashMap<String, Vec<u8>>|
+                 -> Result<(), subversion::Error> {
+                    let revnum = Into::<u64>::into(revnum);
+                    let editor = WrapEditor(unsafe { Box::from_raw(editor as *const _ as *mut _) });
+                    let props = props
+                        .into_iter()
+                        .map(|(k, v)| (k, PyBytes::new_bound(py, &v).to_object(py)))
+                        .collect::<HashMap<_, _>>();
+                    end_rev_cb
+                        .call1(py, (revnum, editor, props))
+                        .map_err(map_py_err_to_svn_err)?;
+                    Ok(())
+                },
+            )
+            .map_err(map_svn_error_to_py_err)
     }
 
     #[pyo3(signature = (revision_to_update_to, switch_target, switch_url, update_editor, depth=None, send_copyfrom_args=false, ignore_ancestry=false))]
@@ -854,6 +952,7 @@ impl RemoteAccess {
         Ok(self.ra.lock().unwrap().get_latest_revnum().unwrap().into())
     }
 
+    #[pyo3(signature = (url, ))]
     fn reparent(&self, url: &str) -> Result<(), PyErr> {
         Ok(self.ra.lock().unwrap().reparent(url).unwrap())
     }
