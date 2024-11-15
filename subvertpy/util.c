@@ -764,7 +764,7 @@ svn_error_t *py_svn_log_wrapper(void *baton, apr_hash_t *changed_paths, svn_revn
 
 svn_error_t *py_svn_error()
 {
-	return svn_error_create(BZR_SVN_APR_ERROR_OFFSET, NULL, "Error occured in python bindings");
+	return svn_error_create(BZR_SVN_APR_ERROR_OFFSET, NULL, "Error occurred in python bindings");
 }
 
 PyObject *wrap_lock(svn_lock_t *lock)
