@@ -41,7 +41,7 @@ class VersionTest(TestCase):
         self.assertEqual(4, len(client.api_version()))
 
     def test_api_version_later_same(self):
-        self.assertTrue(client.api_version() <= client.version())
+        self.assertLessEqual(client.api_version(), client.version())
 
 
 class TestClient(SubversionTestCase):
@@ -120,9 +120,11 @@ class TestClient(SubversionTestCase):
             config = client.get_config(svn_cfg_dir)
             self.assertIsInstance(config, client.Config)
             ignores = config.get_default_ignores()
-            self.assertTrue(
-                base_dir_basename.encode('utf-8') in ignores,
-                f"no {base_dir_basename!r} in {ignores!r}")
+            self.assertIn(
+                base_dir_basename.encode('utf-8'),
+                ignores,
+                f"no {base_dir_basename!r} in {ignores!r}"
+            )
         finally:
             shutil.rmtree(base_dir)
 
@@ -181,7 +183,7 @@ class TestClient(SubversionTestCase):
         actual = datetime.strptime(
             entry["revprops"]["svn:date"].decode('utf-8'),
             "%Y-%m-%dT%H:%M:%S.%fZ")
-        self.assertTrue((actual - expected) < delta)
+        self.assertLess(actual - expected, delta)
 
     def test_log(self):
         log_entries = []

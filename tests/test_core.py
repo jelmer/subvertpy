@@ -25,5 +25,7 @@ class TestCore(TestCase):
         super().setUp()
 
     def test_exc(self):
-        self.assertTrue(
-            isinstance(subvertpy.SubversionException("foo", 1), Exception))
+        self.assertIsInstance(
+            subvertpy.SubversionException("foo", 1),
+            Exception
+        )
