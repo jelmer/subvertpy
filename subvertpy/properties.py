@@ -208,19 +208,19 @@ def range_add_revnum(ranges, revnum, inheritable=True):
         return ranges
     i = bisect.bisect(ranges, item)
     if i > 0:
-        (start, end, inh) = ranges[i-1]
+        (start, end, in) = ranges[i-1]
         if (start <= revnum <= end):
             # already there
             return ranges
         if end == revnum-1:
             # Extend previous range
-            ranges[i-1] = (start, end+1, inh)
+            ranges[i-1] = (start, end+1, in)
             return ranges
     if i < len(ranges):
-        (start, end, inh) = ranges[i]
+        (start, end, in) = ranges[i]
         if start-1 == revnum:
             # Extend next range
-            ranges[i] = (start-1, end, inh)
+            ranges[i] = (start-1, end, in)
             return ranges
     ranges.insert(i, item)
     return ranges
