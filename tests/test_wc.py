@@ -33,7 +33,7 @@ class VersionTest(TestCase):
         self.assertEqual(4, len(wc.api_version()))
 
     def test_api_version_later_same(self):
-        self.assertTrue(wc.api_version() <= wc.version())
+        self.assertLessEqual(wc.api_version(), wc.version())
 
 
 class AdmTests(TestCase):

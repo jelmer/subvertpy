@@ -32,7 +32,7 @@ class VersionTest(TestCase):
         self.assertEqual(4, len(repos.api_version()))
 
     def test_api_version_later_same(self):
-        self.assertTrue(repos.api_version() <= repos.version())
+        self.assertLessEqual(repos.api_version(), repos.version())
 
 
 class TestRepository(TestCaseInTempDir):
@@ -67,8 +67,9 @@ class TestRepository(TestCaseInTempDir):
 
     def test_rev_root(self):
         repos.create(os.path.join(self.test_dir, "foo"))
-        self.assertTrue(
-            repos.Repository("foo").fs().revision_root(0) is not None)
+        self.assertIsNotNone(
+            repos.Repository("foo").fs().revision_root(0)
+        )
 
     def test_load_fs_invalid(self):
         r = repos.create(os.path.join(self.test_dir, "foo"))

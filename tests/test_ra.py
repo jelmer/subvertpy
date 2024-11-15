@@ -38,7 +38,7 @@ class VersionTest(TestCase):
         self.assertEqual(4, len(ra.api_version()))
 
     def test_api_version_later_same(self):
-        self.assertTrue(ra.api_version() <= ra.version())
+        self.assertLessEqual(ra.api_version(), ra.version())
 
 
 class TestRemoteAccessUnknown(TestCase):
@@ -159,7 +159,7 @@ class TestRemoteAccess(SubversionTestCase):
     def test_iter_log(self):
         def check_results(returned):
             self.assertEqual(2, len(returned))
-            self.assertTrue(len(returned[0]) in (3, 4))
+            self.assertIn(len(returned[0]), (3, 4))
             if len(returned[0]) == 3:
                 (paths, revnum, props) = returned[0]
             else:
@@ -194,7 +194,7 @@ class TestRemoteAccess(SubversionTestCase):
 
         def check_results(returned):
             self.assertEqual(2, len(returned))
-            self.assertTrue(len(returned[0]) in (3, 4))
+            self.assertIn(len(returned[0]), (3, 4))
             if len(returned[0]) == 3:
                 (paths, revnum, props) = returned[0]
             else:
