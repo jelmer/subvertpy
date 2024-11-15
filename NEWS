@@ -62,7 +62,7 @@
 
   BUG FIXES
 
-   * Disable tests probing for nonexistant paths in FS, as this causes
+   * Disable tests probing for nonexistent paths in FS, as this causes
      a crash in newer versions of libsvn_repos.
      (Jelmer Vernooĳ)
 

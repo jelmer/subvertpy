@@ -85,7 +85,7 @@ class RaCmd(cmd.Cmd):
         elif kind == subvertpy.NODE_FILE:
             print("file")
         else:
-            print("nonexistant")
+            print("nonexistent")
 
     def do_uuid(self, args):
         print(conn.get_uuid())
