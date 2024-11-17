@@ -173,7 +173,7 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props, has_children) = returned[1]
             self.assertEqual({'/foo': ('A', None, -1, NODE_DIR)}, paths)
             self.assertEqual(revnum, 1)
-            self.assertEqual(set(["svn:date", "svn:author", "svn:log"]),
+            self.assertEqual({"svn:date", "svn:author", "svn:log"},
                              set(props.keys()))
 
         returned = list(self.ra.iter_log(
@@ -208,7 +208,7 @@ class TestRemoteAccess(SubversionTestCase):
                 (paths, revnum, props, has_children) = returned[1]
             self.assertEqual({'/foo': ('A', None, -1)}, paths)
             self.assertEqual(revnum, 1)
-            self.assertEqual(set(["svn:date", "svn:author", "svn:log"]),
+            self.assertEqual({"svn:date", "svn:author", "svn:log"},
                              set(props.keys()))
         self.ra.get_log(cb, [""], 0, 0,
                         revprops=["svn:date", "svn:author", "svn:log"])
@@ -276,8 +276,8 @@ class TestRemoteAccess(SubversionTestCase):
 
         revprops = self.ra.rev_proplist(1)
         self.assertEqual(
-            set(['bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date',
-                 'svn:log']),
+            {'bar:foo', 'svn:author', 'svn:custom:blie', 'svn:date',
+                 'svn:log'},
             set(revprops.keys()), f"result: {revprops!r}")
 
     def test_get_commit_editor_context_manager(self):
@@ -379,8 +379,8 @@ class TestRemoteAccess(SubversionTestCase):
 
         ret = self.ra.stat("bar", 1)
         self.assertEqual(
-            set(['last_author', 'kind', 'created_rev', 'has_props', 'time',
-                 'size']),
+            {'last_author', 'kind', 'created_rev', 'has_props', 'time',
+                 'size'},
             set(ret.keys()))
 
     def test_get_locations_dir(self):
