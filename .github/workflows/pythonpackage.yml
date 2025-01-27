@@ -24,7 +24,7 @@ jobs:
     - name: Install dependencies (apt)
       run: |
         sudo apt update
-        sudo apt install libapr1-dev libaprutil1-dev libdb5.3-dev liblz4-dev libsasl2-dev libperl-dev libserf-dev libsqlite3-dev libtool python-all-dev libneon27-gnutls-dev libutf8proc-dev
+        sudo apt install libapr1-dev libaprutil1-dev libdb5.3-dev liblz4-dev libsasl2-dev libperl-dev libserf-dev libsqlite3-dev libtool libneon27-gnutls-dev libutf8proc-dev
       if: "matrix.os == 'ubuntu-latest'"
     - name: Install dependencies (brew)
       run: |
