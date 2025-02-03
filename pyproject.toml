@@ -3,7 +3,7 @@ requires = ["setuptools>=61.2", "setuptools_rust"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
-dev = ["ruff==0.9.3"]
+dev = ["ruff==0.9.4"]
 
 [tool.cibuildwheel]
 environment = {PATH="$HOME/.cargo/bin:$PATH"}
