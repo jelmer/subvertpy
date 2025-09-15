@@ -14,8 +14,7 @@ repos.create("tmprepo")
 # Note that a username provider needs to be provided, so that Subversion
 # knows who to record as the author of new commits made over this connection.
 repo_url = "file://{}".format(os.path.abspath("tmprepo"))
-conn = RemoteAccess(repo_url,
-                    auth=Auth([get_username_provider()]))
+conn = RemoteAccess(repo_url, auth=Auth([get_username_provider()]))
 
 # Simple commit that adds a directory
 editor = conn.get_commit_editor({"svn:log": "Commit message"})

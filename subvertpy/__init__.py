@@ -89,8 +89,8 @@ ERR_CATEGORY_SIZE = 5000
 ERR_EAI_NONAME = 670008
 ERR_UNKNOWN_HOSTNAME = 670002
 
-AUTH_PARAM_DEFAULT_USERNAME = 'svn:auth:username'
-AUTH_PARAM_DEFAULT_PASSWORD = 'svn:auth:password'
+AUTH_PARAM_DEFAULT_USERNAME = "svn:auth:username"
+AUTH_PARAM_DEFAULT_PASSWORD = "svn:auth:password"
 
 SSL_NOTYETVALID = 0x00000001
 SSL_EXPIRED = 0x00000002
@@ -114,6 +114,7 @@ def _check_mtime(m):
     :param m: Python module that is a C extension
     """
     import os
+
     (base, _) = os.path.splitext(m.__file__)
     c_file = f"{base}.c"
     if not os.path.exists(c_file):
@@ -125,9 +126,11 @@ def _check_mtime(m):
 
 try:
     from subvertpy import _ra, client, repos, wc
+
     for x in client, _ra, repos, wc:
         if not _check_mtime(x):
             from warnings import warn
+
             warn("subvertpy extensions are outdated and need to be rebuilt")
             break
 except ImportError as e:
