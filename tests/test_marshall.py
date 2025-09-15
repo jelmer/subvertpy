@@ -21,12 +21,11 @@ from subvertpy.marshall import (
     literal,
     marshall,
     unmarshall,
-    )
+)
 from tests import TestCase
 
 
 class TestMarshalling(TestCase):
-
     def test_literal_txt(self):
         line = literal("foo")
         self.assertEqual("foo", line.txt)
@@ -68,16 +67,16 @@ class TestMarshalling(TestCase):
         self.assertEqual(b"5:bla l ", marshall("bla l"))
 
     def test_unmarshall_string(self):
-        self.assertEqual((b'', b"bla l"), unmarshall(b"5:bla l"))
+        self.assertEqual((b"", b"bla l"), unmarshall(b"5:bla l"))
 
     def test_unmarshall_list(self):
-        self.assertEqual((b'', [4, 5]), unmarshall(b"( 4 5 ) "))
+        self.assertEqual((b"", [4, 5]), unmarshall(b"( 4 5 ) "))
 
     def test_unmarshall_int(self):
-        self.assertEqual((b'', 2), unmarshall(b"2 "))
+        self.assertEqual((b"", 2), unmarshall(b"2 "))
 
     def test_unmarshall_literal(self):
-        self.assertEqual((b'', literal("x")), unmarshall(b"x "))
+        self.assertEqual((b"", literal("x")), unmarshall(b"x "))
 
     def test_unmarshall_empty(self):
         self.assertRaises(MarshallError, unmarshall, b"")

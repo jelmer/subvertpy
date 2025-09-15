@@ -27,19 +27,27 @@ class ServerBackend:
 def generate_random_id():
     """Create a UUID for a repository."""
     import uuid
+
     return str(uuid.uuid4())
 
 
 class ServerRepositoryBackend:
-
     def get_uuid(self):
         raise NotImplementedError(self.get_uuid)
 
     def get_latest_revnum(self):
         raise NotImplementedError(self.get_latest_revnum)
 
-    def log(self, send_revision, target_path, start_rev, end_rev,
-            changed_paths, strict_node, limit):
+    def log(
+        self,
+        send_revision,
+        target_path,
+        start_rev,
+        end_rev,
+        changed_paths,
+        strict_node,
+        limit,
+    ):
         raise NotImplementedError(self.log)
 
     def update(self, editor, revnum, target_path, recurse=True):

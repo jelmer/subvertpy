@@ -17,15 +17,14 @@
 
 from subvertpy import (
     wc,
-    )
+)
 from tests import (
     SubversionTestCase,
     TestCase,
-    )
+)
 
 
 class VersionTest(TestCase):
-
     def test_version_length(self):
         self.assertEqual(4, len(wc.version()))
 
@@ -37,7 +36,6 @@ class VersionTest(TestCase):
 
 
 class AdmTests(TestCase):
-
     def test_get_adm_dir(self):
         self.assertEqual(".svn", wc.get_adm_dir())
 
@@ -66,7 +64,6 @@ class AdmTests(TestCase):
 
 
 class WcTests(SubversionTestCase):
-
     def test_revision_status(self):
         self.make_client("repos", "checkout")
         ret = wc.revision_status("checkout")

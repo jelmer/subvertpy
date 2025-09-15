@@ -33,7 +33,6 @@ from tests import (
 
 
 class VersionTest(TestCase):
-
     def test_version_length(self):
         self.assertEqual(4, len(client.version()))
 
@@ -45,9 +44,7 @@ class VersionTest(TestCase):
 
 
 class TestClient(SubversionTestCase):
-
     def setUp(self):
-
         super().setUp()
         self.repos_url = self.make_client("d", "dc")
         self.client = client.Client(auth=ra.Auth([ra.get_username_provider()]))
@@ -73,7 +70,8 @@ class TestClient(SubversionTestCase):
         self.build_tree({"dc/foo": None})
         self.client = client.Client(
             auth=ra.Auth([ra.get_username_provider()]),
-            log_msg_func=lambda c: "Bmessage")
+            log_msg_func=lambda c: "Bmessage",
+        )
         self.client.add("dc/foo")
         self.client.commit(["dc"])
         r = ra.RemoteAccess(self.repos_url)
@@ -89,8 +87,9 @@ class TestClient(SubversionTestCase):
         self.client.mkdir(["dc/foo"])
         self.client.propset("someprop", "lala", "dc/foo")
         self.assertEqual(
-            {os.path.abspath('dc/foo'): b'lala'},
-            self.client.propget("someprop", "dc/foo"))
+            {os.path.abspath("dc/foo"): b"lala"},
+            self.client.propget("someprop", "dc/foo"),
+        )
 
     def test_export(self):
         self.build_tree({"dc/foo": b"bla"})
@@ -103,8 +102,9 @@ class TestClient(SubversionTestCase):
         self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
         self.client.commit(["dc"])
-        self.client.export(self.repos_url, "de", ignore_externals=True,
-                           ignore_keywords=True)
+        self.client.export(
+            self.repos_url, "de", ignore_externals=True, ignore_keywords=True
+        )
         self.assertEqual(["foo"], os.listdir("de"))
 
     def test_get_config(self):
@@ -112,18 +112,18 @@ class TestClient(SubversionTestCase):
         try:
             base_dir = tempfile.mkdtemp()
             base_dir_basename = os.path.basename(base_dir)
-            svn_cfg_dir = os.path.join(base_dir, '.subversion')
+            svn_cfg_dir = os.path.join(base_dir, ".subversion")
             os.mkdir(svn_cfg_dir)
-            with open(os.path.join(svn_cfg_dir, 'config'), 'w') as svn_cfg:
-                svn_cfg.write('[miscellany]\n')
-                svn_cfg.write(f'global-ignores = {base_dir_basename}')
+            with open(os.path.join(svn_cfg_dir, "config"), "w") as svn_cfg:
+                svn_cfg.write("[miscellany]\n")
+                svn_cfg.write(f"global-ignores = {base_dir_basename}")
             config = client.get_config(svn_cfg_dir)
             self.assertIsInstance(config, client.Config)
             ignores = config.get_default_ignores()
             self.assertIn(
-                base_dir_basename.encode('utf-8'),
+                base_dir_basename.encode("utf-8"),
                 ignores,
-                f"no {base_dir_basename!r} in {ignores!r}"
+                f"no {base_dir_basename!r} in {ignores!r}",
             )
         finally:
             shutil.rmtree(base_dir)
@@ -142,7 +142,8 @@ class TestClient(SubversionTestCase):
         (outf, errf) = self.client.diff(1, 2, self.repos_url, self.repos_url)
         self.addCleanup(outf.close)
         self.addCleanup(errf.close)
-        self.assertEqual(b"""Index: foo
+        self.assertEqual(
+            b"""Index: foo
 ===================================================================
 --- foo\t(revision 1)
 +++ foo\t(revision 2)
@@ -151,7 +152,9 @@ class TestClient(SubversionTestCase):
 \\ No newline at end of file
 +foo2
 \\ No newline at end of file
-""".splitlines(), outf.read().splitlines())
+""".splitlines(),
+            outf.read().splitlines(),
+        )
         self.assertEqual(b"", errf.read())
 
     def assertCatEquals(self, value, revision=None):
@@ -181,8 +184,8 @@ class TestClient(SubversionTestCase):
 
     def assertLogEntryDateAlmostEquals(self, expected, entry, delta):
         actual = datetime.strptime(
-            entry["revprops"]["svn:date"].decode('utf-8'),
-            "%Y-%m-%dT%H:%M:%S.%fZ")
+            entry["revprops"]["svn:date"].decode("utf-8"), "%Y-%m-%dT%H:%M:%S.%fZ"
+        )
         self.assertLess(actual - expected, delta)
 
     def test_log(self):
@@ -192,12 +195,15 @@ class TestClient(SubversionTestCase):
         delta = timedelta(hours=1)
 
         def cb(changed_paths, revision, revprops, has_children=False):
-            log_entries.append({
-                'changed_paths': changed_paths,
-                'revision': revision,
-                'revprops': revprops,
-                'has_children': has_children,
-            })
+            log_entries.append(
+                {
+                    "changed_paths": changed_paths,
+                    "revision": revision,
+                    "revprops": revprops,
+                    "has_children": has_children,
+                }
+            )
+
         self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
         self.client.log_msg_func = lambda c: commit_msg_1
@@ -209,18 +215,20 @@ class TestClient(SubversionTestCase):
         self.assertEqual(1, log_entries[0]["revision"])
         self.assertLogEntryMessageEquals(commit_msg_1, log_entries[0])
         self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[0], delta)
-        self.build_tree({
-            "dc/foo": b"blabla",
-            "dc/bar": b"blablabla",
-        })
+        self.build_tree(
+            {
+                "dc/foo": b"blabla",
+                "dc/bar": b"blablabla",
+            }
+        )
         self.client.add("dc/bar")
         self.client.log_msg_func = lambda c: commit_msg_2
         self.client.commit(["dc"])
         commit_2_dt = datetime.utcnow()
         log_entries = []
         self.client.log(
-                cb, "dc/foo", start_rev="HEAD", end_rev=1,
-                discover_changed_paths=True)
+            cb, "dc/foo", start_rev="HEAD", end_rev=1, discover_changed_paths=True
+        )
         self.assertEqual(2, len(log_entries))
         self.assertLogEntryChangedPathsEquals(["/foo", "/bar"], log_entries[0])
         self.assertEqual(2, log_entries[0]["revision"])
@@ -231,8 +239,9 @@ class TestClient(SubversionTestCase):
         self.assertLogEntryMessageEquals(commit_msg_1, log_entries[1])
         self.assertLogEntryDateAlmostEquals(commit_1_dt, log_entries[1], delta)
         log_entries = []
-        self.client.log(cb, "dc/foo", start_rev=2, end_rev=2,
-                        discover_changed_paths=True)
+        self.client.log(
+            cb, "dc/foo", start_rev=2, end_rev=2, discover_changed_paths=True
+        )
         self.assertEqual(1, len(log_entries))
         self.assertLogEntryChangedPathsEquals(["/foo", "/bar"], log_entries[0])
         self.assertEqual(2, log_entries[0]["revision"])

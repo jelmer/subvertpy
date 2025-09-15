@@ -54,10 +54,18 @@ def time_to_cstring(timestamp):
     :return: string with date
     """
     tm_usec = timestamp % 1000000
-    (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday,
-     tm_isdst) = time.gmtime(timestamp / 1000000)
+    (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, _tm_wday, _tm_yday, _tm_isdst) = (
+        time.gmtime(timestamp / 1000000)
+    )
     return "%04d-%02d-%02dT%02d:%02d:%02d.%06dZ" % (
-            tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_usec)
+        tm_year,
+        tm_mon,
+        tm_mday,
+        tm_hour,
+        tm_min,
+        tm_sec,
+        tm_usec,
+    )
 
 
 def time_from_cstring(text):
@@ -70,7 +78,7 @@ def time_from_cstring(text):
     assert usecstr[-1] == "Z"
     tm_usec = int(usecstr[:-1])
     tm = time.strptime(basestr, "%Y-%m-%dT%H:%M:%S")
-    return (int(calendar.timegm(tm)) * 1000000 + tm_usec)
+    return int(calendar.timegm(tm)) * 1000000 + tm_usec
 
 
 def parse_externals_description(base_url, val):
@@ -83,8 +91,10 @@ def parse_externals_description(base_url, val):
               as value. revnum is the revision number and is
               set to None if not applicable.
     """
+
     def is_url(u):
-        return ("://" in u)
+        return "://" in u
+
     ret = {}
     for line in val.splitlines():
         if line == "" or line[0] == "#":
@@ -124,11 +134,13 @@ def parse_externals_description(base_url, val):
             raise InvalidExternalsDescription
         if relurl.startswith("//"):
             raise NotImplementedError(
-                "Relative to the scheme externals not yet supported")
+                "Relative to the scheme externals not yet supported"
+            )
         if relurl.startswith("^/"):
             raise NotImplementedError(
-                "Relative to the repository root externals not yet supported")
-        ret[path] = (revno, urlparse.urljoin(base_url+"/", relurl))
+                "Relative to the repository root externals not yet supported"
+            )
+        ret[path] = (revno, urlparse.urljoin(base_url + "/", relurl))
     return ret
 
 
@@ -163,6 +175,7 @@ def generate_mergeinfo_property(merges):
     :param merges: dictionary mapping paths to lists of ranges
     :return: Property contents
     """
+
     def formatrange(range_params):
         (start, end, inheritable) = range_params
         suffix = ""
@@ -172,8 +185,9 @@ def generate_mergeinfo_property(merges):
             return "%d%s" % (start, suffix)
         else:
             return "%d-%d%s" % (start, end, suffix)
+
     text = ""
-    for (path, ranges) in merges.items():
+    for path, ranges in merges.items():
         assert path.startswith("/")
         text += "{}:{}\n".format(path, ",".join(map(formatrange, ranges)))
     return text
@@ -189,8 +203,8 @@ def range_includes_revnum(ranges, revnum):
     i = bisect.bisect(ranges, (revnum, revnum, True))
     if i == 0:
         return False
-    (start, end, inheritable) = ranges[i-1]
-    return (start <= revnum <= end)
+    (start, end, _inheritable) = ranges[i - 1]
+    return start <= revnum <= end
 
 
 def range_add_revnum(ranges, revnum, inheritable=True):
@@ -208,19 +222,19 @@ def range_add_revnum(ranges, revnum, inheritable=True):
         return ranges
     i = bisect.bisect(ranges, item)
     if i > 0:
-        (start, end, inh) = ranges[i-1]
-        if (start <= revnum <= end):
+        (start, end, inh) = ranges[i - 1]
+        if start <= revnum <= end:
             # already there
             return ranges
-        if end == revnum-1:
+        if end == revnum - 1:
             # Extend previous range
-            ranges[i-1] = (start, end+1, inh)
+            ranges[i - 1] = (start, end + 1, inh)
             return ranges
     if i < len(ranges):
         (start, end, inh) = ranges[i]
-        if start-1 == revnum:
+        if start - 1 == revnum:
             # Extend next range
-            ranges[i] = (start-1, end, inh)
+            ranges[i] = (start - 1, end, inh)
             return ranges
     ranges.insert(i, item)
     return ranges
@@ -256,25 +270,25 @@ def mergeinfo_add_revision(mergeinfo, path, revnum):
     return mergeinfo
 
 
-PROP_EXECUTABLE = 'svn:executable'
-PROP_EXECUTABLE_VALUE = b'*'
-PROP_EXTERNALS = 'svn:externals'
-PROP_IGNORE = 'svn:ignore'
-PROP_KEYWORDS = 'svn:keywords'
-PROP_MIME_TYPE = 'svn:mime-type'
-PROP_MERGEINFO = 'svn:mergeinfo'
-PROP_NEEDS_LOCK = 'svn:needs-lock'
-PROP_NEEDS_LOCK_VALUE = b'*'
-PROP_PREFIX = 'svn:'
-PROP_SPECIAL = 'svn:special'
-PROP_SPECIAL_VALUE = b'*'
-PROP_WC_PREFIX = 'svn:wc:'
-PROP_ENTRY_PREFIX = 'svn:entry'
-PROP_ENTRY_COMMITTED_DATE = 'svn:entry:committed-date'
-PROP_ENTRY_COMMITTED_REV = 'svn:entry:committed-rev'
-PROP_ENTRY_LAST_AUTHOR = 'svn:entry:last-author'
-PROP_ENTRY_LOCK_TOKEN = 'svn:entry:lock-token'
-PROP_ENTRY_UUID = 'svn:entry:uuid'
+PROP_EXECUTABLE = "svn:executable"
+PROP_EXECUTABLE_VALUE = b"*"
+PROP_EXTERNALS = "svn:externals"
+PROP_IGNORE = "svn:ignore"
+PROP_KEYWORDS = "svn:keywords"
+PROP_MIME_TYPE = "svn:mime-type"
+PROP_MERGEINFO = "svn:mergeinfo"
+PROP_NEEDS_LOCK = "svn:needs-lock"
+PROP_NEEDS_LOCK_VALUE = b"*"
+PROP_PREFIX = "svn:"
+PROP_SPECIAL = "svn:special"
+PROP_SPECIAL_VALUE = b"*"
+PROP_WC_PREFIX = "svn:wc:"
+PROP_ENTRY_PREFIX = "svn:entry"
+PROP_ENTRY_COMMITTED_DATE = "svn:entry:committed-date"
+PROP_ENTRY_COMMITTED_REV = "svn:entry:committed-rev"
+PROP_ENTRY_LAST_AUTHOR = "svn:entry:last-author"
+PROP_ENTRY_LOCK_TOKEN = "svn:entry:lock-token"
+PROP_ENTRY_UUID = "svn:entry:uuid"
 
 PROP_REVISION_LOG = "svn:log"
 PROP_REVISION_AUTHOR = "svn:author"

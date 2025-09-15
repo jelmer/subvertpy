@@ -30,7 +30,8 @@ class literal:
         return self.txt
 
     def __eq__(self, other):
-        return (isinstance(self, type(other)) and self.txt == other.txt)
+        return isinstance(self, type(other)) and self.txt == other.txt
+
 
 # 1. Syntactic structure
 # ----------------------
@@ -87,7 +88,7 @@ def unmarshall(x):
     :param x: Bytes to parse
     :return: tuple with unpacked item and remaining bytes
     """
-    whitespace = frozenset(b'\n ')
+    whitespace = frozenset(b"\n ")
     if len(x) == 0:
         raise NeedMoreData("Not enough data")
     if x[0:1] == b"(":  # list follows
@@ -124,7 +125,7 @@ def unmarshall(x):
         elif x[0:1] == b":":
             if len(x) < num:
                 raise NeedMoreData(f"Expected string of length {num!r}")
-            return (x[num+2:], x[1:num+1])
+            return (x[num + 2 :], x[1 : num + 1])
         elif not x:
             raise MarshallError("Expected whitespace, got end of string.")
         else:
@@ -133,7 +134,7 @@ def unmarshall(x):
         ret = bytearray()
         # Parse literal
         try:
-            while x[:1].isalpha() or x[:1].isdigit() or x[0:1] == b'-':
+            while x[:1].isalpha() or x[:1].isdigit() or x[0:1] == b"-":
                 ret.append(x[0])
                 x = x[1:]
         except IndexError:

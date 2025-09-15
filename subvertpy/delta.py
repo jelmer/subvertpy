@@ -46,7 +46,7 @@ def apply_txdelta_window(sbuf, window):
     :return: Target buffer
     """
     (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
-    sview = sbuf[sview_offset:sview_offset+sview_len]
+    sview = sbuf[sview_offset : sview_offset + sview_len]
     tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
     if len(tview) != tview_len:
         raise AssertionError("%d != %d" % (len(tview), tview_len))
@@ -65,6 +65,7 @@ def apply_txdelta_handler_chunks(source_chunks, target_chunks):
         if window is None:
             return  # Last call
         target_chunks.append(apply_txdelta_window(sbuf, window))
+
     return apply_window
 
 
@@ -74,10 +75,12 @@ def apply_txdelta_handler(sbuf, target_stream):
     :param sbuf: Source buffer
     :param target_stream: Target stream
     """
+
     def apply_window(window):
         if window is None:
             return  # Last call
         target_stream.write(apply_txdelta_window(sbuf, window))
+
     return apply_window
 
 
@@ -91,15 +94,15 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
     :return: Result data
     """
     tview = bytearray()
-    for (action, offset, length) in ops:
+    for action, offset, length in ops:
         if action == TXDELTA_SOURCE:
             # Copy from source area.
-            tview.extend(sview[offset:offset+length])
+            tview.extend(sview[offset : offset + length])
         elif action == TXDELTA_TARGET:
             for i in range(length):
-                tview.append(tview[offset+i])
+                tview.append(tview[offset + i])
         elif action == TXDELTA_NEW:
-            tview.extend(new_data[offset:offset+length])
+            tview.extend(new_data[offset : offset + length])
         else:
             raise Exception("Invalid delta instruction code")
     return tview
@@ -151,7 +154,7 @@ def encode_length(len):
             cont = 1
         else:
             cont = 0
-        ret.append(((len >> (n * 7)) & 0x7f) | (cont << 7))
+        ret.append(((len >> (n * 7)) & 0x7F) | (cont << 7))
 
     return ret
 
@@ -166,7 +169,7 @@ def decode_length(text):
     ret = 0
     next = True
     while next:
-        ret = (ret << 7) | (text[0] & 0x7f)
+        ret = (ret << 7) | (text[0] & 0x7F)
         next = (text[0] >> 7) & 0x1
         text = text[1:]
     return ret, text
@@ -182,7 +185,7 @@ def pack_svndiff_instruction(diff_params):
     :return: encoded text
     """
     (action, offset, length) = diff_params
-    if length < 0x3f:
+    if length < 0x3F:
         text = bytearray(((action << 6) + length,))
     else:
         text = bytearray((action << 6,)) + encode_length(length)
@@ -198,7 +201,7 @@ def unpack_svndiff_instruction(text):
     :return: tuple with operation, remaining text
     """
     action = text[0] >> 6
-    length = text[0] & 0x3f
+    length = text[0] & 0x3F
     text = text[1:]
     assert action in (TXDELTA_NEW, TXDELTA_SOURCE, TXDELTA_TARGET)
     if length == 0:
@@ -219,10 +222,12 @@ def pack_svndiff0_window(window):
     :param window: Window to pack
     :return: Packed diff (as bytestring)
     """
-    (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
-    ret = (encode_length(sview_offset) +
-           encode_length(sview_len) +
-           encode_length(tview_len))
+    (sview_offset, sview_len, tview_len, _src_ops, ops, new_data) = window
+    ret = (
+        encode_length(sview_offset)
+        + encode_length(sview_len)
+        + encode_length(tview_len)
+    )
 
     instrdata = bytearray()
     for op in ops:
