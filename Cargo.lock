@@ -291,9 +291,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3-filelike"
-version = "0.3.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4d4ba4774757be317f112fb7b09f9d2c157a77f07d229a08144f275223f06e8"
+checksum = "e09e283dc7f80e7deb37d06829a3e0e9e12ea4105f10388ebdd6178021567b62"
 dependencies = [
  "pyo3",
 ]
