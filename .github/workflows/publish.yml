@@ -1,0 +1,79 @@
+name: publish
+on:
+  workflow_run:
+    workflows: [manylinux-wheels, macos-wheels, windows-wheels, sdist]
+    types: [completed]
+    branches: ["**"]
+    tags: ["**"]
+jobs:
+  publish:
+    name: Publish to PyPI
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      startsWith(github.event.workflow_run.head_branch, 'subvertpy-')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Wait for all build workflows to succeed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=${{ github.event.workflow_run.head_sha }}
+          for workflow in manylinux-wheels macos-wheels windows-wheels sdist; do
+            echo "Checking $workflow..."
+            while true; do
+              CONCLUSION=$(gh api repos/${{ github.repository }}/actions/workflows/${workflow}.yml/runs \
+                --jq ".workflow_runs[] | select(.head_sha == \"${SHA}\") | .conclusion" | head -1)
+              if [ "$CONCLUSION" = "success" ]; then
+                echo "$workflow succeeded"
+                break
+              elif [ "$CONCLUSION" = "failure" ] || [ "$CONCLUSION" = "cancelled" ]; then
+                echo "$workflow failed or was cancelled"
+                exit 1
+              else
+                echo "$workflow still running (status: $CONCLUSION), waiting..."
+                sleep 30
+              fi
+            done
+          done
+      - name: Download sdist artifact
+        uses: dawidd6/action-download-artifact@v8
+        with:
+          workflow: sdist.yml
+          commit: ${{ github.event.workflow_run.head_sha }}
+          name: subvertpy-sdist
+          path: dist/
+          allow_forks: false
+      - name: Download manylinux wheel artifacts
+        uses: dawidd6/action-download-artifact@v8
+        with:
+          workflow: manylinux-wheels.yml
+          commit: ${{ github.event.workflow_run.head_sha }}
+          pattern: subvertpy-wheel-manylinux-*
+          path: dist/
+          merge_multiple: true
+          allow_forks: false
+      - name: Download macOS wheel artifacts
+        uses: dawidd6/action-download-artifact@v8
+        with:
+          workflow: macos-wheels.yml
+          commit: ${{ github.event.workflow_run.head_sha }}
+          pattern: subvertpy-wheel-macos-*
+          path: dist/
+          merge_multiple: true
+          allow_forks: false
+      - name: Download Windows wheel artifacts
+        uses: dawidd6/action-download-artifact@v8
+        with:
+          workflow: windows-wheels.yml
+          commit: ${{ github.event.workflow_run.head_sha }}
+          pattern: subvertpy-wheel-windows-*
+          path: dist/
+          merge_multiple: true
+          allow_forks: false
+      - name: List dist contents
+        run: ls -la dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

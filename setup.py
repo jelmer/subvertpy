@@ -272,9 +272,12 @@ if __name__ == "__main__":
     setup(
         packages=["subvertpy"],
         package_data=package_data(),
-        ext_modules=subvertpy_modules(),
         rust_extensions=[
-            RustExtension("subvertpy.subr", "subr/Cargo.toml", binding=Binding.PyO3)
+            RustExtension("subvertpy.subr", "subr/Cargo.toml", binding=Binding.PyO3),
+            RustExtension("subvertpy.repos", "repos/Cargo.toml", binding=Binding.PyO3),
+            RustExtension("subvertpy._ra", "ra/Cargo.toml", binding=Binding.PyO3),
+            RustExtension("subvertpy.client", "client/Cargo.toml", binding=Binding.PyO3),
+            RustExtension("subvertpy.wc", "wc/Cargo.toml", binding=Binding.PyO3),
         ],
         scripts=["bin/subvertpy-fast-export"],
     )

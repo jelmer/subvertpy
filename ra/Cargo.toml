@@ -1,0 +1,15 @@
+[package]
+name = "ra"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name = "_ra"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { workspace = true }
+pyo3-filelike = "0.5"
+subversion = { workspace = true, features = ["ra"] }
+subvertpy-util = { path = "../subvertpy_util" }
+apr = "0.4"

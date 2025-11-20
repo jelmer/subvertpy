@@ -1,0 +1,14 @@
+[package]
+name = "repos"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name = "repos"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { workspace = true }
+subversion = { workspace = true, features = ["repos"] }
+subvertpy-util = { path = "../subvertpy_util" }
+apr = "0.4"

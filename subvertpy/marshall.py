@@ -63,7 +63,9 @@ def marshall(x):
     :param x: Data item
     :return: encoded byte string
     """
-    if isinstance(x, int):
+    if isinstance(x, bool):
+        return b"true " if x else b"false "
+    elif isinstance(x, int):
         return f"{x} ".encode("ascii")
     elif isinstance(x, (list, tuple)):
         return b"( " + b"".join(map(marshall, x)) + b") "
@@ -74,11 +76,6 @@ def marshall(x):
     elif isinstance(x, str):
         x = x.encode("utf-8")
         return f"{len(x)}:".encode("ascii") + x + b" "
-    elif isinstance(x, bool):
-        if x is True:
-            return b"true "
-        elif x is False:
-            return b"false "
     raise MarshallError(f"Unable to marshall type {x}")
 
 

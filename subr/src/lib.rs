@@ -1,33 +1,33 @@
 use pyo3::prelude::*;
 
 #[pyfunction]
-fn uri_canonicalize(uri: &str) -> String {
-    let uri = std::ffi::CString::new(uri).unwrap();
-    subversion::uri::Uri::from_cstr(uri.as_c_str())
-        .canonicalize()
-        .to_string()
+fn uri_canonicalize(uri: &str) -> PyResult<String> {
+    subversion::uri::canonicalize_uri(uri).map_err(|e| {
+        pyo3::exceptions::PyValueError::new_err(format!("Failed to canonicalize URI: {}", e))
+    })
 }
 
 #[pyfunction]
-fn dirent_canonicalize(dirent: &str) -> String {
-    let dirent = std::ffi::CString::new(dirent).unwrap();
-    subversion::dirent::Dirent::from_cstr(dirent.as_c_str())
-        .canonicalize()
-        .to_string()
+fn dirent_canonicalize(dirent: &str) -> PyResult<String> {
+    let path = std::path::Path::new(dirent);
+    subversion::dirent::canonicalize_dirent(path)
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Failed to canonicalize dirent: {}", e))
+        })
 }
 
 #[pyfunction]
 fn abspath(path: &str) -> PyResult<String> {
-    let dirent = std::ffi::CString::new(path).unwrap();
-    subversion::dirent::Dirent::from_cstr(dirent.as_c_str())
-        .absolute()
-        .map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!(
-                "Failed to get absolute path of '{}': {}",
-                path, e
-            ))
-        })
-        .map(|d| d.to_string())
+    let dirent = subversion::dirent::Dirent::new(path).map_err(|e| {
+        pyo3::exceptions::PyValueError::new_err(format!("Failed to create dirent: {}", e))
+    })?;
+
+    let absolute = dirent.get_absolute().map_err(|e| {
+        pyo3::exceptions::PyValueError::new_err(format!("Failed to get absolute path: {}", e))
+    })?;
+
+    Ok(absolute.as_str().to_string())
 }
 
 #[pymodule]

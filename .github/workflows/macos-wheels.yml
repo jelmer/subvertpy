@@ -1,0 +1,65 @@
+name: macos-wheels
+on: [push, pull_request]
+jobs:
+  macos:
+    name: subvertpy wheel build for Python ${{ matrix.python-version }}
+      on ${{ matrix.config.os }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        config:
+          - os: macos-15-intel
+            arch: x86_64
+          - os: macos-15
+            arch: arm64
+    steps:
+      - name: Checkout subvertpy code
+        uses: actions/checkout@v6
+      - name: Install Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        id: python-install
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install build and pytest Python packages
+        run: sudo pip install build pytest
+      - name: Install MacPorts
+        run: |
+          curl -LO https://raw.githubusercontent.com/GiovanniBussi/macports-ci/master/macports-ci
+          source ./macports-ci install --sync=rsync
+      - name: Set macOS deployment target and install MacOSX sdk 11.3
+        run: |
+          echo 'macosx_deployment_target 11.0' | sudo tee -a /opt/local/etc/macports/macports.conf
+          echo 'macosx_sdk_version 11.3' | sudo tee -a /opt/local/etc/macports/macports.conf
+          curl -LO https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz
+          tar -xzf MacOSX11.3.sdk.tar.xz
+          sudo mv MacOSX11.3.sdk /Library/Developer/CommandLineTools/SDKs/
+      - name: Install subvertpy build dependencies
+        run: sudo port -N -s install subversion db48
+      - name: Sets CIBW_BUILD and SDKROOT environment variable
+        env:
+          pyVer: "${{matrix.python-version}}"
+          arch: "${{matrix.config.arch}}"
+        run: |
+          echo "CIBW_BUILD=cp${pyVer/./}-macosx_$arch" >> $GITHUB_ENV
+          echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk" >> $GITHUB_ENV
+      - name: Build subvertpy wheel with cibuildwheel
+        run: |
+          pip install cibuildwheel --user
+          python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+      - name: Test built wheel can be installed and imported
+        working-directory: wheelhouse
+        run: |
+          pip install $(ls -t | head -1)
+          python -c "from subvertpy import client, ra, repos, subr, wc"
+          cd ../ && mv subvertpy/tests . && rm -rf subvertpy && python -m pytest tests
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subvertpy-wheel-macos-${{ matrix.python-version }}-${{ matrix.config.arch }}
+          path: ./wheelhouse/*.whl
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+

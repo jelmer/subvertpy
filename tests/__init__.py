@@ -19,13 +19,13 @@
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 __docformat__ = "restructuredText"
 
+from io import BytesIO
 import os
 import shutil
 import stat
 import sys
 import tempfile
 import unittest
-from io import BytesIO
 
 try:
     import urlparse
@@ -71,10 +71,14 @@ class TestCase(unittest.TestCase):
     """
 
     def assertIsInstance(self, obj, kls, msg=None):
-        """Fail if obj is not an instance of kls."""
+        """Fail if obj is not an instance of kls"""
         if not isinstance(obj, kls):
             if msg is None:
-                msg = f"{obj!r} is an instance of {obj.__class__} rather than {kls}"
+                msg = "%r is an instance of %s rather than %s" % (
+                    obj,
+                    obj.__class__,
+                    kls,
+                )
             self.fail(msg)
 
     def assertIs(self, left, right, message=None):
@@ -82,7 +86,7 @@ class TestCase(unittest.TestCase):
             if message is not None:
                 raise AssertionError(message)
             else:
-                raise AssertionError(f"{left!r} is not {right!r}.")
+                raise AssertionError("%r is not %r." % (left, right))
 
 
 class TestCaseInTempDir(TestCase):
@@ -100,7 +104,7 @@ class TestCaseInTempDir(TestCase):
         rmtree_with_readonly(self.test_dir)
 
 
-class TestFileEditor:
+class TestFileEditor(object):
     """Simple file editor wrapper that doesn't require closing."""
 
     def __init__(self, file):
@@ -122,7 +126,7 @@ class TestFileEditor:
         self.file.close()
 
 
-class TestDirEditor:
+class TestDirEditor(object):
     """Simple dir editor wrapper that doesn't require closing."""
 
     def __init__(self, dir, baseurl, revnum):
@@ -214,8 +218,7 @@ class TestCommitEditor(TestDirEditor):
 
 class SubversionTestCase(TestCaseInTempDir):
     """A test case that provides the ability to build Subversion
-    repositories.
-    """
+    repositories."""
 
     def _init_client(self):
         self.client_ctx = client.Client()
@@ -232,12 +235,12 @@ class SubversionTestCase(TestCaseInTempDir):
         # self.client_ctx.notify_func = lambda err: mutter("Error: %s" % err)
 
     def setUp(self):
-        super().setUp()
+        super(SubversionTestCase, self).setUp()
         self._init_client()
 
     def tearDown(self):
         del self.client_ctx
-        super().tearDown()
+        super(SubversionTestCase, self).tearDown()
 
     def log_message_func(self, items):
         return self.next_message
@@ -263,9 +266,9 @@ class SubversionTestCase(TestCaseInTempDir):
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0o111)
 
         if sys.platform == "win32":
-            return f"file:{pathname2url(abspath)}"
+            return "file:%s" % pathname2url(abspath)
         else:
-            return f"file://{abspath}"
+            return "file://%s" % abspath
 
     def make_checkout(self, repos_url, relpath):
         """Create a new checkout."""
@@ -347,7 +350,7 @@ class SubversionTestCase(TestCaseInTempDir):
         self.client_ctx.add(relpath, recursive, False, False)
 
     def client_log(self, url, start_revnum, stop_revnum):
-        """Fetch the log.
+        """Fetch the log
 
         :param url: URL to log
         :param start_revnum: Start revision of the range to log over
@@ -472,6 +475,7 @@ def test_suite():
         "marshall",
         "properties",
         "ra",
+        "ra_svn",
         "repos",
         "server",
         "subr",

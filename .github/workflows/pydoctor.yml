@@ -1,0 +1,53 @@
+name: API docs
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install libsvn-dev
+        python -m pip install --upgrade pip
+        pip install setuptools-rust
+        pip install -e .
+        pip install pydoctor
+    - name: Build API docs
+      run: |
+        pydoctor --introspect-c-modules -c subvertpy.cfg --make-html subvertpy
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: apidocs
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

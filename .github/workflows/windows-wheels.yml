@@ -1,0 +1,75 @@
+name: windows-wheels
+on: [push, pull_request]
+jobs:
+  windows:
+    name: subvertpy Python ${{ matrix.python-version }} wheel build on windows
+    runs-on: windows-latest
+    env:
+      VCPKG_INSTALL_DIR: ${{ github.workspace }}\vcpkg\installed\x64-windows-release
+    defaults:
+      run:
+        shell: cmd
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Checkout subvertpy code
+        uses: actions/checkout@v6
+      - name: Install MSYS2 shell
+        uses: msys2/setup-msys2@v2
+      - name: Install Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        id: python-install
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install build, cibuildwheel and pytest Python packages
+        run: |
+          set PATH=%Python3_ROOT_DIR%\Scripts;%PATH%
+          pip install build cibuildwheel pytest
+      - name: Install build dependencies with vcpkg
+        uses: johnwason/vcpkg-action@v7
+        id: vcpkg
+        continue-on-error: true
+        with:
+          pkgs: subversion
+          triplet: x64-windows-release
+          extra-args: --allow-unsupported --recurse --keep-going
+          token: ${{ github.token }}
+      - name: Sets CIBW_BUILD environment variable
+        env:
+          pyVer: "${{matrix.python-version}}"
+        run: |
+          echo "CIBW_BUILD=cp${pyVer/./}-win_amd64" >> $GITHUB_ENV
+        shell: msys2 {0}
+      - name: Build subvertpy wheel with cibuildwheel
+        env:
+            APR_INCLUDE_DIR: ${{ env.VCPKG_INSTALL_DIR }}/include
+            APU_INCLUDE_DIR: ${{ env.VCPKG_INSTALL_DIR }}/include
+            SVN_HEADER_PATH: ${{ env.VCPKG_INSTALL_DIR }}/include/subversion-1
+            SVN_LIBRARY_PATH: ${{ env.VCPKG_INSTALL_DIR }}/lib
+            LIB: ${{ env.VCPKG_INSTALL_DIR }}/lib
+            CIBW_BUILD_VERBOSITY: 1
+            CIBW_BEFORE_BUILD_WINDOWS: pip install delvewheel
+            CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
+                delvewheel repair -v -w {dest_dir} --analyze-existing
+                --add-path ${{ env.VCPKG_INSTALL_DIR }}\bin
+                {wheel}
+        run: python -m cibuildwheel --output-dir wheelhouse
+      - name: Cleanup subvertpy repo to run tests with installed wheel
+        run: mv subvertpy/tests . && rm -rf subvertpy
+        shell: msys2 {0}
+      - name: Test built wheel can be installed and imported
+        working-directory: wheelhouse
+        run: |
+          set PATH=%Python3_ROOT_DIR%\Scripts:%PATH%
+          set PYTHONIOENCODING=utf-8
+          for /f "tokens=*" %%g in ('dir /b *.whl') do (set wheel=%%g)
+          pip install %wheel%
+          python -c "from subvertpy import client, ra, repos, subr, wc"
+          cd .. && python -m pytest tests
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subvertpy-wheel-windows-${{ matrix.python-version }}
+          path: ./wheelhouse/*.whl
+

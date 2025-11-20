@@ -122,16 +122,3 @@ def _check_mtime(m):
     if os.path.getmtime(m.__file__) < os.path.getmtime(c_file):
         return False
     return True
-
-
-try:
-    from subvertpy import _ra, client, repos, wc
-
-    for x in client, _ra, repos, wc:
-        if not _check_mtime(x):
-            from warnings import warn
-
-            warn("subvertpy extensions are outdated and need to be rebuilt")
-            break
-except ImportError as e:
-    raise ImportError(f"Unable to load subvertpy extensions: {e}")

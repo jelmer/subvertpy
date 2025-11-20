@@ -18,3 +18,4 @@ apidocs
 # Added by cargo
 
 /target
+subvertpy.egg-info

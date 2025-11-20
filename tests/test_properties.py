@@ -18,7 +18,6 @@
 import os
 import time
 from unittest import SkipTest
-
 from subvertpy import properties
 from tests import (
     TestCase,
@@ -27,7 +26,7 @@ from tests import (
 
 class TestProperties(TestCase):
     def setUp(self):
-        super().setUp()
+        super(TestProperties, self).setUp()
 
     def test_time_from_cstring(self):
         self.assertEqual(
@@ -291,3 +290,159 @@ class MergeInfoIncludeTests(TestCase):
                 {"/trunk": [(1, 5, True)]}, "/trunk", 30
             )
         )
+
+
+class MergeInfoAddRevisionTests(TestCase):
+    def test_add_new_path(self):
+        mergeinfo = {}
+        result = properties.mergeinfo_add_revision(mergeinfo, "/trunk", 5)
+        self.assertEqual({"/trunk": [(5, 5, True)]}, result)
+
+    def test_add_to_existing_path(self):
+        mergeinfo = {"/trunk": [(1, 3, True)]}
+        result = properties.mergeinfo_add_revision(mergeinfo, "/trunk", 5)
+        self.assertEqual({"/trunk": [(1, 3, True), (5, 5, True)]}, result)
+
+    def test_add_extends_range(self):
+        mergeinfo = {"/trunk": [(1, 3, True)]}
+        result = properties.mergeinfo_add_revision(mergeinfo, "/trunk", 4)
+        self.assertEqual({"/trunk": [(1, 4, True)]}, result)
+
+    def test_add_already_included(self):
+        mergeinfo = {"/trunk": [(1, 5, True)]}
+        result = properties.mergeinfo_add_revision(mergeinfo, "/trunk", 3)
+        self.assertEqual({"/trunk": [(1, 5, True)]}, result)
+
+
+class IsValidPropertyNameTests(TestCase):
+    def test_simple_name(self):
+        self.assertTrue(properties.is_valid_property_name("svn:log"))
+
+    def test_name_with_colon(self):
+        self.assertTrue(properties.is_valid_property_name(":foo"))
+
+    def test_name_with_underscore_start(self):
+        self.assertTrue(properties.is_valid_property_name("_foo"))
+
+    def test_alphanumeric(self):
+        self.assertTrue(properties.is_valid_property_name("abc123"))
+
+    def test_with_dash(self):
+        self.assertTrue(properties.is_valid_property_name("my-prop"))
+
+    def test_with_dot(self):
+        self.assertTrue(properties.is_valid_property_name("my.prop"))
+
+    def test_invalid_start(self):
+        self.assertFalse(properties.is_valid_property_name("-foo"))
+
+    def test_invalid_char(self):
+        self.assertFalse(properties.is_valid_property_name("foo bar"))
+
+    def test_svn_prefix(self):
+        self.assertTrue(properties.is_valid_property_name("svn:externals"))
+
+
+class PropertyDiffTests(TestCase):
+    def test_diff_empty(self):
+        self.assertEqual({}, properties.diff({}, {}))
+
+    def test_diff_added(self):
+        self.assertEqual({"key": (None, "val")}, properties.diff({"key": "val"}, {}))
+
+    def test_diff_changed(self):
+        self.assertEqual(
+            {"key": ("old", "new")}, properties.diff({"key": "new"}, {"key": "old"})
+        )
+
+    def test_diff_unchanged(self):
+        self.assertEqual({}, properties.diff({"key": "same"}, {"key": "same"}))
+
+    def test_diff_multiple_changes(self):
+        result = properties.diff(
+            {"a": "1", "b": "changed", "c": "3"}, {"a": "1", "b": "original"}
+        )
+        self.assertEqual({"b": ("original", "changed"), "c": (None, "3")}, result)
+
+    def test_diff_only_reports_current_keys(self):
+        # diff() only iterates over current.items(), so properties
+        # that were deleted (in previous but not current) are not reported
+        result = properties.diff({}, {"deleted": "val"})
+        self.assertEqual({}, result)
+
+
+class PropertyConstantsTests(TestCase):
+    def test_prop_executable(self):
+        self.assertEqual(properties.PROP_EXECUTABLE, "svn:executable")
+
+    def test_prop_externals(self):
+        self.assertEqual(properties.PROP_EXTERNALS, "svn:externals")
+
+    def test_prop_mergeinfo(self):
+        self.assertEqual(properties.PROP_MERGEINFO, "svn:mergeinfo")
+
+    def test_prop_revision_log(self):
+        self.assertEqual(properties.PROP_REVISION_LOG, "svn:log")
+
+    def test_prop_revision_author(self):
+        self.assertEqual(properties.PROP_REVISION_AUTHOR, "svn:author")
+
+    def test_prop_revision_date(self):
+        self.assertEqual(properties.PROP_REVISION_DATE, "svn:date")
+
+    def test_prop_special(self):
+        self.assertEqual(properties.PROP_SPECIAL, "svn:special")
+
+    def test_prop_prefix(self):
+        self.assertEqual(properties.PROP_PREFIX, "svn:")
+
+
+class ExternalsParserAdditionalTests(TestCase):
+    def test_parse_swapped_with_revision_dash_r_x(self):
+        self.assertEqual(
+            {"ext": (10, "http://example.com/foo")},
+            properties.parse_externals_description(
+                "http://example.com", "-r10 http://example.com/foo ext"
+            ),
+        )
+
+    def test_parse_dir_dash_r_x_url(self):
+        self.assertEqual(
+            {"ext": (10, "http://example.com/foo")},
+            properties.parse_externals_description(
+                "http://example.com", "ext -r10 http://example.com/foo"
+            ),
+        )
+
+    def test_parse_empty(self):
+        self.assertEqual(
+            {}, properties.parse_externals_description("http://example.com", "")
+        )
+
+    def test_parse_comment_only(self):
+        self.assertEqual(
+            {},
+            properties.parse_externals_description(
+                "http://example.com", "# just a comment"
+            ),
+        )
+
+
+class MergeInfoPropertyCreatorAdditionalTests(TestCase):
+    def test_uninheritable_range(self):
+        self.assertEqual(
+            "/trunk:1-2*\n",
+            properties.generate_mergeinfo_property({"/trunk": [(1, 2, False)]}),
+        )
+
+    def test_uninheritable_individual(self):
+        self.assertEqual(
+            "/trunk:1*\n",
+            properties.generate_mergeinfo_property({"/trunk": [(1, 1, False)]}),
+        )
+
+    def test_multiple_ranges(self):
+        result = properties.generate_mergeinfo_property(
+            {"/trunk": [(1, 3, True), (5, 8, True)]}
+        )
+        self.assertEqual("/trunk:1-3,5-8\n", result)

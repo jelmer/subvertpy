@@ -1,0 +1,13 @@
+[package]
+name = "client"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name = "client"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { workspace = true }
+subversion = { workspace = true, features = ["client"] }
+subvertpy-util = { path = "../subvertpy_util" }

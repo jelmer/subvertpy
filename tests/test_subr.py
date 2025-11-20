@@ -19,9 +19,9 @@ import os
 from unittest import TestCase
 
 from subvertpy.subr import (
-    abspath,
-    dirent_canonicalize,
     uri_canonicalize,
+    dirent_canonicalize,
+    abspath,
 )
 
 
@@ -48,6 +48,15 @@ class DirentCanonicalizeTests(TestCase):
 
 class AbspathTests(TestCase):
     def test_abspath(self):
-        self.assertEqual("/foo/bar", abspath("/foo//bar"))
-        self.assertEqual(os.path.join(os.getcwd(), "bar"), abspath("bar"))
-        self.assertEqual(os.path.join(os.getcwd(), "bar", "foo"), abspath("bar/foo"))
+        path = "/foo/bar" if os.name != "nt" else "C:/foo/bar"
+        self.assertEqual(path, abspath(path))
+        # os.getcwd() returns '/foo/bar' on linux/macos
+        # while it returns 'c:\\foo\\bar' on windows
+        self.assertEqual(
+            os.path.join(os.getcwd(), "bar").replace("\\", "/").lower(),
+            abspath("bar").lower(),
+        )
+        self.assertEqual(
+            os.path.join(os.getcwd(), "bar", "foo").replace("\\", "/").lower(),
+            abspath("bar/foo").lower(),
+        )

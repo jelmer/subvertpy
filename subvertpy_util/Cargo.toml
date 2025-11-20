@@ -1,0 +1,13 @@
+[package]
+name = "subvertpy-util"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+pyo3 = { workspace = true }
+subversion = { workspace = true, features = ["client", "ra", "wc", "repos", "delta"] }
+pyo3-filelike = { workspace = true }
+apr = "0.4"
