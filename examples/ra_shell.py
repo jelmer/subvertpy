@@ -16,7 +16,7 @@ conn = RemoteAccess(url)
 
 def log_printer(changed_paths, rev, revprops, has_children=None):
     print("=" * 79)
-    print("%d:" % rev)
+    print(f"{rev}:")
     print("Revision properties:")
     for entry in revprops.items():
         print("  {}: {}".format(*entry))

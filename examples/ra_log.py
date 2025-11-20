@@ -9,7 +9,7 @@ for changed_paths, rev, revprops, has_children in conn.iter_log(
     paths=None, start=0, end=conn.get_latest_revnum(), discover_changed_paths=True
 ):
     print("=" * 79)
-    print("%d:" % rev)
+    print(f"{rev}:")
     print("Revision properties:")
     for entry in revprops.items():
         print("  {}: {}".format(*entry))
