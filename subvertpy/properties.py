@@ -54,18 +54,18 @@ def time_to_cstring(timestamp):
     :return: string with date
     """
     tm_usec = timestamp % 1000000
-    (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, _tm_wday, _tm_yday, _tm_isdst) = (
-        time.gmtime(timestamp / 1000000)
-    )
-    return "%04d-%02d-%02dT%02d:%02d:%02d.%06dZ" % (
+    (
         tm_year,
         tm_mon,
         tm_mday,
         tm_hour,
         tm_min,
         tm_sec,
-        tm_usec,
-    )
+        _tm_wday,
+        _tm_yday,
+        _tm_isdst,
+    ) = time.gmtime(timestamp / 1000000)
+    return f"{tm_year:04d}-{tm_mon:02d}-{tm_mday:02d}T{tm_hour:02d}:{tm_min:02d}:{tm_sec:02d}.{tm_usec:06d}Z"
 
 
 def time_from_cstring(text):
@@ -182,9 +182,9 @@ def generate_mergeinfo_property(merges):
         if not inheritable:
             suffix = "*"
         if start == end:
-            return "%d%s" % (start, suffix)
+            return f"{start}{suffix}"
         else:
-            return "%d-%d%s" % (start, end, suffix)
+            return f"{start}-{end}{suffix}"
 
     text = ""
     for path, ranges in merges.items():

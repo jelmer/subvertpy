@@ -49,7 +49,7 @@ def apply_txdelta_window(sbuf, window):
     sview = sbuf[sview_offset : sview_offset + sview_len]
     tview = txdelta_apply_ops(src_ops, ops, new_data, sview)
     if len(tview) != tview_len:
-        raise AssertionError("%d != %d" % (len(tview), tview_len))
+        raise AssertionError(f"{len(tview)} != {tview_len}")
     return tview
 
 

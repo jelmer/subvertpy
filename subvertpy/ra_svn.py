@@ -443,7 +443,9 @@ class SVNClient(SVNConnection):
         else:
             (recv_func, send_func) = self._connect_ssh(host)
         super().__init__(recv_func, send_func)
-        (_min_version, max_version, _, self._server_capabilities) = self._recv_greeting()
+        (_min_version, max_version, _, self._server_capabilities) = (
+            self._recv_greeting()
+        )
         self.send_msg(
             [
                 max_version,

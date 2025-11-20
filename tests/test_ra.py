@@ -174,7 +174,7 @@ class TestRemoteAccess(SubversionTestCase):
             if len(returned[0]) == 3:
                 (paths, revnum, props) = returned[0]
             else:
-                (paths, revnum, props, has_children) = returned[0]
+                (paths, revnum, props, _has_children) = returned[0]
             self.assertEqual(None, paths)
             self.assertEqual(revnum, 0)
             self.assertEqual(["svn:date"], list(props.keys()))
@@ -215,7 +215,7 @@ class TestRemoteAccess(SubversionTestCase):
             if len(returned[0]) == 3:
                 (paths, revnum, props) = returned[0]
             else:
-                (paths, revnum, props, has_children) = returned[0]
+                (paths, revnum, props, _has_children) = returned[0]
             self.assertEqual(None, paths)
             self.assertEqual(revnum, 0)
             self.assertEqual(["svn:date"], list(props.keys()))
@@ -534,7 +534,7 @@ class AuthTests(TestCase):
 
         def inc_foo(realm, may_save):
             self.i += 1
-            return ("somebody%d" % self.i, False)
+            return (f"somebody{self.i}", False)
 
         auth = ra.Auth([ra.get_username_prompt_provider(inc_foo, 2)])
         creds = auth.credentials("svn.username", "MyRealm")

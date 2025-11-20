@@ -53,7 +53,7 @@ class MyDirEditor:
 
 class MyEditor:
     def set_target_revision(self, revnum):
-        print("Target revision: %d" % revnum)
+        print(f"Target revision: {revnum}")
 
     def abort(self):
         print("Aborted")

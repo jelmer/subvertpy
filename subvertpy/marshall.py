@@ -64,16 +64,16 @@ def marshall(x):
     :return: encoded byte string
     """
     if isinstance(x, int):
-        return ("%d " % x).encode("ascii")
+        return f"{x} ".encode("ascii")
     elif isinstance(x, (list, tuple)):
         return b"( " + b"".join(map(marshall, x)) + b") "
     elif isinstance(x, literal):
         return (f"{x} ").encode("ascii")
     elif isinstance(x, bytes):
-        return ("%d:" % len(x)).encode("ascii") + x + b" "
+        return f"{len(x)}:".encode("ascii") + x + b" "
     elif isinstance(x, str):
         x = x.encode("utf-8")
-        return ("%d:" % len(x)).encode("ascii") + x + b" "
+        return f"{len(x)}:".encode("ascii") + x + b" "
     elif isinstance(x, bool):
         if x is True:
             return b"true "
@@ -109,7 +109,7 @@ def unmarshall(x):
             raise NeedMoreData("Missing whitespace")
 
         if x[1] not in whitespace:
-            raise MarshallError("Expected space, got '%c'" % x[1])
+            raise MarshallError(f"Expected space, got '{chr(x[1])}'")
 
         return (x[2:], ret)
     elif x[0:1].isdigit():
@@ -129,7 +129,7 @@ def unmarshall(x):
         elif not x:
             raise MarshallError("Expected whitespace, got end of string.")
         else:
-            raise MarshallError("Expected whitespace or ':', got '%c'" % x[0])
+            raise MarshallError(f"Expected whitespace or ':', got '{chr(x[0])}'")
     elif x[:1].isalpha():
         ret = bytearray()
         # Parse literal
@@ -144,8 +144,8 @@ def unmarshall(x):
             raise MarshallError("Expected whitespace, got end of string.")
 
         if x[0] not in whitespace:
-            raise MarshallError("Expected whitespace, got '%c'" % x[0])
+            raise MarshallError(f"Expected whitespace, got '{chr(x[0])}'")
 
         return (x[1:], literal(ret.decode("ascii")))
     else:
-        raise MarshallError("Unexpected character '%c'" % x[0])
+        raise MarshallError(f"Unexpected character '{chr(x[0])}'")
