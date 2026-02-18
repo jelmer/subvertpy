@@ -77,7 +77,7 @@ def svn_build_data():
                 [os.getenv("SVN_LIBRARY_PATH")], [])
     svn_prefix = os.getenv("SVN_PREFIX")
     if svn_prefix is None:
-        basedirs = ["/usr/local", "/usr"]
+        basedirs = ["/usr/local", "/usr", "/opt/homebrew"]
         for basedir in basedirs:
             includedir = os.path.join(basedir, "include/subversion-1")
             if os.path.isdir(includedir):
