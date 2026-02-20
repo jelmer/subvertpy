@@ -41,15 +41,19 @@ def apr_build_data():
     try:
         includedir = os.environ['APR_INCLUDE_DIR']
     except KeyError:
-        includedir = apr_config(["--includedir"])
+        if os.name != "nt":
+            includedir = apr_config(["--includedir"])
     if not os.path.isdir(includedir):
         raise Exception("APR development headers not found")
     try:
         extra_link_flags = split_shell_results(
             os.environ['APR_LINK_FLAGS'])
     except KeyError:
-        extra_link_flags = split_shell_results(
-            apr_config(["--link-ld", "--libs"]))
+        if os.name != "nt":
+            extra_link_flags = split_shell_results(
+                apr_config(["--link-ld", "--libs"]))
+        else:
+            extra_link_flags = []
     return (includedir, extra_link_flags)
 
 
@@ -58,15 +62,19 @@ def apu_build_data():
     try:
         includedir = os.environ['APU_INCLUDE_DIR']
     except KeyError:
-        includedir = apu_config(["--includedir"])
+        if os.name != "nt":
+            includedir = apu_config(["--includedir"])
     if not os.path.isdir(includedir):
         raise Exception("APR util development headers not found")
     try:
         extra_link_flags = split_shell_results(
             os.environ['APU_LINK_FLAGS'])
     except KeyError:
-        extra_link_flags = split_shell_results(
-            apu_config(["--link-ld", "--libs"]))
+        if os.name != "nt":
+            extra_link_flags = split_shell_results(
+                apu_config(["--link-ld", "--libs"]))
+        else:
+            extra_link_flags = []
     return (includedir, extra_link_flags)
 
 
@@ -145,15 +153,16 @@ class SvnExtension(Extension):
     def __init__(self, name, *args, **kwargs):
         if sys.platform == 'win32':
             libraries = kwargs.get('libraries', [])
+            libs = [("lib" + lib) for lib in libraries]
             modified = True
             while modified:
                 modified = False
                 for lib in libraries:
                     for extra in deep_deps.get(lib, []):
-                        if extra not in libraries:
+                        if extra not in libs:
                             modified = True
-                            libraries.append(extra)
-            kwargs['libraries'] = libraries
+                            libs.append(extra)
+            kwargs["libraries"] = libs
         kwargs["include_dirs"] = ([apr_includedir, apu_includedir] +
                                   svn_includedirs + ["subvertpy"])
         kwargs["library_dirs"] = svn_libdirs
@@ -188,7 +197,9 @@ def source_path(filename):
 
 # Urgh. It's a pain having to maintain these manually. But what else can we do?
 subr_deep_deps = [
-    "svn_subr-1",
+    "libsvn_subr-1",
+    "libapr-1",
+    "libaprutil-1",
     "sqlite3",
     "zlib",
     "advapi32",
@@ -203,19 +214,23 @@ subr_deep_deps = [
 
 
 repos_deep_deps = [
-    "svn_repos-1",
-    "svn_fs-1",
+    "libsvn_repos-1",
+    "libsvn_fs-1",
     "libsvn_fs_util-1",
     "libsvn_fs_fs-1",
     "libsvn_fs_x-1",
-    "svn_delta-1",
+    "libsvn_delta-1",
+    "libapr-1",
+    "libaprutil-1",
     ]
 
 
 ra_deep_deps = [
     "libsvn_ra_svn-1",
     "libsvn_ra_local-1",
-    "svn_repos-1",
+    "libsvn_repos-1",
+    "libapr-1",
+    "libaprutil-1",
     ]
 
 
