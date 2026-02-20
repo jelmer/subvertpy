@@ -1,0 +1,28 @@
+name: archlinux-build
+on: [push, pull_request]
+jobs:
+  build:
+    name: subvertpy build on ArchLinux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout subvertpy code
+        uses: actions/checkout@v6
+      - name: Build subvertpy on ArchLinux
+        uses: vjik/docker-run@v1
+        with:
+          image: archlinux
+          volumes: ${{ github.workspace }}:/subvertpy:rw
+          workdir: /subvertpy
+          command: |
+            pacman --noconfirm -Syuu
+
+            pacman --noconfirm -S \
+              base-devel \
+              python-pip \
+              svn \
+              db
+
+            python -m venv ~/venv
+            source ~/venv/bin/activate
+
+            pip install .
