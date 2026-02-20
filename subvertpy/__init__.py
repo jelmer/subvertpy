@@ -16,6 +16,9 @@
 
 """Python bindings for Subversion."""
 
+import os
+import platform
+
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 __version__ = (0, 11, 0)
 
@@ -122,6 +125,17 @@ def _check_mtime(m):
         return False
     return True
 
+
+if platform.system() == "Windows":
+    dll_dirs = [
+        dll_dir for dll_dir in os.environ.get(
+            "SUBVERTPY_DLL_PATH", "").split(';')
+        if dll_dir
+    ]
+    for path in dll_dirs:
+        path = os.path.abspath(path)
+        if os.path.exists(path):
+            os.add_dll_directory(path)
 
 try:
     from subvertpy import client, _ra, repos, wc
