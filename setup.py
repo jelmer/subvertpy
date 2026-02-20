@@ -85,7 +85,7 @@ def svn_build_data():
                 [os.getenv("SVN_LIBRARY_PATH")], [])
     svn_prefix = os.getenv("SVN_PREFIX")
     if svn_prefix is None:
-        basedirs = ["/usr/local", "/usr", "/opt/homebrew"]
+        basedirs = ["/usr/local", "/usr", "/opt/homebrew", "/opt/local"]
         for basedir in basedirs:
             includedir = os.path.join(basedir, "include/subversion-1")
             if os.path.isdir(includedir):
@@ -93,7 +93,8 @@ def svn_build_data():
                 break
     if svn_prefix is not None:
         return ([os.path.join(svn_prefix, "include/subversion-1")],
-                [os.path.join(svn_prefix, "lib")], [])
+                [os.path.join(svn_prefix, "lib"),
+                 os.path.join(svn_prefix, "lib", "db48")], [])
     raise Exception("Subversion development files not found. "
                     "Please set SVN_PREFIX or (SVN_LIBRARY_PATH and "
                     "SVN_HEADER_PATH) environment variable. ")

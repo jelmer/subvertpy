@@ -1,0 +1,68 @@
+name: macos-wheels
+on: [push, pull_request]
+jobs:
+  macos:
+    name: subvertpy wheel build for Python ${{ matrix.python-version }}
+      on ${{ matrix.config.os }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        config:
+          - os: macos-15-intel
+            macosx_deployment_target: "15.0"
+            arch: x86_64
+          - os: macos-15
+            macosx_deployment_target: "15.0"
+            arch: arm64
+    env:
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.config.macosx_deployment_target }}
+      TWINE_USERNAME: __token__
+      TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      
+    steps:
+      - name: Checkout subvertpy code
+        uses: actions/checkout@v6
+      - name: Install Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        id: python-install
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install build and pytest Python packages
+        run: sudo pip install build pytest
+      - name: Install MacPorts
+        run: |
+          curl -LO https://raw.githubusercontent.com/GiovanniBussi/macports-ci/master/macports-ci
+          source ./macports-ci install --sync=rsync
+      - name: Install subvertpy build dependencies
+        run: sudo port -N install subversion db48
+      - name: Sets CIBW_BUILD environment variable
+        env:
+          pyVer: "${{matrix.python-version}}"
+          arch: "${{matrix.config.arch}}"
+        run: |
+          echo "CIBW_BUILD=cp${pyVer/./}-macosx_$arch" >> $GITHUB_ENV
+      - name: Build subvertpy wheel with cibuildwheel
+        run: |
+          pip install cibuildwheel --user
+          python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+      - name: Test built wheel can be installed and imported
+        working-directory: wheelhouse
+        run: |
+          pip install $(ls -t | head -1)
+          python -c "from subvertpy import client, ra, repos, subr, wc"
+          cd ../ && mv subvertpy/tests . && rm -rf subvertpy && python -m pytest tests
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subvertpy-wheel-${{ matrix.python-version }}
+            -${{ matrix.config.macosx_deployment_target }}-${{ matrix.config.arch }}
+          path: ./wheelhouse/*.whl
+      - name: Publish subvertpy wheel to PyPI
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          sudo pip install twine
+          twine check wheelhouse/*
+          twine upload --skip-existing wheelhouse/*
