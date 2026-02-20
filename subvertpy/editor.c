@@ -108,7 +108,7 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 		Py_RETURN_NONE;
 	}
 
-	if (!PyArg_ParseTuple(py_window, SVN_FILESIZE_T_PYFMT "kkiOO",
+	if (!PyArg_ParseTuple(py_window, SVN_FILESIZE_T_PYFMT "nniOO",
 		&window.sview_offset, &window.sview_len, &window.tview_len,
 		&window.src_ops, &py_ops, &py_new_data))
 		return NULL;
@@ -136,7 +136,7 @@ static PyObject *txdelta_call(PyObject *self, PyObject *args, PyObject *kwargs)
 
 	for (i = 0; i < window.num_ops; i++) {
 		PyObject *windowitem = PyList_GetItem(py_ops, i);
-		if (!PyArg_ParseTuple(windowitem, "ikk", &ops[i].action_code, 
+		if (!PyArg_ParseTuple(windowitem, "inn", &ops[i].action_code,
 							  &ops[i].offset, &ops[i].length)) {
 			free(ops);
 			return NULL;
