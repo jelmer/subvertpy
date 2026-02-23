@@ -248,3 +248,22 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.assertRaises(SubversionException, self.client.info, "dc/missing")
+
+    def test_set_get_prop_with_path(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client_add("dc/foo")
+        self.client_set_prop("dc/foo", "svn:eol-style", "native")
+        self.client_commit("dc", message="Commit")
+        self.assertEqual(
+            self.client_get_prop("dc/foo", "svn:eol-style", "HEAD"), b"native")
+
+    def test_set_get_prop_with_url(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client_add("dc/foo")
+        self.client_set_prop("dc/foo", "svn:eol-style", "native")
+        self.client_commit("dc", message="Commit")
+        self.assertEqual(
+            self.client_get_prop(
+                self.repos_url + "/foo", "svn:eol-style", "HEAD"),
+            b"native"
+        )

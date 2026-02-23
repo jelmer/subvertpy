@@ -100,7 +100,9 @@ const char *py_object_to_svn_abspath(PyObject *obj, apr_pool_t *pool)
     if (ret == NULL) {
         return NULL;
     }
-    if (svn_dirent_is_absolute(ret)) {
+    if (svn_path_is_url(ret)) {
+        return svn_uri_canonicalize(ret, pool);
+    } else if (svn_dirent_is_absolute(ret)) {
         return svn_dirent_canonicalize(ret, pool);
     } else {
         const char *absolute;
