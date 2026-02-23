@@ -11,13 +11,11 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         config:
           - os: macos-15-intel
-            macosx_deployment_target: "15.0"
             arch: x86_64
           - os: macos-15
-            macosx_deployment_target: "15.0"
             arch: arm64
     env:
-      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.config.macosx_deployment_target }}
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
       TWINE_USERNAME: __token__
       TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       
@@ -35,14 +33,22 @@ jobs:
         run: |
           curl -LO https://raw.githubusercontent.com/GiovanniBussi/macports-ci/master/macports-ci
           source ./macports-ci install --sync=rsync
+      - name: Set macOS deployment target and install MacOSX sdk 11.3
+        run: |
+          echo 'macosx_deployment_target 11.0' | sudo tee -a /opt/local/etc/macports/macports.conf
+          echo 'macosx_sdk_version 11.3' | sudo tee -a /opt/local/etc/macports/macports.conf
+          curl -LO https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz
+          tar -xzf MacOSX11.3.sdk.tar.xz
+          sudo mv MacOSX11.3.sdk /Library/Developer/CommandLineTools/SDKs/
       - name: Install subvertpy build dependencies
-        run: sudo port -N install subversion db48
-      - name: Sets CIBW_BUILD environment variable
+        run: sudo port -N -s install subversion db48
+      - name: Sets CIBW_BUILD and SDKROOT environment variable
         env:
           pyVer: "${{matrix.python-version}}"
           arch: "${{matrix.config.arch}}"
         run: |
           echo "CIBW_BUILD=cp${pyVer/./}-macosx_$arch" >> $GITHUB_ENV
+          echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk" >> $GITHUB_ENV
       - name: Build subvertpy wheel with cibuildwheel
         run: |
           pip install cibuildwheel --user
@@ -57,8 +63,7 @@ jobs:
           cd ../ && mv subvertpy/tests . && rm -rf subvertpy && python -m pytest tests
       - uses: actions/upload-artifact@v4
         with:
-          name: subvertpy-wheel-${{ matrix.python-version }}
-            -${{ matrix.config.macosx_deployment_target }}-${{ matrix.config.arch }}
+          name: subvertpy-wheel-${{ matrix.python-version }}-${{ matrix.config.arch }}
           path: ./wheelhouse/*.whl
       - name: Publish subvertpy wheel to PyPI
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
