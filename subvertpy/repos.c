@@ -275,7 +275,11 @@ PyTypeObject FileSystem_Type = {
 	/* Methods to implement standard operations */
 
 	fs_dealloc, /*	destructor tp_dealloc;	*/
+#if PY_MAJOR_VERSION >= 3
+	0, /* Py_ssize_t tp_vectorcall_offset; */
+#else
 	NULL, /*	printfunc tp_print;	*/
+#endif
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
@@ -542,7 +546,11 @@ PyTypeObject Repository_Type = {
 	/* Methods to implement standard operations */
 
 	repos_dealloc, /*	destructor tp_dealloc;	*/
+#if PY_MAJOR_VERSION >= 3
+	0, /* Py_ssize_t tp_vectorcall_offset; */
+#else
 	NULL, /*	printfunc tp_print;	*/
+#endif
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
@@ -839,7 +847,11 @@ PyTypeObject FileSystemRoot_Type = {
 	/* Methods to implement standard operations */
 
 	fs_root_dealloc, /*	destructor tp_dealloc;	*/
+#if PY_MAJOR_VERSION >= 3
+	0, /* Py_ssize_t tp_vectorcall_offset; */
+#else
 	NULL, /*	printfunc tp_print;	*/
+#endif
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
