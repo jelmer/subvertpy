@@ -186,7 +186,6 @@ class SvnExtension(Extension):
                     )
         if sys.platform in ('darwin', 'linux'):
             kwargs["extra_compile_args"] = [
-                "-Wno-int-conversion",
                 "-std=c99"  # for GCC >=15 as it is using c23 by default
             ]
         Extension.__init__(self, name, *args, **kwargs)

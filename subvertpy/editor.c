@@ -172,7 +172,11 @@ PyTypeObject TxDeltaWindowHandler_Type = {
 	/* Methods to implement standard operations */
 	
 	py_txdelta_window_handler_dealloc, /* destructor tp_dealloc; */
+#if PY_MAJOR_VERSION >= 3
+	0, /* Py_ssize_t tp_vectorcall_offset; */
+#else
 	NULL, /*	printfunc tp_print;	*/
+#endif
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
@@ -310,7 +314,11 @@ PyTypeObject FileEditor_Type = {
 	/* Methods to implement standard operations */
 	
 	py_editor_dealloc, /*	destructor tp_dealloc; 	*/
+#if PY_MAJOR_VERSION >= 3
+	0, /* Py_ssize_t tp_vectorcall_offset; */
+#else
 	NULL, /*	printfunc tp_print;	*/
+#endif
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
@@ -737,7 +745,11 @@ PyTypeObject DirectoryEditor_Type = {
 	/* Methods to implement standard operations */
 
 	py_editor_dealloc, /* destructor tp_dealloc;  */
+#if PY_MAJOR_VERSION >= 3
+	0, /* Py_ssize_t tp_vectorcall_offset; */
+#else
 	NULL, /*	printfunc tp_print;	*/
+#endif
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
@@ -939,7 +951,11 @@ PyTypeObject Editor_Type = {
 	/* Methods to implement standard operations */
 	
 	py_editor_dealloc, /*	destructor tp_dealloc;	*/
+#if PY_MAJOR_VERSION >= 3
+	0, /* Py_ssize_t tp_vectorcall_offset; */
+#else
 	NULL, /*	printfunc tp_print;	*/
+#endif
 	NULL, /*	getattrfunc tp_getattr;	*/
 	NULL, /*	setattrfunc tp_setattr;	*/
 	NULL, /*	cmpfunc tp_compare;	*/
