@@ -1,0 +1,51 @@
+name: manylinux-wheels
+on: [push, pull_request]
+jobs:
+  manylinux:
+    name: subvertpy manylinux ${{ matrix.python-version }} wheel build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Checkout subvertpy code
+        uses: actions/checkout@v6
+      - name: Install Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        id: python-install
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Sets CIBW_BUILD environment variable
+        env:
+          pyVer: "${{matrix.python-version}}"
+        run: |
+          echo "CIBW_BUILD=cp${pyVer/./}-manylinux_x86_64" >> $GITHUB_ENV
+      - name: Build subvertpy wheel with cibuildwheel
+        run: |
+          sudo apt install python3-pip
+          pip3.12 install cibuildwheel --user
+          python3.12 -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
+          CIBW_BUILD_VERBOSITY: 1
+          CIBW_BEFORE_ALL: dnf -y install subversion-devel
+      - name: Test wheel can be installed and subvertpy module imported
+        run: |
+          $Python3_ROOT_DIR/bin/pip install $(ls -t | head -1)
+          $Python3_ROOT_DIR/bin/python -c "
+          from subvertpy import client, ra, repos, subr, wc"
+          pip3 install pytest
+          cd ../ && mv subvertpy/tests . && rm -rf subvertpy && python3 -m pytest tests
+        working-directory: wheelhouse
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subvertpy-wheel-${{ matrix.python-version }}
+          path: ./wheelhouse/*.whl
+      - name: Publish subvertpy wheel to PyPI
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: wheelhouse/
+          skip-existing: true

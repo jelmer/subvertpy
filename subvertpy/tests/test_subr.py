@@ -53,12 +53,16 @@ class DirentCanonicalizeTests(TestCase):
 class AbspathTests(TestCase):
 
     def test_abspath(self):
+        path = '/foo/bar' if os.name != 'nt' else 'C:/foo/bar'
         self.assertEqual(
-                '/foo/bar',
-                abspath('/foo//bar'))
+                path,
+                abspath(path))
+        # os.getcwd() returns '/foo/bar' on linux/macos
+        # while it returns 'c:\\foo\\bar' on windows
         self.assertEqual(
-                os.path.join(os.getcwd(), 'bar'),
-                abspath('bar'))
+                os.path.join(os.getcwd(), 'bar').replace("\\", "/").lower(),
+                abspath('bar').lower())
         self.assertEqual(
-                os.path.join(os.getcwd(), 'bar', 'foo'),
-                abspath('bar/foo'))
+                os.path.join(
+                    os.getcwd(), 'bar', 'foo').replace("\\", "/").lower(),
+                abspath('bar/foo').lower())
