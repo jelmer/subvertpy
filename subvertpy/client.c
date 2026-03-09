@@ -738,7 +738,7 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *peg_rev=Py_None, *rev=Py_None;
     bool recurse=true, ignore_externals=false, overwrite=false, ignore_keywords=false;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OObbbbb", kwnames, &py_from, &py_to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol, &ignore_keywords))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|OObbbzb", kwnames, &py_from, &py_to, &rev, &peg_rev, &recurse, &ignore_externals, &overwrite, &native_eol, &ignore_keywords))
         return NULL;
 
     if (!to_opt_revision(peg_rev, &c_peg_rev))
@@ -774,7 +774,7 @@ static PyObject *client_export(PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     ClientObject *client = (ClientObject *)self;
-    char *kwnames[] = { "path", "output_stream", "revision", "peg_revision", NULL };
+    char *kwnames[] = { "path", "output_stream", "revision", "peg_revision", "expand_keywords", NULL };
     char *path;
     PyObject *peg_rev=Py_None, *rev=Py_None;
     svn_opt_revision_t c_peg_rev, c_rev;
@@ -823,7 +823,7 @@ static PyObject *client_cat(PyObject *self, PyObject *args, PyObject *kwargs)
     return ret;
 }
 
-static PyObject *client_delete(PyObject *self, PyObject *args)
+static PyObject *client_delete(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject *paths;
     bool force=false, keep_local=false;
@@ -833,8 +833,9 @@ static PyObject *client_delete(PyObject *self, PyObject *args)
     ClientObject *client = (ClientObject *)self;
     apr_hash_t *hash_revprops;
     PyObject *callback = Py_None;
+    char *kwnames[] = { "paths", "force", "keep_local", "revprops", "callback", NULL };
 
-    if (!PyArg_ParseTuple(args, "O|bbOO", &paths, &force, &keep_local, &py_revprops, &callback))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|bbOO", kwnames, &paths, &force, &keep_local, &py_revprops, &callback))
         return NULL;
 
     temp_pool = Pool(NULL);
@@ -973,7 +974,7 @@ static PyObject *client_copy(PyObject *self, PyObject *args, PyObject *kwargs)
     Py_RETURN_NONE;
 }
 
-static PyObject *client_propset(PyObject *self, PyObject *args)
+static PyObject *client_propset(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     char *propname;
     svn_string_t c_propval;
@@ -987,8 +988,11 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
     svn_revnum_t base_revision_for_url = SVN_INVALID_REVNUM;
     apr_hash_t *revprops;
     svn_commit_info_t *commit_info = NULL;
+    char *kwnames[] = { "name", "value", "target", "recurse", "skip_checks",
+                        "base_revision_for_url", "revprops", NULL };
 
-    if (!PyArg_ParseTuple(args, "sz#s|bblO", &propname, &c_propval.data,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sz#s|bblO", kwnames,
+                          &propname, &c_propval.data,
                           &vallen, &target, &recurse, &skip_checks,
                           &base_revision_for_url, &py_revprops))
         return NULL;
@@ -1020,7 +1024,7 @@ static PyObject *client_propset(PyObject *self, PyObject *args)
     return ret;
 }
 
-static PyObject *client_propget(PyObject *self, PyObject *args)
+static PyObject *client_propget(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     svn_opt_revision_t c_peg_rev;
     svn_opt_revision_t c_rev;
@@ -1033,8 +1037,10 @@ static PyObject *client_propget(PyObject *self, PyObject *args)
     PyObject *revision;
     ClientObject *client = (ClientObject *)self;
     PyObject *ret, *py_target;
+    char *kwnames[] = { "name", "target", "peg_revision", "revision", "recurse", NULL };
 
-    if (!PyArg_ParseTuple(args, "sOO|Ob", &propname, &py_target, &peg_revision,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sOO|Ob", kwnames,
+                          &propname, &py_target, &peg_revision,
                           &revision, &recurse))
         return NULL;
     if (!to_opt_revision(peg_revision, &c_peg_rev))
@@ -1148,7 +1154,7 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
             "allow_unver_obstructions", "adds_as_modification", "make_parents",
             NULL };
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|Obbbbb", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|Obbbbbb", kwnames,
             &paths, &rev, &recurse, &ignore_externals,
             &depth_is_sticky, &allow_unver_obstructions, &adds_as_modification,
             &make_parents))
@@ -1189,7 +1195,7 @@ static PyObject *client_update(PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *client_list(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     char *kwnames[] =
-        { "path", "peg_revision", "depth", "dirents", "revision", NULL };
+        { "path", "peg_revision", "depth", "dirents", "revision", "include_externals", NULL };
     svn_opt_revision_t c_peg_rev;
     svn_opt_revision_t c_rev;
     int depth;
@@ -1542,10 +1548,10 @@ static PyMethodDef client_methods[] = {
     { "cat", (PyCFunction)client_cat, METH_VARARGS|METH_KEYWORDS,
         "S.cat(path, output_stream, revision=None, peg_revision=None)" },
     { "commit", (PyCFunction)client_commit, METH_VARARGS|METH_KEYWORDS, "S.commit(targets, recurse=True, keep_locks=True, revprops=None, keep_changelist=False, commit_as_operations=False, include_file_externals=False, include_dir_externals=False, callback=None) -> (revnum, date, author)" },
-    { "delete", client_delete, METH_VARARGS, "S.delete(paths, force=False)" },
+    { "delete", (PyCFunction)client_delete, METH_VARARGS|METH_KEYWORDS, "S.delete(paths, force=False, keep_local=False, revprops=None, callback=None)" },
     { "copy", (PyCFunction)client_copy, METH_VARARGS|METH_KEYWORDS, "S.copy(src_path, dest_path, srv_rev=None)" },
-    { "propset", client_propset, METH_VARARGS, "S.propset(name, value, target, recurse=True, skip_checks=False)" },
-    { "propget", client_propget, METH_VARARGS, "S.propget(name, target, peg_revision, revision=None, recurse=False) -> value" },
+    { "propset", (PyCFunction)client_propset, METH_VARARGS|METH_KEYWORDS, "S.propset(name, value, target, recurse=True, skip_checks=False)" },
+    { "propget", (PyCFunction)client_propget, METH_VARARGS|METH_KEYWORDS, "S.propget(name, target, peg_revision, revision=None, recurse=False) -> value" },
     { "proplist", (PyCFunction)client_proplist, METH_VARARGS|METH_KEYWORDS, "S.proplist(path, peg_revision, depth, revision=None)" },
     { "resolve", client_resolve, METH_VARARGS, "S.resolve(path, depth, choice)" },
     { "update", (PyCFunction)client_update, METH_VARARGS|METH_KEYWORDS, "S.update(path, rev=None, recurse=True, ignore_externals=False) -> list of revnums" },
@@ -1556,10 +1562,10 @@ static PyMethodDef client_methods[] = {
         "S.log(callback, paths, start_rev=None, end_rev=None, limit=0, peg_revision=None, discover_changed_paths=False, strict_node_history=False, include_merged_revisions=False, revprops=None)" },
     { "info", (PyCFunction)client_info, METH_VARARGS|METH_KEYWORDS,
         "S.info(path, revision=None, peg_revision=None, depth=DEPTH_EMPTY) -> dict of info entries" },
-    { "lock", (PyCFunction)client_lock, METH_VARARGS,
+    { "lock", (PyCFunction)client_lock, METH_VARARGS|METH_KEYWORDS,
          "S.lock(targets, comment, steal_lock=False)" },
-    { "unlock", (PyCFunction)client_unlock, METH_VARARGS,
-         "S.lock(targets, break_lock=False)" },
+    { "unlock", (PyCFunction)client_unlock, METH_VARARGS|METH_KEYWORDS,
+         "S.unlock(targets, break_lock=False)" },
     { NULL, }
 };
 
