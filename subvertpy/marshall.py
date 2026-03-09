@@ -30,7 +30,8 @@ class literal(object):
         return self.txt
 
     def __eq__(self, other):
-        return (isinstance(other, literal) and self.txt == other.txt)
+        return isinstance(other, literal) and self.txt == other.txt
+
 
 # 1. Syntactic structure
 # ----------------------
@@ -87,7 +88,7 @@ def unmarshall(x):
     :param x: Bytes to parse
     :return: tuple with unpacked item and remaining bytes
     """
-    whitespace = frozenset(b'\n ')
+    whitespace = frozenset(b"\n ")
     if len(x) == 0:
         raise NeedMoreData("Not enough data")
     if x[0:1] == b"(":  # list follows
@@ -107,7 +108,7 @@ def unmarshall(x):
         if len(x) <= 1:
             raise NeedMoreData("Missing whitespace")
 
-        if not x[1] in whitespace:
+        if x[1] not in whitespace:
             raise MarshallError("Expected space, got '%c'" % x[1])
 
         return (x[2:], ret)
@@ -124,7 +125,7 @@ def unmarshall(x):
         elif x[0:1] == b":":
             if len(x) < num:
                 raise NeedMoreData("Expected string of length %r" % num)
-            return (x[num+2:], x[1:num+1])
+            return (x[num + 2 :], x[1 : num + 1])
         elif not x:
             raise MarshallError("Expected whitespace, got end of string.")
         else:
@@ -133,7 +134,7 @@ def unmarshall(x):
         ret = bytearray()
         # Parse literal
         try:
-            while x[:1].isalpha() or x[:1].isdigit() or x[0:1] == b'-':
+            while x[:1].isalpha() or x[:1].isdigit() or x[0:1] == b"-":
                 ret.append(x[0])
                 x = x[1:]
         except IndexError:
@@ -142,7 +143,7 @@ def unmarshall(x):
         if not x:
             raise MarshallError("Expected whitespace, got end of string.")
 
-        if not x[0] in whitespace:
+        if x[0] not in whitespace:
             raise MarshallError("Expected whitespace, got '%c'" % x[0])
 
         return (x[1:], literal(ret.decode("ascii")))

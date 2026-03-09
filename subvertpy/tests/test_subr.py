@@ -22,47 +22,41 @@ from subvertpy.subr import (
     uri_canonicalize,
     dirent_canonicalize,
     abspath,
-    )
+)
 
 
 class UriCanonicalizeTests(TestCase):
-
     def test_canonicalize(self):
         self.assertEqual(
-                'https://www.example.com',
-                uri_canonicalize('https://www.example.com/'))
+            "https://www.example.com", uri_canonicalize("https://www.example.com/")
+        )
         self.assertEqual(
-                'https://www.example.com(bla)',
-                uri_canonicalize('https://www.example.com(bla)'))
+            "https://www.example.com(bla)",
+            uri_canonicalize("https://www.example.com(bla)"),
+        )
         self.assertEqual(
-                'https://www.example.com/(bla)',
-                uri_canonicalize('https://www.example.com/(bla%29'))
+            "https://www.example.com/(bla)",
+            uri_canonicalize("https://www.example.com/(bla%29"),
+        )
 
 
 class DirentCanonicalizeTests(TestCase):
-
     def test_canonicalize(self):
-        self.assertEqual(
-                '/foo/bar',
-                dirent_canonicalize('/foo/bar'))
-        self.assertEqual(
-                '/foo/bar',
-                dirent_canonicalize('/foo//bar'))
+        self.assertEqual("/foo/bar", dirent_canonicalize("/foo/bar"))
+        self.assertEqual("/foo/bar", dirent_canonicalize("/foo//bar"))
 
 
 class AbspathTests(TestCase):
-
     def test_abspath(self):
-        path = '/foo/bar' if os.name != 'nt' else 'C:/foo/bar'
-        self.assertEqual(
-                path,
-                abspath(path))
+        path = "/foo/bar" if os.name != "nt" else "C:/foo/bar"
+        self.assertEqual(path, abspath(path))
         # os.getcwd() returns '/foo/bar' on linux/macos
         # while it returns 'c:\\foo\\bar' on windows
         self.assertEqual(
-                os.path.join(os.getcwd(), 'bar').replace("\\", "/").lower(),
-                abspath('bar').lower())
+            os.path.join(os.getcwd(), "bar").replace("\\", "/").lower(),
+            abspath("bar").lower(),
+        )
         self.assertEqual(
-                os.path.join(
-                    os.getcwd(), 'bar', 'foo').replace("\\", "/").lower(),
-                abspath('bar/foo').lower())
+            os.path.join(os.getcwd(), "bar", "foo").replace("\\", "/").lower(),
+            abspath("bar/foo").lower(),
+        )

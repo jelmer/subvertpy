@@ -23,8 +23,8 @@ def config_value(command, env, args):
     except OSError as e:
         if e.errno == errno.ENOENT:
             raise Exception(
-                "%s not found. Please set %s environment variable" % (
-                    command, env))
+                "%s not found. Please set %s environment variable" % (command, env)
+            )
         raise
 
 
@@ -39,19 +39,17 @@ def apu_config(args):
 def apr_build_data():
     """Determine the APR header file location."""
     try:
-        includedir = os.environ['APR_INCLUDE_DIR']
+        includedir = os.environ["APR_INCLUDE_DIR"]
     except KeyError:
         if os.name != "nt":
             includedir = apr_config(["--includedir"])
     if not os.path.isdir(includedir):
         raise Exception("APR development headers not found")
     try:
-        extra_link_flags = split_shell_results(
-            os.environ['APR_LINK_FLAGS'])
+        extra_link_flags = split_shell_results(os.environ["APR_LINK_FLAGS"])
     except KeyError:
         if os.name != "nt":
-            extra_link_flags = split_shell_results(
-                apr_config(["--link-ld", "--libs"]))
+            extra_link_flags = split_shell_results(apr_config(["--link-ld", "--libs"]))
         else:
             extra_link_flags = []
     return (includedir, extra_link_flags)
@@ -60,19 +58,17 @@ def apr_build_data():
 def apu_build_data():
     """Determine the APR util header file location."""
     try:
-        includedir = os.environ['APU_INCLUDE_DIR']
+        includedir = os.environ["APU_INCLUDE_DIR"]
     except KeyError:
         if os.name != "nt":
             includedir = apu_config(["--includedir"])
     if not os.path.isdir(includedir):
         raise Exception("APR util development headers not found")
     try:
-        extra_link_flags = split_shell_results(
-            os.environ['APU_LINK_FLAGS'])
+        extra_link_flags = split_shell_results(os.environ["APU_LINK_FLAGS"])
     except KeyError:
         if os.name != "nt":
-            extra_link_flags = split_shell_results(
-                apu_config(["--link-ld", "--libs"]))
+            extra_link_flags = split_shell_results(apu_config(["--link-ld", "--libs"]))
         else:
             extra_link_flags = []
     return (includedir, extra_link_flags)
@@ -81,8 +77,7 @@ def apu_build_data():
 def svn_build_data():
     """Determine the Subversion header file location."""
     if "SVN_HEADER_PATH" in os.environ and "SVN_LIBRARY_PATH" in os.environ:
-        return ([os.getenv("SVN_HEADER_PATH")],
-                [os.getenv("SVN_LIBRARY_PATH")], [])
+        return ([os.getenv("SVN_HEADER_PATH")], [os.getenv("SVN_LIBRARY_PATH")], [])
     svn_prefix = os.getenv("SVN_PREFIX")
     if svn_prefix is None:
         basedirs = ["/usr/local", "/usr", "/opt/homebrew", "/opt/local"]
@@ -92,12 +87,16 @@ def svn_build_data():
                 svn_prefix = basedir
                 break
     if svn_prefix is not None:
-        return ([os.path.join(svn_prefix, "include/subversion-1")],
-                [os.path.join(svn_prefix, "lib"),
-                 os.path.join(svn_prefix, "lib", "db48")], [])
-    raise Exception("Subversion development files not found. "
-                    "Please set SVN_PREFIX or (SVN_LIBRARY_PATH and "
-                    "SVN_HEADER_PATH) environment variable. ")
+        return (
+            [os.path.join(svn_prefix, "include/subversion-1")],
+            [os.path.join(svn_prefix, "lib"), os.path.join(svn_prefix, "lib", "db48")],
+            [],
+        )
+    raise Exception(
+        "Subversion development files not found. "
+        "Please set SVN_PREFIX or (SVN_LIBRARY_PATH and "
+        "SVN_HEADER_PATH) environment variable. "
+    )
 
 
 def is_keychain_provider_available():
@@ -108,24 +107,28 @@ def is_keychain_provider_available():
     abd = apr_build_data()
     sbd = svn_build_data()
     gcc_command_args = (
-            ['gcc'] + ['-I' + inc for inc in sbd[0]] +
-            ['-L' + lib for lib in sbd[1]] +
-            ['-I' + abd[0], '-lsvn_subr-1', '-x', 'c', '-'])
+        ["gcc"]
+        + ["-I" + inc for inc in sbd[0]]
+        + ["-L" + lib for lib in sbd[1]]
+        + ["-I" + abd[0], "-lsvn_subr-1", "-x", "c", "-"]
+    )
     gcc = subprocess.Popen(
-            gcc_command_args,
-            stdin=subprocess.PIPE, universal_newlines=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        gcc_command_args,
+        stdin=subprocess.PIPE,
+        universal_newlines=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     gcc.communicate("""
 #include <svn_auth.h>
 int main(int argc, const char* arv[]) {
     svn_auth_get_keychain_simple_provider(NULL, NULL);
 }
 """)
-    return (gcc.returncode == 0)
+    return gcc.returncode == 0
 
 
 class VersionQuery(object):
-
     def __init__(self, filename):
         self.filename = filename
         f = open(filename, "rU")
@@ -135,12 +138,11 @@ class VersionQuery(object):
             f.close()
 
     def grep(self, what):
-        m = re.search(r"^#define\s+%s\s+(\d+)\s*$" % (what,), self.text,
-                      re.MULTILINE)
+        m = re.search(r"^#define\s+%s\s+(\d+)\s*$" % (what,), self.text, re.MULTILINE)
         if not m:
             raise Exception(
-                    "Definition for %s was not found in file %s." %
-                    (what, self.filename))
+                "Definition for %s was not found in file %s." % (what, self.filename)
+            )
         return int(m.group(1))
 
 
@@ -150,10 +152,9 @@ class VersionQuery(object):
 
 
 class SvnExtension(Extension):
-
     def __init__(self, name, *args, **kwargs):
-        if sys.platform == 'win32':
-            libraries = kwargs.get('libraries', [])
+        if sys.platform == "win32":
+            libraries = kwargs.get("libraries", [])
             libs = [("lib" + lib) for lib in libraries]
             modified = True
             while modified:
@@ -164,27 +165,26 @@ class SvnExtension(Extension):
                             modified = True
                             libs.append(extra)
             kwargs["libraries"] = libs
-        kwargs["include_dirs"] = ([apr_includedir, apu_includedir] +
-                                  svn_includedirs + ["subvertpy"])
+        kwargs["include_dirs"] = (
+            [apr_includedir, apu_includedir] + svn_includedirs + ["subvertpy"]
+        )
         kwargs["library_dirs"] = svn_libdirs
         # Note that the apr-util link flags are not included here, as
         # subvertpy only uses some apr util constants but does not use
         # the library directly.
-        kwargs["extra_link_args"] = (
-            apr_link_flags + apu_link_flags + svn_link_flags)
-        if os.name == 'nt':
+        kwargs["extra_link_args"] = apr_link_flags + apu_link_flags + svn_link_flags
+        if os.name == "nt":
             # APR needs WIN32 defined.
             kwargs["define_macros"] = [("WIN32", None)]
-        if sys.platform == 'darwin':
+        if sys.platform == "darwin":
             # on Mac OS X, we need to check for Keychain availability
             if is_keychain_provider_available():
                 if "define_macros" not in kwargs:
                     kwargs["define_macros"] = []
-                kwargs["define_macros"].extend((
-                    ('DARWIN', None),
-                    ('SVN_KEYCHAIN_PROVIDER_AVAILABLE', '1'))
-                    )
-        if sys.platform in ('darwin', 'linux'):
+                kwargs["define_macros"].extend(
+                    (("DARWIN", None), ("SVN_KEYCHAIN_PROVIDER_AVAILABLE", "1"))
+                )
+        if sys.platform in ("darwin", "linux"):
             kwargs["extra_compile_args"] = [
                 "-std=c99"  # for GCC >=15 as it is using c23 by default
             ]
@@ -210,7 +210,7 @@ subr_deep_deps = [
     "mswsock",
     "version",
     "ole32",
-    ]
+]
 
 
 repos_deep_deps = [
@@ -222,7 +222,7 @@ repos_deep_deps = [
     "libsvn_delta-1",
     "libapr-1",
     "libaprutil-1",
-    ]
+]
 
 
 ra_deep_deps = [
@@ -231,7 +231,7 @@ ra_deep_deps = [
     "libsvn_repos-1",
     "libapr-1",
     "libaprutil-1",
-    ]
+]
 
 
 deep_deps = {
@@ -245,33 +245,45 @@ def subvertpy_modules():
     return [
         SvnExtension(
             "subvertpy.client",
-            [source_path(n)
-                for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")],
-            libraries=["svn_client-1", "svn_diff-1", "svn_delta-1",
-                       "svn_wc-1", "svn_ra-1", "svn_subr-1"]),
+            [
+                source_path(n)
+                for n in ("client.c", "editor.c", "util.c", "_ra.c", "wc.c")
+            ],
+            libraries=[
+                "svn_client-1",
+                "svn_diff-1",
+                "svn_delta-1",
+                "svn_wc-1",
+                "svn_ra-1",
+                "svn_subr-1",
+            ],
+        ),
         SvnExtension(
             "subvertpy._ra",
             [source_path(n) for n in ("_ra.c", "util.c", "editor.c")],
-            libraries=["svn_delta-1", "svn_ra-1", "svn_subr-1"]),
+            libraries=["svn_delta-1", "svn_ra-1", "svn_subr-1"],
+        ),
         SvnExtension(
-            "subvertpy.repos", [source_path(n) for n in ("repos.c", "util.c")],
-            libraries=["svn_repos-1", "svn_subr-1"]),
+            "subvertpy.repos",
+            [source_path(n) for n in ("repos.c", "util.c")],
+            libraries=["svn_repos-1", "svn_subr-1"],
+        ),
         SvnExtension(
             "subvertpy.wc",
-            [source_path(n) for n in
-                ["wc.c", "util.c", "editor.c"]],
-            libraries=["svn_wc-1", "svn_diff-1", "svn_delta-1", "svn_subr-1"]),
+            [source_path(n) for n in ["wc.c", "util.c", "editor.c"]],
+            libraries=["svn_wc-1", "svn_diff-1", "svn_delta-1", "svn_subr-1"],
+        ),
         SvnExtension(
             "subvertpy.subr",
-            [source_path(n)
-                for n in ["util.c", "subr.c"]],
-            libraries=["svn_subr-1"]),
-        ]
+            [source_path(n) for n in ["util.c", "subr.c"]],
+            libraries=["svn_subr-1"],
+        ),
+    ]
 
 
 def package_data():
-    if sys.platform == 'win32':
-        return {'subvertpy': ['subvertpy/*.dll']}
+    if sys.platform == "win32":
+        return {"subvertpy": ["subvertpy/*.dll"]}
     else:
         return {}
 
@@ -281,17 +293,18 @@ subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
 if __name__ == "__main__":
-    setup(name='subvertpy',
-          description='Alternative Python bindings for Subversion',
-          keywords='svn subvertpy subversion bindings',
-          version=subvertpy_version_string,
-          url='https://jelmer.uk/subvertpy',
-          download_url="https://jelmer.uk/subvertpy/tarball/subvertpy-%s/" % (
-              subvertpy_version_string, ),
-          license='LGPLv2.1 or later',
-          author='Jelmer Vernooij',
-          author_email='jelmer@jelmer.uk',
-          long_description="""
+    setup(
+        name="subvertpy",
+        description="Alternative Python bindings for Subversion",
+        keywords="svn subvertpy subversion bindings",
+        version=subvertpy_version_string,
+        url="https://jelmer.uk/subvertpy",
+        download_url="https://jelmer.uk/subvertpy/tarball/subvertpy-%s/"
+        % (subvertpy_version_string,),
+        license="LGPLv2.1 or later",
+        author="Jelmer Vernooij",
+        author_email="jelmer@jelmer.uk",
+        long_description="""
 Alternative Python bindings for Subversion. The goal is to have
 complete, portable and "Pythonic" Python bindings.
 
@@ -311,20 +324,20 @@ Subvertpy depends on Python 2.7 or 3.5, and Subversion 1.4 or later. It should
 work on Windows as well as most POSIX-based platforms (including Linux, BSDs
 and Mac OS X).
 """,
-          packages=['subvertpy', 'subvertpy.tests'],
-          package_data=package_data(),
-          ext_modules=subvertpy_modules(),
-          scripts=['bin/subvertpy-fast-export'],
-          classifiers=[
-              'Development Status :: 4 - Beta',
-              'License :: OSI Approved :: GNU General Public '
-              'License v2 or later (GPLv2+)',
-              'Programming Language :: Python :: 2.7',
-              'Programming Language :: Python :: 3.4',
-              'Programming Language :: Python :: 3.5',
-              'Programming Language :: Python :: 3.6',
-              'Programming Language :: Python :: Implementation :: CPython',
-              'Operating System :: POSIX',
-              'Topic :: Software Development :: Version Control',
-          ],
-          )
+        packages=["subvertpy", "subvertpy.tests"],
+        package_data=package_data(),
+        ext_modules=subvertpy_modules(),
+        scripts=["bin/subvertpy-fast-export"],
+        classifiers=[
+            "Development Status :: 4 - Beta",
+            "License :: OSI Approved :: GNU General Public "
+            "License v2 or later (GPLv2+)",
+            "Programming Language :: Python :: 2.7",
+            "Programming Language :: Python :: 3.4",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: Implementation :: CPython",
+            "Operating System :: POSIX",
+            "Topic :: Software Development :: Version Control",
+        ],
+    )

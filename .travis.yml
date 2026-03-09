@@ -26,7 +26,7 @@ script:
   - make check
   - make style
 install:
-  - travis_retry pip install -U pip coverage codecov flake8
+  - travis_retry pip install -U pip coverage codecov ruff
 before_install:
   - wget https://archive.apache.org/dist/subversion/subversion-${SVN_VERSION}.tar.gz
   - tar xvfz subversion-${SVN_VERSION}.tar.gz

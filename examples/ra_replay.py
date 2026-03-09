@@ -4,12 +4,12 @@
 
 from subvertpy.ra import RemoteAccess, Auth, get_username_provider
 
-conn = RemoteAccess("svn://svn.gnome.org/svn/gnome-specimen/trunk",
-                    auth=Auth([get_username_provider()]))
+conn = RemoteAccess(
+    "svn://svn.gnome.org/svn/gnome-specimen/trunk", auth=Auth([get_username_provider()])
+)
 
 
 class MyFileEditor:
-
     def change_prop(self, key, value):
         print("Change prop: %s -> %r" % (key, value))
 
@@ -17,6 +17,7 @@ class MyFileEditor:
         # This should return a function that can receive delta windows
         def apply_window(x):
             pass
+
         return apply_window
 
     def close(self):
@@ -24,7 +25,6 @@ class MyFileEditor:
 
 
 class MyDirEditor:
-
     def open_directory(self, *args):
         print("Open dir: %s (base revnum: %r)" % args)
         return MyDirEditor()
@@ -38,8 +38,7 @@ class MyDirEditor:
         return MyFileEditor()
 
     def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
-        print("Add file: %s (from %r:%r)" %
-              (path, copyfrom_path, copyfrom_rev))
+        print("Add file: %s (from %r:%r)" % (path, copyfrom_path, copyfrom_rev))
         return MyFileEditor()
 
     def change_prop(self, key, value):
@@ -53,7 +52,6 @@ class MyDirEditor:
 
 
 class MyEditor:
-
     def set_target_revision(self, revnum):
         print("Target revision: %d" % revnum)
 

@@ -1,0 +1,9 @@
+[tool.ruff]
+exclude = [
+    "build",
+    ".git",
+    "build-pypy",
+    ".tox",
+    "subversion-*",
+    "serf-*",
+]
