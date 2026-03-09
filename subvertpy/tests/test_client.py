@@ -372,41 +372,53 @@ class TestClient(SubversionTestCase):
 
     def test_add_with_options(self):
         self.build_tree({"dc/addopts": b"data"})
-        self.client.add("dc/addopts", recursive=True, force=False,
-                        no_ignore=True, add_parents=False,
-                        no_autoprops=True)
+        self.client.add(
+            "dc/addopts",
+            recursive=True,
+            force=False,
+            no_ignore=True,
+            add_parents=False,
+            no_autoprops=True,
+        )
 
     def test_commit_with_options(self):
         self.build_tree({"dc/commitopt": b"data"})
         self.client.add("dc/commitopt")
         self.client.log_msg_func = lambda c: "Commit with opts"
         callbacks = []
-        self.client.commit(["dc"], recurse=True, keep_locks=False,
-                           keep_changelist=False,
-                           commit_as_operations=True,
-                           include_file_externals=False,
-                           include_dir_externals=False,
-                           callback=lambda *args: callbacks.append(args))
+        self.client.commit(
+            ["dc"],
+            recurse=True,
+            keep_locks=False,
+            keep_changelist=False,
+            commit_as_operations=True,
+            include_file_externals=False,
+            include_dir_externals=False,
+            callback=lambda *args: callbacks.append(args),
+        )
         self.assertEqual(1, len(callbacks))
 
     def test_commit_revprops(self):
         self.build_tree({"dc/rptest": b"data"})
         self.client.add("dc/rptest")
         self.client.log_msg_func = lambda c: "revprop commit"
-        self.client.commit(["dc"],
-                           revprops={"custom:testprop": "testval"})
+        self.client.commit(["dc"], revprops={"custom:testprop": "testval"})
 
     def test_update_with_options(self):
         self.build_tree({"dc/updopt": b"data"})
         self.client.add("dc/updopt")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        self.client.update(["dc"], "HEAD", recurse=True,
-                           ignore_externals=True,
-                           depth_is_sticky=False,
-                           allow_unver_obstructions=False,
-                           adds_as_modification=True,
-                           make_parents=False)
+        self.client.update(
+            ["dc"],
+            "HEAD",
+            recurse=True,
+            ignore_externals=True,
+            depth_is_sticky=False,
+            allow_unver_obstructions=False,
+            adds_as_modification=True,
+            make_parents=False,
+        )
 
     def test_checkout_with_options(self):
         self.build_tree({"dc/chkopt": b"data"})
@@ -414,9 +426,14 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         checkout_dir = os.path.join(self.test_dir, "checkout3")
-        self.client.checkout(self.repos_url, checkout_dir, "HEAD",
-                             peg_rev="HEAD", recurse=True,
-                             allow_unver_obstructions=False)
+        self.client.checkout(
+            self.repos_url,
+            checkout_dir,
+            "HEAD",
+            peg_rev="HEAD",
+            recurse=True,
+            allow_unver_obstructions=False,
+        )
         self.assertTrue(os.path.exists(os.path.join(checkout_dir, "chkopt")))
 
     def test_export_with_options(self):
@@ -425,8 +442,14 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         export_dir = os.path.join(self.test_dir, "export_opts")
-        self.client.export(self.repos_url, export_dir, rev="HEAD",
-                           peg_rev="HEAD", recurse=True, overwrite=False)
+        self.client.export(
+            self.repos_url,
+            export_dir,
+            rev="HEAD",
+            peg_rev="HEAD",
+            recurse=True,
+            overwrite=False,
+        )
         self.assertTrue(os.path.exists(os.path.join(export_dir, "expopt")))
 
     def test_diff_with_options(self):
@@ -439,9 +462,14 @@ class TestClient(SubversionTestCase):
         f.modify(b"v2")
         dc.close()
         (outf, errf) = self.client.diff(
-            1, 2, self.repos_url, self.repos_url,
-            ignore_ancestry=True, no_diff_deleted=False,
-            ignore_content_type=False)
+            1,
+            2,
+            self.repos_url,
+            self.repos_url,
+            ignore_ancestry=True,
+            no_diff_deleted=False,
+            ignore_content_type=False,
+        )
         self.addCleanup(outf.close)
         self.addCleanup(errf.close)
         out = outf.read()
@@ -449,18 +477,26 @@ class TestClient(SubversionTestCase):
 
     def test_log_with_options(self):
         entries = []
+
         def cb(changed_paths, revision, revprops, has_children=False):
             entries.append(revision)
+
         self.build_tree({"dc/logopt": b"data"})
         self.client.add("dc/logopt")
         self.client.log_msg_func = lambda c: "Commit 1"
         self.client.commit(["dc"])
         self.build_tree({"dc/logopt": b"data2"})
         self.client.commit(["dc"])
-        self.client.log(cb, "dc/logopt", start_rev="HEAD", end_rev=1,
-                        limit=1, discover_changed_paths=True,
-                        strict_node_history=True,
-                        include_merged_revisions=False)
+        self.client.log(
+            cb,
+            "dc/logopt",
+            start_rev="HEAD",
+            end_rev=1,
+            limit=1,
+            discover_changed_paths=True,
+            strict_node_history=True,
+            include_merged_revisions=False,
+        )
         self.assertEqual(1, len(entries))
 
     def test_cat_with_peg_revision(self):
@@ -486,9 +522,13 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/cpsrc")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        self.client.copy("dc/cpsrc", "dc/cpdst",
-                         copy_as_child=False, make_parents=False,
-                         metadata_only=False)
+        self.client.copy(
+            "dc/cpsrc",
+            "dc/cpdst",
+            copy_as_child=False,
+            make_parents=False,
+            metadata_only=False,
+        )
         self.assertTrue(os.path.exists("dc/cpdst"))
 
     def test_info_with_options(self):
@@ -496,9 +536,14 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/infoopt")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        info = self.client.info("dc/infoopt", revision=1, peg_revision=1,
-                                depth=0, fetch_excluded=False,
-                                fetch_actual_only=False)
+        info = self.client.info(
+            "dc/infoopt",
+            revision=1,
+            peg_revision=1,
+            depth=0,
+            fetch_excluded=False,
+            fetch_actual_only=False,
+        )
         self.assertIn("infoopt", info)
 
     def test_lock_steal(self):
@@ -516,26 +561,23 @@ class TestClient(SubversionTestCase):
     def test_mkdir_with_callback(self):
         commits = []
         self.client.mkdir(
-            [self.repos_url + "/remotedir"],
-            callback=lambda *args: commits.append(args))
+            [self.repos_url + "/remotedir"], callback=lambda *args: commits.append(args)
+        )
 
     def test_propset_skip_checks(self):
         self.build_tree({"dc/propskip": b"data"})
         self.client.add("dc/propskip")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        self.client.propset("custom:myprop", b"value", "dc/propskip",
-                            skip_checks=True)
+        self.client.propset("custom:myprop", b"value", "dc/propskip", skip_checks=True)
 
     def test_propset_with_options(self):
         self.build_tree({"dc/propopt": b"data"})
         self.client.add("dc/propopt")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        self.client.propset("myprop", "myval", "dc/propopt",
-                            False, True)
-        ret = self.client.propget("myprop", "dc/propopt", "WORKING",
-                                  "WORKING", True)
+        self.client.propset("myprop", "myval", "dc/propopt", False, True)
+        ret = self.client.propget("myprop", "dc/propopt", "WORKING", "WORKING", True)
         self.assertIsInstance(ret, dict)
 
     def test_cat_expand_keywords(self):
@@ -561,8 +603,7 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/listfile")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        entries = self.client.list(self.repos_url, "HEAD", 0,
-                                   include_externals=False)
+        entries = self.client.list(self.repos_url, "HEAD", 0, include_externals=False)
         self.assertIsInstance(entries, dict)
 
     def test_delete_with_callback(self):
@@ -574,7 +615,8 @@ class TestClient(SubversionTestCase):
         self.client.delete(
             [self.repos_url + "/delcb"],
             force=True,
-            callback=lambda *args: commits.append(args))
+            callback=lambda *args: commits.append(args),
+        )
 
     def test_copy_with_src_rev(self):
         self.build_tree({"dc/cprev": b"data"})
@@ -586,12 +628,14 @@ class TestClient(SubversionTestCase):
 
     def test_get_config_with_dir(self):
         import tempfile
+
         cfg_dir = tempfile.mkdtemp()
         try:
             config = client.get_config(cfg_dir)
             self.assertIsInstance(config, client.Config)
         finally:
             import shutil
+
             shutil.rmtree(cfg_dir)
 
     def test_copy_pin_externals(self):
@@ -615,9 +659,11 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/cpcb")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        self.client.copy(self.repos_url + "/cpcb",
-                         self.repos_url + "/cpcb2",
-                         callback=lambda *args: None)
+        self.client.copy(
+            self.repos_url + "/cpcb",
+            self.repos_url + "/cpcb2",
+            callback=lambda *args: None,
+        )
 
     def test_diff_relative_to_dir(self):
         self.build_tree({"dc/diffrel": b"line1\n"})
@@ -625,8 +671,9 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.build_tree({"dc/diffrel": b"line1\nline2\n"})
-        (outfile, errfile) = self.client.diff(1, 'WORKING', "dc", "dc",
-                                              relative_to_dir="dc")
+        (outfile, errfile) = self.client.diff(
+            1, "WORKING", "dc", "dc", relative_to_dir="dc"
+        )
         out = outfile.read()
         self.assertIn(b"line2", out)
 
@@ -636,8 +683,9 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.build_tree({"dc/diffenc": b"hello\nworld\n"})
-        (outfile, errfile) = self.client.diff(1, 'WORKING', "dc", "dc",
-                                              encoding="utf-8")
+        (outfile, errfile) = self.client.diff(
+            1, "WORKING", "dc", "dc", encoding="utf-8"
+        )
         out = outfile.read()
         self.assertIn(b"world", out)
 
@@ -647,8 +695,9 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.build_tree({"dc/diffict": b"hello\nworld\n"})
-        (outfile, errfile) = self.client.diff(1, 'WORKING', "dc", "dc",
-                                              ignore_content_type=True)
+        (outfile, errfile) = self.client.diff(
+            1, "WORKING", "dc", "dc", ignore_content_type=True
+        )
         out = outfile.read()
         self.assertIn(b"world", out)
 
@@ -658,8 +707,7 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.build_tree({"dc/diffopt": b"hello\nworld\n"})
-        (outfile, errfile) = self.client.diff(1, 'WORKING', "dc", "dc",
-                                              diffopts=["-u"])
+        (outfile, errfile) = self.client.diff(1, "WORKING", "dc", "dc", diffopts=["-u"])
         out = outfile.read()
         self.assertIn(b"world", out)
 

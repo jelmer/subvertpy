@@ -82,7 +82,7 @@ class TestCase(unittest.TestCase):
             self.fail(msg)
 
     def assertIs(self, left, right, message=None):
-        if not (left is right):
+        if left is not right:
             if message is not None:
                 raise AssertionError(message)
             else:

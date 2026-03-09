@@ -35,12 +35,11 @@ from subvertpy.ra_svn import (
     SSHVendor,
     mark_busy,
     unmarshall_dirent,
-    )
+)
 from subvertpy.tests import TestCase
 
 
 class MarkBusyTests(TestCase):
-
     def test_sets_and_clears_busy(self):
         class Obj:
             busy = False
@@ -97,7 +96,6 @@ class MarkBusyTests(TestCase):
 
 
 class UnmarshallDirentTests(TestCase):
-
     def test_basic(self):
         d = ["file.txt", "file", 1234, True, 5, [], []]
         result = unmarshall_dirent(d)
@@ -110,11 +108,9 @@ class UnmarshallDirentTests(TestCase):
         self.assertNotIn("last-author", result)
 
     def test_with_date_and_author(self):
-        d = ["dir", "dir", 0, False, 3,
-             "2024-01-01T00:00:00.000000Z", "admin"]
+        d = ["dir", "dir", 0, False, 3, "2024-01-01T00:00:00.000000Z", "admin"]
         result = unmarshall_dirent(d)
-        self.assertEqual("2024-01-01T00:00:00.000000Z",
-                         result["created-date"])
+        self.assertEqual("2024-01-01T00:00:00.000000Z", result["created-date"])
         self.assertEqual("admin", result["last-author"])
 
     def test_has_props_converted_to_bool(self):
@@ -128,7 +124,6 @@ class UnmarshallDirentTests(TestCase):
 
 
 class SVNConnectionTests(TestCase):
-
     def test_send_msg(self):
         sent = []
 
@@ -169,7 +164,6 @@ class SVNConnectionTests(TestCase):
 
 
 class EditorTests(TestCase):
-
     def setUp(self):
         super(EditorTests, self).setUp()
         self.sent = []
@@ -219,7 +213,6 @@ class EditorTests(TestCase):
 
 
 class DirectoryEditorTests(TestCase):
-
     def setUp(self):
         super(DirectoryEditorTests, self).setUp()
         self.sent = []
@@ -238,13 +231,11 @@ class DirectoryEditorTests(TestCase):
     def test_change_prop(self):
         self.de.change_prop("svn:log", "value")
         self.assertEqual(literal("change-dir-prop"), self.sent[0][0])
-        self.assertEqual(
-            [self.dir_id, "svn:log", ["value"]], self.sent[0][1])
+        self.assertEqual([self.dir_id, "svn:log", ["value"]], self.sent[0][1])
 
     def test_change_prop_none_value(self):
         self.de.change_prop("svn:log", None)
-        self.assertEqual(
-            [self.dir_id, "svn:log", []], self.sent[0][1])
+        self.assertEqual([self.dir_id, "svn:log", []], self.sent[0][1])
 
     def test_add_file_returns_file_editor(self):
         fe = self.de.add_file("test.txt")
@@ -252,8 +243,7 @@ class DirectoryEditorTests(TestCase):
         self.assertEqual(literal("add-file"), self.sent[0][0])
 
     def test_add_file_with_copyfrom(self):
-        self.de.add_file("test.txt", copyfrom_path="/trunk/old.txt",
-                         copyfrom_rev=3)
+        self.de.add_file("test.txt", copyfrom_path="/trunk/old.txt", copyfrom_rev=3)
         args = self.sent[0][1]
         self.assertEqual("test.txt", args[0])
         self.assertEqual(["/trunk/old.txt", 3], args[3])
@@ -269,8 +259,7 @@ class DirectoryEditorTests(TestCase):
         self.assertEqual(literal("add-dir"), self.sent[0][0])
 
     def test_add_directory_with_copyfrom(self):
-        self.de.add_directory("subdir", copyfrom_path="/trunk/old",
-                              copyfrom_rev=2)
+        self.de.add_directory("subdir", copyfrom_path="/trunk/old", copyfrom_rev=2)
         args = self.sent[0][1]
         self.assertEqual("subdir", args[0])
         self.assertEqual(["/trunk/old", 2], args[3])
@@ -306,13 +295,10 @@ class DirectoryEditorTests(TestCase):
         initial_count = self.conn._open_ids.count(self.dir_id)
         self.de.close()
         self.assertEqual(literal("close-dir"), self.sent[0][0])
-        self.assertEqual(
-            initial_count - 1,
-            self.conn._open_ids.count(self.dir_id))
+        self.assertEqual(initial_count - 1, self.conn._open_ids.count(self.dir_id))
 
 
 class FileEditorTests(TestCase):
-
     def setUp(self):
         super(FileEditorTests, self).setUp()
         self.sent = []
@@ -332,13 +318,12 @@ class FileEditorTests(TestCase):
         self.fe.change_prop("svn:mime-type", "text/plain")
         self.assertEqual(literal("change-file-prop"), self.sent[0][0])
         self.assertEqual(
-            [self.file_id, "svn:mime-type", ["text/plain"]],
-            self.sent[0][1])
+            [self.file_id, "svn:mime-type", ["text/plain"]], self.sent[0][1]
+        )
 
     def test_change_prop_none(self):
         self.fe.change_prop("svn:mime-type", None)
-        self.assertEqual(
-            [self.file_id, "svn:mime-type", []], self.sent[0][1])
+        self.assertEqual([self.file_id, "svn:mime-type", []], self.sent[0][1])
 
     def test_close_no_checksum(self):
         self.fe.close()
@@ -347,8 +332,7 @@ class FileEditorTests(TestCase):
 
     def test_close_with_checksum(self):
         self.fe.close(checksum="abc123")
-        self.assertEqual(
-            [self.file_id, ["abc123"]], self.sent[0][1])
+        self.assertEqual([self.file_id, ["abc123"]], self.sent[0][1])
 
     def test_apply_textdelta(self):
         handler = self.fe.apply_textdelta()
@@ -359,8 +343,7 @@ class FileEditorTests(TestCase):
 
     def test_apply_textdelta_with_checksum(self):
         self.fe.apply_textdelta(base_checksum="md5sum")
-        self.assertEqual(
-            [self.file_id, ["md5sum"]], self.sent[0][1])
+        self.assertEqual([self.file_id, ["md5sum"]], self.sent[0][1])
 
     def test_apply_textdelta_handler_sends_chunks(self):
         handler = self.fe.apply_textdelta()
@@ -371,6 +354,7 @@ class FileEditorTests(TestCase):
 
     def test_apply_textdelta_handler_sends_window(self):
         from subvertpy.delta import TXDELTA_NEW
+
         handler = self.fe.apply_textdelta()
         self.sent.clear()
         window = (0, 0, 3, 1, [(TXDELTA_NEW, 0, 3)], b"foo")
@@ -381,7 +365,6 @@ class FileEditorTests(TestCase):
 
 
 class SSHSubprocessTests(TestCase):
-
     def test_get_filelike_channels(self):
         class FakeProc:
             stdout = "fake_stdout"
@@ -395,14 +378,12 @@ class SSHSubprocessTests(TestCase):
 
 
 class SSHVendorTests(TestCase):
-
     def test_is_instantiable(self):
         vendor = SSHVendor()
-        self.assertTrue(hasattr(vendor, 'connect_ssh'))
+        self.assertTrue(hasattr(vendor, "connect_ssh"))
 
 
 class ReporterTests(TestCase):
-
     def setUp(self):
         super(ReporterTests, self).setUp()
         self.sent = []
@@ -462,15 +443,13 @@ class ReporterTests(TestCase):
 
     def test_link_path_with_lock_token(self):
         reporter = Reporter(self.conn, None)
-        reporter.link_path("path", "svn://example.com", 3,
-                           lock_token="tok")
+        reporter.link_path("path", "svn://example.com", 3, lock_token="tok")
         args = self.sent[0][1]
         self.assertEqual(["tok"], args[4])
 
     def test_link_path_with_depth(self):
         reporter = Reporter(self.conn, None)
-        reporter.link_path("path", "svn://example.com", 3,
-                           depth="files")
+        reporter.link_path("path", "svn://example.com", 3, depth="files")
         args = self.sent[0][1]
         self.assertEqual("files", args[5])
 
@@ -482,7 +461,6 @@ class ReporterTests(TestCase):
 
 
 class SVNServerMutterTests(TestCase):
-
     def test_mutter_with_logf(self):
         logf = StringIO()
         sent = []
@@ -551,7 +529,6 @@ class SVNServerMutterTests(TestCase):
 
 
 class ConstantsTests(TestCase):
-
     def test_svn_port(self):
         self.assertEqual(3690, SVN_PORT)
 

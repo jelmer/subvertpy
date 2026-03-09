@@ -352,9 +352,10 @@ class TestRemoteAccess(SubversionTestCase):
     def test_get_commit_editor_with_lock_tokens(self):
         def mycb(paths, rev, revprops):
             pass
+
         editor = self.ra.get_commit_editor(
-            {"svn:log": "with locks"}, mycb,
-            lock_tokens={}, keep_locks=True)
+            {"svn:log": "with locks"}, mycb, lock_tokens={}, keep_locks=True
+        )
         root = editor.open_root()
         root.close()
         editor.close()
@@ -362,10 +363,11 @@ class TestRemoteAccess(SubversionTestCase):
     def test_get_log_with_limit(self):
         self.do_commit()
         returned = []
+
         def cb(*args):
             returned.append(args)
-        self.ra.get_log(cb, [""], 0, 1, limit=1,
-                        include_merged_revisions=False)
+
+        self.ra.get_log(cb, [""], 0, 1, limit=1, include_merged_revisions=False)
         self.assertEqual(1, len(returned))
 
     def test_change_rev_prop_old_value(self):
@@ -378,23 +380,44 @@ class TestRemoteAccess(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         reporter = self.ra.do_diff(
-            1, "", self.ra.get_repos_root(), MyEditor(),
-            recurse=True, ignore_ancestry=True, text_deltas=True)
+            1,
+            "",
+            self.ra.get_repos_root(),
+            MyEditor(),
+            recurse=True,
+            ignore_ancestry=True,
+            text_deltas=True,
+        )
         reporter.set_path("", 0, True)
         reporter.finish()
 
@@ -402,20 +425,37 @@ class TestRemoteAccess(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def apply_textdelta(self, base_checksum): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def apply_textdelta(self, base_checksum):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         self.ra.replay(1, 0, MyEditor(), send_deltas=False)
 
@@ -423,54 +463,87 @@ class TestRemoteAccess(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def apply_textdelta(self, base_checksum): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def apply_textdelta(self, base_checksum):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         editors = []
+
         def revstart_cb(rev, revprops):
             e = MyEditor()
             editors.append(e)
             return e
+
         def revfinish_cb(rev, revprops, editor):
             pass
 
-        self.ra.replay_range(1, 1, 0, (revstart_cb, revfinish_cb),
-                             send_deltas=False)
+        self.ra.replay_range(1, 1, 0, (revstart_cb, revfinish_cb), send_deltas=False)
         self.assertEqual(1, len(editors))
 
     def test_do_update_with_options(self):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
 
-        reporter = self.ra.do_update(1, "", True, MyEditor(),
-                                     send_copyfrom_args=True,
-                                     ignore_ancestry=True)
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
+
+        reporter = self.ra.do_update(
+            1, "", True, MyEditor(), send_copyfrom_args=True, ignore_ancestry=True
+        )
         reporter.set_path("", 0, True)
         reporter.finish()
 
@@ -478,23 +551,44 @@ class TestRemoteAccess(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         reporter = self.ra.do_switch(
-            1, "", True, self.repos_url, MyEditor(),
-            send_copyfrom_args=True, ignore_ancestry=True)
+            1,
+            "",
+            True,
+            self.repos_url,
+            MyEditor(),
+            send_copyfrom_args=True,
+            ignore_ancestry=True,
+        )
         reporter.set_path("", 0, True)
         reporter.finish()
 
@@ -504,17 +598,18 @@ class TestRemoteAccess(SubversionTestCase):
         f.modify(b"v1")
         dc.close()
         revs = []
+
         def handler(path, rev, rev_props, prop_diffs=None):
             revs.append(rev)
-        self.ra.get_file_revs("filerevs", 0, 1, handler,
-                              include_merged_revisions=True)
+
+        self.ra.get_file_revs("filerevs", 0, 1, handler, include_merged_revisions=True)
         self.assertTrue(len(revs) > 0)
 
     def test_mergeinfo_with_options(self):
         self.do_commit()
         result = self.ra.mergeinfo(
-            [""], revision=1, inherit=ra.MERGEINFO_INHERITED,
-            include_descendants=True)
+            [""], revision=1, inherit=ra.MERGEINFO_INHERITED, include_descendants=True
+        )
         if result is not None:
             self.assertIsInstance(result, dict)
 
@@ -649,8 +744,7 @@ class TestEditorOperations(SubversionTestCase):
         dc.delete("todelete")
         dc.close()
 
-        r = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
         self.assertEqual(NODE_NONE, r.check_path("todelete", 2))
 
     def test_open_directory(self):
@@ -664,8 +758,7 @@ class TestEditorOperations(SubversionTestCase):
         subdir.add_file("mydir/another").modify(b"more")
         dc.close()
 
-        r = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
         stream = BytesIO()
         r.get_file("mydir/another", stream, 2)
         stream.seek(0)
@@ -677,8 +770,7 @@ class TestEditorOperations(SubversionTestCase):
         subdir.change_prop("myprop", "myval")
         dc.close()
 
-        r = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
         (dirents, rev, props) = r.get_dir("propdir", 1)
         self.assertIn("myprop", props)
         self.assertEqual(b"myval", props["myprop"])
@@ -686,8 +778,7 @@ class TestEditorOperations(SubversionTestCase):
     def test_absent_file(self):
         # absent_file is used by editors to signal a file is not present
         # We test it via the low-level commit editor
-        r = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
         editor = r.get_commit_editor({"svn:log": "absent test"})
         root = editor.open_root()
         root.absent_file("ghost")
@@ -695,8 +786,7 @@ class TestEditorOperations(SubversionTestCase):
         editor.close()
 
     def test_absent_directory(self):
-        r = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
         editor = r.get_commit_editor({"svn:log": "absent dir test"})
         root = editor.open_root()
         root.absent_directory("ghostdir")
@@ -816,7 +906,6 @@ class AuthTests(TestCase):
 
 
 class TestProviders(TestCase):
-
     def test_get_simple_provider(self):
         provider = ra.get_simple_provider()
         self.assertIsNotNone(provider)
@@ -844,12 +933,12 @@ class TestProviders(TestCase):
 
 
 class TestRemoteAccessProperties(SubversionTestCase):
-
     def setUp(self):
         super(TestRemoteAccessProperties, self).setUp()
         self.repos_url = self.make_repository("d")
         self.ra_ctx = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+            self.repos_url, auth=ra.Auth([ra.get_username_provider()])
+        )
 
     def tearDown(self):
         del self.ra_ctx
@@ -871,8 +960,7 @@ class TestRemoteAccessProperties(SubversionTestCase):
         self.assertIsInstance(result, bool)
 
     def test_has_capability_unknown(self):
-        self.assertRaises(
-            SubversionException, self.ra_ctx.has_capability, "bogus")
+        self.assertRaises(SubversionException, self.ra_ctx.has_capability, "bogus")
 
     def do_commit(self):
         dc = self.get_commit_editor(self.repos_url)
@@ -883,19 +971,34 @@ class TestRemoteAccessProperties(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         reporter = self.ra_ctx.do_update(1, "", True, MyEditor())
         reporter.set_path("", 0, True)
@@ -905,19 +1008,34 @@ class TestRemoteAccessProperties(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         self.ra_ctx.replay(1, 0, MyEditor())
 
@@ -935,12 +1053,14 @@ class TestRemoteAccessProperties(SubversionTestCase):
     def test_get_commit_editor_abort(self):
         def mycb(*args):
             pass
+
         editor = self.ra_ctx.get_commit_editor({"svn:log": "test"}, mycb)
         editor.abort()
 
     def test_editor_dir_context_manager(self):
         def mycb(*args):
             pass
+
         editor = self.ra_ctx.get_commit_editor({"svn:log": "test"}, mycb)
         with editor:
             root = editor.open_root()
@@ -1035,25 +1155,45 @@ class TestRemoteAccessProperties(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def open_directory(self, *args): return MyDirEditor()
-            def open_file(self, *args): return MyFileEditor()
-            def delete_entry(self, *args): pass
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def open_directory(self, *args):
+                return MyDirEditor()
+
+            def open_file(self, *args):
+                return MyFileEditor()
+
+            def delete_entry(self, *args):
+                pass
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
 
-        reporter = self.ra_ctx.do_switch(
-            1, "", True, self.repos_url, MyEditor())
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
+
+        reporter = self.ra_ctx.do_switch(1, "", True, self.repos_url, MyEditor())
         reporter.set_path("", 0, True)
         reporter.finish()
 
@@ -1065,21 +1205,37 @@ class TestRemoteAccessProperties(SubversionTestCase):
         dc.close()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
+
             def apply_textdelta(self, base_checksum=None):
                 return None
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         editors = []
 
@@ -1097,10 +1253,12 @@ class TestRemoteAccessProperties(SubversionTestCase):
     def test_constructor_client_string_func(self):
         def client_string_func():
             return "test-client/1.0"
+
         ra_ctx = ra.RemoteAccess(
             self.repos_url,
             auth=ra.Auth([ra.get_username_provider()]),
-            client_string_func=client_string_func)
+            client_string_func=client_string_func,
+        )
         self.assertIsNotNone(ra_ctx)
         ra_ctx.get_latest_revnum()
         del ra_ctx
@@ -1109,35 +1267,43 @@ class TestRemoteAccessProperties(SubversionTestCase):
         ra_ctx = ra.RemoteAccess(
             self.repos_url,
             auth=ra.Auth([ra.get_username_provider()]),
-            uuid=self.ra_ctx.get_uuid())
+            uuid=self.ra_ctx.get_uuid(),
+        )
         self.assertIsNotNone(ra_ctx)
         del ra_ctx
 
     def test_constructor_progress_cb(self):
         progress_calls = []
+
         def progress_cb(progress, total):
             progress_calls.append((progress, total))
+
         ra_ctx = ra.RemoteAccess(
             self.repos_url,
             auth=ra.Auth([ra.get_username_provider()]),
-            progress_cb=progress_cb)
+            progress_cb=progress_cb,
+        )
         ra_ctx.get_latest_revnum()
         del ra_ctx
 
     def test_get_simple_provider_callback(self):
         def simple_cb(realm, username, may_save):
             return ("user", "pass", False)
+
         provider = ra.get_simple_provider(simple_cb)
         self.assertIsNotNone(provider)
 
     def test_constructor_open_tmp_file_func(self):
         import tempfile
+
         def open_tmp_file():
             return tempfile.mktemp()
+
         ra_ctx = ra.RemoteAccess(
             self.repos_url,
             auth=ra.Auth([ra.get_username_provider()]),
-            open_tmp_file_func=open_tmp_file)
+            open_tmp_file_func=open_tmp_file,
+        )
         self.assertIsNotNone(ra_ctx)
         ra_ctx.get_latest_revnum()
         del ra_ctx
@@ -1149,19 +1315,19 @@ class TestRemoteAccessProperties(SubversionTestCase):
             progress_calls.append((progress, total))
 
         ra_ctx = ra.RemoteAccess(
-            self.repos_url,
-            auth=ra.Auth([ra.get_username_provider()]))
+            self.repos_url, auth=ra.Auth([ra.get_username_provider()])
+        )
         ra_ctx.progress_func = progress_cb
         ra_ctx.get_latest_revnum()
         del ra_ctx
 
     def test_constructor_config(self):
         from subvertpy import client
+
         config = client.get_config()
         ra_ctx = ra.RemoteAccess(
-            self.repos_url,
-            auth=ra.Auth([ra.get_username_provider()]),
-            config=config)
+            self.repos_url, auth=ra.Auth([ra.get_username_provider()]), config=config
+        )
         self.assertIsNotNone(ra_ctx)
         ra_ctx.get_latest_revnum()
         del ra_ctx
@@ -1170,20 +1336,37 @@ class TestRemoteAccessProperties(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def delete_entry(self, *args): pass
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def delete_entry(self, *args):
+                pass
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         reporter = self.ra_ctx.do_update(1, "", True, MyEditor())
         reporter.set_path("", 0, True, None, ra.DEPTH_INFINITY)
@@ -1193,48 +1376,86 @@ class TestRemoteAccessProperties(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def open_directory(self, *args): return MyDirEditor()
-            def open_file(self, *args): return MyFileEditor()
-            def delete_entry(self, *args): pass
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def open_directory(self, *args):
+                return MyDirEditor()
+
+            def open_file(self, *args):
+                return MyFileEditor()
+
+            def delete_entry(self, *args):
+                pass
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         reporter = self.ra_ctx.do_update(1, "", True, MyEditor())
         reporter.set_path("", 0, True)
         reporter.link_path(
-            "foo", self.repos_url + "/foo", 1, True,
-            None, ra.DEPTH_INFINITY)
+            "foo", self.repos_url + "/foo", 1, True, None, ra.DEPTH_INFINITY
+        )
         reporter.finish()
 
     def test_reporter_delete_path(self):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def delete_entry(self, *args): pass
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def delete_entry(self, *args):
+                pass
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         reporter = self.ra_ctx.do_update(1, "", True, MyEditor())
         reporter.set_path("", 0, True)
@@ -1252,22 +1473,43 @@ class TestRemoteAccessProperties(SubversionTestCase):
         self.do_commit()
 
         class MyFileEditor:
-            def change_prop(self, name, val): pass
-            def close(self, checksum=None): pass
+            def change_prop(self, name, val):
+                pass
+
+            def close(self, checksum=None):
+                pass
 
         class MyDirEditor:
-            def change_prop(self, name, val): pass
-            def add_directory(self, *args): return MyDirEditor()
-            def open_directory(self, *args): return MyDirEditor()
-            def add_file(self, *args): return MyFileEditor()
-            def open_file(self, *args): return MyFileEditor()
-            def delete_entry(self, *args): pass
-            def close(self): pass
+            def change_prop(self, name, val):
+                pass
+
+            def add_directory(self, *args):
+                return MyDirEditor()
+
+            def open_directory(self, *args):
+                return MyDirEditor()
+
+            def add_file(self, *args):
+                return MyFileEditor()
+
+            def open_file(self, *args):
+                return MyFileEditor()
+
+            def delete_entry(self, *args):
+                pass
+
+            def close(self):
+                pass
 
         class MyEditor:
-            def set_target_revision(self, rev): pass
-            def open_root(self, base_rev): return MyDirEditor()
-            def close(self): pass
+            def set_target_revision(self, rev):
+                pass
+
+            def open_root(self, base_rev):
+                return MyDirEditor()
+
+            def close(self):
+                pass
 
         reporter = self.ra_ctx.do_update(1, "", True, MyEditor())
         reporter.set_path("", 0, True)
@@ -1277,7 +1519,6 @@ class TestRemoteAccessProperties(SubversionTestCase):
 
 
 class ConstantsTests(TestCase):
-
     def test_depth_constants(self):
         self.assertIsInstance(ra.DEPTH_UNKNOWN, int)
         self.assertIsInstance(ra.DEPTH_EXCLUDE, int)

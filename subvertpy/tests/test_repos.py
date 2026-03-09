@@ -85,8 +85,13 @@ class TestRepository(TestCaseInTempDir):
         PROPS-END
         """).encode("ascii")
         feedback = BytesIO()
-        r.load_fs(BytesIO(dumpfile), feedback, repos.LOAD_UUID_DEFAULT,
-                  use_pre_commit_hook=False, use_post_commit_hook=False)
+        r.load_fs(
+            BytesIO(dumpfile),
+            feedback,
+            repos.LOAD_UUID_DEFAULT,
+            use_pre_commit_hook=False,
+            use_post_commit_hook=False,
+        )
 
     def test_hotcopy(self):
         src = os.path.join(self.test_dir, "hotcopy_src")
@@ -147,8 +152,10 @@ class TestRepository(TestCaseInTempDir):
     def test_pack_fs_with_notify(self):
         r = repos.create(os.path.join(self.test_dir, "pack_notify"))
         notifications = []
+
         def notify_func(shard, action):
             notifications.append((shard, action))
+
         r.pack_fs(notify_func)
 
     def test_create_with_config_none(self):
@@ -179,8 +186,7 @@ class TestRepository(TestCaseInTempDir):
         PROPS-END
         """).encode("ascii")
         feedback = BytesIO()
-        r.load_fs(BytesIO(dumpfile), feedback, repos.LOAD_UUID_DEFAULT,
-                  parent_dir="")
+        r.load_fs(BytesIO(dumpfile), feedback, repos.LOAD_UUID_DEFAULT, parent_dir="")
 
     def test_paths_changed(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -205,7 +211,6 @@ class TestRepository(TestCaseInTempDir):
 
 
 class TestRepositoryDelete(TestCaseInTempDir):
-
     def test_delete(self):
         path = os.path.join(self.test_dir, "todelete")
         repos.create(path)
@@ -215,7 +220,6 @@ class TestRepositoryDelete(TestCaseInTempDir):
 
 
 class TestRepositoryHotcopy(TestCaseInTempDir):
-
     def test_hotcopy(self):
         src = os.path.join(self.test_dir, "src")
         dest = os.path.join(self.test_dir, "dest")
@@ -228,7 +232,6 @@ class TestRepositoryHotcopy(TestCaseInTempDir):
 
 
 class TestFileSystemRoot(TestCaseInTempDir):
-
     def setUp(self):
         super(TestFileSystemRoot, self).setUp()
         self.repo_path = os.path.join(self.test_dir, "repo")
@@ -262,7 +265,7 @@ class TestFileSystemRootWithFile(SubversionTestCase):
 
     def _get_repo_path(self):
         # file:// URL to path
-        return self.repos_url[len("file://"):]
+        return self.repos_url[len("file://") :]
 
     def test_file_length(self):
         r = repos.Repository(self._get_repo_path())
@@ -325,7 +328,6 @@ class StreamTests(TestCase):
 
 
 class ConstantsTests(TestCase):
-
     def test_load_uuid_constants(self):
         self.assertIsInstance(repos.LOAD_UUID_DEFAULT, int)
         self.assertIsInstance(repos.LOAD_UUID_IGNORE, int)

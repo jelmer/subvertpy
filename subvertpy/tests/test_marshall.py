@@ -118,31 +118,28 @@ class TestMarshalling(TestCase):
         self.assertEqual((b"", [4, 5]), unmarshall(b"( 4 5 ) "))
 
     def test_unmarshall_list_empty(self):
-        self.assertEqual((b'', []), unmarshall(b"( ) "))
+        self.assertEqual((b"", []), unmarshall(b"( ) "))
 
     def test_unmarshall_list_nested(self):
-        self.assertEqual(
-            (b'', [[1, 2], 3]),
-            unmarshall(b"( ( 1 2 ) 3 ) "))
+        self.assertEqual((b"", [[1, 2], 3]), unmarshall(b"( ( 1 2 ) 3 ) "))
 
     def test_unmarshall_int(self):
         self.assertEqual((b"", 2), unmarshall(b"2 "))
 
     def test_unmarshall_int_zero(self):
-        self.assertEqual((b'', 0), unmarshall(b"0 "))
+        self.assertEqual((b"", 0), unmarshall(b"0 "))
 
     def test_unmarshall_int_large(self):
-        self.assertEqual((b'', 123456), unmarshall(b"123456 "))
+        self.assertEqual((b"", 123456), unmarshall(b"123456 "))
 
     def test_unmarshall_literal(self):
         self.assertEqual((b"", literal("x")), unmarshall(b"x "))
 
     def test_unmarshall_literal_with_digits(self):
-        self.assertEqual((b'', literal("foo2")), unmarshall(b"foo2 "))
+        self.assertEqual((b"", literal("foo2")), unmarshall(b"foo2 "))
 
     def test_unmarshall_literal_with_dash(self):
-        self.assertEqual(
-            (b'', literal("foo-bar")), unmarshall(b"foo-bar "))
+        self.assertEqual((b"", literal("foo-bar")), unmarshall(b"foo-bar "))
 
     def test_unmarshall_empty(self):
         self.assertRaises(NeedMoreData, unmarshall, b"")
@@ -209,10 +206,10 @@ class TestMarshalling(TestCase):
 
     def test_unmarshall_literal_newline_separator(self):
         # newline is also valid whitespace
-        self.assertEqual((b'', literal("x")), unmarshall(b"x\n"))
+        self.assertEqual((b"", literal("x")), unmarshall(b"x\n"))
 
     def test_unmarshall_int_newline_separator(self):
-        self.assertEqual((b'', 5), unmarshall(b"5\n"))
+        self.assertEqual((b"", 5), unmarshall(b"5\n"))
 
     def test_unmarshall_list_newline_separator(self):
-        self.assertEqual((b'', [1]), unmarshall(b"( 1 )\n"))
+        self.assertEqual((b"", [1]), unmarshall(b"( 1 )\n"))

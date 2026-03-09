@@ -80,12 +80,14 @@ class AdmTests(TestCase):
 
     def test_check_wc_nonexistent(self):
         import tempfile
+
         tmpdir = tempfile.mkdtemp()
         try:
             result = wc.check_wc(tmpdir)
             self.assertEqual(0, result)
         finally:
             import shutil
+
             shutil.rmtree(tmpdir)
 
     def test_get_actual_target(self):
@@ -117,7 +119,6 @@ class WcTests(SubversionTestCase):
 
 
 class ContextTests(SubversionTestCase):
-
     def setUp(self):
         super(ContextTests, self).setUp()
         self.repos_url = self.make_client("repos", "checkout")
@@ -193,6 +194,7 @@ class ContextTests(SubversionTestCase):
 
     def test_walk_status_with_options(self):
         from subvertpy import ra
+
         ctx = wc.Context()
         self.build_tree({"checkout/walkopt": b"content"})
         self.client_add("checkout/walkopt")
@@ -202,9 +204,13 @@ class ContextTests(SubversionTestCase):
         def receiver(path, status):
             statuses.append((path, status))
 
-        ctx.walk_status(os.path.abspath("checkout"), receiver,
-                        depth=ra.DEPTH_INFINITY, get_all=True,
-                        no_ignore=True)
+        ctx.walk_status(
+            os.path.abspath("checkout"),
+            receiver,
+            depth=ra.DEPTH_INFINITY,
+            get_all=True,
+            no_ignore=True,
+        )
         self.assertTrue(len(statuses) > 0)
 
     def test_walk_status_ignore_patterns(self):
@@ -217,8 +223,9 @@ class ContextTests(SubversionTestCase):
         def receiver(path, status):
             statuses.append((path, status))
 
-        ctx.walk_status(os.path.abspath("checkout"), receiver,
-                        ignore_patterns=["*.pyc", "*.o"])
+        ctx.walk_status(
+            os.path.abspath("checkout"), receiver, ignore_patterns=["*.pyc", "*.o"]
+        )
         self.assertTrue(len(statuses) > 0)
 
     def test_walk_status_ignore_text_mode(self):
@@ -231,8 +238,7 @@ class ContextTests(SubversionTestCase):
         def receiver(path, status):
             statuses.append((path, status))
 
-        ctx.walk_status(os.path.abspath("checkout"), receiver,
-                        ignore_text_mode=True)
+        ctx.walk_status(os.path.abspath("checkout"), receiver, ignore_text_mode=True)
         self.assertTrue(len(statuses) > 0)
 
     def test_crawl_revisions_with_options(self):
@@ -244,26 +250,31 @@ class ContextTests(SubversionTestCase):
         class MockReporter:
             def __init__(self):
                 self.calls = []
-            def set_path(self, path, revision, start_empty, lock_token,
-                         depth):
+
+            def set_path(self, path, revision, start_empty, lock_token, depth):
                 self.calls.append(("set_path", path))
+
             def finish(self):
                 self.calls.append(("finish",))
+
             def delete_path(self, path):
                 pass
-            def link_path(self, path, url, revision, start_empty,
-                          lock_token, depth):
+
+            def link_path(self, path, url, revision, start_empty, lock_token, depth):
                 pass
+
             def abort(self):
                 pass
 
         reporter = MockReporter()
         ctx.crawl_revisions(
-            os.path.abspath("checkout"), reporter,
+            os.path.abspath("checkout"),
+            reporter,
             restore_files=True,
             honor_depth_exclude=False,
             depth_compatibility_trick=True,
-            use_commit_times=True)
+            use_commit_times=True,
+        )
         call_types = [c[0] for c in reporter.calls]
         self.assertIn("set_path", call_types)
         self.assertIn("finish", call_types)
@@ -272,10 +283,11 @@ class ContextTests(SubversionTestCase):
         ctx = wc.Context()
         self.build_tree({"checkout/diskfile": b"disk content"})
         from subvertpy import SubversionException
+
         # add_from_disk requires a write lock
         self.assertRaises(
-            SubversionException,
-            ctx.add_from_disk, os.path.abspath("checkout/diskfile"))
+            SubversionException, ctx.add_from_disk, os.path.abspath("checkout/diskfile")
+        )
 
     def test_add_lock_requires_write_lock(self):
         ctx = wc.Context()
@@ -284,10 +296,11 @@ class ContextTests(SubversionTestCase):
         self.client_commit("checkout", message="add lockwc")
         lock = wc.Lock(token="opaquelocktoken:test-token")
         from subvertpy import SubversionException
+
         # add_lock requires a write lock on the WC
         self.assertRaises(
-            SubversionException,
-            ctx.add_lock, os.path.abspath("checkout/lockwc"), lock)
+            SubversionException, ctx.add_lock, os.path.abspath("checkout/lockwc"), lock
+        )
 
     def test_remove_lock_requires_write_lock(self):
         ctx = wc.Context()
@@ -295,9 +308,10 @@ class ContextTests(SubversionTestCase):
         self.client_add("checkout/rmlockwc")
         self.client_commit("checkout", message="add rmlockwc")
         from subvertpy import SubversionException
+
         self.assertRaises(
-            SubversionException,
-            ctx.remove_lock, os.path.abspath("checkout/rmlockwc"))
+            SubversionException, ctx.remove_lock, os.path.abspath("checkout/rmlockwc")
+        )
 
     def test_crawl_revisions(self):
         ctx = wc.Context()
@@ -309,10 +323,8 @@ class ContextTests(SubversionTestCase):
             def __init__(self):
                 self.calls = []
 
-            def set_path(self, path, revision, start_empty, lock_token,
-                         depth):
-                self.calls.append(
-                    ("set_path", path, revision, start_empty))
+            def set_path(self, path, revision, start_empty, lock_token, depth):
+                self.calls.append(("set_path", path, revision, start_empty))
 
             def finish(self):
                 self.calls.append(("finish",))
@@ -320,16 +332,14 @@ class ContextTests(SubversionTestCase):
             def delete_path(self, path):
                 self.calls.append(("delete_path", path))
 
-            def link_path(self, path, url, revision, start_empty,
-                          lock_token, depth):
+            def link_path(self, path, url, revision, start_empty, lock_token, depth):
                 self.calls.append(("link_path", path, url))
 
             def abort(self):
                 self.calls.append(("abort",))
 
         reporter = MockReporter()
-        ctx.crawl_revisions(
-            os.path.abspath("checkout"), reporter, restore_files=False)
+        ctx.crawl_revisions(os.path.abspath("checkout"), reporter, restore_files=False)
         self.assertTrue(len(reporter.calls) > 0)
         # Should have called set_path at least once and finish
         call_types = [c[0] for c in reporter.calls]
@@ -341,25 +351,27 @@ class ContextTests(SubversionTestCase):
         self.build_tree({"checkout/updfile": b"data"})
         self.client_add("checkout/updfile")
         self.client_commit("checkout", message="add updfile")
-        editor = ctx.get_update_editor(
-            os.path.abspath("checkout"), "")
+        editor = ctx.get_update_editor(os.path.abspath("checkout"), "")
         self.assertIsNotNone(editor)
 
     def test_get_update_editor_with_options(self):
         from subvertpy import ra
+
         ctx = wc.Context()
         self.build_tree({"checkout/upd2": b"data"})
         self.client_add("checkout/upd2")
         self.client_commit("checkout", message="add upd2")
         editor = ctx.get_update_editor(
-            os.path.abspath("checkout"), "",
+            os.path.abspath("checkout"),
+            "",
             use_commit_times=True,
             depth=ra.DEPTH_INFINITY,
             depth_is_sticky=False,
             allow_unver_obstructions=False,
             adds_as_modification=True,
             server_performs_filtering=False,
-            clean_checkout=False)
+            clean_checkout=False,
+        )
         self.assertIsNotNone(editor)
 
     def test_get_update_editor_preserved_exts(self):
@@ -368,8 +380,8 @@ class ContextTests(SubversionTestCase):
         self.client_add("checkout/upd3")
         self.client_commit("checkout", message="add upd3")
         editor = ctx.get_update_editor(
-            os.path.abspath("checkout"), "",
-            preserved_exts=[".mine", ".theirs"])
+            os.path.abspath("checkout"), "", preserved_exts=[".mine", ".theirs"]
+        )
         self.assertIsNotNone(editor)
 
     def test_get_update_editor_notify_func(self):
@@ -378,11 +390,13 @@ class ContextTests(SubversionTestCase):
         self.client_add("checkout/upd4")
         self.client_commit("checkout", message="add upd4")
         notifications = []
+
         def notify(info):
             notifications.append(info)
+
         editor = ctx.get_update_editor(
-            os.path.abspath("checkout"), "",
-            notify_func=notify)
+            os.path.abspath("checkout"), "", notify_func=notify
+        )
         self.assertIsNotNone(editor)
 
     def test_get_update_editor_conflict_func_not_implemented(self):
@@ -393,8 +407,10 @@ class ContextTests(SubversionTestCase):
         self.assertRaises(
             NotImplementedError,
             ctx.get_update_editor,
-            os.path.abspath("checkout"), "",
-            conflict_func=lambda: None)
+            os.path.abspath("checkout"),
+            "",
+            conflict_func=lambda: None,
+        )
 
     def test_get_update_editor_external_func_not_implemented(self):
         ctx = wc.Context()
@@ -404,8 +420,10 @@ class ContextTests(SubversionTestCase):
         self.assertRaises(
             NotImplementedError,
             ctx.get_update_editor,
-            os.path.abspath("checkout"), "",
-            external_func=lambda: None)
+            os.path.abspath("checkout"),
+            "",
+            external_func=lambda: None,
+        )
 
     def test_get_update_editor_dirents_func_not_implemented(self):
         ctx = wc.Context()
@@ -415,42 +433,55 @@ class ContextTests(SubversionTestCase):
         self.assertRaises(
             NotImplementedError,
             ctx.get_update_editor,
-            os.path.abspath("checkout"), "",
-            dirents_func=lambda: None)
+            os.path.abspath("checkout"),
+            "",
+            dirents_func=lambda: None,
+        )
 
     def test_add_from_disk_with_props(self):
         ctx = wc.Context()
         self.build_tree({"checkout/diskprops": b"data"})
         from subvertpy import SubversionException
+
         # add_from_disk requires a write lock, but we can test that
         # the props parameter is accepted
         self.assertRaises(
             SubversionException,
-            ctx.add_from_disk, os.path.abspath("checkout/diskprops"),
-            props={b"svn:eol-style": b"native"})
+            ctx.add_from_disk,
+            os.path.abspath("checkout/diskprops"),
+            props={b"svn:eol-style": b"native"},
+        )
 
     def test_add_from_disk_skip_checks(self):
         ctx = wc.Context()
         self.build_tree({"checkout/diskskip": b"data"})
         from subvertpy import SubversionException
+
         # add_from_disk requires a write lock
         self.assertRaises(
             SubversionException,
-            ctx.add_from_disk, os.path.abspath("checkout/diskskip"),
-            skip_checks=True)
+            ctx.add_from_disk,
+            os.path.abspath("checkout/diskskip"),
+            skip_checks=True,
+        )
 
     def test_add_from_disk_notify(self):
         ctx = wc.Context()
         self.build_tree({"checkout/disknot": b"data"})
         from subvertpy import SubversionException
+
         notifications = []
+
         def notify_cb(info):
             notifications.append(info)
+
         # add_from_disk requires a write lock
         self.assertRaises(
             SubversionException,
-            ctx.add_from_disk, os.path.abspath("checkout/disknot"),
-            notify=notify_cb)
+            ctx.add_from_disk,
+            os.path.abspath("checkout/disknot"),
+            notify=notify_cb,
+        )
 
     def test_crawl_revisions_with_notify(self):
         ctx = wc.Context()
@@ -461,49 +492,60 @@ class ContextTests(SubversionTestCase):
         class MockReporter:
             def __init__(self):
                 self.calls = []
-            def set_path(self, path, revision, start_empty, lock_token,
-                         depth):
+
+            def set_path(self, path, revision, start_empty, lock_token, depth):
                 self.calls.append(("set_path", path))
+
             def finish(self):
                 self.calls.append(("finish",))
+
             def delete_path(self, path):
                 pass
-            def link_path(self, path, url, revision, start_empty,
-                          lock_token, depth):
+
+            def link_path(self, path, url, revision, start_empty, lock_token, depth):
                 pass
+
             def abort(self):
                 pass
 
         reporter = MockReporter()
         notifications = []
+
         def notify_cb(info):
             notifications.append(info)
+
         ctx.crawl_revisions(
-            os.path.abspath("checkout"), reporter,
-            restore_files=True, notify=notify_cb)
+            os.path.abspath("checkout"), reporter, restore_files=True, notify=notify_cb
+        )
         call_types = [c[0] for c in reporter.calls]
         self.assertIn("set_path", call_types)
         self.assertIn("finish", call_types)
 
     def test_ensure_adm(self):
         from subvertpy import repos as svn_repos
+
         repo = svn_repos.Repository("repos")
         uuid = repo.fs().get_uuid()
         ctx = wc.Context()
         # ensure_adm on an existing checkout should succeed
         ctx.ensure_adm(
-            os.path.abspath("checkout"),
-            self.repos_url, self.repos_url, uuid, 0)
+            os.path.abspath("checkout"), self.repos_url, self.repos_url, uuid, 0
+        )
 
     def test_ensure_adm_with_depth(self):
         from subvertpy import repos as svn_repos, ra
+
         repo = svn_repos.Repository("repos")
         uuid = repo.fs().get_uuid()
         ctx = wc.Context()
         ctx.ensure_adm(
             os.path.abspath("checkout"),
-            self.repos_url, self.repos_url, uuid, 0,
-            depth=ra.DEPTH_INFINITY)
+            self.repos_url,
+            self.repos_url,
+            uuid,
+            0,
+            depth=ra.DEPTH_INFINITY,
+        )
 
     def test_committed_queue_create(self):
         queue = wc.CommittedQueue()
@@ -519,6 +561,7 @@ class ContextTests(SubversionTestCase):
 
     def test_process_committed_queue_requires_write_lock(self):
         from subvertpy import SubversionException
+
         ctx = wc.Context()
         self.build_tree({"checkout/pcqfile": b"data"})
         self.client_add("checkout/pcqfile")
@@ -527,12 +570,15 @@ class ContextTests(SubversionTestCase):
         queue.queue(os.path.abspath("checkout/pcqfile"), ctx)
         self.assertRaises(
             SubversionException,
-            ctx.process_committed_queue, queue, 1,
-            "2026-01-01T00:00:00.000000Z", "testuser")
+            ctx.process_committed_queue,
+            queue,
+            1,
+            "2026-01-01T00:00:00.000000Z",
+            "testuser",
+        )
 
 
 class LockTests(TestCase):
-
     def test_create_lock(self):
         lock = wc.Lock()
         self.assertIsNotNone(lock)
@@ -561,7 +607,6 @@ class LockTests(TestCase):
 
 
 class PristineTests(SubversionTestCase):
-
     def setUp(self):
         super(PristineTests, self).setUp()
         self.repos_url = self.make_client("repos", "checkout")
@@ -570,51 +615,50 @@ class PristineTests(SubversionTestCase):
         self.build_tree({"checkout/pristfile": b"pristine data"})
         self.client_add("checkout/pristfile")
         self.client_commit("checkout", message="add pristfile")
-        stream = wc.get_pristine_contents(
-            os.path.abspath("checkout/pristfile"))
+        stream = wc.get_pristine_contents(os.path.abspath("checkout/pristfile"))
         self.assertIsNotNone(stream)
 
     def test_get_pristine_copy_path(self):
         import warnings
+
         self.build_tree({"checkout/cpfile": b"data"})
         self.client_add("checkout/cpfile")
         self.client_commit("checkout", message="add cpfile")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
-            result = wc.get_pristine_copy_path(
-                os.path.abspath("checkout/cpfile"))
+            result = wc.get_pristine_copy_path(os.path.abspath("checkout/cpfile"))
         self.assertIsNotNone(result)
 
 
 class EnsureAdmTests(SubversionTestCase):
-
     def test_ensure_adm_bogus_url(self):
         from subvertpy import SubversionException
+
         self.make_client("repos", "checkout")
         self.assertRaises(
-            SubversionException,
-            wc.ensure_adm, "checkout", "fake-uuid", "file:///fake")
+            SubversionException, wc.ensure_adm, "checkout", "fake-uuid", "file:///fake"
+        )
 
     def test_ensure_adm_with_repos_and_rev(self):
         from subvertpy import repos as svn_repos
+
         repos_url = self.make_client("repos", "checkout")
         repo = svn_repos.Repository("repos")
         uuid = repo.fs().get_uuid()
-        wc.ensure_adm("checkout", uuid, repos_url,
-                       repos=repos_url, rev=0)
+        wc.ensure_adm("checkout", uuid, repos_url, repos=repos_url, rev=0)
 
     def test_ensure_adm_with_depth(self):
         from subvertpy import repos as svn_repos, ra
+
         repos_url = self.make_client("repos", "checkout")
         repo = svn_repos.Repository("repos")
         uuid = repo.fs().get_uuid()
-        wc.ensure_adm("checkout", uuid, repos_url,
-                       repos=repos_url, rev=0,
-                       depth=ra.DEPTH_INFINITY)
+        wc.ensure_adm(
+            "checkout", uuid, repos_url, repos=repos_url, rev=0, depth=ra.DEPTH_INFINITY
+        )
 
 
 class CleanupTests(SubversionTestCase):
-
     def test_cleanup(self):
         self.make_client("repos", "checkout")
         # cleanup on a clean working copy should succeed
@@ -626,7 +670,6 @@ class CleanupTests(SubversionTestCase):
 
 
 class ConstantsTests(TestCase):
-
     def test_schedule_constants(self):
         self.assertEqual(0, wc.SCHEDULE_NORMAL)
         self.assertEqual(1, wc.SCHEDULE_ADD)
