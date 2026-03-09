@@ -100,6 +100,13 @@ class TestClient(SubversionTestCase):
         )
         self.assertEqual(["foo"], os.listdir("de"))
 
+    def test_set_config(self):
+        config = client.get_config()
+        self.client.config = config
+
+    def test_set_config_none(self):
+        self.client.config = None
+
     def test_get_config(self):
         self.assertIsInstance(client.get_config(), client.Config)
         try:
@@ -277,3 +284,391 @@ class TestClient(SubversionTestCase):
             self.client_get_prop(self.repos_url + "/foo", "svn:eol-style", "HEAD"),
             b"native",
         )
+
+    def test_checkout(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        checkout_dir = os.path.join(self.test_dir, "checkout2")
+        self.client.checkout(self.repos_url, checkout_dir, "HEAD")
+        self.assertTrue(os.path.exists(os.path.join(checkout_dir, "foo")))
+
+    def test_delete(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.delete(["dc/foo"])
+        self.assertFalse(os.path.exists("dc/foo"))
+
+    def test_copy(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.copy("dc/foo", "dc/bar")
+        self.assertTrue(os.path.exists("dc/bar"))
+
+    def test_propset_propget(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.propset("myprop", "myval", "dc/foo", False, True)
+        ret = self.client.propget("myprop", "dc/foo", "WORKING", "WORKING")
+        self.assertIsInstance(ret, dict)
+        self.assertIn(b"myval", ret.values())
+
+    def test_proplist(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.propset("myprop", "myval", "dc/foo", False, True)
+        self.client.commit(["dc"])
+        result = self.client.proplist("dc/foo", "WORKING", 0)
+        self.assertIsInstance(result, list)
+
+    def test_update(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.update(["dc"], "HEAD")
+
+    def test_list(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        entries = self.client.list(self.repos_url, "HEAD", 0)
+        self.assertIsInstance(entries, dict)
+
+    def test_config(self):
+        config = client.get_config()
+        self.assertIsInstance(config, client.Config)
+
+    def test_config_default_ignores(self):
+        config = client.get_config()
+        ignores = config.get_default_ignores()
+        self.assertIsInstance(ignores, list)
+
+    def test_lock_unlock(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.lock(["dc/foo"], "test lock comment")
+        self.client.unlock(["dc/foo"])
+
+    def test_resolve(self):
+        self.build_tree({"dc/resolveme": b"content"})
+        self.client.add("dc/resolveme")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        # resolve on a non-conflicted path should succeed without error
+        self.client.resolve("dc/resolveme", 0, 0)
+
+    def test_add_with_options(self):
+        self.build_tree({"dc/addopts": b"data"})
+        self.client.add("dc/addopts", recursive=True, force=False,
+                        no_ignore=True, add_parents=False,
+                        no_autoprops=True)
+
+    def test_commit_with_options(self):
+        self.build_tree({"dc/commitopt": b"data"})
+        self.client.add("dc/commitopt")
+        self.client.log_msg_func = lambda c: "Commit with opts"
+        callbacks = []
+        self.client.commit(["dc"], recurse=True, keep_locks=False,
+                           keep_changelist=False,
+                           commit_as_operations=True,
+                           include_file_externals=False,
+                           include_dir_externals=False,
+                           callback=lambda *args: callbacks.append(args))
+        self.assertEqual(1, len(callbacks))
+
+    def test_commit_revprops(self):
+        self.build_tree({"dc/rptest": b"data"})
+        self.client.add("dc/rptest")
+        self.client.log_msg_func = lambda c: "revprop commit"
+        self.client.commit(["dc"],
+                           revprops={"custom:testprop": "testval"})
+
+    def test_update_with_options(self):
+        self.build_tree({"dc/updopt": b"data"})
+        self.client.add("dc/updopt")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.update(["dc"], "HEAD", recurse=True,
+                           ignore_externals=True,
+                           depth_is_sticky=False,
+                           allow_unver_obstructions=False,
+                           adds_as_modification=True,
+                           make_parents=False)
+
+    def test_checkout_with_options(self):
+        self.build_tree({"dc/chkopt": b"data"})
+        self.client.add("dc/chkopt")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        checkout_dir = os.path.join(self.test_dir, "checkout3")
+        self.client.checkout(self.repos_url, checkout_dir, "HEAD",
+                             peg_rev="HEAD", recurse=True,
+                             allow_unver_obstructions=False)
+        self.assertTrue(os.path.exists(os.path.join(checkout_dir, "chkopt")))
+
+    def test_export_with_options(self):
+        self.build_tree({"dc/expopt": b"data"})
+        self.client.add("dc/expopt")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        export_dir = os.path.join(self.test_dir, "export_opts")
+        self.client.export(self.repos_url, export_dir, rev="HEAD",
+                           peg_rev="HEAD", recurse=True, overwrite=False)
+        self.assertTrue(os.path.exists(os.path.join(export_dir, "expopt")))
+
+    def test_diff_with_options(self):
+        dc = self.get_commit_editor(self.repos_url)
+        f = dc.add_file("diffopt")
+        f.modify(b"v1")
+        dc.close()
+        dc = self.get_commit_editor(self.repos_url)
+        f = dc.open_file("diffopt")
+        f.modify(b"v2")
+        dc.close()
+        (outf, errf) = self.client.diff(
+            1, 2, self.repos_url, self.repos_url,
+            ignore_ancestry=True, no_diff_deleted=False,
+            ignore_content_type=False)
+        self.addCleanup(outf.close)
+        self.addCleanup(errf.close)
+        out = outf.read()
+        self.assertIn(b"diffopt", out)
+
+    def test_log_with_options(self):
+        entries = []
+        def cb(changed_paths, revision, revprops, has_children=False):
+            entries.append(revision)
+        self.build_tree({"dc/logopt": b"data"})
+        self.client.add("dc/logopt")
+        self.client.log_msg_func = lambda c: "Commit 1"
+        self.client.commit(["dc"])
+        self.build_tree({"dc/logopt": b"data2"})
+        self.client.commit(["dc"])
+        self.client.log(cb, "dc/logopt", start_rev="HEAD", end_rev=1,
+                        limit=1, discover_changed_paths=True,
+                        strict_node_history=True,
+                        include_merged_revisions=False)
+        self.assertEqual(1, len(entries))
+
+    def test_cat_with_peg_revision(self):
+        self.build_tree({"dc/pegcat": b"original"})
+        self.client.add("dc/pegcat")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        io = BytesIO()
+        self.client.cat("dc/pegcat", io, revision=1, peg_revision=1)
+        self.assertEqual(b"original", io.getvalue())
+
+    def test_delete_keep_local(self):
+        self.build_tree({"dc/keepme": b"data"})
+        self.client.add("dc/keepme")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.delete(["dc/keepme"], keep_local=True)
+        # File should still exist on disk
+        self.assertTrue(os.path.exists("dc/keepme"))
+
+    def test_copy_with_options(self):
+        self.build_tree({"dc/cpsrc": b"data"})
+        self.client.add("dc/cpsrc")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.copy("dc/cpsrc", "dc/cpdst",
+                         copy_as_child=False, make_parents=False,
+                         metadata_only=False)
+        self.assertTrue(os.path.exists("dc/cpdst"))
+
+    def test_info_with_options(self):
+        self.build_tree({"dc/infoopt": b"data"})
+        self.client.add("dc/infoopt")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        info = self.client.info("dc/infoopt", revision=1, peg_revision=1,
+                                depth=0, fetch_excluded=False,
+                                fetch_actual_only=False)
+        self.assertIn("infoopt", info)
+
+    def test_lock_steal(self):
+        self.build_tree({"dc/locksteal": b"data"})
+        self.client.add("dc/locksteal")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.lock(["dc/locksteal"], "lock comment", steal_lock=True)
+        self.client.unlock(["dc/locksteal"], break_lock=True)
+
+    def test_mkdir_make_parents(self):
+        self.client.mkdir("dc/parent/child", make_parents=True)
+        self.assertTrue(os.path.exists("dc/parent/child"))
+
+    def test_mkdir_with_callback(self):
+        commits = []
+        self.client.mkdir(
+            [self.repos_url + "/remotedir"],
+            callback=lambda *args: commits.append(args))
+
+    def test_propset_skip_checks(self):
+        self.build_tree({"dc/propskip": b"data"})
+        self.client.add("dc/propskip")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.propset("custom:myprop", b"value", "dc/propskip",
+                            skip_checks=True)
+
+    def test_propset_with_options(self):
+        self.build_tree({"dc/propopt": b"data"})
+        self.client.add("dc/propopt")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.propset("myprop", "myval", "dc/propopt",
+                            False, True)
+        ret = self.client.propget("myprop", "dc/propopt", "WORKING",
+                                  "WORKING", True)
+        self.assertIsInstance(ret, dict)
+
+    def test_cat_expand_keywords(self):
+        self.build_tree({"dc/kwcat": b"$Id$"})
+        self.client.add("dc/kwcat")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        io = BytesIO()
+        self.client.cat("dc/kwcat", io, revision=1, expand_keywords=False)
+        self.assertEqual(b"$Id$", io.getvalue())
+
+    def test_export_native_eol(self):
+        self.build_tree({"dc/eolfile": b"line\n"})
+        self.client.add("dc/eolfile")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        export_dir = os.path.join(self.test_dir, "export_eol")
+        self.client.export(self.repos_url, export_dir, native_eol="LF")
+        self.assertTrue(os.path.exists(os.path.join(export_dir, "eolfile")))
+
+    def test_list_include_externals(self):
+        self.build_tree({"dc/listfile": b"data"})
+        self.client.add("dc/listfile")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        entries = self.client.list(self.repos_url, "HEAD", 0,
+                                   include_externals=False)
+        self.assertIsInstance(entries, dict)
+
+    def test_delete_with_callback(self):
+        self.build_tree({"dc/delcb": b"data"})
+        self.client.add("dc/delcb")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        commits = []
+        self.client.delete(
+            [self.repos_url + "/delcb"],
+            force=True,
+            callback=lambda *args: commits.append(args))
+
+    def test_copy_with_src_rev(self):
+        self.build_tree({"dc/cprev": b"data"})
+        self.client.add("dc/cprev")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.copy("dc/cprev", "dc/cprev2", src_rev=1)
+        self.assertTrue(os.path.exists("dc/cprev2"))
+
+    def test_get_config_with_dir(self):
+        import tempfile
+        cfg_dir = tempfile.mkdtemp()
+        try:
+            config = client.get_config(cfg_dir)
+            self.assertIsInstance(config, client.Config)
+        finally:
+            import shutil
+            shutil.rmtree(cfg_dir)
+
+    def test_copy_pin_externals(self):
+        self.build_tree({"dc/cppin": b"data"})
+        self.client.add("dc/cppin")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.copy("dc/cppin", "dc/cppin2", pin_externals=False)
+        self.assertTrue(os.path.exists("dc/cppin2"))
+
+    def test_copy_metadata_only(self):
+        self.build_tree({"dc/cpmeta": b"data"})
+        self.client.add("dc/cpmeta")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.copy("dc/cpmeta", "dc/cpmeta2", metadata_only=False)
+        self.assertTrue(os.path.exists("dc/cpmeta2"))
+
+    def test_copy_with_callback(self):
+        self.build_tree({"dc/cpcb": b"data"})
+        self.client.add("dc/cpcb")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.copy(self.repos_url + "/cpcb",
+                         self.repos_url + "/cpcb2",
+                         callback=lambda *args: None)
+
+    def test_diff_relative_to_dir(self):
+        self.build_tree({"dc/diffrel": b"line1\n"})
+        self.client.add("dc/diffrel")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.build_tree({"dc/diffrel": b"line1\nline2\n"})
+        (outfile, errfile) = self.client.diff(1, 'WORKING', "dc", "dc",
+                                              relative_to_dir="dc")
+        out = outfile.read()
+        self.assertIn(b"line2", out)
+
+    def test_diff_encoding(self):
+        self.build_tree({"dc/diffenc": b"hello\n"})
+        self.client.add("dc/diffenc")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.build_tree({"dc/diffenc": b"hello\nworld\n"})
+        (outfile, errfile) = self.client.diff(1, 'WORKING', "dc", "dc",
+                                              encoding="utf-8")
+        out = outfile.read()
+        self.assertIn(b"world", out)
+
+    def test_diff_ignore_content_type(self):
+        self.build_tree({"dc/diffict": b"hello\n"})
+        self.client.add("dc/diffict")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.build_tree({"dc/diffict": b"hello\nworld\n"})
+        (outfile, errfile) = self.client.diff(1, 'WORKING', "dc", "dc",
+                                              ignore_content_type=True)
+        out = outfile.read()
+        self.assertIn(b"world", out)
+
+    def test_diff_diffopts(self):
+        self.build_tree({"dc/diffopt": b"hello\n"})
+        self.client.add("dc/diffopt")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.build_tree({"dc/diffopt": b"hello\nworld\n"})
+        (outfile, errfile) = self.client.diff(1, 'WORKING', "dc", "dc",
+                                              diffopts=["-u"])
+        out = outfile.read()
+        self.assertIn(b"world", out)
+
+    def test_notify_func_set_get(self):
+        def notify_cb(info):
+            pass
+
+        self.assertIsNone(self.client.notify_func)
+        self.client.notify_func = notify_cb
+        self.assertIs(notify_cb, self.client.notify_func)
+        self.client.notify_func = None
+        self.assertIsNone(self.client.notify_func)
