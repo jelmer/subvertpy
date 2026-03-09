@@ -37,8 +37,9 @@ typedef struct {
 	svn_repos_t *repos;
 } RepositoryObject;
 
-static PyObject *repos_create(PyObject *self, PyObject *args)
+static PyObject *repos_create(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+	char *kwnames[] = { "path", "config", "fs_config", NULL };
 	const char *path;
 	PyObject *config=Py_None, *fs_config=Py_None, *py_path;
 	svn_repos_t *repos = NULL;
@@ -46,7 +47,7 @@ static PyObject *repos_create(PyObject *self, PyObject *args)
 	apr_hash_t *hash_config, *hash_fs_config;
 	RepositoryObject *ret;
 
-	if (!PyArg_ParseTuple(args, "O|OO:create", &py_path, &config, &fs_config))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|OO:create", kwnames, &py_path, &config, &fs_config))
 		return NULL;
 
     pool = Pool(NULL);
@@ -435,7 +436,7 @@ static PyObject *api_version(PyObject *self)
 }
 
 static PyMethodDef repos_module_methods[] = {
-	{ "create", (PyCFunction)repos_create, METH_VARARGS,
+	{ "create", (PyCFunction)repos_create, METH_VARARGS|METH_KEYWORDS,
 		"create(path, config=None, fs_config=None)\n\n"
 		"Create a new repository." },
 	{ "delete", (PyCFunction)repos_delete, METH_VARARGS,
@@ -501,12 +502,17 @@ static PyObject *repos_verify(RepositoryObject *self, PyObject *args)
 static svn_error_t *py_pack_notify(void *baton, apr_int64_t shard, svn_fs_pack_notify_action_t action, apr_pool_t *pool)
 {
 	PyObject *ret;
+	PyGILState_STATE state;
 	if (baton == Py_None)
 		return NULL;
+	state = PyGILState_Ensure();
 	ret = PyObject_CallFunction((PyObject *)baton, "li", shard, action);
-	if (ret == NULL)
+	if (ret == NULL) {
+		PyGILState_Release(state);
 		return py_svn_error();
+	}
 	Py_DECREF(ret);
+	PyGILState_Release(state);
 	return NULL;
 }
 

@@ -1095,13 +1095,14 @@ static PyObject *py_wc_context_crawl_revisions(PyObject *self, PyObject *args, P
     bool honor_depth_exclude = true;
     bool depth_compatibility_trick = false;
     bool use_commit_times = false;
+    PyObject *cancel = Py_None;
     PyObject *notify = Py_None;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|bibbbOO", kwnames,
                                      &py_path, &py_reporter, &restore_files,
                                      &depth, &honor_depth_exclude,
                                      &depth_compatibility_trick,
-                                     &use_commit_times, &notify)) {
+                                     &use_commit_times, &cancel, &notify)) {
         return NULL;
     }
 
@@ -1169,7 +1170,8 @@ static PyObject *py_wc_context_get_update_editor(PyObject *self, PyObject *args,
                                      &allow_unver_obstructions,
                                      &adds_as_modification,
                                      &server_performs_filtering,
-                                     &clean_checkout, &py_preserved_exts,
+                                     &clean_checkout, &diff3_cmd,
+                                     &py_preserved_exts,
                                      &dirents_func, &conflict_func,
                                      &external_func, &notify_func)) {
         return NULL;
@@ -1466,7 +1468,7 @@ static PyObject *py_wc_walk_status(PyObject *self, PyObject *args, PyObject *kwa
     apr_array_header_t *ignore_patterns;
     apr_pool_t *pool;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|ibbbOO", kwnames,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|ibbbO", kwnames,
                                      &py_path, &status_func, &depth, &get_all, &no_ignore,
                                      &ignore_text_mode, &py_ignore_patterns)) {
         return NULL;

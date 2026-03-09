@@ -76,6 +76,9 @@ static svn_error_t *py_commit_callback(const svn_commit_info_t *commit_info, voi
 
 static PyObject *pyify_lock(const svn_lock_t *lock)
 {
+	if (lock == NULL) {
+		Py_RETURN_NONE;
+	}
 	return Py_BuildValue("(ssszbLL)",
 						 lock->path, lock->token,
 						 lock->owner, lock->comment,
@@ -809,8 +812,9 @@ static PyObject *ra_get_session_url(PyObject *self)
 
 
 
-static PyObject *ra_do_update(PyObject *self, PyObject *args)
+static PyObject *ra_do_update(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+	char *kwnames[] = { "revision_to_update_to", "update_target", "recurse", "update_editor", "send_copyfrom_args", "ignore_ancestry", NULL };
 	svn_revnum_t revision_to_update_to;
 	char *update_target;
 	bool recurse;
@@ -824,7 +828,7 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	bool send_copyfrom_args = false;
 
-	if (!PyArg_ParseTuple(args, "lsbO|bb:do_update", &revision_to_update_to, &update_target, &recurse, &update_editor,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "lsbO|bb:do_update", kwnames, &revision_to_update_to, &update_target, &recurse, &update_editor,
 						  &send_copyfrom_args, &ignore_ancestry))
 		return NULL;
 
@@ -878,8 +882,9 @@ static PyObject *ra_do_update(PyObject *self, PyObject *args)
 	return (PyObject *)ret;
 }
 
-static PyObject *ra_do_switch(PyObject *self, PyObject *args)
+static PyObject *ra_do_switch(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+	char *kwnames[] = { "revision_to_update_to", "update_target", "recurse", "switch_url", "update_editor", "send_copyfrom_args", "ignore_ancestry", NULL };
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	svn_revnum_t revision_to_update_to;
 	char *update_target;
@@ -895,7 +900,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
     PyObject *py_switch_url;
 	svn_error_t *err;
 
-	if (!PyArg_ParseTuple(args, "lsbOO|bb:do_switch", &revision_to_update_to, &update_target,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "lsbOO|bb:do_switch", kwnames, &revision_to_update_to, &update_target,
 						  &recurse, &py_switch_url, &update_editor, &send_copyfrom_args, &ignore_ancestry))
 		return NULL;
 	if (ra_check_busy(ra))
@@ -955,7 +960,7 @@ static PyObject *ra_do_switch(PyObject *self, PyObject *args)
 	return (PyObject *)ret;
 }
 
-static PyObject *ra_do_diff(PyObject *self, PyObject *args)
+static PyObject *ra_do_diff(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	svn_revnum_t revision_to_update_to;
 	char *diff_target, *versus_url;
@@ -967,8 +972,12 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 	bool ignore_ancestry = false, text_deltas = false, recurse=true;
 	ReporterObject *ret;
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
+	char *kwnames[] = { "revision_to_update_to", "diff_target", "versus_url",
+		"diff_editor", "recurse", "ignore_ancestry", "text_deltas", NULL };
 
-	if (!PyArg_ParseTuple(args, "lssO|bbb:do_diff", &revision_to_update_to, &diff_target, &versus_url, &diff_editor, &recurse, &ignore_ancestry, &text_deltas))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "lssO|bbb:do_diff", kwnames,
+			&revision_to_update_to, &diff_target, &versus_url, &diff_editor,
+			&recurse, &ignore_ancestry, &text_deltas))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1008,15 +1017,18 @@ static PyObject *ra_do_diff(PyObject *self, PyObject *args)
 	return (PyObject *)ret;
 }
 
-static PyObject *ra_replay(PyObject *self, PyObject *args)
+static PyObject *ra_replay(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_pool_t *temp_pool;
 	svn_revnum_t revision, low_water_mark;
 	PyObject *update_editor;
 	bool send_deltas = true;
+	char *kwnames[] = { "revision", "low_water_mark", "update_editor",
+		"send_deltas", NULL };
 
-	if (!PyArg_ParseTuple(args, "llO|b:replay", &revision, &low_water_mark, &update_editor, &send_deltas))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "llO|b:replay", kwnames,
+			&revision, &low_water_mark, &update_editor, &send_deltas))
 		return NULL;
 
 	if (ra_check_busy(ra))
@@ -1039,13 +1051,15 @@ static PyObject *ra_replay(PyObject *self, PyObject *args)
 static svn_error_t *py_revstart_cb(svn_revnum_t revision, void *replay_baton,
    const svn_delta_editor_t **editor, void **edit_baton, apr_hash_t *rev_props, apr_pool_t *pool)
 {
-	PyObject *cbs = (PyObject *)replay_baton;
-	PyObject *py_start_fn = PyTuple_GetItem(cbs, 0);
-	PyObject *py_revprops = prop_hash_to_dict(rev_props);
-	PyObject *ret;
+	PyObject *cbs, *py_start_fn, *py_revprops, *ret;
 	PyGILState_STATE state = PyGILState_Ensure();
 
+	cbs = (PyObject *)replay_baton;
+	py_start_fn = PyTuple_GetItem(cbs, 0);
+	py_revprops = prop_hash_to_dict(rev_props);
+
 	ret = PyObject_CallFunction(py_start_fn, "lO", revision, py_revprops);
+	Py_DECREF(py_revprops);
 	CB_CHECK_PYRETVAL(ret);
 
 	*editor = &py_editor;
@@ -1059,13 +1073,15 @@ static svn_error_t *py_revfinish_cb(svn_revnum_t revision, void *replay_baton,
 									const svn_delta_editor_t *editor, void *edit_baton,
 									apr_hash_t *rev_props, apr_pool_t *pool)
 {
-	PyObject *cbs = (PyObject *)replay_baton;
-	PyObject *py_finish_fn = PyTuple_GetItem(cbs, 1);
-	PyObject *py_revprops = prop_hash_to_dict(rev_props);
-	PyObject *ret;
+	PyObject *cbs, *py_finish_fn, *py_revprops, *ret;
 	PyGILState_STATE state = PyGILState_Ensure();
 
+	cbs = (PyObject *)replay_baton;
+	py_finish_fn = PyTuple_GetItem(cbs, 1);
+	py_revprops = prop_hash_to_dict(rev_props);
+
 	ret = PyObject_CallFunction(py_finish_fn, "lOO", revision, py_revprops, edit_baton);
+	Py_DECREF(py_revprops);
 	CB_CHECK_PYRETVAL(ret);
 
 	Py_DECREF((PyObject *)edit_baton);
@@ -1075,15 +1091,16 @@ static svn_error_t *py_revfinish_cb(svn_revnum_t revision, void *replay_baton,
 	return NULL;
 }
 
-static PyObject *ra_replay_range(PyObject *self, PyObject *args)
+static PyObject *ra_replay_range(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+	char *kwnames[] = { "start_revision", "end_revision", "low_water_mark", "cbs", "send_deltas", NULL };
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_pool_t *temp_pool;
 	svn_revnum_t start_revision, end_revision, low_water_mark;
 	PyObject *cbs;
 	bool send_deltas = true;
 
-	if (!PyArg_ParseTuple(args, "lllO|b:replay_range", &start_revision, &end_revision, &low_water_mark, &cbs, &send_deltas))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "lllO|b:replay_range", kwnames, &start_revision, &end_revision, &low_water_mark, &cbs, &send_deltas))
 		return NULL;
 
 	if (!PyTuple_Check(cbs)) {
@@ -1203,7 +1220,7 @@ fail_pool:
 	return NULL;
 }
 
-static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
+static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	svn_revnum_t rev;
 	char *name;
@@ -1214,8 +1231,10 @@ static PyObject *ra_change_rev_prop(PyObject *self, PyObject *args)
 	svn_string_t *val_string;
 	const svn_string_t *old_val_string;
 	const svn_string_t *const *old_val_string_p;
+	char *kwnames[] = { "revnum", "name", "value", "old_value", NULL };
 
-	if (!PyArg_ParseTuple(args, "lss#|z#:change_rev_prop", &rev, &name, &value,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "lss#|z#:change_rev_prop",
+			kwnames, &rev, &name, &value,
 			&vallen, &oldvalue, &oldvallen))
 		return NULL;
 	if (ra_check_busy(ra))
@@ -1491,7 +1510,7 @@ static PyObject *ra_unlock(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	PyObject *path_tokens, *lock_func, *k, *v;
 	bool break_lock;
-	Py_ssize_t idx;
+	Py_ssize_t idx = 0;
 	apr_pool_t *temp_pool;
 	apr_hash_t *hash_path_tokens;
 
@@ -1784,8 +1803,9 @@ static PyObject *mergeinfo_to_dict(svn_mergeinfo_t mergeinfo, apr_pool_t *temp_p
 	return ret;
 }
 
-static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
+static PyObject *ra_mergeinfo(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+	char *kwnames[] = { "paths", "revision", "inherit", "include_descendants", NULL };
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	apr_array_header_t *apr_paths;
 	apr_pool_t *temp_pool;
@@ -1800,7 +1820,7 @@ static PyObject *ra_mergeinfo(PyObject *self, PyObject *args)
 	svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
 	bool include_descendants;
 
-	if (!PyArg_ParseTuple(args, "O|lib:mergeinfo", &paths, &revision, &inherit, &include_descendants))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|lib:mergeinfo", kwnames, &paths, &revision, &inherit, &include_descendants))
 		return NULL;
 
 	temp_pool = Pool(NULL);
@@ -1896,8 +1916,9 @@ static PyObject *ra_get_location_segments(PyObject *self, PyObject *args)
 }
 
 
-static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
+static PyObject *ra_get_file_revs(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+	char *kwnames[] = { "path", "start", "end", "file_rev_handler", "include_merged_revisions", NULL };
 	char *path;
 	svn_revnum_t start, end;
 	PyObject *file_rev_handler;
@@ -1905,7 +1926,7 @@ static PyObject *ra_get_file_revs(PyObject *self, PyObject *args)
 	RemoteAccessObject *ra = (RemoteAccessObject *)self;
 	bool include_merged_revisions = false;
 
-	if (!PyArg_ParseTuple(args, "sllO|b:get_file_revs", &path, &start,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "sllO|b:get_file_revs", kwnames, &path, &start,
 			&end, &file_rev_handler, &include_merged_revisions))
 		return NULL;
 
@@ -1965,8 +1986,8 @@ static PyGetSetDef ra_getsetters[] = {
 static PyMethodDef ra_methods[] = {
     { "get_session_url", (PyCFunction)ra_get_session_url, METH_NOARGS,
         "S.get_session_url() -> url" },
-	{ "get_file_revs", ra_get_file_revs, METH_VARARGS,
-		"S.get_file_revs(path, start_rev, end_revs, handler)" },
+	{ "get_file_revs", (PyCFunction)ra_get_file_revs, METH_VARARGS|METH_KEYWORDS,
+		"S.get_file_revs(path, start_rev, end_revs, handler, include_merged_revisions=False)" },
 	{ "get_locations", ra_get_locations, METH_VARARGS,
 		"S.get_locations(path, peg_revision, location_revisions)" },
 	{ "get_locks", ra_get_locks, METH_VARARGS,
@@ -1975,8 +1996,8 @@ static PyMethodDef ra_methods[] = {
 		"S.lock(path_revs, comment, steal_lock, lock_func)\n" },
 	{ "unlock", ra_unlock, METH_VARARGS,
 		"S.unlock(path_tokens, break_lock, lock_func)\n" },
-	{ "mergeinfo", ra_mergeinfo, METH_VARARGS,
-		"S.mergeinfo(paths, revision, inherit, include_descendants)\n" },
+	{ "mergeinfo", (PyCFunction)ra_mergeinfo, METH_VARARGS|METH_KEYWORDS,
+		"S.mergeinfo(paths, revision=-1, inherit=MERGEINFO_EXPLICIT, include_descendants=False)\n" },
 	{ "get_location_segments", ra_get_location_segments, METH_VARARGS,
 		"S.get_location_segments(path, peg_revision, start_revision, "
 			"end_revision, rcvr)\n"
@@ -1999,8 +2020,8 @@ static PyMethodDef ra_methods[] = {
 	{ "get_file", ra_get_file, METH_VARARGS,
 		"S.get_file(path, stream, revnum=-1) -> (fetched_rev, properties)\n"
 		"Fetch a file. The contents will be written to stream." },
-	{ "change_rev_prop", ra_change_rev_prop, METH_VARARGS,
-		"S.change_rev_prop(revnum, name, value)\n"
+	{ "change_rev_prop", (PyCFunction)ra_change_rev_prop, METH_VARARGS|METH_KEYWORDS,
+		"S.change_rev_prop(revnum, name, value, old_value=None)\n"
 		"Change a revision property" },
 	{ "get_commit_editor", (PyCFunction)get_commit_editor, METH_VARARGS|METH_KEYWORDS,
 		"S.get_commit_editor(revprops, commit_callback, lock_tokens, keep_locks) -> editor\n"
@@ -2008,22 +2029,22 @@ static PyMethodDef ra_methods[] = {
 	{ "rev_proplist", ra_rev_proplist, METH_VARARGS,
 		"S.rev_proplist(revnum) -> properties\n"
 		"Return a dictionary with the properties set on the specified revision" },
-	{ "replay", ra_replay, METH_VARARGS,
+	{ "replay", (PyCFunction)ra_replay, METH_VARARGS|METH_KEYWORDS,
 		"S.replay(revision, low_water_mark, update_editor, send_deltas=True)\n"
 		"Replay a revision, reporting changes to update_editor." },
-	{ "replay_range", ra_replay_range, METH_VARARGS,
+	{ "replay_range", (PyCFunction)ra_replay_range, METH_VARARGS|METH_KEYWORDS,
 		"S.replay_range(start_rev, end_rev, low_water_mark, cbs, send_deltas=True)\n"
 		"Replay a range of revisions, reporting them to an update editor.\n"
 		"cbs is a two-tuple with two callbacks:\n"
 		"- start_rev_cb(revision, revprops) -> editor\n"
 		"- finish_rev_cb(revision, revprops, editor)\n"
 	},
-	{ "do_switch", ra_do_switch, METH_VARARGS,
+	{ "do_switch", (PyCFunction)ra_do_switch, METH_VARARGS|METH_KEYWORDS,
 		"S.do_switch(revision_to_update_to, update_target, recurse, switch_url, update_editor, send_copyfrom_args=False, ignore_ancestry=True)\n" },
-	{ "do_update", ra_do_update, METH_VARARGS,
+	{ "do_update", (PyCFunction)ra_do_update, METH_VARARGS|METH_KEYWORDS,
 		"S.do_update(revision_to_update_to, update_target, recurse, update_editor, send_copyfrom_args=False, ignore_ancestry=True)\n" },
-	{ "do_diff", ra_do_diff, METH_VARARGS,
-		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse, ignore_ancestry, text_deltas) -> Reporter object\n"
+	{ "do_diff", (PyCFunction)ra_do_diff, METH_VARARGS|METH_KEYWORDS,
+		"S.do_diff(revision_to_update_to, diff_target, versus_url, diff_editor, recurse=True, ignore_ancestry=False, text_deltas=False) -> Reporter object\n"
 	},
 	{ "get_repos_root", (PyCFunction)ra_get_repos_root, METH_NOARGS,
 		"S.get_repos_root() -> url\n"
