@@ -475,6 +475,7 @@ def test_suite():
         "marshall",
         "properties",
         "ra",
+        "ra_svn",
         "repos",
         "server",
         "subr",
