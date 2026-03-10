@@ -1244,21 +1244,28 @@ static PyObject *py_wc_context_ensure_adm(PyObject *self, PyObject *args,
     char *kwnames[] = {
         "local_abspath", "url", "repos_root_url", "repos_uuid",
         "revnum", "depth", NULL };
-    char *local_abspath;
+    PyObject *py_local_abspath;
     char *url;
     char *repos_root_url;
     char *repos_uuid;
     int revnum;
     int depth = svn_depth_infinity;
     apr_pool_t *pool;
+    const char *local_abspath;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ssssi|i", kwnames,
-                                     &local_abspath, &url, &repos_root_url,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Osssi|i", kwnames,
+                                     &py_local_abspath, &url, &repos_root_url,
                                      &repos_uuid, &revnum, &depth)) {
         return NULL;
     }
 
     pool = Pool(NULL);
+
+    local_abspath = py_object_to_svn_abspath(py_local_abspath, pool);
+    if (local_abspath == NULL) {
+        apr_pool_destroy(pool);
+        return NULL;
+    }
 
     RUN_SVN_WITH_POOL(pool, svn_wc_ensure_adm4(context_obj->context,
                                                local_abspath, url,
