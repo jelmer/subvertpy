@@ -265,6 +265,13 @@ class TestFileSystemRootWithFile(SubversionTestCase):
 
     def _get_repo_path(self):
         # file:// URL to path
+        import sys
+
+        if sys.platform == "win32":
+            from urllib.request import url2pathname
+
+            # On Windows, repos_url is file:///D:/... via pathname2url
+            return url2pathname(self.repos_url[len("file:") :])
         return self.repos_url[len("file://") :]
 
     def test_file_length(self):
