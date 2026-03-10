@@ -353,6 +353,7 @@ class ContextTests(SubversionTestCase):
         self.client_commit("checkout", message="add updfile")
         editor = ctx.get_update_editor(os.path.abspath("checkout"), "")
         self.assertIsNotNone(editor)
+        editor.abort()
 
     def test_get_update_editor_with_options(self):
         from subvertpy import ra
@@ -373,6 +374,7 @@ class ContextTests(SubversionTestCase):
             clean_checkout=False,
         )
         self.assertIsNotNone(editor)
+        editor.abort()
 
     def test_get_update_editor_preserved_exts(self):
         ctx = wc.Context()
@@ -383,6 +385,7 @@ class ContextTests(SubversionTestCase):
             os.path.abspath("checkout"), "", preserved_exts=[".mine", ".theirs"]
         )
         self.assertIsNotNone(editor)
+        editor.abort()
 
     def test_get_update_editor_notify_func(self):
         ctx = wc.Context()
@@ -398,6 +401,7 @@ class ContextTests(SubversionTestCase):
             os.path.abspath("checkout"), "", notify_func=notify
         )
         self.assertIsNotNone(editor)
+        editor.abort()
 
     def test_get_update_editor_conflict_func_not_implemented(self):
         ctx = wc.Context()
