@@ -320,6 +320,29 @@ class TestClient(SubversionTestCase):
         self.assertIsInstance(ret, dict)
         self.assertIn(b"myval", ret.values())
 
+    def test_propget_url(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.propset("myprop", "myval", "dc/foo", False, True)
+        self.client.commit(["dc"])
+        url = self.repos_url + "/foo"
+        ret = self.client.propget("myprop", url, 2, 2)
+        self.assertIsInstance(ret, dict)
+        self.assertIn(b"myval", ret.values())
+
+    def test_propget_abspath(self):
+        self.build_tree({"dc/foo": b"bla"})
+        self.client.add("dc/foo")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+        self.client.propset("myprop", "myval", "dc/foo", False, True)
+        abspath = os.path.abspath("dc/foo")
+        ret = self.client.propget("myprop", abspath, "WORKING", "WORKING")
+        self.assertIsInstance(ret, dict)
+        self.assertIn(b"myval", ret.values())
+
     def test_proplist(self):
         self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
