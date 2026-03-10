@@ -29,6 +29,11 @@ jobs:
         run: |
           set PATH=%Python3_ROOT_DIR%\Scripts;%PATH%
           pip install build cibuildwheel pytest
+      - name: Cache cibuildwheel downloads
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\pypa\cibuildwheel\Cache
+          key: cibw-cache-${{ runner.os }}-${{ matrix.python-version }}
       - name: Install build dependencies with vcpkg
         uses: johnwason/vcpkg-action@v7
         id: vcpkg
