@@ -24,13 +24,14 @@ from subvertpy.delta import (
     send_stream,
     unpack_svndiff0,
     apply_txdelta_handler,
-    TXDELTA_NEW, TXDELTA_SOURCE, TXDELTA_TARGET,
-    )
+    TXDELTA_NEW,
+    TXDELTA_SOURCE,
+    TXDELTA_TARGET,
+)
 from subvertpy.tests import TestCase
 
 
 class DeltaTests(TestCase):
-
     def setUp(self):
         super(DeltaTests, self).setUp()
         self.windows = []
@@ -41,8 +42,7 @@ class DeltaTests(TestCase):
     def test_send_stream(self):
         stream = BytesIO(b"foo")
         send_stream(stream, self.storing_window_handler)
-        self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], b'foo'), None],
-                         self.windows)
+        self.assertEqual([(0, 0, 3, 0, [(2, 0, 3)], b"foo"), None], self.windows)
 
     def test_apply_delta(self):
         stream = BytesIO()
@@ -55,7 +55,6 @@ class DeltaTests(TestCase):
             (TXDELTA_SOURCE, 0, len(source)),
             (TXDELTA_TARGET, len(new), len(b"(s")),  # Copy "(s"
             (TXDELTA_TARGET, len(b"(n"), len(b"ew)")),  # Copy "ew)"
-
             # Copy as target is generated
             (TXDELTA_TARGET, len(new + source), len(b"(sew)") * 2),
         )
@@ -68,7 +67,6 @@ class DeltaTests(TestCase):
 
 
 class MarshallTests(TestCase):
-
     def test_encode_length(self):
         self.assertEqual(bytearray(b"\x81\x02"), encode_length(130))
 
@@ -76,7 +74,5 @@ class MarshallTests(TestCase):
         self.assertEqual((42, bytes()), decode_length(encode_length(42)))
 
     def test_roundtrip_window(self):
-        mywindow = (0, 0, 3, 1, [(2, 0, 3)], b'foo')
-        self.assertEqual(
-            [mywindow],
-            list(unpack_svndiff0(pack_svndiff0([mywindow]))))
+        mywindow = (0, 0, 3, 1, [(2, 0, 3)], b"foo")
+        self.assertEqual([mywindow], list(unpack_svndiff0(pack_svndiff0([mywindow]))))

@@ -20,10 +20,8 @@ from subvertpy.tests import TestCase
 
 
 class TestCore(TestCase):
-
     def setUp(self):
         super(TestCore, self).setUp()
 
     def test_exc(self):
-        self.assertTrue(
-            isinstance(subvertpy.SubversionException("foo", 1), Exception))
+        self.assertTrue(isinstance(subvertpy.SubversionException("foo", 1), Exception))

@@ -29,13 +29,13 @@ except ImportError:
     from urllib.parse import splittype
 
 url_handlers = {
-        "svn": _ra.RemoteAccess,
-        # "svn": ra_svn.Client,
-        "svn+ssh": _ra.RemoteAccess,
-        # "svn+ssh": ra_svn.Client,
-        "http": _ra.RemoteAccess,
-        "https": _ra.RemoteAccess,
-        "file": _ra.RemoteAccess,
+    "svn": _ra.RemoteAccess,
+    # "svn": ra_svn.Client,
+    "svn+ssh": _ra.RemoteAccess,
+    # "svn+ssh": ra_svn.Client,
+    "http": _ra.RemoteAccess,
+    "https": _ra.RemoteAccess,
+    "file": _ra.RemoteAccess,
 }
 
 

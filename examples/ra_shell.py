@@ -29,7 +29,6 @@ def log_printer(changed_paths, rev, revprops, has_children=None):
 
 
 class RaCmd(cmd.Cmd):
-
     @staticmethod
     def parse_path_revnum(line):
         args = line.split(" ")
@@ -59,7 +58,7 @@ class RaCmd(cmd.Cmd):
 
     def do_cat(self, args):
         path, revnum = self.parse_path_revnum(args)
-        outf = getattr(sys.stdout, 'buffer', sys.stdout)
+        outf = getattr(sys.stdout, "buffer", sys.stdout)
         (fetched_rev, props) = conn.get_file(path, outf, revnum)
 
     def do_reparent(self, args):
@@ -93,8 +92,13 @@ class RaCmd(cmd.Cmd):
         print(conn.get_repos_root())
 
     def do_log(self, args):
-        conn.get_log(callback=log_printer, paths=None, start=0,
-                     end=conn.get_latest_revnum(), discover_changed_paths=True)
+        conn.get_log(
+            callback=log_printer,
+            paths=None,
+            start=0,
+            end=conn.get_latest_revnum(),
+            discover_changed_paths=True,
+        )
 
 
 cmdline = RaCmd()
