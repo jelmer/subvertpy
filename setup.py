@@ -288,7 +288,7 @@ def package_data():
         return {}
 
 
-subvertpy_version = (0, 11, 0)
+subvertpy_version = (0, 11, 1)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
