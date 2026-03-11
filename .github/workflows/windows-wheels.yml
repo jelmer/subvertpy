@@ -6,8 +6,6 @@ jobs:
     runs-on: windows-latest
     env:
       VCPKG_INSTALL_DIR: ${{ github.workspace }}\vcpkg\installed\x64-windows-release
-      TWINE_USERNAME: __token__
-      TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
     defaults:
       run:
         shell: cmd
@@ -72,14 +70,21 @@ jobs:
           cd .. && python -m pytest tests
       - uses: actions/upload-artifact@v4
         with:
-          name: subvertpy-wheel-${{ matrix.python-version }}
+          name: subvertpy-wheel-windows-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
-      - name: Publish subvertpy wheel to PyPI
-        working-directory: wheelhouse
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-        run: |
-          set PATH=%Python3_ROOT_DIR%\Scripts;%PATH%
-          for /f "tokens=*" %%g in ('dir /b *.whl') do (set wheel=%%g)
-          pip install twine
-          twine check %wheel%
-          twine upload --skip-existing %wheel%
+
+  publish:
+    name: Publish Windows wheels to PyPI
+    needs: windows
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: subvertpy-wheel-windows-*
+          path: dist/
+          merge-multiple: true
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
