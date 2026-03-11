@@ -1,7 +1,7 @@
 name: publish
 on:
   workflow_run:
-    workflows: [manylinux-wheels, macos-wheels, windows-wheels]
+    workflows: [manylinux-wheels, macos-wheels, windows-wheels, sdist]
     types: [completed]
     branches: ["**"]
     tags: ["**"]
@@ -16,12 +16,12 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Wait for all wheel workflows to succeed
+      - name: Wait for all build workflows to succeed
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           SHA=${{ github.event.workflow_run.head_sha }}
-          for workflow in manylinux-wheels macos-wheels windows-wheels; do
+          for workflow in manylinux-wheels macos-wheels windows-wheels sdist; do
             echo "Checking $workflow..."
             while true; do
               CONCLUSION=$(gh api repos/${{ github.repository }}/actions/workflows/${workflow}.yml/runs \
@@ -38,23 +38,19 @@ jobs:
               fi
             done
           done
-      - name: Checkout subvertpy code
-        uses: actions/checkout@v6
+      - name: Download sdist artifact
+        uses: dawidd6/action-download-artifact@v8
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-      - name: Install Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-      - name: Build sdist
-        run: |
-          pip install build
-          python -m build --sdist --outdir dist/
+          workflow: sdist.yml
+          commit: ${{ github.event.workflow_run.head_sha }}
+          name: subvertpy-sdist
+          path: dist/
+          allow_forks: false
       - name: Download manylinux wheel artifacts
         uses: dawidd6/action-download-artifact@v8
         with:
-          run_id: ${{ github.event.workflow_run.id }}
           workflow: manylinux-wheels.yml
+          commit: ${{ github.event.workflow_run.head_sha }}
           pattern: subvertpy-wheel-manylinux-*
           path: dist/
           merge_multiple: true
