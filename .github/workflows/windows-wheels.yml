@@ -73,18 +73,3 @@ jobs:
           name: subvertpy-wheel-windows-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
 
-  publish:
-    name: Publish Windows wheels to PyPI
-    needs: windows
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: subvertpy-wheel-windows-*
-          path: dist/
-          merge-multiple: true
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1

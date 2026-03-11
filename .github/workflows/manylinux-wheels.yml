@@ -43,18 +43,3 @@ jobs:
           name: subvertpy-wheel-manylinux-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
 
-  publish:
-    name: Publish manylinux wheels to PyPI
-    needs: manylinux
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: subvertpy-wheel-manylinux-*
-          path: dist/
-          merge-multiple: true
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
