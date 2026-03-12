@@ -13,3 +13,4 @@ apidocs
 *~
 .tox/
 .pybuild
+subvertpy.egg-info
