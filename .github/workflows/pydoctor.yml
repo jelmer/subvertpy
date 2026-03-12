@@ -2,7 +2,7 @@ name: API docs
 
 on:
   push:
-    branches: [master]
+  pull_request:
 
 permissions:
   contents: read
@@ -39,6 +39,7 @@ jobs:
 
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/0.11'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
