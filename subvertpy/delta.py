@@ -37,13 +37,8 @@ def apply_txdelta_window(sbuf, window):
     """Apply a txdelta window to a buffer.
 
     :param sbuf: Source buffer (as bytestring)
-    :param window: (sview_offset, sview_len, tview_len, src_ops, ops, new_data)
-    :param sview_offset: Offset of the source view
-    :param sview_len: Length of the source view
-    :param tview_len: Target view length
-    :param src_ops: Operations to apply to sview
-    :param ops: Ops to apply
-    :param new_data: Buffer with possible new data
+    :param window: Tuple of (sview_offset, sview_len, tview_len, src_ops,
+        ops, new_data)
     :return: Target buffer
     """
     (sview_offset, sview_len, tview_len, src_ops, ops, new_data) = window
@@ -57,8 +52,8 @@ def apply_txdelta_window(sbuf, window):
 def apply_txdelta_handler_chunks(source_chunks, target_chunks):
     """Return a function that can be called repeatedly with txdelta windows.
 
-    :param sbuf: Source buffer
-    :param target_stream: Target stream
+    :param source_chunks: Source chunks to join into a buffer
+    :param target_chunks: Target chunks list to append results to
     """
     sbuf = bytes().join(source_chunks)
 
@@ -179,10 +174,7 @@ def decode_length(text):
 def pack_svndiff_instruction(diff_params):
     """Pack a SVN diff instruction
 
-    :param diff_params: (action, offset, length)
-    :param action: Action
-    :param offset: Offset
-    :param length: Length
+    :param diff_params: Tuple of (action, offset, length)
     :return: encoded text
     """
     (action, offset, length) = diff_params
