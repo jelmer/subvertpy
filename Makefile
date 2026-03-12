@@ -41,7 +41,7 @@ clean::
 	rm -f subvertpy/*.so subvertpy/*.o subvertpy/*.pyc
 
 pydoctor:
-	$(PYDOCTOR) $(PYDOCTOR_OPTIONS) --introspect-c-modules -c subvertpy.cfg --make-html
+	$(PYDOCTOR) $(PYDOCTOR_OPTIONS) --introspect-c-modules -c subvertpy.cfg --make-html subvertpy
 
 style:
 	$(RUFF) check

@@ -60,7 +60,7 @@ class ServerRepositoryBackend(object):
         """Stat a path.
 
         Should return a dictionary with the following keys: name, kind, size,
-            has-props, created-rev, created-date, last-author.
+        has-props, created-rev, created-date, last-author.
         """
         raise NotImplementedError(self.stat)
 
