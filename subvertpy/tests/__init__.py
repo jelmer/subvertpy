@@ -354,7 +354,7 @@ class SubversionTestCase(TestCaseInTempDir):
 
         :param url: URL to log
         :param start_revnum: Start revision of the range to log over
-        :param start_revnum: Stop revision of the range to log over
+        :param stop_revnum: Stop revision of the range to log over
         :return: Dictionary
         """
         r = ra.RemoteAccess(url)
