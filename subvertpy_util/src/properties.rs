@@ -54,15 +54,15 @@ mod tests {
 
     #[test]
     fn test_py_dict_to_props() {
-        pyo3::prepare_freethreaded_python();
+        Python::initialize();
 
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let dict = PyDict::new(py);
             dict.set_item("key1", "value1").unwrap();
             dict.set_item("key2", PyBytes::new(py, b"binary\x00value"))
                 .unwrap();
 
-            let props = py_dict_to_props(dict.bind(py)).unwrap();
+            let props = py_dict_to_props(&dict).unwrap();
             assert_eq!(props.get("key1").unwrap(), b"value1");
             assert_eq!(props.get("key2").unwrap(), b"binary\x00value");
         });
@@ -70,17 +70,17 @@ mod tests {
 
     #[test]
     fn test_props_to_py_dict() {
-        pyo3::prepare_freethreaded_python();
+        Python::initialize();
 
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let mut props = HashMap::new();
             props.insert("key1".to_string(), b"value1".to_vec());
             props.insert("key2".to_string(), b"binary\x00value".to_vec());
 
             let dict = props_to_py_dict(py, &props).unwrap();
 
-            let val1: String = dict.get_item("key1").unwrap().unwrap().extract().unwrap();
-            assert_eq!(val1, "value1");
+            let val1: Vec<u8> = dict.get_item("key1").unwrap().unwrap().extract().unwrap();
+            assert_eq!(val1, b"value1");
 
             // Binary value should be bytes
             let val2 = dict.get_item("key2").unwrap().unwrap();
