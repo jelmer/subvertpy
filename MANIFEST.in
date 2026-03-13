@@ -1,10 +1,14 @@
 include MANIFEST.in
-include subvertpy/*.c
-include subvertpy/*.h
 include AUTHORS COPYING INSTALL NEWS TODO
 include examples/*.py
 include README.md
 include Makefile
 include subvertpy.cfg
 include man/*.1
+include Cargo.toml
 recursive-include subr Cargo.toml *.rs
+recursive-include subvertpy_util Cargo.toml *.rs
+recursive-include repos Cargo.toml *.rs
+recursive-include ra Cargo.toml *.rs
+recursive-include client Cargo.toml *.rs
+recursive-include wc Cargo.toml *.rs

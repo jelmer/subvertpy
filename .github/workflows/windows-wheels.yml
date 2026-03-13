@@ -44,10 +44,7 @@ jobs:
         shell: msys2 {0}
       - name: Build subvertpy wheel with cibuildwheel
         env:
-            APR_INCLUDE_DIR: ${{ env.VCPKG_INSTALL_DIR }}/include
-            APU_INCLUDE_DIR: ${{ env.VCPKG_INSTALL_DIR }}/include
-            SVN_HEADER_PATH: ${{ env.VCPKG_INSTALL_DIR }}/include/subversion-1
-            SVN_LIBRARY_PATH: ${{ env.VCPKG_INSTALL_DIR }}/lib
+            PKG_CONFIG_PATH: ${{ env.VCPKG_INSTALL_DIR }}/lib/pkgconfig
             LIB: ${{ env.VCPKG_INSTALL_DIR }}/lib
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD_WINDOWS: pip install delvewheel
@@ -72,4 +69,3 @@ jobs:
         with:
           name: subvertpy-wheel-windows-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
-

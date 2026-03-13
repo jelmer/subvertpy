@@ -29,7 +29,7 @@ jobs:
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_BEFORE_ALL: dnf -y install subversion-devel
+          CIBW_BEFORE_ALL: dnf -y install subversion-devel clang-devel
       - name: Test wheel can be installed and subvertpy module imported
         run: |
           $Python3_ROOT_DIR/bin/pip install $(ls -t | head -1)
