@@ -27,7 +27,10 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install libsvn-dev
+        sudo apt install libsvn-dev libutf8proc-dev libclang-dev subversion
+        # Work around https://bugs.debian.org/1055242
+        svnversion=$(svn --version | grep -oP 'svn, version \K\d+\.\d+\.\d+')
+        sudo sed -i "s/^Version: $/Version: $svnversion/" /usr/lib/*/pkgconfig/libsvn_*.pc
         python -m pip install --upgrade pip
         pip install setuptools-rust
         pip install -e .

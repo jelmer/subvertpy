@@ -25,7 +25,10 @@ jobs:
     - name: Install dependencies (apt)
       run: |
         sudo apt update
-        sudo apt install libsvn-dev
+        sudo apt install libsvn-dev libutf8proc-dev libclang-dev subversion
+        # Work around https://bugs.debian.org/1055242
+        svnversion=$(svn --version | grep -oP 'svn, version \K\d+\.\d+\.\d+')
+        sudo sed -i "s/^Version: $/Version: $svnversion/" /usr/lib/*/pkgconfig/libsvn_*.pc
       if: "matrix.os == 'ubuntu-latest'"
     - name: Install dependencies (brew)
       run: |
@@ -63,12 +66,12 @@ jobs:
         export PATH="$(brew --prefix)/opt/apr/bin:$PATH"
         pip install -e .
       if: "matrix.os == 'macos-latest'"
+    - name: Install pkg-config (Windows)
+      run: choco install pkgconfiglite
+      if: "matrix.os == 'windows-latest'"
     - name: Build (Windows)
       env:
-        APR_INCLUDE_DIR: ${{ env.VCPKG_INSTALL_DIR }}/include
-        APU_INCLUDE_DIR: ${{ env.VCPKG_INSTALL_DIR }}/include
-        SVN_HEADER_PATH: ${{ env.VCPKG_INSTALL_DIR }}/include/subversion-1
-        SVN_LIBRARY_PATH: ${{ env.VCPKG_INSTALL_DIR }}/lib
+        PKG_CONFIG_PATH: ${{ env.VCPKG_INSTALL_DIR }}/lib/pkgconfig
         LIB: ${{ env.VCPKG_INSTALL_DIR }}/lib
       run: |
         pip install -e .

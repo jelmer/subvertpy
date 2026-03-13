@@ -36,6 +36,8 @@ jobs:
           triplet: x64-windows-release
           extra-args: --allow-unsupported --recurse --keep-going
           token: ${{ github.token }}
+      - name: Install pkg-config
+        run: choco install pkgconfiglite
       - name: Sets CIBW_BUILD environment variable
         env:
           pyVer: "${{matrix.python-version}}"
