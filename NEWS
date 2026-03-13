@@ -1,4 +1,46 @@
-0.11.0	UNRELEASED
+0.12.0	UNRELEASED
+
+ IMPROVEMENTS
+
+  * Port to rust. (Jelmer Vernooĳ)
+
+0.11.1	2026-03-11
+
+ BUG FIXES
+
+  * Fix compilation warnings and errors with Python 3.
+    (Antoine Lambert)
+
+  * Fix crash when providing a URI to ``py_object_to_svn_abspath``.
+    (Antoine Lambert)
+
+  * Fix extension modules build when using subversion from vcpkg.
+    (Antoine Lambert)
+
+  * Fix crash when calling ``txdelta_call`` on Windows.
+    (Antoine Lambert)
+
+  * Fix svn path detection on macOS with latest brew.
+    (Antoine Lambert)
+
+  * Fix multiple bugs in C bindings. (Jelmer Vernooĳ)
+
+  * Fix ``Context.ensure_adm()`` crash on Windows. (Jelmer Vernooĳ)
+
+  * Fix ``_get_repo_path()`` for Windows ``file://`` URL handling.
+    (Jelmer Vernooĳ)
+
+  * Properly close editors in ``get_update_editor`` tests.
+    (Jelmer Vernooĳ)
+
+ IMPROVEMENTS
+
+  * Add CI workflows for building binary wheels on all platforms.
+    (Antoine Lambert)
+
+  * Migrate to ruff for linting and formatting. (Jelmer Vernooĳ)
+
+0.11.0	2021-01-11
 
  API CHANGES
 
@@ -62,7 +104,7 @@
 
   BUG FIXES
 
-   * Disable tests probing for nonexistent paths in FS, as this causes
+   * Disable tests probing for nonexistant paths in FS, as this causes
      a crash in newer versions of libsvn_repos.
      (Jelmer Vernooĳ)
 
