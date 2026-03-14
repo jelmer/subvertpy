@@ -114,16 +114,16 @@ jobs:
       if: "matrix.os == 'windows-latest'"
     - name: Coverage test suite run (Linux)
       run: |
-        pytest -sv --cov=subvertpy subvertpy
+        pytest -sv --cov=subvertpy tests
       if: "matrix.os == 'ubuntu-latest'"
     - name: Coverage test suite run
       run: |
-        pytest -sv --cov=subvertpy subvertpy
+        pytest -sv --cov=subvertpy tests
       if: "matrix.os == 'macos-latest'"
     - name: Coverage test suite run
       env:
         SUBVERTPY_DLL_PATH: ${{ github.workspace }}/vcpkg/installed/x64-windows-release/bin
       run: |
         # using coverage on windows make some tests fail so only run tests
-        pytest -sv subvertpy
+        pytest -sv tests
       if: "matrix.os == 'windows-latest'"
