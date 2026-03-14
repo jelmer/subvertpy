@@ -23,9 +23,9 @@ dependencies = [
 
 [[package]]
 name = "apr-sys"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edccb3d92ae38dd713e46ea192cf3a2fb3ffa387817691816cef9a3b5ebb8b7c"
+checksum = "476a989d912a438479336f36c01af296103b7b5dd943a8f754206dbdf1fe0601"
 dependencies = [
  "bindgen",
  "system-deps",
@@ -101,7 +101,7 @@ dependencies = [
 
 [[package]]
 name = "client"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "pyo3",
  "subversion",
@@ -391,7 +391,7 @@ dependencies = [
 
 [[package]]
 name = "ra"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "apr",
  "pyo3",
@@ -431,7 +431,7 @@ checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
 name = "repos"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "apr",
  "pyo3",
@@ -532,7 +532,7 @@ dependencies = [
 
 [[package]]
 name = "subvertpy-util"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "apr",
  "pyo3",
@@ -635,7 +635,7 @@ checksum = "03c2856837ef78f57382f06b2b8563a2f512f7185d732608fd9176cb3b8edf0e"
 
 [[package]]
 name = "wc"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "apr",
  "pyo3",

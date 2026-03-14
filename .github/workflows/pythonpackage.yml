@@ -28,7 +28,7 @@ jobs:
         sudo apt install libsvn-dev libutf8proc-dev libclang-dev subversion
         # Work around https://bugs.debian.org/1055242
         svnversion=$(svn --version | grep -oP 'svn, version \K\d+\.\d+\.\d+')
-        sudo sed -i "s/^Version: $/Version: $svnversion/" /usr/lib/*/pkgconfig/libsvn_*.pc
+        sudo sed -i "s/^Version: *$/Version: $svnversion/" /usr/lib/*/pkgconfig/libsvn_*.pc
       if: "matrix.os == 'ubuntu-latest'"
     - name: Install dependencies (brew)
       run: |
@@ -66,13 +66,49 @@ jobs:
         export PATH="$(brew --prefix)/opt/apr/bin:$PATH"
         pip install -e .
       if: "matrix.os == 'macos-latest'"
-    - name: Install pkg-config (Windows)
-      run: choco install pkgconfiglite
-      if: "matrix.os == 'windows-latest'"
     - name: Build (Windows)
       env:
-        PKG_CONFIG_PATH: ${{ env.VCPKG_INSTALL_DIR }}/lib/pkgconfig
-        LIB: ${{ env.VCPKG_INSTALL_DIR }}/lib
+        LIB: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_APR_1_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_APR_1_LIB: apr-1
+        SYSTEM_DEPS_APR_1_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_APR_1_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include
+        SYSTEM_DEPS_APR_UTIL_1_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_APR_UTIL_1_LIB: aprutil-1
+        SYSTEM_DEPS_APR_UTIL_1_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_APR_UTIL_1_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include
+        SYSTEM_DEPS_LIBSVN_CLIENT_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_LIBSVN_CLIENT_LIB: svn_client-1
+        SYSTEM_DEPS_LIBSVN_CLIENT_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_LIBSVN_CLIENT_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_DELTA_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_LIBSVN_DELTA_LIB: svn_delta-1
+        SYSTEM_DEPS_LIBSVN_DELTA_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_LIBSVN_DELTA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_DIFF_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_LIBSVN_DIFF_LIB: svn_diff-1
+        SYSTEM_DEPS_LIBSVN_DIFF_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_LIBSVN_DIFF_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_FS_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_LIBSVN_FS_LIB: svn_fs-1
+        SYSTEM_DEPS_LIBSVN_FS_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_LIBSVN_FS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_RA_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_LIBSVN_RA_LIB: svn_ra-1
+        SYSTEM_DEPS_LIBSVN_RA_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_LIBSVN_RA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_REPOS_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_LIBSVN_REPOS_LIB: svn_repos-1
+        SYSTEM_DEPS_LIBSVN_REPOS_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_LIBSVN_REPOS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_SUBR_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_LIBSVN_SUBR_LIB: svn_subr-1
+        SYSTEM_DEPS_LIBSVN_SUBR_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_LIBSVN_SUBR_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_WC_NO_PKG_CONFIG: "1"
+        SYSTEM_DEPS_LIBSVN_WC_LIB: svn_wc-1
+        SYSTEM_DEPS_LIBSVN_WC_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
+        SYSTEM_DEPS_LIBSVN_WC_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
       run: |
         pip install -e .
       if: "matrix.os == 'windows-latest'"

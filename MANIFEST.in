@@ -5,7 +5,7 @@ include README.md
 include Makefile
 include subvertpy.cfg
 include man/*.1
-include Cargo.toml
+include Cargo.toml Cargo.lock
 recursive-include subr Cargo.toml *.rs
 recursive-include subvertpy_util Cargo.toml *.rs
 recursive-include repos Cargo.toml *.rs
