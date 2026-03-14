@@ -21,9 +21,9 @@ jobs:
 
             # Work around https://bugs.debian.org/1055242
             svnversion=$(svn --version | grep -oP 'svn, version \K\d+\.\d+\.\d+')
-            echo "Detected svn version: $svnversion"
             sed -i "s/^Version: *$/Version: $svnversion/" /usr/lib/*/pkgconfig/libsvn_*.pc
-            grep "^Version:" /usr/lib/*/pkgconfig/libsvn_client*.pc
+
+            export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
 
             python3 -m venv ~/venv
             . ~/venv/bin/activate
