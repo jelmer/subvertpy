@@ -36,7 +36,7 @@ jobs:
           $Python3_ROOT_DIR/bin/python -c "
           from subvertpy import client, ra, repos, subr, wc"
           pip3 install pytest
-          cd ../ && mv subvertpy/tests . && rm -rf subvertpy && python3 -m pytest tests
+          cd ../ && rm -rf subvertpy && python3 -m pytest tests
         working-directory: wheelhouse
       - uses: actions/upload-artifact@v4
         with:
