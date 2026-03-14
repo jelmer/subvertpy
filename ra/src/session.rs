@@ -471,7 +471,10 @@ impl RemoteAccess {
                     )
                         .into_pyobject(py)
                         .map_err(|e| {
-                            subversion::Error::from_message(&format!("Failed to convert lock: {}", e))
+                            subversion::Error::from_message(&format!(
+                                "Failed to convert lock: {}",
+                                e
+                            ))
                         })?
                         .into_any(),
                     None => py.None().into_bound(py),
@@ -536,7 +539,10 @@ impl RemoteAccess {
                     )
                         .into_pyobject(py)
                         .map_err(|e| {
-                            subversion::Error::from_message(&format!("Failed to convert lock: {}", e))
+                            subversion::Error::from_message(&format!(
+                                "Failed to convert lock: {}",
+                                e
+                            ))
                         })?
                         .into_any(),
                     None => py.None().into_bound(py),

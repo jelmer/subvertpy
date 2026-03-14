@@ -548,7 +548,10 @@ impl Client {
                     revprops
                         .set_item(key, pyo3::types::PyBytes::new(py, &value))
                         .map_err(|e| {
-                            subversion::Error::from_message(&format!("Failed to set revprop: {}", e))
+                            subversion::Error::from_message(&format!(
+                                "Failed to set revprop: {}",
+                                e
+                            ))
                         })?;
                 }
 
@@ -655,7 +658,10 @@ impl Client {
                     revprops_dict
                         .set_item(key, pyo3::types::PyBytes::new(py, &value))
                         .map_err(|e| {
-                            subversion::Error::from_message(&format!("Failed to set revprop: {}", e))
+                            subversion::Error::from_message(&format!(
+                                "Failed to set revprop: {}",
+                                e
+                            ))
                         })?;
                 }
 
@@ -1053,9 +1059,9 @@ impl Client {
 
                 let date_str = format!("{}", info.last_changed_date());
 
-                let wc_info_py = info.wc_info().map(|wci| {
-                    Py::new(py, crate::info::WCInfo::from_svn(&wci)).unwrap()
-                });
+                let wc_info_py = info
+                    .wc_info()
+                    .map(|wci| Py::new(py, crate::info::WCInfo::from_svn(&wci)).unwrap());
 
                 let info_obj = crate::info::Info {
                     url: info.url().to_string(),

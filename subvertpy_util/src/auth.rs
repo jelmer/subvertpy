@@ -150,9 +150,9 @@ impl Auth {
         {
             let auth = slf.borrow(py);
             if auth.baton.is_none() {
-                return Err(crate::error::svn_err_to_py(subversion::Error::from_message(
-                    "No authentication providers registered",
-                )));
+                return Err(crate::error::svn_err_to_py(
+                    subversion::Error::from_message("No authentication providers registered"),
+                ));
             }
         }
 
