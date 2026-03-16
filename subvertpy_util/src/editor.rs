@@ -4,6 +4,9 @@
 //! to apply changes to repository trees. The editor types can be used by
 //! multiple Python modules (client, _ra, wc).
 
+use std::cell::Cell;
+use std::rc::Rc;
+
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use pyo3::Bound;
@@ -92,7 +95,8 @@ impl PyEditor {
         Ok(PyDirectoryEditor {
             editor: dir_editor,
             closed: false,
-            has_active_child: std::cell::Cell::new(false),
+            has_active_child: Rc::new(Cell::new(false)),
+            parent_active_child: None,
         })
     }
 
@@ -163,7 +167,9 @@ impl PyEditor {
 pub struct PyDirectoryEditor {
     editor: WrapDirectoryEditor<'static>,
     closed: bool,
-    has_active_child: std::cell::Cell<bool>,
+    has_active_child: Rc<Cell<bool>>,
+    /// Reference to parent's active_child flag, reset to false on close
+    parent_active_child: Option<Rc<Cell<bool>>>,
 }
 
 #[pymethods]
@@ -209,10 +215,12 @@ impl PyDirectoryEditor {
         Ok(PyDirectoryEditor {
             editor: child_editor,
             closed: false,
-            has_active_child: std::cell::Cell::new(false),
+            has_active_child: Rc::new(Cell::new(false)),
+            parent_active_child: Some(Rc::clone(&self.has_active_child)),
         })
     }
 
+    #[pyo3(signature = (path, base_revision=None))]
     fn open_directory(
         &mut self,
         _py: Python,
@@ -240,7 +248,8 @@ impl PyDirectoryEditor {
         Ok(PyDirectoryEditor {
             editor: child_editor,
             closed: false,
-            has_active_child: std::cell::Cell::new(false),
+            has_active_child: Rc::new(Cell::new(false)),
+            parent_active_child: Some(Rc::clone(&self.has_active_child)),
         })
     }
 
@@ -283,6 +292,9 @@ impl PyDirectoryEditor {
 
         if result.is_ok() {
             self.closed = true;
+            if let Some(ref parent_flag) = self.parent_active_child {
+                parent_flag.set(false);
+            }
         }
 
         result
@@ -326,9 +338,11 @@ impl PyDirectoryEditor {
         Ok(PyFileEditor {
             editor: file_editor,
             closed: false,
+            parent_active_child: Some(Rc::clone(&self.has_active_child)),
         })
     }
 
+    #[pyo3(signature = (path, base_revision=None))]
     fn open_file(
         &mut self,
         _py: Python,
@@ -355,6 +369,7 @@ impl PyDirectoryEditor {
         Ok(PyFileEditor {
             editor: file_editor,
             closed: false,
+            parent_active_child: Some(Rc::clone(&self.has_active_child)),
         })
     }
 
@@ -385,6 +400,8 @@ impl PyDirectoryEditor {
 pub struct PyFileEditor {
     editor: WrapFileEditor<'static>,
     closed: bool,
+    /// Reference to parent's active_child flag, reset to false on close
+    parent_active_child: Option<Rc<Cell<bool>>>,
 }
 
 #[pymethods]
@@ -443,6 +460,9 @@ impl PyFileEditor {
 
         if result.is_ok() {
             self.closed = true;
+            if let Some(ref parent_flag) = self.parent_active_child {
+                parent_flag.set(false);
+            }
         }
 
         result

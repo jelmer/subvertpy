@@ -259,6 +259,13 @@ impl FileEditor for PyFileEditorWrapper {
             let closure: Box<dyn for<'b> Fn(&'b mut subversion::delta::TxDeltaWindow) -> Result<(), subversion::Error<'static>>> =
                 Box::new(move |window: &mut subversion::delta::TxDeltaWindow| -> Result<(), subversion::Error<'static>> {
                 Python::attach(|py| {
+                    if window.as_ptr().is_null() {
+                        // End-of-delta signal: call handler with None
+                        handler_obj
+                            .call1(py, (py.None(),))
+                            .map_err(|e| py_err_to_svn(e))?;
+                        return Ok(());
+                    }
                     let ops: Vec<(i32, u64, u64)> = window.ops();
                     let py_ops = pyo3::types::PyList::new(
                         py,
@@ -302,9 +309,15 @@ impl FileEditor for PyFileEditorWrapper {
 
     fn close(&mut self, text_checksum: Option<&str>) -> Result<(), subversion::Error<'static>> {
         Python::attach(|py| {
-            self.py_file
-                .call_method1(py, "close", (text_checksum,))
-                .map_err(|e| py_err_to_svn(e))?;
+            if let Some(checksum) = text_checksum {
+                self.py_file
+                    .call_method1(py, "close", (checksum,))
+                    .map_err(|e| py_err_to_svn(e))?;
+            } else {
+                self.py_file
+                    .call_method0(py, "close")
+                    .map_err(|e| py_err_to_svn(e))?;
+            }
             Ok(())
         })
     }

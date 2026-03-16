@@ -13,6 +13,16 @@ dependencies = [
 
 [[package]]
 name = "apr"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1cd5b44fe056a4cac1a41118fc72d92428858c137098767e87596a260b22e0e"
+dependencies = [
+ "apr-sys",
+ "ctor",
+]
+
+[[package]]
+name = "apr"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93e5afaf2a65c6af5fbb4637fdf1c620a603dfd189368461ded09f4f6a5cd5a8"
@@ -393,7 +403,7 @@ dependencies = [
 name = "ra"
 version = "0.12.0"
 dependencies = [
- "apr",
+ "apr 0.4.2",
  "pyo3",
  "pyo3-filelike",
  "subversion",
@@ -433,7 +443,7 @@ checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 name = "repos"
 version = "0.12.0"
 dependencies = [
- "apr",
+ "apr 0.4.2",
  "pyo3",
  "subversion",
  "subvertpy-util",
@@ -494,11 +504,9 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
 name = "subversion"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b47076599a7022e6d8335bce7b94a0ac63e28d5f7f8c458310e2eddb084266e5"
+version = "0.1.2"
 dependencies = [
- "apr",
+ "apr 0.4.2",
  "apr-sys",
  "bitflags",
  "ctor",
@@ -511,11 +519,9 @@ dependencies = [
 
 [[package]]
 name = "subversion-sys"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95f062fc585943a72343bec686bdc7002022cfbff139ae2adc3ac0f1d572e33d"
+version = "0.1.2"
 dependencies = [
- "apr",
+ "apr 0.3.5",
  "apr-sys",
  "bindgen",
  "system-deps",
@@ -534,7 +540,7 @@ dependencies = [
 name = "subvertpy-util"
 version = "0.12.0"
 dependencies = [
- "apr",
+ "apr 0.4.2",
  "pyo3",
  "pyo3-filelike",
  "subversion",
@@ -637,7 +643,7 @@ checksum = "03c2856837ef78f57382f06b2b8563a2f512f7185d732608fd9176cb3b8edf0e"
 name = "wc"
 version = "0.12.0"
 dependencies = [
- "apr",
+ "apr 0.4.2",
  "pyo3",
  "subversion",
  "subvertpy-util",

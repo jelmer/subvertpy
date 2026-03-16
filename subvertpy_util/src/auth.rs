@@ -15,7 +15,10 @@ pub struct Auth {
 const AUTH_BATON_CAPSULE_NAME: &std::ffi::CStr = c"subvertpy._auth_baton";
 
 impl Auth {
-    /// Take the auth baton out of this Auth object (for use in same-cdylib code)
+    /// Take the auth baton out of this Auth object (for use in same-cdylib code).
+    ///
+    /// This replaces the baton with a dummy — prefer `with_baton_mut` when
+    /// ownership transfer is not required.
     pub fn take_baton(&self) -> Option<subversion::auth::AuthBaton> {
         self.baton.as_ref().map(|b| {
             b.replace(
@@ -25,27 +28,44 @@ impl Auth {
             )
         })
     }
+
+    /// Apply a function to the auth baton without consuming it.
+    ///
+    /// This allows setting the auth baton on a Client or RemoteAccess session
+    /// without transferring ownership. The caller should keep a Python reference
+    /// to the Auth object to ensure the baton remains alive.
+    pub fn with_baton_mut<F, R>(&self, f: F) -> Option<R>
+    where
+        F: FnOnce(&mut subversion::auth::AuthBaton) -> R,
+    {
+        self.baton.as_ref().map(|b| f(&mut b.borrow_mut()))
+    }
 }
 
-/// Extract an AuthBaton from a Python Auth object (works across cdylib boundaries).
+/// Apply a function to the AuthBaton inside a Python Auth object (works across cdylib boundaries).
 ///
-/// Calls `_take_baton_capsule()` on the object and extracts the AuthBaton from the
-/// returned PyCapsule.
-pub fn take_baton_from_py(
+/// Calls `_borrow_baton_capsule()` on the object and applies `f` to the borrowed AuthBaton.
+/// The Auth Python object retains ownership; the caller must keep a reference to it.
+pub fn with_baton_from_py<F, R>(
     auth: &pyo3::Bound<pyo3::PyAny>,
-) -> PyResult<Option<subversion::auth::AuthBaton>> {
+    f: F,
+) -> PyResult<Option<R>>
+where
+    F: FnOnce(&mut subversion::auth::AuthBaton) -> R,
+{
     use pyo3::types::PyCapsuleMethods;
 
-    let capsule_obj = auth.call_method0("_take_baton_capsule")?;
+    let capsule_obj = auth.call_method0("_borrow_baton_capsule")?;
     if capsule_obj.is_none() {
         return Ok(None);
     }
     let capsule = capsule_obj.cast::<pyo3::types::PyCapsule>()?;
     let ptr = capsule.pointer_checked(Some(AUTH_BATON_CAPSULE_NAME))?;
-    // Safety: the capsule was created with Box::into_raw in _take_baton_capsule.
-    // We reclaim ownership here; the capsule has no destructor so no double-free.
-    let baton = unsafe { *Box::from_raw(ptr.as_ptr() as *mut subversion::auth::AuthBaton) };
-    Ok(Some(baton))
+    // Safety: the capsule contains a pointer to a RefCell<AuthBaton> that is
+    // kept alive by the Auth Python object. We borrow it mutably here.
+    let baton_cell = unsafe { &*(ptr.as_ptr() as *const RefCell<subversion::auth::AuthBaton>) };
+    let result = f(&mut baton_cell.borrow_mut());
+    Ok(Some(result))
 }
 
 #[pymethods]
@@ -116,16 +136,16 @@ impl Auth {
         Ok(self.params.get(name).map(|v| v.clone_ref(py)))
     }
 
-    /// Take the auth baton and return it as a PyCapsule.
+    /// Return the auth baton as a PyCapsule for cross-cdylib use.
     ///
-    /// This is used to pass the baton across cdylib boundaries (e.g. from _ra to client).
-    /// The capsule stores a raw pointer to a heap-allocated AuthBaton; the consumer
-    /// is responsible for calling `take_baton_from_py` to reclaim ownership.
-    fn _take_baton_capsule(&self, py: Python) -> PyResult<Option<Py<PyAny>>> {
-        let Some(baton) = self.take_baton() else {
+    /// The capsule stores a pointer to the AuthBaton (not ownership).
+    /// The caller must keep a Python reference to this Auth object to
+    /// ensure the baton remains valid.
+    fn _borrow_baton_capsule(&self, py: Python) -> PyResult<Option<Py<PyAny>>> {
+        let Some(ref baton_cell) = self.baton else {
             return Ok(None);
         };
-        let ptr = Box::into_raw(Box::new(baton));
+        let ptr = baton_cell as *const RefCell<subversion::auth::AuthBaton>;
         let capsule = unsafe {
             pyo3::Bound::from_owned_ptr(
                 py,
