@@ -39,7 +39,7 @@ jobs:
       run: |
         pydoctor --introspect-c-modules -c subvertpy.cfg --make-html subvertpy
     - name: Upload Pages artifact
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v4
       with:
         path: apidocs
 
