@@ -23,9 +23,9 @@ dependencies = [
 
 [[package]]
 name = "apr-sys"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "476a989d912a438479336f36c01af296103b7b5dd943a8f754206dbdf1fe0601"
+checksum = "4b3848e5dd8525d8a6b592eef87a6cebaa472472128d8b1fc3dc246154025661"
 dependencies = [
  "bindgen",
  "system-deps",

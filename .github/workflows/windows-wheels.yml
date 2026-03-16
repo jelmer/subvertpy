@@ -93,7 +93,7 @@ jobs:
                 {wheel}
         run: python -m cibuildwheel --output-dir wheelhouse
       - name: Cleanup subvertpy repo to run tests with installed wheel
-        run: mv subvertpy/tests . && rm -rf subvertpy
+        run: rm -rf subvertpy
         shell: msys2 {0}
       - name: Test built wheel can be installed and imported
         working-directory: wheelhouse
