@@ -46,46 +46,58 @@ jobs:
         env:
             LIB: ${{ env.VCPKG_INSTALL_DIR }}/lib
             SYSTEM_DEPS_APR_1_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_APR_1_LIB: apr-1
+            SYSTEM_DEPS_APR_1_LIB: libapr-1
             SYSTEM_DEPS_APR_1_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
             SYSTEM_DEPS_APR_1_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include
             SYSTEM_DEPS_APR_UTIL_1_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_APR_UTIL_1_LIB: aprutil-1
+            SYSTEM_DEPS_APR_UTIL_1_LIB: libaprutil-1
             SYSTEM_DEPS_APR_UTIL_1_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
             SYSTEM_DEPS_APR_UTIL_1_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include
             SYSTEM_DEPS_LIBSVN_CLIENT_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_LIBSVN_CLIENT_LIB: svn_client-1
+            SYSTEM_DEPS_LIBSVN_CLIENT_LIB: libsvn_client-1
             SYSTEM_DEPS_LIBSVN_CLIENT_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-            SYSTEM_DEPS_LIBSVN_CLIENT_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+            SYSTEM_DEPS_LIBSVN_CLIENT_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
             SYSTEM_DEPS_LIBSVN_DELTA_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_LIBSVN_DELTA_LIB: svn_delta-1
+            SYSTEM_DEPS_LIBSVN_DELTA_LIB: libsvn_delta-1
             SYSTEM_DEPS_LIBSVN_DELTA_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-            SYSTEM_DEPS_LIBSVN_DELTA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+            SYSTEM_DEPS_LIBSVN_DELTA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
             SYSTEM_DEPS_LIBSVN_DIFF_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_LIBSVN_DIFF_LIB: svn_diff-1
+            SYSTEM_DEPS_LIBSVN_DIFF_LIB: libsvn_diff-1
             SYSTEM_DEPS_LIBSVN_DIFF_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-            SYSTEM_DEPS_LIBSVN_DIFF_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+            SYSTEM_DEPS_LIBSVN_DIFF_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
             SYSTEM_DEPS_LIBSVN_FS_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_LIBSVN_FS_LIB: svn_fs-1
+            SYSTEM_DEPS_LIBSVN_FS_LIB: libsvn_fs-1
             SYSTEM_DEPS_LIBSVN_FS_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-            SYSTEM_DEPS_LIBSVN_FS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+            SYSTEM_DEPS_LIBSVN_FS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
             SYSTEM_DEPS_LIBSVN_RA_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_LIBSVN_RA_LIB: svn_ra-1
+            SYSTEM_DEPS_LIBSVN_RA_LIB: libsvn_ra-1
             SYSTEM_DEPS_LIBSVN_RA_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-            SYSTEM_DEPS_LIBSVN_RA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+            SYSTEM_DEPS_LIBSVN_RA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
             SYSTEM_DEPS_LIBSVN_REPOS_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_LIBSVN_REPOS_LIB: svn_repos-1
+            SYSTEM_DEPS_LIBSVN_REPOS_LIB: libsvn_repos-1
             SYSTEM_DEPS_LIBSVN_REPOS_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-            SYSTEM_DEPS_LIBSVN_REPOS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+            SYSTEM_DEPS_LIBSVN_REPOS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
             SYSTEM_DEPS_LIBSVN_SUBR_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_LIBSVN_SUBR_LIB: svn_subr-1
+            SYSTEM_DEPS_LIBSVN_SUBR_LIB: libsvn_subr-1
             SYSTEM_DEPS_LIBSVN_SUBR_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-            SYSTEM_DEPS_LIBSVN_SUBR_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+            SYSTEM_DEPS_LIBSVN_SUBR_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
             SYSTEM_DEPS_LIBSVN_WC_NO_PKG_CONFIG: "1"
-            SYSTEM_DEPS_LIBSVN_WC_LIB: svn_wc-1
+            SYSTEM_DEPS_LIBSVN_WC_LIB: libsvn_wc-1
             SYSTEM_DEPS_LIBSVN_WC_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-            SYSTEM_DEPS_LIBSVN_WC_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+            SYSTEM_DEPS_LIBSVN_WC_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
             CIBW_BUILD_VERBOSITY: 1
+            CIBW_ENVIRONMENT_PASS_WINDOWS: >-
+              LIB
+              SYSTEM_DEPS_APR_1_NO_PKG_CONFIG SYSTEM_DEPS_APR_1_LIB SYSTEM_DEPS_APR_1_SEARCH_NATIVE SYSTEM_DEPS_APR_1_INCLUDE
+              SYSTEM_DEPS_APR_UTIL_1_NO_PKG_CONFIG SYSTEM_DEPS_APR_UTIL_1_LIB SYSTEM_DEPS_APR_UTIL_1_SEARCH_NATIVE SYSTEM_DEPS_APR_UTIL_1_INCLUDE
+              SYSTEM_DEPS_LIBSVN_CLIENT_NO_PKG_CONFIG SYSTEM_DEPS_LIBSVN_CLIENT_LIB SYSTEM_DEPS_LIBSVN_CLIENT_SEARCH_NATIVE SYSTEM_DEPS_LIBSVN_CLIENT_INCLUDE
+              SYSTEM_DEPS_LIBSVN_DELTA_NO_PKG_CONFIG SYSTEM_DEPS_LIBSVN_DELTA_LIB SYSTEM_DEPS_LIBSVN_DELTA_SEARCH_NATIVE SYSTEM_DEPS_LIBSVN_DELTA_INCLUDE
+              SYSTEM_DEPS_LIBSVN_DIFF_NO_PKG_CONFIG SYSTEM_DEPS_LIBSVN_DIFF_LIB SYSTEM_DEPS_LIBSVN_DIFF_SEARCH_NATIVE SYSTEM_DEPS_LIBSVN_DIFF_INCLUDE
+              SYSTEM_DEPS_LIBSVN_FS_NO_PKG_CONFIG SYSTEM_DEPS_LIBSVN_FS_LIB SYSTEM_DEPS_LIBSVN_FS_SEARCH_NATIVE SYSTEM_DEPS_LIBSVN_FS_INCLUDE
+              SYSTEM_DEPS_LIBSVN_RA_NO_PKG_CONFIG SYSTEM_DEPS_LIBSVN_RA_LIB SYSTEM_DEPS_LIBSVN_RA_SEARCH_NATIVE SYSTEM_DEPS_LIBSVN_RA_INCLUDE
+              SYSTEM_DEPS_LIBSVN_REPOS_NO_PKG_CONFIG SYSTEM_DEPS_LIBSVN_REPOS_LIB SYSTEM_DEPS_LIBSVN_REPOS_SEARCH_NATIVE SYSTEM_DEPS_LIBSVN_REPOS_INCLUDE
+              SYSTEM_DEPS_LIBSVN_SUBR_NO_PKG_CONFIG SYSTEM_DEPS_LIBSVN_SUBR_LIB SYSTEM_DEPS_LIBSVN_SUBR_SEARCH_NATIVE SYSTEM_DEPS_LIBSVN_SUBR_INCLUDE
+              SYSTEM_DEPS_LIBSVN_WC_NO_PKG_CONFIG SYSTEM_DEPS_LIBSVN_WC_LIB SYSTEM_DEPS_LIBSVN_WC_SEARCH_NATIVE SYSTEM_DEPS_LIBSVN_WC_INCLUDE
             CIBW_BEFORE_BUILD_WINDOWS: pip install delvewheel
             CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
                 delvewheel repair -v -w {dest_dir} --analyze-existing
@@ -93,7 +105,7 @@ jobs:
                 {wheel}
         run: python -m cibuildwheel --output-dir wheelhouse
       - name: Cleanup subvertpy repo to run tests with installed wheel
-        run: mv subvertpy/tests . && rm -rf subvertpy
+        run: rm -rf subvertpy
         shell: msys2 {0}
       - name: Test built wheel can be installed and imported
         working-directory: wheelhouse

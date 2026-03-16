@@ -20,6 +20,16 @@ pub mod error;
 pub mod io;
 pub mod properties;
 
+/// Convert a Python revision number (i64) to an Option<Revnum>.
+/// Negative values are treated as invalid (None).
+pub fn to_revnum(rev: i64) -> Option<subversion::Revnum> {
+    if rev < 0 {
+        None
+    } else {
+        Some(subversion::Revnum::from(rev as u64))
+    }
+}
+
 /// Convert a Python object to an SVN path or URL
 ///
 /// This handles both filesystem paths (dirents) and URLs (URIs),

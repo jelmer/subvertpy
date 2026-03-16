@@ -30,7 +30,7 @@ impl FileSystem {
 
     /// Get a revision root for a specific revision
     fn get_revision_root(&self, revnum: i64) -> PyResult<super::fsroot::FileSystemRoot> {
-        let rev = subversion::Revnum::from_raw(revnum).ok_or_else(|| {
+        let rev = subvertpy_util::to_revnum(revnum).ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
         })?;
 
@@ -41,7 +41,7 @@ impl FileSystem {
 
     /// Get revision properties for a specific revision
     fn get_revision_proplist(&self, revnum: i64) -> PyResult<pyo3::Py<pyo3::PyAny>> {
-        let rev = subversion::Revnum::from_raw(revnum).ok_or_else(|| {
+        let rev = subvertpy_util::to_revnum(revnum).ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
         })?;
 

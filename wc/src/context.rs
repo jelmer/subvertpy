@@ -205,7 +205,7 @@ impl Context {
                 url,
                 repos_root_url,
                 repos_uuid,
-                subversion::Revnum::from_raw(revnum).unwrap_or(subversion::Revnum::invalid()),
+                subvertpy_util::to_revnum(revnum).unwrap_or(subversion::Revnum::invalid()),
                 d,
             )
             .map_err(svn_err_to_py)
@@ -288,7 +288,7 @@ impl Context {
         self.inner
             .process_committed_queue(
                 &mut queue.inner,
-                subversion::Revnum::from_raw(revnum).unwrap_or(subversion::Revnum::invalid()),
+                subvertpy_util::to_revnum(revnum).unwrap_or(subversion::Revnum::invalid()),
                 Some(date),
                 Some(author),
             )

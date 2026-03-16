@@ -66,7 +66,7 @@ fn ensure_adm(
     let path_str = subvertpy_util::py_to_svn_abspath(path)?;
     let repos_root = repos.unwrap_or(url);
     let svn_depth = context::depth_from_py(depth);
-    let revnum = subversion::Revnum::from_raw(rev).unwrap_or(subversion::Revnum::invalid());
+    let revnum = subvertpy_util::to_revnum(rev).unwrap_or(subversion::Revnum::invalid());
     let mut ctx = subversion::wc::Context::new().map_err(svn_err_to_py)?;
     ctx.ensure_adm(&path_str, url, repos_root, uuid, revnum, svn_depth)
         .map_err(svn_err_to_py)

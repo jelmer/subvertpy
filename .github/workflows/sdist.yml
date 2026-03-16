@@ -15,6 +15,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: |
+          sudo apt-get update -y
           sudo apt-get install -y libsvn-dev libutf8proc-dev libclang-dev subversion
           # Work around https://bugs.debian.org/1055242
           svnversion=$(svn --version | grep -oP 'svn, version \K\d+\.\d+\.\d+')

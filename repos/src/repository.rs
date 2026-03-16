@@ -54,11 +54,11 @@ impl Repository {
         end_rev: Option<i64>,
     ) -> PyResult<()> {
         let start = start_rev
-            .and_then(|r| subversion::Revnum::from_raw(r))
-            .unwrap_or_else(|| subversion::Revnum::from_raw(0).unwrap());
+            .and_then(|r| subvertpy_util::to_revnum(r))
+            .unwrap_or_else(|| subvertpy_util::to_revnum(0).unwrap());
         let end = end_rev
-            .and_then(|r| subversion::Revnum::from_raw(r))
-            .unwrap_or_else(|| subversion::Revnum::from_raw(-1).unwrap());
+            .and_then(|r| subvertpy_util::to_revnum(r))
+            .unwrap_or(subversion::Revnum::invalid());
 
         let callback = |_revnum: subversion::Revnum,
                         _err: &subversion::Error|

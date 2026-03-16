@@ -55,7 +55,7 @@ jobs:
         run: |
           pip install $(ls -t | head -1)
           python -c "from subvertpy import client, ra, repos, subr, wc"
-          cd ../ && mv subvertpy/tests . && rm -rf subvertpy && python -m pytest tests
+          cd ../ && rm -rf subvertpy && python -m pytest tests
       - uses: actions/upload-artifact@v4
         with:
           name: subvertpy-wheel-macos-${{ matrix.python-version }}-${{ matrix.config.arch }}

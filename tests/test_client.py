@@ -749,9 +749,12 @@ class TestClient(SubversionTestCase):
     def test_propset(self):
         self.client.mkdir(["dc/foo"])
         self.client.propset("someprop", "lala", "dc/foo")
+        result = self.client.propget("someprop", "dc/foo")
+        # SVN returns canonical paths with forward slashes; normalize for comparison
+        normalized = {os.path.normpath(k): v for k, v in result.items()}
         self.assertEqual(
-            {os.path.abspath("dc/foo"): b"lala"},
-            self.client.propget("someprop", "dc/foo"),
+            {os.path.normpath(os.path.abspath("dc/foo")): b"lala"},
+            normalized,
         )
 
     def test_iter_log(self):

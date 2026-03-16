@@ -13,9 +13,9 @@ dependencies = [
 
 [[package]]
 name = "apr"
-version = "0.4.2"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93e5afaf2a65c6af5fbb4637fdf1c620a603dfd189368461ded09f4f6a5cd5a8"
+checksum = "542b26acc95b84446737e8eca862606d11443caf086d5cfd3cf0e4c4e6b29346"
 dependencies = [
  "apr-sys",
  "ctor",
@@ -23,9 +23,9 @@ dependencies = [
 
 [[package]]
 name = "apr-sys"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "476a989d912a438479336f36c01af296103b7b5dd943a8f754206dbdf1fe0601"
+checksum = "4b3848e5dd8525d8a6b592eef87a6cebaa472472128d8b1fc3dc246154025661"
 dependencies = [
  "bindgen",
  "system-deps",
@@ -494,9 +494,9 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
 name = "subversion"
-version = "0.1.1"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b47076599a7022e6d8335bce7b94a0ac63e28d5f7f8c458310e2eddb084266e5"
+checksum = "983b4142950d7aebb44cc49386f1c1ae44d90ca6f966bd4963c9ab78b2797693"
 dependencies = [
  "apr",
  "apr-sys",
@@ -511,9 +511,9 @@ dependencies = [
 
 [[package]]
 name = "subversion-sys"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95f062fc585943a72343bec686bdc7002022cfbff139ae2adc3ac0f1d572e33d"
+checksum = "3c18f6949478852356b0f5bdc860ae85c560c7de5ac632d6a25060515fe1d1ae"
 dependencies = [
  "apr",
  "apr-sys",

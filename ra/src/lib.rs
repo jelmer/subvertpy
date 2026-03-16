@@ -24,22 +24,16 @@ use session::{LogIterator, RemoteAccess};
 
 /// Get the SVN library version
 #[pyfunction]
-fn version() -> (i32, i32, i32, Option<String>) {
+fn version() -> (i32, i32, i32, String) {
     let ver = subversion::ra::version();
-    let tag = ver.tag();
-    let tag_opt = if tag.is_empty() {
-        None
-    } else {
-        Some(tag.to_string())
-    };
-    (ver.major(), ver.minor(), ver.patch(), tag_opt)
+    (ver.major(), ver.minor(), ver.patch(), ver.tag().to_string())
 }
 
 /// Get the API version
 #[pyfunction]
-fn api_version() -> (i32, i32, i32, Option<String>) {
+fn api_version() -> (i32, i32, i32, String) {
     let (major, minor, patch) = subversion::ra::api_version();
-    (major, minor, patch, None)
+    (major, minor, patch, String::new())
 }
 
 /// Get available RA modules

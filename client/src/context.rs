@@ -18,7 +18,7 @@ fn parse_revision(_py: Python, rev: &Bound<PyAny>) -> PyResult<subversion::Revis
             ))),
         }
     } else if let Ok(n) = rev.extract::<i64>() {
-        let revnum = subversion::Revnum::from_raw(n).ok_or_else(|| {
+        let revnum = subvertpy_util::to_revnum(n).ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
         })?;
         Ok(subversion::Revision::Number(revnum))
@@ -79,9 +79,11 @@ impl Client {
             .map_err(|e| subvertpy_util::error::svn_err_to_py(e))?;
 
         let auth_py = if let Some(ref auth_obj) = auth {
-            if let Some(baton) = subvertpy_util::auth::take_baton_from_py(auth_obj)? {
-                ctx.set_auth_owned(baton);
-            }
+            subvertpy_util::auth::with_baton_from_py(auth_obj, |baton| {
+                // Safety: the Auth Python object is kept alive via auth_py below,
+                // so the baton pointer remains valid for the lifetime of the Client.
+                unsafe { ctx.set_auth_unchecked(baton) };
+            })?;
             Some(auth_obj.clone().unbind())
         } else {
             None
@@ -488,7 +490,7 @@ impl Client {
         let end_revision = if let Some(r) = end_rev {
             parse_revision(py, &r)?
         } else {
-            subversion::Revision::Number(subversion::Revnum::from_raw(1).unwrap())
+            subversion::Revision::Number(subvertpy_util::to_revnum(1).unwrap())
         };
 
         let revision_ranges = vec![subversion::RevisionRange {
@@ -595,7 +597,7 @@ impl Client {
         let end_revision = if let Some(r) = end_rev {
             parse_revision(py, &r)?
         } else {
-            subversion::Revision::Number(subversion::Revnum::from_raw(1).unwrap())
+            subversion::Revision::Number(subvertpy_util::to_revnum(1).unwrap())
         };
 
         let revision_ranges = vec![subversion::RevisionRange {
@@ -812,7 +814,7 @@ impl Client {
         };
 
         let base_rev = if let Some(rev) = base_revision_for_url {
-            subversion::Revnum::from_raw(rev).ok_or_else(|| {
+            subvertpy_util::to_revnum(rev).ok_or_else(|| {
                 PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
                     "Invalid revision number: {}",
                     rev
@@ -1000,7 +1002,8 @@ impl Client {
         include_externals: bool,
     ) -> PyResult<Bound<'py, pyo3::types::PyDict>> {
         let path_str = subvertpy_util::py_to_svn_string(&path)?;
-        let path_abs = if std::path::Path::new(&path_str).is_absolute() {
+        let path_abs = if std::path::Path::new(&path_str).is_absolute() || path_str.contains("://")
+        {
             path_str
         } else {
             let current_dir = std::env::current_dir().map_err(|e| {
@@ -1015,7 +1018,13 @@ impl Client {
         let rev = if let Some(r) = revision {
             parse_revision(py, &r)?
         } else {
-            subversion::Revision::Working
+            subversion::Revision::Unspecified
+        };
+        // Match the old C behavior: default unspecified revision to HEAD
+        let rev = if matches!(rev, subversion::Revision::Unspecified) {
+            subversion::Revision::Head
+        } else {
+            rev
         };
 
         let peg_rev = if let Some(r) = peg_revision {
@@ -1069,9 +1078,12 @@ impl Client {
                     kind: kind_str.to_string(),
                     repos_root_url: info.repos_root_url().to_string(),
                     repos_uuid: info.repos_uuid().to_string(),
-                    last_changed_rev: info.last_changed_rev().as_u64() as i64,
+                    last_changed_rev: info
+                        .last_changed_rev()
+                        .map(|r| r.as_u64() as i64)
+                        .unwrap_or(-1),
                     last_changed_date: date_str,
-                    last_changed_author: info.last_changed_author().to_string(),
+                    last_changed_author: info.last_changed_author().unwrap_or("").to_string(),
                     size: info.size(),
                     wc_info: wc_info_py,
                 };
@@ -1097,12 +1109,12 @@ impl Client {
     }
 
     /// Export a tree from the repository to a local directory
-    #[pyo3(signature = (from_path_or_url, to_path, rev=None, peg_rev=None, overwrite=false, ignore_externals=false, ignore_keywords=false, recurse=true, native_eol=None))]
+    #[pyo3(signature = (from_path_or_url, to, rev=None, peg_rev=None, overwrite=false, ignore_externals=false, ignore_keywords=false, recurse=true, native_eol=None))]
     fn export(
         &mut self,
         py: Python,
         from_path_or_url: &str,
-        to_path: Bound<PyAny>,
+        to: Bound<PyAny>,
         rev: Option<Bound<PyAny>>,
         peg_rev: Option<Bound<PyAny>>,
         overwrite: bool,
@@ -1111,7 +1123,7 @@ impl Client {
         recurse: bool,
         native_eol: Option<&str>,
     ) -> PyResult<i64> {
-        let to_path_str = subvertpy_util::py_to_svn_string(&to_path)?;
+        let to_path_str = subvertpy_util::py_to_svn_string(&to)?;
         let to_path_abs = if std::path::Path::new(&to_path_str).is_absolute() {
             to_path_str
         } else {
@@ -1173,7 +1185,7 @@ impl Client {
             .export(from_path_or_url, to_path_abs.as_str(), &options)
             .map_err(|e| subvertpy_util::error::svn_err_to_py(e))?;
 
-        Ok(result_rev.as_u64() as i64)
+        Ok(result_rev.map(|r| r.as_u64() as i64).unwrap_or(-1))
     }
 
     /// Diff two paths or URLs

@@ -70,45 +70,45 @@ jobs:
       env:
         LIB: ${{ env.VCPKG_INSTALL_DIR }}\lib
         SYSTEM_DEPS_APR_1_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_APR_1_LIB: apr-1
+        SYSTEM_DEPS_APR_1_LIB: libapr-1
         SYSTEM_DEPS_APR_1_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
         SYSTEM_DEPS_APR_1_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include
         SYSTEM_DEPS_APR_UTIL_1_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_APR_UTIL_1_LIB: aprutil-1
+        SYSTEM_DEPS_APR_UTIL_1_LIB: libaprutil-1
         SYSTEM_DEPS_APR_UTIL_1_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
         SYSTEM_DEPS_APR_UTIL_1_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include
         SYSTEM_DEPS_LIBSVN_CLIENT_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_LIBSVN_CLIENT_LIB: svn_client-1
+        SYSTEM_DEPS_LIBSVN_CLIENT_LIB: libsvn_client-1
         SYSTEM_DEPS_LIBSVN_CLIENT_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-        SYSTEM_DEPS_LIBSVN_CLIENT_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_CLIENT_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
         SYSTEM_DEPS_LIBSVN_DELTA_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_LIBSVN_DELTA_LIB: svn_delta-1
+        SYSTEM_DEPS_LIBSVN_DELTA_LIB: libsvn_delta-1
         SYSTEM_DEPS_LIBSVN_DELTA_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-        SYSTEM_DEPS_LIBSVN_DELTA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_DELTA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
         SYSTEM_DEPS_LIBSVN_DIFF_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_LIBSVN_DIFF_LIB: svn_diff-1
+        SYSTEM_DEPS_LIBSVN_DIFF_LIB: libsvn_diff-1
         SYSTEM_DEPS_LIBSVN_DIFF_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-        SYSTEM_DEPS_LIBSVN_DIFF_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_DIFF_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
         SYSTEM_DEPS_LIBSVN_FS_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_LIBSVN_FS_LIB: svn_fs-1
+        SYSTEM_DEPS_LIBSVN_FS_LIB: libsvn_fs-1
         SYSTEM_DEPS_LIBSVN_FS_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-        SYSTEM_DEPS_LIBSVN_FS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_FS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
         SYSTEM_DEPS_LIBSVN_RA_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_LIBSVN_RA_LIB: svn_ra-1
+        SYSTEM_DEPS_LIBSVN_RA_LIB: libsvn_ra-1
         SYSTEM_DEPS_LIBSVN_RA_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-        SYSTEM_DEPS_LIBSVN_RA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_RA_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
         SYSTEM_DEPS_LIBSVN_REPOS_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_LIBSVN_REPOS_LIB: svn_repos-1
+        SYSTEM_DEPS_LIBSVN_REPOS_LIB: libsvn_repos-1
         SYSTEM_DEPS_LIBSVN_REPOS_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-        SYSTEM_DEPS_LIBSVN_REPOS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_REPOS_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
         SYSTEM_DEPS_LIBSVN_SUBR_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_LIBSVN_SUBR_LIB: svn_subr-1
+        SYSTEM_DEPS_LIBSVN_SUBR_LIB: libsvn_subr-1
         SYSTEM_DEPS_LIBSVN_SUBR_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-        SYSTEM_DEPS_LIBSVN_SUBR_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_SUBR_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
         SYSTEM_DEPS_LIBSVN_WC_NO_PKG_CONFIG: "1"
-        SYSTEM_DEPS_LIBSVN_WC_LIB: svn_wc-1
+        SYSTEM_DEPS_LIBSVN_WC_LIB: libsvn_wc-1
         SYSTEM_DEPS_LIBSVN_WC_SEARCH_NATIVE: ${{ env.VCPKG_INSTALL_DIR }}\lib
-        SYSTEM_DEPS_LIBSVN_WC_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1
+        SYSTEM_DEPS_LIBSVN_WC_INCLUDE: ${{ env.VCPKG_INSTALL_DIR }}\include\subversion-1;${{ env.VCPKG_INSTALL_DIR }}\include
       run: |
         pip install -e .
       if: "matrix.os == 'windows-latest'"
@@ -120,9 +120,11 @@ jobs:
       run: |
         pytest -sv --cov=subvertpy tests
       if: "matrix.os == 'macos-latest'"
-    - name: Coverage test suite run
-      env:
-        SUBVERTPY_DLL_PATH: ${{ github.workspace }}/vcpkg/installed/x64-windows-release/bin
+    - name: Copy DLLs for test run
+      run: |
+        Copy-Item "${{ env.VCPKG_INSTALL_DIR }}\bin\*.dll" subvertpy\
+      if: "matrix.os == 'windows-latest'"
+    - name: Test suite run
       run: |
         # using coverage on windows make some tests fail so only run tests
         pytest -sv tests
