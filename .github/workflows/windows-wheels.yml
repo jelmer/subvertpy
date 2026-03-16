@@ -104,7 +104,7 @@ jobs:
           pip install %wheel%
           python -c "from subvertpy import client, ra, repos, subr, wc"
           cd .. && python -m pytest tests
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: subvertpy-wheel-windows-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl

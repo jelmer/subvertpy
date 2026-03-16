@@ -38,7 +38,7 @@ jobs:
           pip3 install pytest
           cd ../ && rm -rf subvertpy && python3 -m pytest tests
         working-directory: wheelhouse
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: subvertpy-wheel-manylinux-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
