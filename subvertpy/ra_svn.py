@@ -26,7 +26,7 @@ import os
 import socket
 import subprocess
 from errno import EPIPE
-from typing import Any, ClassVar, Dict
+from typing import Any, ClassVar
 
 try:
     import urlparse
@@ -1097,7 +1097,7 @@ class SVNServer(SVNConnection):
             # Needs to be sent back to the client to display
             self.send_failure(client_result[1][0])
 
-    commands: ClassVar[Dict[str, Any]] = {
+    commands: ClassVar[dict[str, Any]] = {
         "get-latest-rev": get_latest_rev,
         "log": log,
         "update": update,

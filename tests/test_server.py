@@ -52,7 +52,7 @@ class ServerBackendTests(TestCase):
 
 class ServerRepositoryBackendTests(TestCase):
     def setUp(self):
-        super(ServerRepositoryBackendTests, self).setUp()
+        super().setUp()
         self.backend = ServerRepositoryBackend()
 
     def test_get_uuid_raises(self):

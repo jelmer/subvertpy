@@ -120,7 +120,7 @@ class WcTests(SubversionTestCase):
 
 class ContextTests(SubversionTestCase):
     def setUp(self):
-        super(ContextTests, self).setUp()
+        super().setUp()
         self.repos_url = self.make_client("repos", "checkout")
 
     def test_create_context(self):
@@ -537,7 +537,8 @@ class ContextTests(SubversionTestCase):
         )
 
     def test_ensure_adm_with_depth(self):
-        from subvertpy import repos as svn_repos, ra
+        from subvertpy import ra
+        from subvertpy import repos as svn_repos
 
         repo = svn_repos.Repository("repos")
         uuid = repo.fs().get_uuid()
@@ -612,7 +613,7 @@ class LockTests(TestCase):
 
 class PristineTests(SubversionTestCase):
     def setUp(self):
-        super(PristineTests, self).setUp()
+        super().setUp()
         self.repos_url = self.make_client("repos", "checkout")
 
     def test_get_pristine_contents(self):
@@ -652,7 +653,8 @@ class EnsureAdmTests(SubversionTestCase):
         wc.ensure_adm("checkout", uuid, repos_url, repos=repos_url, rev=0)
 
     def test_ensure_adm_with_depth(self):
-        from subvertpy import repos as svn_repos, ra
+        from subvertpy import ra
+        from subvertpy import repos as svn_repos
 
         repos_url = self.make_client("repos", "checkout")
         repo = svn_repos.Repository("repos")

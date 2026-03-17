@@ -15,12 +15,12 @@
 
 """Subversion repository library tests."""
 
-from io import BytesIO
 import os
 import textwrap
+from io import BytesIO
 
-from subvertpy import repos, SubversionException
-from tests import SubversionTestCase, TestCaseInTempDir, TestCase
+from subvertpy import SubversionException, repos
+from tests import SubversionTestCase, TestCase, TestCaseInTempDir
 
 
 class VersionTest(TestCase):
@@ -36,7 +36,7 @@ class VersionTest(TestCase):
 
 class TestRepository(TestCaseInTempDir):
     def setUp(self):
-        super(TestRepository, self).setUp()
+        super().setUp()
 
     def test_create(self):
         repos.create(os.path.join(self.test_dir, "foo"))
@@ -233,7 +233,7 @@ class TestRepositoryHotcopy(TestCaseInTempDir):
 
 class TestFileSystemRoot(TestCaseInTempDir):
     def setUp(self):
-        super(TestFileSystemRoot, self).setUp()
+        super().setUp()
         self.repo_path = os.path.join(self.test_dir, "repo")
         repos.create(self.repo_path)
 
@@ -256,7 +256,7 @@ class TestFileSystemRootWithFile(SubversionTestCase):
     """Tests for FileSystemRoot methods that require a committed file."""
 
     def setUp(self):
-        super(TestFileSystemRootWithFile, self).setUp()
+        super().setUp()
         self.repos_url = self.make_repository("d")
         dc = self.get_commit_editor(self.repos_url)
         f = dc.add_file("testfile")

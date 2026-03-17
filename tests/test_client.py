@@ -15,11 +15,11 @@
 
 """Subversion client library tests."""
 
-from datetime import datetime, timedelta
 import os
-from io import BytesIO
 import shutil
 import tempfile
+from datetime import datetime, timedelta
+from io import BytesIO
 
 from subvertpy import (
     SubversionException,
@@ -46,13 +46,13 @@ class VersionTest(TestCase):
 class TestClient(SubversionTestCase):
     def setUp(self):
 
-        super(TestClient, self).setUp()
+        super().setUp()
         self.repos_url = self.make_client("d", "dc")
         self.client = client.Client(auth=ra.Auth([ra.get_username_provider()]))
 
     def tearDown(self):
         del self.client
-        super(TestClient, self).tearDown()
+        super().tearDown()
 
     def test_add(self):
         self.build_tree({"dc/foo": None})
@@ -118,13 +118,13 @@ class TestClient(SubversionTestCase):
             os.mkdir(svn_cfg_dir)
             with open(os.path.join(svn_cfg_dir, "config"), "w") as svn_cfg:
                 svn_cfg.write("[miscellany]\n")
-                svn_cfg.write("global-ignores = %s" % base_dir_basename)
+                svn_cfg.write(f"global-ignores = {base_dir_basename}")
             config = client.get_config(svn_cfg_dir)
             self.assertIsInstance(config, client.Config)
             ignores = config.get_default_ignores()
             self.assertTrue(
                 base_dir_basename.encode("utf-8") in ignores,
-                "no %r in %r" % (base_dir_basename, ignores),
+                f"no {base_dir_basename!r} in {ignores!r}",
             )
         finally:
             shutil.rmtree(base_dir)
@@ -696,7 +696,7 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.build_tree({"dc/diffrel": b"line1\nline2\n"})
-        (outfile, errfile) = self.client.diff(
+        (outfile, _errfile) = self.client.diff(
             1, "WORKING", "dc", "dc", relative_to_dir="dc"
         )
         out = outfile.read()
@@ -708,7 +708,7 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.build_tree({"dc/diffenc": b"hello\nworld\n"})
-        (outfile, errfile) = self.client.diff(
+        (outfile, _errfile) = self.client.diff(
             1, "WORKING", "dc", "dc", encoding="utf-8"
         )
         out = outfile.read()
@@ -720,7 +720,7 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.build_tree({"dc/diffict": b"hello\nworld\n"})
-        (outfile, errfile) = self.client.diff(
+        (outfile, _errfile) = self.client.diff(
             1, "WORKING", "dc", "dc", ignore_content_type=True
         )
         out = outfile.read()
@@ -732,7 +732,7 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.build_tree({"dc/diffopt": b"hello\nworld\n"})
-        (outfile, errfile) = self.client.diff(1, "WORKING", "dc", "dc", diffopts=["-u"])
+        (outfile, _errfile) = self.client.diff(1, "WORKING", "dc", "dc", diffopts=["-u"])
         out = outfile.read()
         self.assertIn(b"world", out)
 
@@ -792,7 +792,7 @@ class TestClient(SubversionTestCase):
         self.assertEqual(2, revision)
         self.assertEqual(commit_msg_2, revprops["svn:log"])
 
-        changed_paths, revision, revprops, has_children = entries[1]
+        changed_paths, revision, revprops, _has_children = entries[1]
         self.assertEqual(["/foo"], sorted(changed_paths.keys()))
         self.assertEqual(1, revision)
         self.assertEqual(commit_msg_1, revprops["svn:log"])

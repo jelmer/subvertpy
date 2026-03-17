@@ -18,6 +18,13 @@
 from io import BytesIO
 
 from subvertpy.delta import (
+    DELTA_WINDOW_SIZE,
+    MAX_ENCODED_INT_LEN,
+    SVNDIFF0_HEADER,
+    TXDELTA_INVALID,
+    TXDELTA_NEW,
+    TXDELTA_SOURCE,
+    TXDELTA_TARGET,
     apply_txdelta_handler,
     apply_txdelta_handler_chunks,
     apply_txdelta_window,
@@ -30,20 +37,13 @@ from subvertpy.delta import (
     txdelta_apply_ops,
     unpack_svndiff0,
     unpack_svndiff_instruction,
-    DELTA_WINDOW_SIZE,
-    MAX_ENCODED_INT_LEN,
-    SVNDIFF0_HEADER,
-    TXDELTA_INVALID,
-    TXDELTA_NEW,
-    TXDELTA_SOURCE,
-    TXDELTA_TARGET,
 )
 from tests import TestCase
 
 
 class DeltaTests(TestCase):
     def setUp(self):
-        super(DeltaTests, self).setUp()
+        super().setUp()
         self.windows = []
 
     def storing_window_handler(self, window):
@@ -190,13 +190,13 @@ class MarshallTests(TestCase):
         self.assertEqual(16384, decoded)
 
     def test_roundtrip_length(self):
-        self.assertEqual((42, bytes()), decode_length(encode_length(42)))
+        self.assertEqual((42, b""), decode_length(encode_length(42)))
 
     def test_roundtrip_length_various(self):
         for val in [0, 1, 127, 128, 255, 256, 1000, 65535, 100000]:
             decoded, remainder = decode_length(encode_length(val))
             self.assertEqual(val, decoded)
-            self.assertEqual(bytes(), remainder)
+            self.assertEqual(b"", remainder)
 
     def test_roundtrip_window(self):
         mywindow = (0, 0, 3, 1, [(2, 0, 3)], b"foo")

@@ -57,7 +57,7 @@ class TestRemoteAccessUnknown(TestCase):
 
 class TestRemoteAccess(SubversionTestCase):
     def setUp(self):
-        super(TestRemoteAccess, self).setUp()
+        super().setUp()
         self.repos_url = self.make_repository("d")
         self.ra = ra.RemoteAccess(
             self.repos_url, auth=ra.Auth([ra.get_username_provider()])
@@ -65,7 +65,7 @@ class TestRemoteAccess(SubversionTestCase):
 
     def tearDown(self):
         del self.ra
-        super(TestRemoteAccess, self).tearDown()
+        super().tearDown()
 
     def commit_editor(self):
         return self.get_commit_editor(self.repos_url)
@@ -76,7 +76,7 @@ class TestRemoteAccess(SubversionTestCase):
         dc.close()
 
     def test_repr(self):
-        self.assertEqual('RemoteAccess("%s")' % self.repos_url, repr(self.ra))
+        self.assertEqual(f'RemoteAccess("{self.repos_url}")', repr(self.ra))
 
     def test_latest_revnum(self):
         self.assertEqual(0, self.ra.get_latest_revnum())
@@ -191,7 +191,7 @@ class TestRemoteAccess(SubversionTestCase):
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
-                (paths, revnum, props, has_children) = returned[1]
+                (paths, revnum, props, _has_children) = returned[1]
             self.assertEqual({"/foo": ("A", None, -1, NODE_DIR)}, paths)
             self.assertEqual(revnum, 1)
             self.assertEqual(
@@ -234,7 +234,7 @@ class TestRemoteAccess(SubversionTestCase):
             if len(returned[1]) == 3:
                 (paths, revnum, props) = returned[1]
             else:
-                (paths, revnum, props, has_children) = returned[1]
+                (paths, revnum, props, _has_children) = returned[1]
             self.assertEqual({"/foo": ("A", None, -1, NODE_DIR)}, paths)
             self.assertEqual(revnum, 1)
             self.assertEqual(
@@ -322,7 +322,7 @@ class TestRemoteAccess(SubversionTestCase):
         self.assertEqual(
             set(["bar:foo", "svn:author", "svn:custom:blie", "svn:date", "svn:log"]),
             set(revprops.keys()),
-            "result: %r" % revprops,
+            f"result: {revprops!r}",
         )
 
     def test_get_commit_editor_context_manager(self):
@@ -729,7 +729,7 @@ class TestEditorOperations(SubversionTestCase):
     """Tests for editor operations: delete_entry, open_directory, etc."""
 
     def setUp(self):
-        super(TestEditorOperations, self).setUp()
+        super().setUp()
         self.repos_url = self.make_repository("d")
 
     def commit_editor(self):
@@ -771,7 +771,7 @@ class TestEditorOperations(SubversionTestCase):
         dc.close()
 
         r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
-        (dirents, rev, props) = r.get_dir("propdir", 1)
+        (_dirents, _rev, props) = r.get_dir("propdir", 1)
         self.assertIn("myprop", props)
         self.assertEqual(b"myval", props["myprop"])
 
@@ -934,7 +934,7 @@ class TestProviders(TestCase):
 
 class TestRemoteAccessProperties(SubversionTestCase):
     def setUp(self):
-        super(TestRemoteAccessProperties, self).setUp()
+        super().setUp()
         self.repos_url = self.make_repository("d")
         self.ra_ctx = ra.RemoteAccess(
             self.repos_url, auth=ra.Auth([ra.get_username_provider()])
@@ -942,7 +942,7 @@ class TestRemoteAccessProperties(SubversionTestCase):
 
     def tearDown(self):
         del self.ra_ctx
-        super(TestRemoteAccessProperties, self).tearDown()
+        super().tearDown()
 
     def test_url_property(self):
         self.assertEqual(self.repos_url, self.ra_ctx.url)

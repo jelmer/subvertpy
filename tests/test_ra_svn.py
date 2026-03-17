@@ -25,14 +25,14 @@ from subvertpy.ra_svn import (
     MECHANISMS,
     MIN_VERSION,
     SVN_PORT,
-    SVNConnection,
-    SVNServer,
-    Editor,
     DirectoryEditor,
+    Editor,
     FileEditor,
     Reporter,
     SSHSubprocess,
     SSHVendor,
+    SVNConnection,
+    SVNServer,
     mark_busy,
     unmarshall_dirent,
 )
@@ -71,7 +71,6 @@ class MarkBusyTests(TestCase):
             @mark_busy
             def do_thing(self):
                 """My docstring."""
-                pass
 
         self.assertEqual("My docstring.", Obj.do_thing.__doc__)
 
@@ -165,7 +164,7 @@ class SVNConnectionTests(TestCase):
 
 class EditorTests(TestCase):
     def setUp(self):
-        super(EditorTests, self).setUp()
+        super().setUp()
         self.sent = []
 
         class MockConn:
@@ -214,7 +213,7 @@ class EditorTests(TestCase):
 
 class DirectoryEditorTests(TestCase):
     def setUp(self):
-        super(DirectoryEditorTests, self).setUp()
+        super().setUp()
         self.sent = []
 
         class MockConn:
@@ -300,7 +299,7 @@ class DirectoryEditorTests(TestCase):
 
 class FileEditorTests(TestCase):
     def setUp(self):
-        super(FileEditorTests, self).setUp()
+        super().setUp()
         self.sent = []
 
         class MockConn:
@@ -385,7 +384,7 @@ class SSHVendorTests(TestCase):
 
 class ReporterTests(TestCase):
     def setUp(self):
-        super(ReporterTests, self).setUp()
+        super().setUp()
         self.sent = []
 
         class MockConn:
