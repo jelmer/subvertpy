@@ -18,9 +18,7 @@ fn parse_revision(_py: Python, rev: &Bound<PyAny>) -> PyResult<subversion::Revis
             ))),
         }
     } else if let Ok(n) = rev.extract::<i64>() {
-        let revnum = subvertpy_util::to_revnum(n).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
+        let revnum = subvertpy_util::to_revnum_or_head(n);
         Ok(subversion::Revision::Number(revnum))
     } else {
         Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
@@ -814,12 +812,7 @@ impl Client {
         };
 
         let base_rev = if let Some(rev) = base_revision_for_url {
-            subvertpy_util::to_revnum(rev).ok_or_else(|| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                    "Invalid revision number: {}",
-                    rev
-                ))
-            })?
+            subvertpy_util::to_revnum_or_head(rev)
         } else {
             subversion::Revnum::invalid()
         };

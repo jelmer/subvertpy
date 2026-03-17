@@ -64,11 +64,15 @@ fn ensure_adm(
     depth: i32,
 ) -> PyResult<()> {
     let path_str = subvertpy_util::py_to_svn_abspath(path)?;
-    let repos_root = repos.unwrap_or(url);
+    let url = subversion::uri::canonicalize_uri(url).map_err(svn_err_to_py)?;
+    let repos_root = match repos {
+        Some(r) => subversion::uri::canonicalize_uri(r).map_err(svn_err_to_py)?,
+        None => url.clone(),
+    };
     let svn_depth = context::depth_from_py(depth);
     let revnum = subvertpy_util::to_revnum(rev).unwrap_or(subversion::Revnum::invalid());
     let mut ctx = subversion::wc::Context::new().map_err(svn_err_to_py)?;
-    ctx.ensure_adm(&path_str, url, repos_root, uuid, revnum, svn_depth)
+    ctx.ensure_adm(&path_str, &url, &repos_root, uuid, revnum, svn_depth)
         .map_err(svn_err_to_py)
 }
 

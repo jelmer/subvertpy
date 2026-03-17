@@ -30,6 +30,22 @@ pub fn to_revnum(rev: i64) -> Option<subversion::Revnum> {
     }
 }
 
+/// Convert a Python revision number (i64) to a Revnum.
+/// Negative values (typically -1) are mapped to Revnum::invalid(),
+/// which the SVN C API interprets as HEAD.
+pub fn to_revnum_or_head(rev: i64) -> subversion::Revnum {
+    if rev < 0 {
+        subversion::Revnum::invalid()
+    } else {
+        subversion::Revnum::from(rev as u64)
+    }
+}
+
+/// Canonicalize a string as an SVN relative path.
+pub fn to_relpath(path: &str) -> PyResult<subversion::ra::RelPath> {
+    subversion::ra::RelPath::canonicalize(path).map_err(|e| error::svn_err_to_py(e))
+}
+
 /// Convert a Python object to an SVN path or URL
 ///
 /// This handles both filesystem paths (dirents) and URLs (URIs),
