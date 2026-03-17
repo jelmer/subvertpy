@@ -10,7 +10,7 @@ use subversion::Error as SvnError;
 pub fn svn_err_to_py(err: SvnError) -> PyErr {
     Python::attach(|py| {
         let message = err.message().unwrap_or("Unknown SVN error");
-        let code = err.apr_err() as i32;
+        let code = err.raw_apr_err();
 
         // Get the SubversionException class from the subvertpy module
         let module = py
