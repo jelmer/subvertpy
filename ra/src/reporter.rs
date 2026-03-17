@@ -75,8 +75,7 @@ impl Reporter {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Reporter has been consumed")
         })?;
 
-        let rev = subvertpy_util::to_revnum(revision)
-            .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision"))?;
+        let rev = subvertpy_util::to_revnum_or_head(revision);
 
         let svn_depth = match depth {
             Some(d) => py_depth_to_svn(d)?,
@@ -125,8 +124,7 @@ impl Reporter {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Reporter has been consumed")
         })?;
 
-        let rev = subvertpy_util::to_revnum(revision)
-            .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision"))?;
+        let rev = subvertpy_util::to_revnum_or_head(revision);
 
         let svn_depth = match depth {
             Some(d) => py_depth_to_svn(d)?,

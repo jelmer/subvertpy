@@ -157,8 +157,9 @@ impl RemoteAccess {
             });
         }
 
+        let url = subversion::uri::canonicalize_uri(url).map_err(|e| svn_err_to_py(e))?;
         let (session, _corrected_url, _repos_root) = subversion::ra::Session::open(
-            url,
+            &url,
             None, // config_dir
             Some(callbacks_ref),
             None, // config
@@ -211,7 +212,8 @@ impl RemoteAccess {
 
     /// Reparent the session to a new URL
     fn reparent(&mut self, url: &str) -> PyResult<()> {
-        self.session.reparent(url).map_err(|e| svn_err_to_py(e))
+        let url = subversion::uri::canonicalize_uri(url).map_err(|e| svn_err_to_py(e))?;
+        self.session.reparent(&url).map_err(|e| svn_err_to_py(e))
     }
 
     /// Check if the repository has a capability
@@ -223,15 +225,12 @@ impl RemoteAccess {
 
     /// Check the type of a path
     fn check_path(&mut self, path: &str, revnum: i64) -> PyResult<i32> {
-        let rev = subvertpy_util::to_revnum(revnum).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
-
-        let path = path.trim_start_matches('/').trim_end_matches('/');
+        let rev = subvertpy_util::to_revnum_or_head(revnum);
+        let path = subvertpy_util::to_relpath(path)?;
 
         let node_kind = self
             .session
-            .check_path(path, rev)
+            .check_path(path.as_str(), rev)
             .map_err(|e| svn_err_to_py(e))?;
 
         Ok(node_kind_to_py(node_kind))
@@ -239,9 +238,7 @@ impl RemoteAccess {
 
     /// Get revision properties
     fn rev_proplist(&mut self, revnum: i64) -> PyResult<pyo3::Py<pyo3::PyAny>> {
-        let rev = subvertpy_util::to_revnum(revnum).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
+        let rev = subvertpy_util::to_revnum_or_head(revnum);
 
         let props = self
             .session
@@ -262,9 +259,7 @@ impl RemoteAccess {
         value: Option<Bound<pyo3::PyAny>>,
         old_value: Option<Bound<pyo3::PyAny>>,
     ) -> PyResult<()> {
-        let rev = subvertpy_util::to_revnum(revnum).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
+        let rev = subvertpy_util::to_revnum_or_head(revnum);
 
         let extract_bytes = |v: &Bound<pyo3::PyAny>| -> PyResult<Vec<u8>> {
             if let Ok(b) = v.cast::<pyo3::types::PyBytes>() {
@@ -318,7 +313,7 @@ impl RemoteAccess {
         stream: Bound<pyo3::PyAny>,
         revnum: Option<i64>,
     ) -> PyResult<(Option<i64>, pyo3::Py<pyo3::PyAny>)> {
-        let path = path.trim_start_matches('/');
+        let path = subvertpy_util::to_relpath(path)?;
 
         let rev = revnum
             .and_then(|r| subvertpy_util::to_revnum(r))
@@ -330,7 +325,7 @@ impl RemoteAccess {
 
         let (fetched_rev, props) = self
             .session
-            .get_file(path, rev, &mut svn_stream)
+            .get_file(path.as_str(), rev, &mut svn_stream)
             .map_err(|e| svn_err_to_py(e))?;
 
         svn_stream.close().map_err(|e| svn_err_to_py(e))?;
@@ -361,11 +356,8 @@ impl RemoteAccess {
         revision: i64,
         fields: Option<i64>,
     ) -> PyResult<(pyo3::Py<pyo3::PyAny>, i64, pyo3::Py<pyo3::PyAny>)> {
-        let rev = subvertpy_util::to_revnum(revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
-
-        let path = path.trim_start_matches('/');
+        let rev = subvertpy_util::to_revnum_or_head(revision);
+        let path = subvertpy_util::to_relpath(path)?;
 
         let dirent_fields = match fields {
             Some(f) => subversion::DirentField::from_bits_truncate(f as u32),
@@ -374,7 +366,7 @@ impl RemoteAccess {
 
         let (fetched_rev, dirents, props) = self
             .session
-            .get_dir(path, rev, dirent_fields)
+            .get_dir(path.as_str(), rev, dirent_fields)
             .map_err(|e| svn_err_to_py(e))?;
 
         Python::attach(|py| {
@@ -408,13 +400,13 @@ impl RemoteAccess {
 
     /// Get file/directory status information
     fn stat(&mut self, path: &str, revnum: i64) -> PyResult<pyo3::Py<pyo3::PyAny>> {
-        let rev = subvertpy_util::to_revnum(revnum).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
+        let rev = subvertpy_util::to_revnum_or_head(revnum);
+        let path = subvertpy_util::to_relpath(path)?;
 
-        let path = path.trim_start_matches('/').trim_end_matches('/');
-
-        let dirent = self.session.stat(path, rev).map_err(|e| svn_err_to_py(e))?;
+        let dirent = self
+            .session
+            .stat(path.as_str(), rev)
+            .map_err(|e| svn_err_to_py(e))?;
 
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
@@ -448,9 +440,7 @@ impl RemoteAccess {
         for (key, value) in path_revs.iter() {
             let path_str = subvertpy_util::py_to_svn_string(&key)?;
             let revnum: i64 = value.extract()?;
-            let rev = subvertpy_util::to_revnum(revnum).ok_or_else(|| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-            })?;
+            let rev = subvertpy_util::to_revnum_or_head(revnum);
             path_rev_map.insert(path_str, rev);
         }
 
@@ -576,8 +566,11 @@ impl RemoteAccess {
 
     /// Get lock for a path (singular)
     fn get_lock(&mut self, path: &str) -> PyResult<Option<pyo3::Py<pyo3::PyAny>>> {
-        let path = path.strip_prefix('/').unwrap_or(path);
-        let lock_opt = self.session.get_lock(path).map_err(|e| svn_err_to_py(e))?;
+        let path = subvertpy_util::to_relpath(path)?;
+        let lock_opt = self
+            .session
+            .get_lock(path.as_str())
+            .map_err(|e| svn_err_to_py(e))?;
 
         match lock_opt {
             Some(lock) => Python::attach(|py| {
@@ -655,16 +648,16 @@ impl RemoteAccess {
         include_merged_revisions: Option<bool>,
         revprops: Option<Vec<String>>,
     ) -> PyResult<()> {
-        let start_rev = subvertpy_util::to_revnum(start).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid start revision")
-        })?;
-        let end_rev = subvertpy_util::to_revnum(end).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid end revision")
-        })?;
+        let start_rev = subvertpy_util::to_revnum_or_head(start);
+        let end_rev = subvertpy_util::to_revnum_or_head(end);
 
         // When paths is None, pass [""] to SVN (meaning "the session root"),
         // matching the old C subvertpy behavior.
-        let paths = paths.unwrap_or_else(|| vec![String::new()]);
+        let paths: Vec<subversion::ra::RelPath> = paths
+            .unwrap_or_else(|| vec![String::new()])
+            .iter()
+            .map(|p| subvertpy_util::to_relpath(p))
+            .collect::<PyResult<Vec<_>>>()?;
         let path_refs: Vec<&str> = paths.iter().map(|s| s.as_str()).collect();
 
         let revprop_strs: Option<Vec<String>> = revprops;
@@ -729,16 +722,16 @@ impl RemoteAccess {
         let py = slf.py();
         let session_ref = slf.clone().unbind();
 
-        let start_rev = subvertpy_util::to_revnum(start).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid start revision")
-        })?;
-        let end_rev = subvertpy_util::to_revnum(end).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid end revision")
-        })?;
+        let start_rev = subvertpy_util::to_revnum_or_head(start);
+        let end_rev = subvertpy_util::to_revnum_or_head(end);
 
         // When paths is None, pass [""] to SVN (meaning "the session root"),
         // matching the old C subvertpy behavior.
-        let paths = paths.unwrap_or_else(|| vec![String::new()]);
+        let paths: Vec<subversion::ra::RelPath> = paths
+            .unwrap_or_else(|| vec![String::new()])
+            .iter()
+            .map(|p| subvertpy_util::to_relpath(p))
+            .collect::<PyResult<Vec<_>>>()?;
         let path_refs: Vec<&str> = paths.iter().map(|s| s.as_str()).collect();
 
         let revprop_strs: Option<Vec<String>> = revprops;
@@ -792,21 +785,18 @@ impl RemoteAccess {
         peg_revision: i64,
         location_revisions: Vec<i64>,
     ) -> PyResult<pyo3::Py<pyo3::PyAny>> {
-        let peg_rev = subvertpy_util::to_revnum(peg_revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid peg revision number")
-        })?;
+        let path = subvertpy_util::to_relpath(path)?;
+        let peg_rev = subvertpy_util::to_revnum_or_head(peg_revision);
 
         let mut revnums = Vec::new();
         for revnum in location_revisions {
-            let rev = subvertpy_util::to_revnum(revnum).ok_or_else(|| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid location revision number")
-            })?;
+            let rev = subvertpy_util::to_revnum_or_head(revnum);
             revnums.push(rev);
         }
 
         let locations = self
             .session
-            .get_locations(path, peg_rev, &revnums)
+            .get_locations(path.as_str(), peg_rev, &revnums)
             .map_err(|e| svn_err_to_py(e))?;
 
         Python::attach(|py| {
@@ -827,15 +817,10 @@ impl RemoteAccess {
         end_revision: i64,
         receiver: Bound<pyo3::PyAny>,
     ) -> PyResult<()> {
-        let peg_rev = subvertpy_util::to_revnum(peg_revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid peg revision")
-        })?;
-        let start_rev = subvertpy_util::to_revnum(start_revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid start revision")
-        })?;
-        let end_rev = subvertpy_util::to_revnum(end_revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid end revision")
-        })?;
+        let path = subvertpy_util::to_relpath(path)?;
+        let peg_rev = subvertpy_util::to_revnum_or_head(peg_revision);
+        let start_rev = subvertpy_util::to_revnum_or_head(start_revision);
+        let end_rev = subvertpy_util::to_revnum_or_head(end_revision);
 
         let py_receiver = receiver.clone();
         let location_receiver =
@@ -864,7 +849,13 @@ impl RemoteAccess {
             };
 
         self.session
-            .get_location_segments(path, peg_rev, start_rev, end_rev, &location_receiver)
+            .get_location_segments(
+                path.as_str(),
+                peg_rev,
+                start_rev,
+                end_rev,
+                &location_receiver,
+            )
             .map_err(|e| svn_err_to_py(e))?;
 
         Ok(())
@@ -880,12 +871,9 @@ impl RemoteAccess {
         handler: Bound<pyo3::PyAny>,
         include_merged_revisions: Option<bool>,
     ) -> PyResult<()> {
-        let start_rev = subvertpy_util::to_revnum(start).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid start revision")
-        })?;
-        let end_rev = subvertpy_util::to_revnum(end).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid end revision")
-        })?;
+        let path = subvertpy_util::to_relpath(path)?;
+        let start_rev = subvertpy_util::to_revnum_or_head(start);
+        let end_rev = subvertpy_util::to_revnum_or_head(end);
 
         let py_handler = handler.clone();
         let file_rev_callback = |path: &str,
@@ -923,7 +911,7 @@ impl RemoteAccess {
 
         self.session
             .get_file_revs(
-                path,
+                path.as_str(),
                 start_rev,
                 end_rev,
                 include_merged_revisions.unwrap_or(false),
@@ -1028,11 +1016,8 @@ impl RemoteAccess {
         ignore_ancestry: bool,
         text_deltas: bool,
     ) -> PyResult<crate::reporter::Reporter> {
-        let rev = subvertpy_util::to_revnum(revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
-
-        let diff_target = diff_target.trim_start_matches('/');
+        let rev = subvertpy_util::to_revnum_or_head(revision);
+        let diff_target = subvertpy_util::to_relpath(diff_target)?;
 
         let py_editor = crate::py_editor::PyEditorWrapper::new(diff_editor);
         let wrap_editor = py_editor.into_wrap_editor();
@@ -1057,7 +1042,7 @@ impl RemoteAccess {
             let session_ptr =
                 &mut slf.borrow_mut().session as *mut subversion::ra::Session<'static>;
             let raw_reporter = (*session_ptr)
-                .do_diff(rev, diff_target, &mut options)
+                .do_diff(rev, diff_target.as_str(), &mut options)
                 .map_err(|e| svn_err_to_py(e))?;
 
             // Transmute the reporter's lifetime from 's to 'static
@@ -1097,11 +1082,8 @@ impl RemoteAccess {
         send_copyfrom_args: bool,
         ignore_ancestry: bool,
     ) -> PyResult<crate::reporter::Reporter> {
-        let rev = subvertpy_util::to_revnum(revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
-
-        let update_target = update_target.trim_start_matches('/');
+        let rev = subvertpy_util::to_revnum_or_head(revision);
+        let update_target = subvertpy_util::to_relpath(update_target)?;
 
         let py_editor = crate::py_editor::PyEditorWrapper::new(update_editor);
         let wrap_editor = py_editor.into_wrap_editor();
@@ -1123,7 +1105,7 @@ impl RemoteAccess {
             let raw_reporter = (*session_ptr)
                 .do_update(
                     rev,
-                    update_target,
+                    update_target.as_str(),
                     depth,
                     send_copyfrom_args,
                     ignore_ancestry,
@@ -1159,11 +1141,8 @@ impl RemoteAccess {
         send_copyfrom_args: bool,
         ignore_ancestry: bool,
     ) -> PyResult<crate::reporter::Reporter> {
-        let rev = subvertpy_util::to_revnum(revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
-
-        let switch_target = switch_target.trim_start_matches('/');
+        let rev = subvertpy_util::to_revnum_or_head(revision);
+        let switch_target = subvertpy_util::to_relpath(switch_target)?;
 
         let py_editor = crate::py_editor::PyEditorWrapper::new(switch_editor);
         let wrap_editor = py_editor.into_wrap_editor();
@@ -1185,7 +1164,7 @@ impl RemoteAccess {
             let raw_reporter = (*session_ptr)
                 .do_switch(
                     rev,
-                    switch_target,
+                    switch_target.as_str(),
                     depth,
                     switch_url,
                     send_copyfrom_args,
@@ -1219,12 +1198,8 @@ impl RemoteAccess {
         editor: Py<PyAny>,
         send_deltas: bool,
     ) -> PyResult<()> {
-        let rev = subvertpy_util::to_revnum(revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-        })?;
-        let lwm = subvertpy_util::to_revnum(low_water_mark).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid low water mark revision")
-        })?;
+        let rev = subvertpy_util::to_revnum_or_head(revision);
+        let lwm = subvertpy_util::to_revnum_or_head(low_water_mark);
 
         let py_editor = crate::py_editor::PyEditorWrapper::new(editor);
         let mut wrap_editor = py_editor.into_wrap_editor();
@@ -1249,15 +1224,9 @@ impl RemoteAccess {
         cbs: Bound<pyo3::types::PyTuple>,
         send_deltas: bool,
     ) -> PyResult<()> {
-        let start_rev = subvertpy_util::to_revnum(start_revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid start revision")
-        })?;
-        let end_rev = subvertpy_util::to_revnum(end_revision).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid end revision")
-        })?;
-        let lwm = subvertpy_util::to_revnum(low_water_mark).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid low water mark revision")
-        })?;
+        let start_rev = subvertpy_util::to_revnum_or_head(start_revision);
+        let end_rev = subvertpy_util::to_revnum_or_head(end_revision);
+        let lwm = subvertpy_util::to_revnum_or_head(low_water_mark);
 
         if cbs.len() != 2 {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
@@ -1336,9 +1305,7 @@ impl RemoteAccess {
         include_descendants: bool,
     ) -> PyResult<Option<pyo3::Py<pyo3::PyAny>>> {
         let rev = match revision {
-            Some(r) => subvertpy_util::to_revnum(r).ok_or_else(|| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid revision number")
-            })?,
+            Some(r) => subvertpy_util::to_revnum_or_head(r),
             None => self
                 .session
                 .get_latest_revnum()
