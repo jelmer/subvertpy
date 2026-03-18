@@ -373,7 +373,7 @@ class TestClient(SubversionTestCase):
         self.client.commit(["dc"])
         self.client.propset("myprop", "myval", "dc/foo", False, True)
         self.client.commit(["dc"])
-        result = self.client.proplist("dc/foo", "WORKING", 0)
+        result = self.client.proplist("dc/foo", "WORKING", depth=0)
         self.assertIsInstance(result, list)
 
     def test_update(self):
@@ -388,7 +388,7 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/foo")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        entries = self.client.list(self.repos_url, "HEAD", 0)
+        entries = self.client.list(self.repos_url, "HEAD", depth=0)
         self.assertIsInstance(entries, dict)
 
     def test_config(self):
@@ -649,7 +649,7 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/listfile")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        entries = self.client.list(self.repos_url, "HEAD", 0, include_externals=False)
+        entries = self.client.list(self.repos_url, "HEAD", depth=0, include_externals=False)
         self.assertIsInstance(entries, dict)
 
     def test_delete_with_callback(self):

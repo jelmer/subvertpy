@@ -889,20 +889,23 @@ impl Client {
     }
 
     /// List properties on a path
-    #[pyo3(signature = (path, revision=None, depth=0))]
+    #[pyo3(signature = (path, revision=None, peg_revision=None, depth=0))]
     fn proplist<'py>(
         &mut self,
         py: Python<'py>,
         path: &str,
         revision: Option<Bound<PyAny>>,
+        peg_revision: Option<Bound<PyAny>>,
         depth: i32,
     ) -> PyResult<Vec<Py<PyAny>>> {
         let rev = parse_revision(py, &revision)?;
 
+        let peg_rev = parse_revision(py, &peg_revision)?;
+
         let svn_depth = parse_depth_int(depth);
 
         let options = subversion::client::ProplistOptions {
-            peg_revision: subversion::Revision::Unspecified,
+            peg_revision: peg_rev,
             revision: rev,
             depth: svn_depth,
             changelists: None,
@@ -1317,21 +1320,24 @@ impl Client {
     }
 
     /// List directory contents
-    #[pyo3(signature = (path_or_url, revision=None, depth=0, include_externals=false))]
+    #[pyo3(signature = (path_or_url, revision=None, peg_revision=None, depth=0, include_externals=false))]
     fn list<'py>(
         &mut self,
         py: Python<'py>,
         path_or_url: &str,
         revision: Option<Bound<PyAny>>,
+        peg_revision: Option<Bound<PyAny>>,
         depth: i32,
         include_externals: bool,
     ) -> PyResult<Bound<'py, pyo3::types::PyDict>> {
         let rev = parse_revision(py, &revision)?;
 
+        let peg_rev = parse_revision(py, &peg_revision)?;
+
         let svn_depth = parse_depth_int(depth);
 
         let options = subversion::client::ListOptions {
-            peg_revision: subversion::Revision::Unspecified,
+            peg_revision: peg_rev,
             revision: rev,
             patterns: None,
             depth: svn_depth,
