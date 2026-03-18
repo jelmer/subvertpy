@@ -296,8 +296,8 @@ impl Context {
         }
 
         Ok((
-            orig_dict.into_pyobject(py)?.into_any().unbind(),
             changes_list.into_pyobject(py)?.into_any().unbind(),
+            orig_dict.into_pyobject(py)?.into_any().unbind(),
         ))
     }
 
