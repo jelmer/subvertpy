@@ -92,6 +92,27 @@ class TestClient(SubversionTestCase):
         self.client.export(self.repos_url, "de")
         self.assertEqual(["foo"], os.listdir("de"))
 
+    def test_export_with_peg_rev(self):
+        self.build_tree({"dc/foo.sh": b"echo foo"})
+        self.client.add("dc/foo.sh")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+
+        self.client.delete(["dc/foo.sh"])
+        self.client.commit(["dc"])
+
+        self.build_tree({"dc/foo.sh": b"echo bar"})
+        self.client.add("dc/foo.sh")
+        self.client.commit(["dc"])
+
+        self.client.export(self.repos_url, "peg_rev_1", peg_rev=1)
+        with open("peg_rev_1/foo.sh", "r") as foo:
+            self.assertEqual("echo foo", foo.read())
+
+        self.client.export(self.repos_url, "peg_rev_3", peg_rev=3)
+        with open("peg_rev_3/foo.sh", "r") as foo:
+            self.assertEqual("echo bar", foo.read())
+
     def test_export_new_option(self):
         self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
