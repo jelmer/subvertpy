@@ -15,6 +15,7 @@
 
 """Subversion ra library tests."""
 
+from datetime import datetime, timezone
 from io import BytesIO
 
 from subvertpy import (
@@ -118,6 +119,15 @@ class TestRemoteAccess(SubversionTestCase):
     def test_change_rev_prop(self):
         self.do_commit()
         self.ra.change_rev_prop(1, "foo", "bar")
+
+    def test_change_rev_prop_svn_date(self):
+        now = datetime.now(tz=timezone.utc)
+        self.do_commit()
+        self.ra.change_rev_prop(
+            revnum=1,
+            name="svn:date",
+            value=now.strftime("%Y-%m-%dT%H:%M:%S.%fZ").encode(),
+        )
 
     def test_rev_proplist(self):
         self.assertIsInstance(self.ra.rev_proplist(0), dict)
