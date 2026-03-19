@@ -16,6 +16,8 @@
 
 """Python bindings for Subversion."""
 
+import os
+
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 __version__ = (0, 12, 0)
 
@@ -97,6 +99,17 @@ SSL_EXPIRED = 0x00000002
 SSL_CNMISMATCH = 0x00000004
 SSL_UNKNOWNCA = 0x00000008
 SSL_OTHER = 0x40000000
+
+_module_dir = os.path.dirname(__file__)
+_wheel_libs_dir = os.path.join(_module_dir, "../subvertpy.libs")
+_wheel_dylibs_dir = os.path.join(_module_dir, ".dylibs")
+
+if os.path.exists(_wheel_libs_dir) or os.path.exists(_wheel_dylibs_dir):
+    # when subvertpy is installed from a binary wheel the hardcoded path to
+    # certificates in bundled openssl does not necessarily exist on the host
+    # system so we ensure one can be found or manipulating remote svn repos
+    # through HTTPS does not work
+    os.environ["SSL_CERT_FILE"] = os.path.join(_module_dir, "cert/cacert.pem")
 
 
 class SubversionException(Exception):

@@ -2,17 +2,20 @@
 # Setup file for subvertpy
 # Copyright (C) 2005-2010 Jelmer Vernooij <jelmer@jelmer.uk>
 
-import sys
+import os
 
+import requests
 from setuptools import setup
 from setuptools_rust import Binding, RustExtension
 
 
 def package_data():
-    if sys.platform == "win32":
-        return {"subvertpy": ["subvertpy/*.dll"]}
-    else:
-        return {}
+    os.makedirs("subvertpy/cert", exist_ok=True)
+    with open("subvertpy/cert/cacert.pem", "wb") as cert:
+        response = requests.get("https://curl.se/ca/cacert.pem")
+        response.raise_for_status()
+        cert.write(response.content)
+    return {"subvertpy": ["cert/cacert.pem"]}
 
 
 if __name__ == "__main__":
