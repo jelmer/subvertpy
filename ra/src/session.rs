@@ -289,21 +289,14 @@ impl RemoteAccess {
             }
         };
 
-        if old_value_bytes.is_some() {
-            self.session
-                .change_rev_prop2(
-                    rev,
-                    name,
-                    old_value_bytes.as_deref(),
-                    value_bytes.as_deref(),
-                )
-                .map_err(|e| svn_err_to_py(e))
-        } else {
-            let new_value = value_bytes.as_deref().unwrap_or(&[]);
-            self.session
-                .change_revprop(rev, name, None, new_value)
-                .map_err(|e| svn_err_to_py(e))
-        }
+        self.session
+            .change_rev_prop2(
+                rev,
+                name,
+                old_value_bytes.as_deref(),
+                value_bytes.as_deref(),
+            )
+            .map_err(|e| svn_err_to_py(e))
     }
 
     /// Get a file from the repository
