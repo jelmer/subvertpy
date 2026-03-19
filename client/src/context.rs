@@ -4,26 +4,30 @@ use pyo3::prelude::*;
 use std::sync::mpsc::{self, Receiver};
 
 /// Parse a revision from Python - can be a string ("HEAD", "BASE", etc.) or integer
-fn parse_revision(_py: Python, rev: &Bound<PyAny>) -> PyResult<subversion::Revision> {
-    if let Ok(s) = rev.extract::<String>() {
-        match s.to_uppercase().as_str() {
-            "HEAD" => Ok(subversion::Revision::Head),
-            "BASE" => Ok(subversion::Revision::Base),
-            "WORKING" => Ok(subversion::Revision::Working),
-            "COMMITTED" => Ok(subversion::Revision::Committed),
-            "PREV" => Ok(subversion::Revision::Previous),
-            _ => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                "Invalid revision string: {}",
-                s
-            ))),
+fn parse_revision(_py: Python, rev: &Option<Bound<PyAny>>) -> PyResult<subversion::Revision> {
+    if let Some(r) = rev {
+        if let Ok(s) = r.extract::<String>() {
+            match s.to_uppercase().as_str() {
+                "HEAD" => Ok(subversion::Revision::Head),
+                "BASE" => Ok(subversion::Revision::Base),
+                "WORKING" => Ok(subversion::Revision::Working),
+                "COMMITTED" => Ok(subversion::Revision::Committed),
+                "PREV" => Ok(subversion::Revision::Previous),
+                _ => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid revision string: {}",
+                    s
+                ))),
+            }
+        } else if let Ok(n) = r.extract::<i64>() {
+            let revnum = subvertpy_util::to_revnum_or_head(n);
+            Ok(subversion::Revision::Number(revnum))
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Revision must be a string or integer",
+            ))
         }
-    } else if let Ok(n) = rev.extract::<i64>() {
-        let revnum = subvertpy_util::to_revnum_or_head(n);
-        Ok(subversion::Revision::Number(revnum))
     } else {
-        Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-            "Revision must be a string or integer",
-        ))
+        Ok(subversion::Revision::Unspecified)
     }
 }
 
@@ -137,17 +141,9 @@ impl Client {
         ignore_externals: bool,
         allow_unver_obstructions: bool,
     ) -> PyResult<i64> {
-        let revision = if let Some(r) = rev {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Head
-        };
+        let revision = parse_revision(py, &rev)?;
 
-        let peg_revision = if let Some(r) = peg_rev {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Head
-        };
+        let peg_revision = parse_revision(py, &peg_rev)?;
 
         let depth = if recurse {
             subversion::Depth::Infinity
@@ -195,11 +191,7 @@ impl Client {
             ));
         };
 
-        let revision = if let Some(r) = rev {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Head
-        };
+        let revision = parse_revision(py, &rev)?;
 
         let depth = if recurse {
             subversion::Depth::Infinity
@@ -480,16 +472,9 @@ impl Client {
         limit: i32,
         include_merged_revisions: bool,
     ) -> PyResult<()> {
-        let start_revision = if let Some(r) = start_rev {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Head
-        };
-        let end_revision = if let Some(r) = end_rev {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Number(subvertpy_util::to_revnum(1).unwrap())
-        };
+        let start_revision = parse_revision(py, &start_rev)?;
+
+        let end_revision = parse_revision(py, &end_rev)?;
 
         let revision_ranges = vec![subversion::RevisionRange {
             start: start_revision,
@@ -587,16 +572,9 @@ impl Client {
         revprops: Option<Vec<String>>,
         include_merged_revisions: bool,
     ) -> PyResult<Py<ClientLogIterator>> {
-        let start_revision = if let Some(r) = start_rev {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Head
-        };
-        let end_revision = if let Some(r) = end_rev {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Number(subvertpy_util::to_revnum(1).unwrap())
-        };
+        let start_revision = parse_revision(py, &start_rev)?;
+
+        let end_revision = parse_revision(py, &end_rev)?;
 
         let revision_ranges = vec![subversion::RevisionRange {
             start: start_revision,
@@ -880,17 +858,9 @@ impl Client {
         peg_revision: Option<Bound<PyAny>>,
         recurse: bool,
     ) -> PyResult<Bound<'py, pyo3::types::PyDict>> {
-        let rev = if let Some(r) = revision {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Working
-        };
+        let rev = parse_revision(py, &revision)?;
 
-        let peg_rev = if let Some(r) = peg_revision {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Unspecified
-        };
+        let peg_rev = parse_revision(py, &peg_revision)?;
 
         let depth = if recurse {
             subversion::Depth::Infinity
@@ -919,24 +889,23 @@ impl Client {
     }
 
     /// List properties on a path
-    #[pyo3(signature = (path, revision=None, depth=0))]
+    #[pyo3(signature = (path, revision=None, peg_revision=None, depth=0))]
     fn proplist<'py>(
         &mut self,
         py: Python<'py>,
         path: &str,
         revision: Option<Bound<PyAny>>,
+        peg_revision: Option<Bound<PyAny>>,
         depth: i32,
     ) -> PyResult<Vec<Py<PyAny>>> {
-        let rev = if let Some(r) = revision {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Working
-        };
+        let rev = parse_revision(py, &revision)?;
+
+        let peg_rev = parse_revision(py, &peg_revision)?;
 
         let svn_depth = parse_depth_int(depth);
 
         let options = subversion::client::ProplistOptions {
-            peg_revision: subversion::Revision::Unspecified,
+            peg_revision: peg_rev,
             revision: rev,
             depth: svn_depth,
             changelists: None,
@@ -1008,11 +977,8 @@ impl Client {
             current_dir.join(&path_str).to_string_lossy().to_string()
         };
 
-        let rev = if let Some(r) = revision {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Unspecified
-        };
+        let rev = parse_revision(py, &revision)?;
+
         // Match the old C behavior: default unspecified revision to HEAD
         let rev = if matches!(rev, subversion::Revision::Unspecified) {
             subversion::Revision::Head
@@ -1020,11 +986,7 @@ impl Client {
             rev
         };
 
-        let peg_rev = if let Some(r) = peg_revision {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Unspecified
-        };
+        let peg_rev = parse_revision(py, &peg_revision)?;
 
         let svn_depth = if let Some(d) = depth {
             parse_depth_int(d)
@@ -1129,17 +1091,9 @@ impl Client {
             current_dir.join(&to_path_str).to_string_lossy().to_string()
         };
 
-        let revision = if let Some(r) = rev {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Head
-        };
+        let revision = parse_revision(py, &rev)?;
 
-        let peg_revision = if let Some(r) = peg_rev {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Unspecified
-        };
+        let peg_revision = parse_revision(py, &peg_rev)?;
 
         let depth = if recurse {
             subversion::Depth::Infinity
@@ -1198,8 +1152,8 @@ impl Client {
         ignore_content_type: bool,
         encoding: Option<&str>,
     ) -> PyResult<(Py<PyAny>, Py<PyAny>)> {
-        let revision1 = parse_revision(py, &rev1)?;
-        let revision2 = parse_revision(py, &rev2)?;
+        let revision1 = parse_revision(py, &Some(rev1))?;
+        let revision2 = parse_revision(py, &Some(rev2))?;
 
         let options = subversion::client::DiffOptions {
             diff_options: diffopts.unwrap_or_default(),
@@ -1257,17 +1211,9 @@ impl Client {
         peg_revision: Option<Bound<PyAny>>,
         expand_keywords: bool,
     ) -> PyResult<()> {
-        let rev = if let Some(r) = revision {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Working
-        };
+        let rev = parse_revision(py, &revision)?;
 
-        let peg_rev = if let Some(r) = peg_revision {
-            parse_revision(py, &r)?
-        } else {
-            rev
-        };
+        let peg_rev = parse_revision(py, &peg_revision)?;
 
         let options = subversion::client::CatOptions {
             peg_revision: peg_rev,
@@ -1328,11 +1274,7 @@ impl Client {
         pin_externals: bool,
         callback: Option<Bound<PyAny>>,
     ) -> PyResult<()> {
-        let src_revision = if let Some(r) = src_rev {
-            Some(parse_revision(py, &r)?)
-        } else {
-            None
-        };
+        let src_revision = parse_revision(py, &src_rev)?;
 
         let callback_py = callback.map(|cb| cb.unbind());
         let mut commit_callback_fn =
@@ -1371,32 +1313,31 @@ impl Client {
         };
 
         self.ctx
-            .copy(&[(src, src_revision)], dst, &mut options)
+            .copy(&[(src, Some(src_revision))], dst, &mut options)
             .map_err(|e| subvertpy_util::error::svn_err_to_py(e))?;
 
         Ok(())
     }
 
     /// List directory contents
-    #[pyo3(signature = (path_or_url, revision=None, depth=0, include_externals=false))]
+    #[pyo3(signature = (path_or_url, revision=None, peg_revision=None, depth=0, include_externals=false))]
     fn list<'py>(
         &mut self,
         py: Python<'py>,
         path_or_url: &str,
         revision: Option<Bound<PyAny>>,
+        peg_revision: Option<Bound<PyAny>>,
         depth: i32,
         include_externals: bool,
     ) -> PyResult<Bound<'py, pyo3::types::PyDict>> {
-        let rev = if let Some(r) = revision {
-            parse_revision(py, &r)?
-        } else {
-            subversion::Revision::Head
-        };
+        let rev = parse_revision(py, &revision)?;
+
+        let peg_rev = parse_revision(py, &peg_revision)?;
 
         let svn_depth = parse_depth_int(depth);
 
         let options = subversion::client::ListOptions {
-            peg_revision: subversion::Revision::Unspecified,
+            peg_revision: peg_rev,
             revision: rev,
             patterns: None,
             depth: svn_depth,

@@ -92,6 +92,27 @@ class TestClient(SubversionTestCase):
         self.client.export(self.repos_url, "de")
         self.assertEqual(["foo"], os.listdir("de"))
 
+    def test_export_with_peg_rev(self):
+        self.build_tree({"dc/foo.sh": b"echo foo"})
+        self.client.add("dc/foo.sh")
+        self.client.log_msg_func = lambda c: "Commit"
+        self.client.commit(["dc"])
+
+        self.client.delete(["dc/foo.sh"])
+        self.client.commit(["dc"])
+
+        self.build_tree({"dc/foo.sh": b"echo bar"})
+        self.client.add("dc/foo.sh")
+        self.client.commit(["dc"])
+
+        self.client.export(self.repos_url, "peg_rev_1", peg_rev=1)
+        with open("peg_rev_1/foo.sh", "r") as foo:
+            self.assertEqual("echo foo", foo.read())
+
+        self.client.export(self.repos_url, "peg_rev_3", peg_rev=3)
+        with open("peg_rev_3/foo.sh", "r") as foo:
+            self.assertEqual("echo bar", foo.read())
+
     def test_export_new_option(self):
         self.build_tree({"dc/foo": b"bla"})
         self.client.add("dc/foo")
@@ -352,7 +373,7 @@ class TestClient(SubversionTestCase):
         self.client.commit(["dc"])
         self.client.propset("myprop", "myval", "dc/foo", False, True)
         self.client.commit(["dc"])
-        result = self.client.proplist("dc/foo", "WORKING", 0)
+        result = self.client.proplist("dc/foo", "WORKING", depth=0)
         self.assertIsInstance(result, list)
 
     def test_update(self):
@@ -367,7 +388,7 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/foo")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        entries = self.client.list(self.repos_url, "HEAD", 0)
+        entries = self.client.list(self.repos_url, "HEAD", depth=0)
         self.assertIsInstance(entries, dict)
 
     def test_config(self):
@@ -628,7 +649,7 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/listfile")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        entries = self.client.list(self.repos_url, "HEAD", 0, include_externals=False)
+        entries = self.client.list(self.repos_url, "HEAD", depth=0, include_externals=False)
         self.assertIsInstance(entries, dict)
 
     def test_delete_with_callback(self):
