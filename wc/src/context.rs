@@ -88,6 +88,131 @@ impl Context {
         self.inner.conflicted(&path_str).map_err(svn_err_to_py)
     }
 
+    /// Schedule a path for addition, optionally with copy history.
+    #[pyo3(signature = (local_abspath, depth=None, copyfrom_url=None, copyfrom_rev=None))]
+    fn add(
+        &mut self,
+        local_abspath: &Bound<PyAny>,
+        depth: Option<i32>,
+        copyfrom_url: Option<&str>,
+        copyfrom_rev: Option<i64>,
+    ) -> PyResult<()> {
+        let path_str = subvertpy_util::py_to_svn_abspath(local_abspath)?;
+        let svn_depth = depth
+            .map(depth_from_py)
+            .unwrap_or(subversion::Depth::Infinity);
+        let rev = copyfrom_rev.and_then(subvertpy_util::to_revnum);
+        self.inner
+            .add(&path_str, svn_depth, copyfrom_url, rev)
+            .map_err(svn_err_to_py)
+    }
+
+    /// Schedule a path for deletion.
+    #[pyo3(signature = (local_abspath, keep_local=false, delete_unversioned_target=false))]
+    fn delete(
+        &mut self,
+        local_abspath: &Bound<PyAny>,
+        keep_local: bool,
+        delete_unversioned_target: bool,
+    ) -> PyResult<()> {
+        let path_str = subvertpy_util::py_to_svn_abspath(local_abspath)?;
+        let path = std::path::Path::new(&path_str);
+        self.inner
+            .delete(path, keep_local, delete_unversioned_target, None, None)
+            .map_err(svn_err_to_py)
+    }
+
+    /// Copy a working copy path.
+    #[pyo3(signature = (src_abspath, dst_abspath, metadata_only=false))]
+    fn copy(
+        &mut self,
+        src_abspath: &Bound<PyAny>,
+        dst_abspath: &Bound<PyAny>,
+        metadata_only: bool,
+    ) -> PyResult<()> {
+        let src = subvertpy_util::py_to_svn_abspath(src_abspath)?;
+        let dst = subvertpy_util::py_to_svn_abspath(dst_abspath)?;
+        self.inner
+            .copy(
+                std::path::Path::new(&src),
+                std::path::Path::new(&dst),
+                metadata_only,
+            )
+            .map_err(svn_err_to_py)
+    }
+
+    /// Get a versioned property value from a working copy path.
+    fn prop_get(&mut self, path: &Bound<PyAny>, name: &str) -> PyResult<Option<PyObject>> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        let value = self
+            .inner
+            .prop_get(std::path::Path::new(&path_str), name)
+            .map_err(svn_err_to_py)?;
+        Ok(value.map(|v| {
+            pyo3::Python::with_gil(|py| pyo3::types::PyBytes::new(py, &v).into_any().unbind())
+        }))
+    }
+
+    /// Set a versioned property on a working copy path.
+    ///
+    /// If value is None, deletes the property.
+    #[pyo3(signature = (name, value, path, depth=None, skip_checks=false))]
+    fn prop_set(
+        &mut self,
+        name: &str,
+        value: Option<&Bound<PyAny>>,
+        path: &Bound<PyAny>,
+        depth: Option<i32>,
+        skip_checks: bool,
+    ) -> PyResult<()> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        let svn_depth = depth.map(depth_from_py).unwrap_or(subversion::Depth::Empty);
+        let value_bytes: Option<Vec<u8>> = match value {
+            None => None,
+            Some(v) => {
+                if let Ok(b) = v.cast::<pyo3::types::PyBytes>() {
+                    Some(b.as_bytes().to_vec())
+                } else if let Ok(s) = v.extract::<String>() {
+                    Some(s.into_bytes())
+                } else if v.is_none() {
+                    None
+                } else {
+                    return Err(pyo3::exceptions::PyTypeError::new_err(
+                        "value must be str, bytes, or None",
+                    ));
+                }
+            }
+        };
+        self.inner
+            .prop_set(
+                std::path::Path::new(&path_str),
+                name,
+                value_bytes.as_deref(),
+                svn_depth,
+                skip_checks,
+                None, // changelist_filter
+                None, // cancel_func
+                None, // notify_func
+            )
+            .map_err(svn_err_to_py)
+    }
+
+    /// Read the kind of a node in the working copy.
+    #[pyo3(signature = (path, show_deleted=false, show_hidden=false))]
+    fn read_kind(
+        &mut self,
+        path: &Bound<PyAny>,
+        show_deleted: bool,
+        show_hidden: bool,
+    ) -> PyResult<i32> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        let kind = self
+            .inner
+            .read_kind(std::path::Path::new(&path_str), show_deleted, show_hidden)
+            .map_err(svn_err_to_py)?;
+        Ok(kind as i32)
+    }
+
     /// Get the status of a path.
     fn status(&mut self, path: &Bound<PyAny>) -> PyResult<crate::status::Status> {
         let path_str = subvertpy_util::py_to_svn_abspath(path)?;
@@ -177,8 +302,8 @@ impl Context {
         }
 
         Ok((
-            orig_dict.into_pyobject(py)?.into_any().unbind(),
             changes_list.into_pyobject(py)?.into_any().unbind(),
+            orig_dict.into_pyobject(py)?.into_any().unbind(),
         ))
     }
 

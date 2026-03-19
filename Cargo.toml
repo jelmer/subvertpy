@@ -16,5 +16,5 @@ edition = "2021"
 [workspace.dependencies]
 pyo3 = { version = "0.27" }
 #subversion = { version = ">=0.0.5" }
-subversion = { version = "0.1.5" }
+subversion = { version = "0.1.6" }
 pyo3-filelike = { version = "0.5" }

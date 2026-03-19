@@ -213,7 +213,9 @@ impl RemoteAccess {
     /// Reparent the session to a new URL
     fn reparent(&mut self, url: &str) -> PyResult<()> {
         let url = subversion::uri::canonicalize_uri(url).map_err(|e| svn_err_to_py(e))?;
-        self.session.reparent(&url).map_err(|e| svn_err_to_py(e))
+        self.session.reparent(&url).map_err(|e| svn_err_to_py(e))?;
+        self.url = url;
+        Ok(())
     }
 
     /// Check if the repository has a capability
