@@ -45,7 +45,7 @@ jobs:
         run: |
           curl -LO https://raw.githubusercontent.com/GiovanniBussi/macports-ci/master/macports-ci
           source ./macports-ci install --sync=rsync
-          brew install md5sha1sum
+          brew install md5sha1sum rust
       - name: Set macOS deployment target and install MacOSX sdk 11.3
         run: |
           echo 'macosx_deployment_target 11.0' | sudo tee -a /opt/local/etc/macports/macports.conf
@@ -74,11 +74,13 @@ jobs:
           echo "CIBW_BUILD=cp${pyVer/./}-macosx_$arch" >> $GITHUB_ENV
           echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk" >> $GITHUB_ENV
       - name: Build subvertpy wheel with cibuildwheel
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+          CIBW_BEFORE_BUILD_MACOS:
+          RUSTFLAGS: -C link-args=-Wl,-headerpad_max_install_names
         run: |
           pip install cibuildwheel --user
           python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_BUILD_VERBOSITY: 1
       - name: Test built wheel can be installed and imported
         working-directory: wheelhouse
         run: |
