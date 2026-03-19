@@ -32,7 +32,7 @@ jobs:
       if: "matrix.os == 'ubuntu-latest'"
     - name: Install dependencies (brew)
       run: |
-        brew install subversion
+        brew install subversion pkg-config apr apr-util
       if: "matrix.os == 'macos-latest'"
     - name: Install dependencies (Windows)
       uses: johnwason/vcpkg-action@v7
@@ -64,6 +64,8 @@ jobs:
         export PATH="$(brew --prefix)/opt/subversion/libexec:$PATH"
         export PATH="$(brew --prefix)/opt/apr-util/bin:$PATH"
         export PATH="$(brew --prefix)/opt/apr/bin:$PATH"
+        export PKG_CONFIG_PATH="$(brew --prefix apr)/lib/pkgconfig:$(brew --prefix apr-util)/lib/pkgconfig"
+        export LIBRARY_PATH="$(brew --prefix gettext)/lib:$(brew --prefix utf8proc)/lib"
         pip install -e .
       if: "matrix.os == 'macos-latest'"
     - name: Build (Windows)
