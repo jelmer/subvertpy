@@ -24,10 +24,28 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install build and pytest Python packages
         run: sudo pip install build pytest
-      - name: Install MacPorts
+      # sudo is required to restore macports cache, apply same workaround from
+      # https://github.com/actions/cache/issues/629#issuecomment-1189184648
+      - name: Install gtar wrapper
+        run: |
+          gtar_path=$(which gtar)
+          echo "#!/bin/sh" > gtar
+          echo "exec sudo $gtar_path.orig \"\$@\"" >> gtar
+          sudo mv $gtar_path $gtar_path.orig
+          sudo mv gtar $gtar_path
+          sudo chmod +x $gtar_path
+      - name: Restore macports cache
+        id: restore-macports-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: /opt/local/
+          key: macports-cache-${{ matrix.config.arch }}-${{ matrix.config.os }}
+          restore-keys: macports-cache-${{ matrix.config.arch }}-${{ matrix.config.os }}
+      - name: Install MacPorts and other tools
         run: |
           curl -LO https://raw.githubusercontent.com/GiovanniBussi/macports-ci/master/macports-ci
           source ./macports-ci install --sync=rsync
+          brew install md5sha1sum
       - name: Set macOS deployment target and install MacOSX sdk 11.3
         run: |
           echo 'macosx_deployment_target 11.0' | sudo tee -a /opt/local/etc/macports/macports.conf
@@ -37,6 +55,17 @@ jobs:
           sudo mv MacOSX11.3.sdk /Library/Developer/CommandLineTools/SDKs/
       - name: Install subvertpy build dependencies
         run: sudo port -N -s install subversion db48
+      # hash software source paths including versions to get a cache key
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          echo "value=$(find /opt/local/var/macports/software | sha1sum | cut -c1-40)" >> $GITHUB_OUTPUT
+        shell: bash
+      - name: Save macports cache
+        uses: actions/cache/save@v5
+        with:
+          path: /opt/local/
+          key: macports-cache-${{ matrix.config.arch }}-${{ matrix.config.os }}-${{ steps.cache-key.outputs.value }}
       - name: Sets CIBW_BUILD and SDKROOT environment variable
         env:
           pyVer: "${{matrix.python-version}}"
