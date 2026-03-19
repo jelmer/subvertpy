@@ -98,7 +98,9 @@ impl Context {
         copyfrom_rev: Option<i64>,
     ) -> PyResult<()> {
         let path_str = subvertpy_util::py_to_svn_abspath(local_abspath)?;
-        let svn_depth = depth.map(depth_from_py).unwrap_or(subversion::Depth::Infinity);
+        let svn_depth = depth
+            .map(depth_from_py)
+            .unwrap_or(subversion::Depth::Infinity);
         let rev = copyfrom_rev.and_then(subvertpy_util::to_revnum);
         self.inner
             .add(&path_str, svn_depth, copyfrom_url, rev)
@@ -131,20 +133,23 @@ impl Context {
         let src = subvertpy_util::py_to_svn_abspath(src_abspath)?;
         let dst = subvertpy_util::py_to_svn_abspath(dst_abspath)?;
         self.inner
-            .copy(std::path::Path::new(&src), std::path::Path::new(&dst), metadata_only)
+            .copy(
+                std::path::Path::new(&src),
+                std::path::Path::new(&dst),
+                metadata_only,
+            )
             .map_err(svn_err_to_py)
     }
 
     /// Get a versioned property value from a working copy path.
     fn prop_get(&mut self, path: &Bound<PyAny>, name: &str) -> PyResult<Option<PyObject>> {
         let path_str = subvertpy_util::py_to_svn_abspath(path)?;
-        let value = self.inner
+        let value = self
+            .inner
             .prop_get(std::path::Path::new(&path_str), name)
             .map_err(svn_err_to_py)?;
         Ok(value.map(|v| {
-            pyo3::Python::with_gil(|py| {
-                pyo3::types::PyBytes::new(py, &v).into_any().unbind()
-            })
+            pyo3::Python::with_gil(|py| pyo3::types::PyBytes::new(py, &v).into_any().unbind())
         }))
     }
 
@@ -201,7 +206,8 @@ impl Context {
         show_hidden: bool,
     ) -> PyResult<i32> {
         let path_str = subvertpy_util::py_to_svn_abspath(path)?;
-        let kind = self.inner
+        let kind = self
+            .inner
             .read_kind(std::path::Path::new(&path_str), show_deleted, show_hidden)
             .map_err(svn_err_to_py)?;
         Ok(kind as i32)
