@@ -19,3 +19,7 @@ apidocs
 
 /target
 subvertpy.egg-info
+
+
+# bundled certificate for wheels
+subvertpy/cert/cacert.pem

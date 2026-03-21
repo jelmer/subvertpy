@@ -110,12 +110,20 @@ jobs:
       - name: Test built wheel can be installed and imported
         working-directory: wheelhouse
         run: |
-          set PATH=%Python3_ROOT_DIR%\Scripts:%PATH%
-          set PYTHONIOENCODING=utf-8
-          for /f "tokens=*" %%g in ('dir /b *.whl') do (set wheel=%%g)
-          pip install %wheel%
-          python -c "from subvertpy import client, ra, repos, subr, wc"
-          cd .. && python -m pytest tests
+          python_dir=$(cygpath -u $Python3_ROOT_DIR)
+          export PATH=$python_dir:$python_dir/Scripts:$PATH
+
+          pip install $(ls -t | head -1)
+
+          # check modules import and https support
+          python -c "
+          from subvertpy import client, ra, repos, subr, wc;
+          client = client.Client(auth=ra.Auth([ra.get_username_provider()]));
+          client.info('https://svn.pld-linux.org/svn')"
+
+          pip install pytest
+          cd ../ && rm -rf subvertpy && python -m pytest tests
+        shell: msys2 {0}
       - uses: actions/upload-artifact@v4
         with:
           name: subvertpy-wheel-windows-${{ matrix.python-version }}
