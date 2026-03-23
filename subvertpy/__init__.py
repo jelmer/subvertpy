@@ -121,6 +121,295 @@ class SubversionException(Exception):
         self.location = location
 
 
+class UnsupportedFeature(SubversionException):
+    """Trying to use an unsupported feature."""
+
+
+class RaSvnUnknownCmd(SubversionException):
+    """Unknown svn protocol command."""
+
+
+class RaSvnConnectionClosed(SubversionException):
+    """Network connection closed unexpectedly."""
+
+
+class WcLocked(SubversionException):
+    """Attempted to lock an already-locked directory."""
+
+
+class RaNotAuthorized(SubversionException):
+    """Authorization failed."""
+
+
+class IncompleteData(SubversionException):
+    """Incomplete data."""
+
+
+class DirNotEmpty(SubversionException):
+    """Directory needs to be empty but is not."""
+
+
+class RaSvnMalformedData(SubversionException):
+    """Malformed network data."""
+
+
+class RaNotImplemented(SubversionException):
+    """Repository access method not implemented."""
+
+
+class FsNoSuchRevision(SubversionException):
+    """Invalid filesystem revision number."""
+
+
+class FsTxnOutOfDate(SubversionException):
+    """Transaction is out of date."""
+
+
+class ReposDisabledFeature(SubversionException):
+    """Disabled repository feature."""
+
+
+class StreamMalformedData(SubversionException):
+    """Malformed stream data."""
+
+
+class RaIllegalUrl(SubversionException):
+    """Bad URL passed to RA layer."""
+
+
+class RaLocalReposOpenFailed(SubversionException):
+    """Couldn't open a repository."""
+
+
+class BadFilename(SubversionException):
+    """Bogus filename."""
+
+
+class BadUrl(SubversionException):
+    """Bogus URL."""
+
+
+class BadDate(SubversionException):
+    """Bogus date."""
+
+
+class RaDavRequestFailed(SubversionException):
+    """RA layer request failed."""
+
+
+class RaDavPathNotFound(SubversionException):
+    """HTTP path not found."""
+
+
+class FsNotDirectory(SubversionException):
+    """Name does not refer to a filesystem directory."""
+
+
+class FsNotFound(SubversionException):
+    """Filesystem has no item."""
+
+
+class FsAlreadyExists(SubversionException):
+    """Item already exists in filesystem."""
+
+
+class RaSvnReposNotFound(SubversionException):
+    """Couldn't find a repository."""
+
+
+class WcNotWorkingCopy(SubversionException):
+    """Path is not a working copy directory."""
+
+
+class EntryExists(SubversionException):
+    """Entry already exists."""
+
+
+class WcPathNotFound(SubversionException):
+    """Can't find a working copy path."""
+
+
+class Cancelled(SubversionException):
+    """The operation was interrupted."""
+
+
+class WcUnsupportedFormat(SubversionException):
+    """Unsupported working copy format."""
+
+
+class UnknownCapability(SubversionException):
+    """Inquiry about unknown capability."""
+
+
+class AuthnNoProvider(SubversionException):
+    """No authentication provider available."""
+
+
+class RaDavRelocated(SubversionException):
+    """Repository has been moved."""
+
+
+class FsNotFile(SubversionException):
+    """Name does not refer to a filesystem file."""
+
+
+class WcBadAdmLog(SubversionException):
+    """Problem running log."""
+
+
+class WcBadAdmLogStart(SubversionException):
+    """Problem on first log entry in a working copy."""
+
+
+class WcNotLocked(SubversionException):
+    """Working copy not locked."""
+
+
+class RaDavNotVcc(SubversionException):
+    """DAV version-controlled configuration error."""
+
+
+class ReposHookFailure(SubversionException):
+    """A repository hook failed."""
+
+
+class XmlMalformed(SubversionException):
+    """XML data was not well-formed."""
+
+
+class MalformedFile(SubversionException):
+    """Malformed file."""
+
+
+class FsPathSyntax(SubversionException):
+    """Invalid filesystem path syntax."""
+
+
+class RaDavForbidden(SubversionException):
+    """URL access forbidden."""
+
+
+class WcScheduleConflict(SubversionException):
+    """Unmergeable scheduling requested on an entry."""
+
+
+class RaDavProppatchFailed(SubversionException):
+    """Failed to execute WebDAV PROPPATCH."""
+
+
+class SvndiffCorruptWindow(SubversionException):
+    """Svndiff data contains corrupt window."""
+
+
+class FsConflict(SubversionException):
+    """Merge conflict during commit."""
+
+
+class NodeUnknownKind(SubversionException):
+    """Unknown node kind."""
+
+
+class RaSerfSslCertUntrusted(SubversionException):
+    """Server SSL certificate untrusted."""
+
+
+class EntryNotFound(SubversionException):
+    """Can't find an entry."""
+
+
+class BadPropertyValue(SubversionException):
+    """Wrong or unexpected property value."""
+
+
+class FsRootDir(SubversionException):
+    """Attempt to remove or recreate filesystem root directory."""
+
+
+class WcNodeKindChange(SubversionException):
+    """Cannot change node kind."""
+
+
+class WcUpgradeRequired(SubversionException):
+    """The working copy needs to be upgraded."""
+
+
+class RaCannotCreateSession(SubversionException):
+    """Can't create session."""
+
+
+class ReposBadArgs(SubversionException):
+    """Incorrect arguments supplied."""
+
+
+class EaiNoname(SubversionException):
+    """Name or service not known."""
+
+
+class UnknownHostname(SubversionException):
+    """Unknown hostname."""
+
+
+_error_code_to_class: dict[int, type[SubversionException]] = {
+    ERR_UNSUPPORTED_FEATURE: UnsupportedFeature,
+    ERR_RA_SVN_UNKNOWN_CMD: RaSvnUnknownCmd,
+    ERR_RA_SVN_CONNECTION_CLOSED: RaSvnConnectionClosed,
+    ERR_WC_LOCKED: WcLocked,
+    ERR_RA_NOT_AUTHORIZED: RaNotAuthorized,
+    ERR_INCOMPLETE_DATA: IncompleteData,
+    ERR_DIR_NOT_EMPTY: DirNotEmpty,
+    ERR_RA_SVN_MALFORMED_DATA: RaSvnMalformedData,
+    ERR_RA_NOT_IMPLEMENTED: RaNotImplemented,
+    ERR_FS_NO_SUCH_REVISION: FsNoSuchRevision,
+    ERR_FS_TXN_OUT_OF_DATE: FsTxnOutOfDate,
+    ERR_REPOS_DISABLED_FEATURE: ReposDisabledFeature,
+    ERR_STREAM_MALFORMED_DATA: StreamMalformedData,
+    ERR_RA_ILLEGAL_URL: RaIllegalUrl,
+    ERR_RA_LOCAL_REPOS_OPEN_FAILED: RaLocalReposOpenFailed,
+    ERR_BAD_FILENAME: BadFilename,
+    ERR_BAD_URL: BadUrl,
+    ERR_BAD_DATE: BadDate,
+    ERR_RA_DAV_REQUEST_FAILED: RaDavRequestFailed,
+    ERR_RA_DAV_PATH_NOT_FOUND: RaDavPathNotFound,
+    ERR_FS_NOT_DIRECTORY: FsNotDirectory,
+    ERR_FS_NOT_FOUND: FsNotFound,
+    ERR_FS_ALREADY_EXISTS: FsAlreadyExists,
+    ERR_RA_SVN_REPOS_NOT_FOUND: RaSvnReposNotFound,
+    ERR_WC_NOT_WORKING_COPY: WcNotWorkingCopy,
+    ERR_ENTRY_EXISTS: EntryExists,
+    ERR_WC_PATH_NOT_FOUND: WcPathNotFound,
+    ERR_CANCELLED: Cancelled,
+    ERR_WC_UNSUPPORTED_FORMAT: WcUnsupportedFormat,
+    ERR_UNKNOWN_CAPABILITY: UnknownCapability,
+    ERR_AUTHN_NO_PROVIDER: AuthnNoProvider,
+    ERR_RA_DAV_RELOCATED: RaDavRelocated,
+    ERR_FS_NOT_FILE: FsNotFile,
+    ERR_WC_BAD_ADM_LOG: WcBadAdmLog,
+    ERR_WC_BAD_ADM_LOG_START: WcBadAdmLogStart,
+    ERR_WC_NOT_LOCKED: WcNotLocked,
+    ERR_RA_DAV_NOT_VCC: RaDavNotVcc,
+    ERR_REPOS_HOOK_FAILURE: ReposHookFailure,
+    ERR_XML_MALFORMED: XmlMalformed,
+    ERR_MALFORMED_FILE: MalformedFile,
+    ERR_FS_PATH_SYNTAX: FsPathSyntax,
+    ERR_RA_DAV_FORBIDDEN: RaDavForbidden,
+    ERR_WC_SCHEDULE_CONFLICT: WcScheduleConflict,
+    ERR_RA_DAV_PROPPATCH_FAILED: RaDavProppatchFailed,
+    ERR_SVNDIFF_CORRUPT_WINDOW: SvndiffCorruptWindow,
+    ERR_FS_CONFLICT: FsConflict,
+    ERR_NODE_UNKNOWN_KIND: NodeUnknownKind,
+    ERR_RA_SERF_SSL_CERT_UNTRUSTED: RaSerfSslCertUntrusted,
+    ERR_ENTRY_NOT_FOUND: EntryNotFound,
+    ERR_BAD_PROPERTY_VALUE: BadPropertyValue,
+    ERR_FS_ROOT_DIR: FsRootDir,
+    ERR_WC_NODE_KIND_CHANGE: WcNodeKindChange,
+    ERR_WC_UPGRADE_REQUIRED: WcUpgradeRequired,
+    ERR_RA_CANNOT_CREATE_SESSION: RaCannotCreateSession,
+    ERR_REPOS_BAD_ARGS: ReposBadArgs,
+    ERR_EAI_NONAME: EaiNoname,
+    ERR_UNKNOWN_HOSTNAME: UnknownHostname,
+}
+
+
 def _check_mtime(m):
     """Check whether a C extension is out of date.
 

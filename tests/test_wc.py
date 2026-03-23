@@ -18,6 +18,8 @@
 import os
 
 from subvertpy import (
+    SubversionException,
+    WcNotLocked,
     wc,
 )
 from tests import (
@@ -282,11 +284,9 @@ class ContextTests(SubversionTestCase):
     def test_add_from_disk_no_lock(self):
         ctx = wc.Context()
         self.build_tree({"checkout/diskfile": b"disk content"})
-        from subvertpy import SubversionException
-
         # add_from_disk requires a write lock
         self.assertRaises(
-            SubversionException, ctx.add_from_disk, os.path.abspath("checkout/diskfile")
+            WcNotLocked, ctx.add_from_disk, os.path.abspath("checkout/diskfile")
         )
 
     def test_add_lock_requires_write_lock(self):
@@ -295,11 +295,9 @@ class ContextTests(SubversionTestCase):
         self.client_add("checkout/lockwc")
         self.client_commit("checkout", message="add lockwc")
         lock = wc.Lock(token="opaquelocktoken:test-token")
-        from subvertpy import SubversionException
-
         # add_lock requires a write lock on the WC
         self.assertRaises(
-            SubversionException, ctx.add_lock, os.path.abspath("checkout/lockwc"), lock
+            WcNotLocked, ctx.add_lock, os.path.abspath("checkout/lockwc"), lock
         )
 
     def test_remove_lock_requires_write_lock(self):
@@ -307,10 +305,8 @@ class ContextTests(SubversionTestCase):
         self.build_tree({"checkout/rmlockwc": b"data"})
         self.client_add("checkout/rmlockwc")
         self.client_commit("checkout", message="add rmlockwc")
-        from subvertpy import SubversionException
-
         self.assertRaises(
-            SubversionException, ctx.remove_lock, os.path.abspath("checkout/rmlockwc")
+            WcNotLocked, ctx.remove_lock, os.path.abspath("checkout/rmlockwc")
         )
 
     def test_crawl_revisions(self):
@@ -445,12 +441,10 @@ class ContextTests(SubversionTestCase):
     def test_add_from_disk_with_props(self):
         ctx = wc.Context()
         self.build_tree({"checkout/diskprops": b"data"})
-        from subvertpy import SubversionException
-
         # add_from_disk requires a write lock, but we can test that
         # the props parameter is accepted
         self.assertRaises(
-            SubversionException,
+            WcNotLocked,
             ctx.add_from_disk,
             os.path.abspath("checkout/diskprops"),
             props={b"svn:eol-style": b"native"},
@@ -459,11 +453,9 @@ class ContextTests(SubversionTestCase):
     def test_add_from_disk_skip_checks(self):
         ctx = wc.Context()
         self.build_tree({"checkout/diskskip": b"data"})
-        from subvertpy import SubversionException
-
         # add_from_disk requires a write lock
         self.assertRaises(
-            SubversionException,
+            WcNotLocked,
             ctx.add_from_disk,
             os.path.abspath("checkout/diskskip"),
             skip_checks=True,
@@ -472,8 +464,6 @@ class ContextTests(SubversionTestCase):
     def test_add_from_disk_notify(self):
         ctx = wc.Context()
         self.build_tree({"checkout/disknot": b"data"})
-        from subvertpy import SubversionException
-
         notifications = []
 
         def notify_cb(info):
@@ -481,7 +471,7 @@ class ContextTests(SubversionTestCase):
 
         # add_from_disk requires a write lock
         self.assertRaises(
-            SubversionException,
+            WcNotLocked,
             ctx.add_from_disk,
             os.path.abspath("checkout/disknot"),
             notify=notify_cb,
@@ -565,8 +555,6 @@ class ContextTests(SubversionTestCase):
         queue.queue(os.path.abspath("checkout/qfile"), ctx)
 
     def test_process_committed_queue_requires_write_lock(self):
-        from subvertpy import SubversionException
-
         ctx = wc.Context()
         self.build_tree({"checkout/pcqfile": b"data"})
         self.client_add("checkout/pcqfile")
@@ -574,7 +562,7 @@ class ContextTests(SubversionTestCase):
         queue = wc.CommittedQueue()
         queue.queue(os.path.abspath("checkout/pcqfile"), ctx)
         self.assertRaises(
-            SubversionException,
+            WcNotLocked,
             ctx.process_committed_queue,
             queue,
             1,
@@ -637,8 +625,6 @@ class PristineTests(SubversionTestCase):
 
 class EnsureAdmTests(SubversionTestCase):
     def test_ensure_adm_bogus_url(self):
-        from subvertpy import SubversionException
-
         self.make_client("repos", "checkout")
         self.assertRaises(
             SubversionException, wc.ensure_adm, "checkout", "fake-uuid", "file:///fake"

@@ -12,15 +12,20 @@ pub fn svn_err_to_py(err: SvnError) -> PyErr {
         let message = err.message().unwrap_or("Unknown SVN error");
         let code = err.raw_apr_err();
 
-        // Get the SubversionException class from the subvertpy module
         let module = py
             .import("subvertpy")
             .expect("Failed to import subvertpy module");
-        let exc_class = module
+
+        // Look up a specific subclass for this error code, falling back to SubversionException
+        let fallback = module
             .getattr("SubversionException")
             .expect("SubversionException not found");
+        let exc_class = module
+            .getattr("_error_code_to_class")
+            .ok()
+            .and_then(|mapping| mapping.get_item(code).ok())
+            .unwrap_or(fallback);
 
-        // Create exception instance with message and error code
         let exc_instance = exc_class
             .call1((message, code))
             .expect("Failed to create exception");
