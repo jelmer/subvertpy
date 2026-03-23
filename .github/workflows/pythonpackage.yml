@@ -44,7 +44,7 @@ jobs:
         token: ${{ github.token }}
       if: "matrix.os == 'windows-latest'"
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v2
+      uses: microsoft/setup-msbuild@v3
       if: "matrix.os == 'windows-latest'"
     - name: Install other dependencies
       run: |
