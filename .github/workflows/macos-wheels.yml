@@ -54,7 +54,13 @@ jobs:
         working-directory: wheelhouse
         run: |
           pip install $(ls -t | head -1)
-          python -c "from subvertpy import client, ra, repos, subr, wc"
+
+          # check modules import and https support
+          python -c "
+          from subvertpy import client, ra, repos, subr, wc;
+          client = client.Client(auth=ra.Auth([ra.get_username_provider()]));
+          client.info('https://svn.pld-linux.org/svn')"
+
           cd ../ && mv subvertpy/tests . && rm -rf subvertpy && python -m pytest tests
       - uses: actions/upload-artifact@v4
         with:

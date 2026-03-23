@@ -33,8 +33,13 @@ jobs:
       - name: Test wheel can be installed and subvertpy module imported
         run: |
           $Python3_ROOT_DIR/bin/pip install $(ls -t | head -1)
+
+          # check modules import and https support
           $Python3_ROOT_DIR/bin/python -c "
-          from subvertpy import client, ra, repos, subr, wc"
+          from subvertpy import client, ra, repos, subr, wc;
+          client = client.Client(auth=ra.Auth([ra.get_username_provider()]));
+          client.info('https://svn.pld-linux.org/svn')"
+
           pip3 install pytest
           cd ../ && mv subvertpy/tests . && rm -rf subvertpy && python3 -m pytest tests
         working-directory: wheelhouse
