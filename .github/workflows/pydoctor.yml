@@ -37,6 +37,9 @@ jobs:
         pip install pydoctor
     - name: Build API docs
       run: |
+        # Remove non-Python .so files (Rust proc-macro build artifacts) that
+        # confuse pydoctor's introspection
+        find subvertpy -name 'lib*.so' -delete
         pydoctor --introspect-c-modules -c subvertpy.cfg --make-html subvertpy
     - name: Upload Pages artifact
       uses: actions/upload-pages-artifact@v3
