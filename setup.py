@@ -292,7 +292,7 @@ def package_data():
     return {"subvertpy": ["cert/cacert.pem"]}
 
 
-subvertpy_version = (0, 11, 1)
+subvertpy_version = (0, 11, 2)
 subvertpy_version_string = ".".join(map(str, subvertpy_version))
 
 
