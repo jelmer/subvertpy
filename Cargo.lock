@@ -495,8 +495,6 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 [[package]]
 name = "subversion"
 version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "648af4f7d621a7d558c6742d99aa8cc950b7a276c046bb84b0eb1c0acfc519b6"
 dependencies = [
  "apr",
  "apr-sys",
@@ -512,8 +510,6 @@ dependencies = [
 [[package]]
 name = "subversion-sys"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c18f6949478852356b0f5bdc860ae85c560c7de5ac632d6a25060515fe1d1ae"
 dependencies = [
  "apr",
  "apr-sys",

@@ -571,6 +571,143 @@ class ContextTests(SubversionTestCase):
         )
 
 
+    def test_context_manager(self):
+        with wc.Context() as ctx:
+            self.assertIsNotNone(ctx)
+            result = ctx.locked(os.path.abspath("checkout"))
+            self.assertIsInstance(result, tuple)
+
+    def test_close(self):
+        ctx = wc.Context()
+        ctx.close()
+
+
+class AdmObjTests(SubversionTestCase):
+    def setUp(self):
+        super().setUp()
+        self.repos_url = self.make_client("repos", "checkout")
+
+    def test_open(self):
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=False)
+        self.assertIsNotNone(adm)
+        adm.close()
+
+    def test_open_positional(self):
+        adm = wc.Adm(None, os.path.abspath("checkout"))
+        self.assertIsNotNone(adm)
+        adm.close()
+
+    def test_open_no_path(self):
+        self.assertRaises(TypeError, wc.Adm)
+
+    def test_open_none_path(self):
+        self.assertRaises(TypeError, wc.Adm, None, None)
+
+    def test_access_path(self):
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=False)
+        self.assertEqual(os.path.abspath("checkout"), adm.access_path())
+        adm.close()
+
+    def test_is_locked_read(self):
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=False)
+        self.assertFalse(adm.is_locked())
+        adm.close()
+
+    def test_is_locked_write(self):
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=True, depth=-1)
+        self.assertTrue(adm.is_locked())
+        adm.close()
+
+    def test_context_manager(self):
+        with wc.Adm(path=os.path.abspath("checkout"), write_lock=False) as adm:
+            self.assertIsNotNone(adm)
+            self.assertEqual(os.path.abspath("checkout"), adm.access_path())
+
+    def test_is_wc_root(self):
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=False)
+        self.assertTrue(adm.is_wc_root(os.path.abspath("checkout")))
+        adm.close()
+
+    def test_prop_set_get(self):
+        self.build_tree({"checkout/proptest": b"content"})
+        self.client_add("checkout/proptest")
+        self.client_commit("checkout", message="add proptest")
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=True, depth=-1)
+        adm.prop_set("svn:eol-style", b"native", os.path.abspath("checkout/proptest"))
+        val = adm.prop_get("svn:eol-style", os.path.abspath("checkout/proptest"))
+        self.assertEqual(b"native", val)
+        adm.close()
+
+    def test_prop_get_nonexistent(self):
+        self.build_tree({"checkout/propnone": b"content"})
+        self.client_add("checkout/propnone")
+        self.client_commit("checkout", message="add propnone")
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=False)
+        val = adm.prop_get("svn:nonexistent", os.path.abspath("checkout/propnone"))
+        self.assertIsNone(val)
+        adm.close()
+
+    def test_text_modified(self):
+        self.build_tree({"checkout/txtmod": b"content"})
+        self.client_add("checkout/txtmod")
+        self.client_commit("checkout", message="add txtmod")
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=False, depth=-1)
+        self.assertFalse(adm.text_modified(os.path.abspath("checkout/txtmod"), False))
+        self.build_tree({"checkout/txtmod": b"changed"})
+        self.assertTrue(adm.text_modified(os.path.abspath("checkout/txtmod"), False))
+        adm.close()
+
+    def test_props_modified(self):
+        self.build_tree({"checkout/pmod": b"content"})
+        self.client_add("checkout/pmod")
+        self.client_commit("checkout", message="add pmod")
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=False, depth=-1)
+        self.assertFalse(adm.props_modified(os.path.abspath("checkout/pmod")))
+        adm.close()
+
+    def test_conflicted(self):
+        self.build_tree({"checkout/conflfile": b"content"})
+        self.client_add("checkout/conflfile")
+        self.client_commit("checkout", message="add conflfile")
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=False, depth=-1)
+        result = adm.conflicted(os.path.abspath("checkout/conflfile"))
+        self.assertIsInstance(result, tuple)
+        self.assertEqual(3, len(result))
+        self.assertEqual((False, False, False), result)
+        adm.close()
+
+    def test_has_binary_prop(self):
+        self.build_tree({"checkout/binfile": b"content"})
+        self.client_add("checkout/binfile")
+        self.client_commit("checkout", message="add binfile")
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=False, depth=-1)
+        self.assertFalse(adm.has_binary_prop(os.path.abspath("checkout/binfile")))
+        adm.close()
+
+    def test_add(self):
+        self.build_tree({"checkout/addfile": b"content"})
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=True, depth=-1)
+        adm.add(os.path.abspath("checkout/addfile"))
+        adm.close()
+
+    def test_delete(self):
+        self.build_tree({"checkout/delfile": b"content"})
+        self.client_add("checkout/delfile")
+        self.client_commit("checkout", message="add delfile")
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=True, depth=-1)
+        adm.delete(os.path.abspath("checkout/delfile"))
+        adm.close()
+
+    def test_delete_keep_local(self):
+        self.build_tree({"checkout/delkeep": b"content"})
+        self.client_add("checkout/delkeep")
+        self.client_commit("checkout", message="add delkeep")
+        adm = wc.Adm(path=os.path.abspath("checkout"), write_lock=True, depth=-1)
+        adm.delete(os.path.abspath("checkout/delkeep"), keep_local=True)
+        self.assertTrue(os.path.exists("checkout/delkeep"))
+        adm.close()
+
+
 class LockTests(TestCase):
     def test_create_lock(self):
         lock = wc.Lock()
