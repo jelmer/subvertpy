@@ -282,10 +282,14 @@ def subvertpy_modules():
 
 
 def package_data():
-    if sys.platform == "win32":
-        return {"subvertpy": ["subvertpy/*.dll"]}
-    else:
-        return {}
+    import requests
+
+    os.makedirs("subvertpy/cert", exist_ok=True)
+    with open("subvertpy/cert/cacert.pem", "wb") as cert:
+        response = requests.get("https://curl.se/ca/cacert.pem")
+        response.raise_for_status()
+        cert.write(response.content)
+    return {"subvertpy": ["cert/cacert.pem"]}
 
 
 subvertpy_version = (0, 11, 1)

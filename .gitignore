@@ -14,3 +14,6 @@ apidocs
 .tox/
 .pybuild
 subvertpy.egg-info
+
+# bundled certificate for wheels
+subvertpy/cert/cacert.pem

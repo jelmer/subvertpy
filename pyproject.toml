@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools", "requests"]
+build-backend = "setuptools.build_meta"
+
 [tool.ruff]
 exclude = [
     "build",

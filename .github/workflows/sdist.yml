@@ -12,7 +12,7 @@ jobs:
         with:
           python-version: "3.x"
       - name: Install dependencies
-        run: sudo apt-get install -y libsvn-dev
+        run: sudo apt update && sudo apt install -y libsvn-dev
       - name: Build sdist
         run: |
           pip install build
