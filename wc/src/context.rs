@@ -58,6 +58,27 @@ impl Context {
         Ok(Self { inner: ctx })
     }
 
+    /// Explicitly close and release all resources held by this context.
+    ///
+    /// After calling this, the context is no longer usable.
+    fn close(&mut self) {
+        self.inner.close();
+    }
+
+    fn __enter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __exit__(
+        &mut self,
+        _exc_type: Option<&Bound<PyAny>>,
+        _exc_val: Option<&Bound<PyAny>>,
+        _exc_tb: Option<&Bound<PyAny>>,
+    ) -> PyResult<bool> {
+        self.inner.close();
+        Ok(false)
+    }
+
     /// Check whether a path is locked.
     fn locked(&mut self, path: &Bound<PyAny>) -> PyResult<(bool, bool)> {
         let path_str = subvertpy_util::py_to_svn_abspath(path)?;

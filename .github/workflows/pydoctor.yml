@@ -37,6 +37,12 @@ jobs:
         pip install pydoctor
     - name: Build API docs
       run: |
+        # Remove Rust proc-macro .so build artifacts that confuse pydoctor
+        find subvertpy -name 'lib*.so' -delete
+        # Work around pydoctor bug: _parseFile only catches SyntaxError but
+        # binary .so files raise UnicodeDecodeError, causing an UnboundLocalError crash.
+        sed -i 's/except SyntaxError/except (SyntaxError, UnicodeDecodeError)/g' \
+          "$(python -c 'import pydoctor.astbuilder; print(pydoctor.astbuilder.__file__)')"
         pydoctor --introspect-c-modules -c subvertpy.cfg --make-html subvertpy
     - name: Upload Pages artifact
       uses: actions/upload-pages-artifact@v3

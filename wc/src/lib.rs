@@ -5,11 +5,13 @@
 use pyo3::prelude::*;
 use subvertpy_util::error::svn_err_to_py;
 
+mod adm;
 mod committed;
 mod context;
 mod lock;
 mod status;
 
+use adm::Adm;
 use committed::CommittedQueue;
 use context::Context;
 use lock::Lock;
@@ -184,6 +186,7 @@ fn revision_status(
 /// Python module initialization
 #[pymodule]
 fn wc(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<Adm>()?;
     m.add_class::<Context>()?;
     m.add_class::<CommittedQueue>()?;
     m.add_class::<Lock>()?;
