@@ -163,15 +163,18 @@ impl Context {
     }
 
     /// Get a versioned property value from a working copy path.
-    fn prop_get(&mut self, path: &Bound<PyAny>, name: &str) -> PyResult<Option<PyObject>> {
+    fn prop_get(
+        &mut self,
+        py: Python<'_>,
+        path: &Bound<PyAny>,
+        name: &str,
+    ) -> PyResult<Option<Py<PyAny>>> {
         let path_str = subvertpy_util::py_to_svn_abspath(path)?;
         let value = self
             .inner
             .prop_get(std::path::Path::new(&path_str), name)
             .map_err(svn_err_to_py)?;
-        Ok(value.map(|v| {
-            pyo3::Python::with_gil(|py| pyo3::types::PyBytes::new(py, &v).into_any().unbind())
-        }))
+        Ok(value.map(|v| pyo3::types::PyBytes::new(py, &v).into_any().unbind()))
     }
 
     /// Set a versioned property on a working copy path.
