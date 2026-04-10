@@ -106,16 +106,21 @@ impl Adm {
     }
 
     /// Get a property on a path.
-    fn prop_get(&self, name: &str, path: &Bound<PyAny>) -> PyResult<Option<PyObject>> {
+    fn prop_get(
+        &self,
+        py: Python<'_>,
+        name: &str,
+        path: &Bound<PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
         let path_str = subvertpy_util::py_to_svn_abspath(path)?;
         let val = self
             .inner
             .prop_get(name, &path_str)
             .map_err(svn_err_to_py)?;
-        pyo3::Python::with_gil(|py| match val {
+        match val {
             None => Ok(None),
-            Some(v) => Ok(Some(pyo3::types::PyBytes::new(py, &v).into())),
-        })
+            Some(v) => Ok(Some(pyo3::types::PyBytes::new(py, &v).into_any().unbind())),
+        }
     }
 
     /// Check if a path has a binary property.
