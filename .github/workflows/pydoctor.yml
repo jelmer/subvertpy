@@ -45,7 +45,7 @@ jobs:
           "$(python -c 'import pydoctor.astbuilder; print(pydoctor.astbuilder.__file__)')"
         pydoctor --introspect-c-modules -c subvertpy.cfg --make-html subvertpy
     - name: Upload Pages artifact
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v5
       with:
         path: apidocs
 
