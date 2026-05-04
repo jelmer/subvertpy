@@ -39,7 +39,7 @@ jobs:
             done
           done
       - name: Download sdist artifact
-        uses: dawidd6/action-download-artifact@v20
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: sdist.yml
           commit: ${{ github.event.workflow_run.head_sha }}
@@ -47,7 +47,7 @@ jobs:
           path: dist/
           allow_forks: false
       - name: Download manylinux wheel artifacts
-        uses: dawidd6/action-download-artifact@v20
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: manylinux-wheels.yml
           commit: ${{ github.event.workflow_run.head_sha }}
@@ -56,7 +56,7 @@ jobs:
           merge_multiple: true
           allow_forks: false
       - name: Download macOS wheel artifacts
-        uses: dawidd6/action-download-artifact@v20
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: macos-wheels.yml
           commit: ${{ github.event.workflow_run.head_sha }}
@@ -65,7 +65,7 @@ jobs:
           merge_multiple: true
           allow_forks: false
       - name: Download Windows wheel artifacts
-        uses: dawidd6/action-download-artifact@v20
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: windows-wheels.yml
           commit: ${{ github.event.workflow_run.head_sha }}
