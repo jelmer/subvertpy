@@ -35,7 +35,7 @@ jobs:
         brew install subversion pkg-config apr apr-util
       if: "matrix.os == 'macos-latest'"
     - name: Install dependencies (Windows)
-      uses: johnwason/vcpkg-action@v7
+      uses: johnwason/vcpkg-action@v8
       id: vcpkg
       with:
         pkgs: subversion
