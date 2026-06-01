@@ -55,6 +55,14 @@ jobs:
           sudo mv MacOSX11.3.sdk /Library/Developer/CommandLineTools/SDKs/
       - name: Install subvertpy build dependencies
         run: sudo port -N -s install subversion db48
+      - name: Dump MacPorts build logs on failure
+        if: failure()
+        run: |
+          find /opt/local/var/macports/logs -name main.log -print | while read -r log; do
+            echo "::group::$log"
+            cat "$log"
+            echo "::endgroup::"
+          done
       # hash software source paths including versions to get a cache key
       - name: Compute cache key
         id: cache-key
