@@ -141,6 +141,7 @@ pub fn py_list_to_vec_revnum(list: &Bound<PyList>) -> PyResult<Vec<i64>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pyo3::types::{PyBytes, PyList, PyString};
 
     #[test]
     fn test_is_url() {
@@ -150,5 +151,122 @@ mod tests {
         assert!(is_url("file:///path/to/repo"));
         assert!(!is_url("/path/to/dir"));
         assert!(!is_url("relative/path"));
+    }
+
+    #[test]
+    fn test_is_url_bare_file_scheme() {
+        // file: without :// still counts as a URL
+        assert!(is_url("file:relative"));
+    }
+
+    #[test]
+    fn test_is_url_empty() {
+        assert!(!is_url(""));
+    }
+
+    #[test]
+    fn test_to_revnum_negative() {
+        assert_eq!(to_revnum(-1), None);
+        assert_eq!(to_revnum(-100), None);
+    }
+
+    #[test]
+    fn test_to_revnum_zero() {
+        assert_eq!(to_revnum(0), Some(subversion::Revnum::from(0u64)));
+    }
+
+    #[test]
+    fn test_to_revnum_positive() {
+        assert_eq!(to_revnum(42), Some(subversion::Revnum::from(42u64)));
+    }
+
+    #[test]
+    fn test_to_revnum_or_head_negative() {
+        assert_eq!(to_revnum_or_head(-1), subversion::Revnum::invalid());
+    }
+
+    #[test]
+    fn test_to_revnum_or_head_positive() {
+        assert_eq!(to_revnum_or_head(7), subversion::Revnum::from(7u64));
+    }
+
+    #[test]
+    fn test_to_revnum_or_head_zero() {
+        assert_eq!(to_revnum_or_head(0), subversion::Revnum::from(0u64));
+    }
+
+    #[test]
+    fn test_py_to_svn_string_from_str() {
+        Python::initialize();
+        Python::attach(|py| {
+            let obj = PyString::new(py, "hello").into_any();
+            assert_eq!(py_to_svn_string(&obj).unwrap(), "hello");
+        });
+    }
+
+    #[test]
+    fn test_py_to_svn_string_from_bytes() {
+        Python::initialize();
+        Python::attach(|py| {
+            let obj = PyBytes::new(py, b"world").into_any();
+            assert_eq!(py_to_svn_string(&obj).unwrap(), "world");
+        });
+    }
+
+    #[test]
+    fn test_py_to_svn_string_invalid_utf8() {
+        Python::initialize();
+        Python::attach(|py| {
+            let obj = PyBytes::new(py, b"\xff\xfe").into_any();
+            assert!(py_to_svn_string(&obj).is_err());
+        });
+    }
+
+    #[test]
+    fn test_py_to_svn_string_wrong_type() {
+        Python::initialize();
+        Python::attach(|py| {
+            let obj = 42i64.into_pyobject(py).unwrap().into_any();
+            assert!(py_to_svn_string(&obj).is_err());
+        });
+    }
+
+    #[test]
+    fn test_py_list_to_vec_string() {
+        Python::initialize();
+        Python::attach(|py| {
+            let list = PyList::new(py, ["a", "b", "c"]).unwrap();
+            assert_eq!(
+                py_list_to_vec_string(&list).unwrap(),
+                vec!["a".to_string(), "b".to_string(), "c".to_string()]
+            );
+        });
+    }
+
+    #[test]
+    fn test_py_list_to_vec_string_empty() {
+        Python::initialize();
+        Python::attach(|py| {
+            let list = PyList::empty(py);
+            assert_eq!(py_list_to_vec_string(&list).unwrap(), Vec::<String>::new());
+        });
+    }
+
+    #[test]
+    fn test_py_list_to_vec_revnum() {
+        Python::initialize();
+        Python::attach(|py| {
+            let list = PyList::new(py, [1i64, 2, 3]).unwrap();
+            assert_eq!(py_list_to_vec_revnum(&list).unwrap(), vec![1, 2, 3]);
+        });
+    }
+
+    #[test]
+    fn test_py_list_to_vec_revnum_wrong_type() {
+        Python::initialize();
+        Python::attach(|py| {
+            let list = PyList::new(py, ["not a number"]).unwrap();
+            assert!(py_list_to_vec_revnum(&list).is_err());
+        });
     }
 }

@@ -69,6 +69,45 @@ mod tests {
     }
 
     #[test]
+    fn test_py_dict_to_props_invalid_value() {
+        Python::initialize();
+
+        Python::attach(|py| {
+            let dict = PyDict::new(py);
+            dict.set_item("key", 42i64).unwrap();
+
+            let err = py_dict_to_props(&dict).unwrap_err();
+            assert!(err.is_instance_of::<pyo3::exceptions::PyTypeError>(py));
+        });
+    }
+
+    #[test]
+    fn test_py_dict_to_props_empty() {
+        Python::initialize();
+
+        Python::attach(|py| {
+            let dict = PyDict::new(py);
+            let props = py_dict_to_props(&dict).unwrap();
+            assert!(props.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_props_roundtrip() {
+        Python::initialize();
+
+        Python::attach(|py| {
+            let mut props = HashMap::new();
+            props.insert("svn:eol-style".to_string(), b"native".to_vec());
+            props.insert("custom".to_string(), b"\x00\x01\x02".to_vec());
+
+            let dict = props_to_py_dict(py, &props).unwrap();
+            let back = py_dict_to_props(&dict).unwrap();
+            assert_eq!(back, props);
+        });
+    }
+
+    #[test]
     fn test_props_to_py_dict() {
         Python::initialize();
 
