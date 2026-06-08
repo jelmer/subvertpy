@@ -26,11 +26,18 @@ jobs:
         run: sudo pip install build pytest
       # sudo is required to restore macports cache, apply same workaround from
       # https://github.com/actions/cache/issues/629#issuecomment-1189184648
+      # Only sudo when available: MacPorts extracts distfiles as a user that
+      # cannot sudo.
       - name: Install gtar wrapper
         run: |
           gtar_path=$(which gtar)
-          echo "#!/bin/sh" > gtar
-          echo "exec sudo $gtar_path.orig \"\$@\"" >> gtar
+          cat > gtar <<EOF
+          #!/bin/sh
+          if sudo -n true 2>/dev/null; then
+            exec sudo $gtar_path.orig "\$@"
+          fi
+          exec $gtar_path.orig "\$@"
+          EOF
           sudo mv $gtar_path $gtar_path.orig
           sudo mv gtar $gtar_path
           sudo chmod +x $gtar_path
@@ -42,19 +49,47 @@ jobs:
           key: macports-cache-${{ matrix.config.arch }}-${{ matrix.config.os }}
           restore-keys: macports-cache-${{ matrix.config.arch }}-${{ matrix.config.os }}
       - name: Install MacPorts and other tools
+        env:
+          arch: "${{ matrix.config.arch }}"
         run: |
           curl -LO https://raw.githubusercontent.com/GiovanniBussi/macports-ci/master/macports-ci
-          source ./macports-ci install --sync=rsync
+          # The prebuilt MacPorts pkg's postinstall fails on the x86_64 runner;
+          # build from source there. arm64 installs the binary pkg fine.
+          if [ "$arch" = "x86_64" ]; then
+            source ./macports-ci install --sync=rsync --source
+          else
+            source ./macports-ci install --sync=rsync
+          fi
           brew install md5sha1sum rust
       - name: Set macOS deployment target and install MacOSX sdk 11.3
         run: |
           echo 'macosx_deployment_target 11.0' | sudo tee -a /opt/local/etc/macports/macports.conf
           echo 'macosx_sdk_version 11.3' | sudo tee -a /opt/local/etc/macports/macports.conf
+          # Let CCC_OVERRIDE_OPTIONS (set below) survive MacPorts' env cleanup.
+          echo 'extra_env CCC_OVERRIDE_OPTIONS' | sudo tee -a /opt/local/etc/macports/macports.conf
           curl -LO https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz
           tar -xzf MacOSX11.3.sdk.tar.xz
           sudo mv MacOSX11.3.sdk /Library/Developer/CommandLineTools/SDKs/
       - name: Install subvertpy build dependencies
-        run: sudo port -N -s install subversion db48
+        run: |
+          # apr-util 1.6.3's bundled sdbm uses K&R definitions, which are a hard
+          # error under the -std=gnu23 that MacPorts' autoconf 2.73 selects.
+          # Force -std=gnu17 via CCC_OVERRIDE_OPTIONS, but since it leaks into
+          # the whole subprocess tree and clang++ rejects it, build apr-util's
+          # dependencies first (this build fails on the K&R error), then rebuild
+          # apr-util alone with the override so no C++ port is recompiled.
+          sudo -E port -N -s install apr-util || true
+          sudo -E port -N clean apr-util
+          sudo -E CCC_OVERRIDE_OPTIONS="+-std=gnu17" port -N -s install apr-util
+          sudo -E port -N -s install subversion db48
+      - name: Dump MacPorts build logs on failure
+        if: failure()
+        run: |
+          find /opt/local/var/macports/logs -name main.log -print | while read -r log; do
+            echo "::group::$log"
+            cat "$log"
+            echo "::endgroup::"
+          done
       # hash software source paths including versions to get a cache key
       - name: Compute cache key
         id: cache-key
