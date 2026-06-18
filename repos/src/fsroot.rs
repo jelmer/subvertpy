@@ -35,12 +35,13 @@ impl FileSystemRoot {
 #[pymethods]
 impl FileSystemRoot {
     /// Get paths that changed in this revision
-    fn paths_changed(&self) -> PyResult<pyo3::Py<pyo3::PyAny>> {
+    fn paths_changed(&mut self) -> PyResult<pyo3::Py<pyo3::PyAny>> {
         let changes = self.root.paths_changed().map_err(|e| svn_err_to_py(e))?;
 
         Python::attach(|py| {
             let dict = PyDict::new(py);
-            for (path, change) in changes {
+            for change in changes {
+                let change = change.map_err(|e| svn_err_to_py(e))?;
                 let change_dict = PyDict::new(py);
                 change_dict.set_item("change_kind", format!("{:?}", change.change_kind()))?;
                 change_dict.set_item("text_mod", change.text_modified())?;
@@ -48,7 +49,7 @@ impl FileSystemRoot {
                 let node_kind = change.node_kind();
                 change_dict.set_item("node_kind", format!("{:?}", node_kind))?;
 
-                dict.set_item(path.to_string(), change_dict)?;
+                dict.set_item(change.path().to_string(), change_dict)?;
             }
             Ok(dict.into_any().unbind())
         })
