@@ -878,7 +878,10 @@ impl RemoteAccess {
                                  _old_path_rev: Option<(&str, subversion::Revnum)>,
                                  _new_path_rev: Option<(&str, subversion::Revnum)>,
                                  _prop_diffs: &std::collections::HashMap<String, Vec<u8>>|
-         -> Result<(), subversion::Error> {
+         -> Result<
+            Option<subversion::ra::TxDeltaHandler>,
+            subversion::Error,
+        > {
             Python::attach(|py| {
                 let py_rev_props = subvertpy_util::properties::props_to_py_dict(py, rev_props)
                     .map_err(|e| {
@@ -900,7 +903,7 @@ impl RemoteAccess {
                     subversion::Error::from_message(&format!("Python callback error: {}", e))
                 })?;
 
-                Ok(())
+                Ok(None)
             })
         };
 

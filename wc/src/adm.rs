@@ -10,7 +10,7 @@ use subvertpy_util::error::svn_err_to_py;
 #[pyclass(name = "Adm", unsendable)]
 pub struct Adm {
     #[allow(deprecated)]
-    pub(crate) inner: subversion::wc::Adm,
+    pub(crate) inner: subversion::wc::Adm<'static>,
 }
 
 #[pymethods]
