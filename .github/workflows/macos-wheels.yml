@@ -5,6 +5,7 @@ jobs:
     name: subvertpy wheel build for Python ${{ matrix.python-version }}
       on ${{ matrix.config.os }}
     runs-on: ${{ matrix.config.os }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
