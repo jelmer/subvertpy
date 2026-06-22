@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout subvertpy code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Install Python
         uses: actions/setup-python@v6
         with:
