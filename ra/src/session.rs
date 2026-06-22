@@ -1341,8 +1341,11 @@ impl RemoteAccess {
                 for (mi_path, ranges) in mergeinfo.paths_with_ranges() {
                     let list = pyo3::types::PyList::empty(py);
                     for r in ranges {
-                        let tuple =
-                            (r.start.as_i64(), r.end.as_i64(), if r.inheritable { 1 } else { 0 });
+                        let tuple = (
+                            r.start.as_i64(),
+                            r.end.as_i64(),
+                            if r.inheritable { 1 } else { 0 },
+                        );
                         list.append(tuple)?;
                     }
                     inner.set_item(mi_path, list)?;
