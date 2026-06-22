@@ -112,12 +112,12 @@ impl PyEditor {
             .close()
             .map_err(|e| crate::error::svn_err_to_py(e));
 
-        if result.is_ok() {
-            self.closed = true;
-            // Call on_close callback if set
-            if let Some(callback) = self.on_close.take() {
-                callback();
-            }
+        // The edit is over either way: mark closed and release resources (e.g.
+        // the session busy flag) even if close itself failed, otherwise the
+        // session stays permanently busy.
+        self.closed = true;
+        if let Some(callback) = self.on_close.take() {
+            callback();
         }
 
         result
@@ -135,12 +135,9 @@ impl PyEditor {
             .abort()
             .map_err(|e| crate::error::svn_err_to_py(e));
 
-        if result.is_ok() {
-            self.closed = true;
-            // Call on_close callback if set
-            if let Some(callback) = self.on_close.take() {
-                callback();
-            }
+        self.closed = true;
+        if let Some(callback) = self.on_close.take() {
+            callback();
         }
 
         result
@@ -153,11 +150,21 @@ impl PyEditor {
     fn __exit__(
         &mut self,
         py: Python,
-        _exc_type: Bound<pyo3::PyAny>,
+        exc_type: Bound<pyo3::PyAny>,
         _exc_value: Bound<pyo3::PyAny>,
         _traceback: Bound<pyo3::PyAny>,
     ) -> PyResult<bool> {
-        self.close(py)?;
+        if self.closed {
+            return Ok(false);
+        }
+        // On a normal exit close the edit; if an exception is propagating,
+        // abort instead so the editor (and the session it holds busy) is
+        // released even though the commit did not complete.
+        if exc_type.is_none() {
+            self.close(py)?;
+        } else {
+            self.abort(py)?;
+        }
         Ok(false)
     }
 }
