@@ -404,8 +404,40 @@ pub struct PyFileEditor {
     parent_active_child: Option<Rc<Cell<bool>>>,
 }
 
+/// PyCapsule name identifying a borrowed `*const WrapFileEditor<'static>`.
+///
+/// The `wc` extension module looks up a capsule with this exact name to
+/// recover the underlying file editor for the deprecated adm-based
+/// transmit_*_deltas functions. Sharing the editor across extension modules
+/// via a capsule sidesteps the fact that each cdylib gets its own distinct
+/// `FileEditor` Python type object (so PyO3 downcasting across modules fails).
+pub const WRAP_FILE_EDITOR_CAPSULE_NAME: &std::ffi::CStr = c"subvertpy._wrap_file_editor";
+
 #[pymethods]
 impl PyFileEditor {
+    /// Return a PyCapsule wrapping a borrowed pointer to the underlying
+    /// `WrapFileEditor`.
+    ///
+    /// This lets other extension modules (notably ``wc``) recover the real
+    /// delta editor and baton from the commit drive, which is required by the
+    /// deprecated adm-based ``transmit_*_deltas`` functions. The capsule
+    /// borrows from this object, so the caller must keep this ``FileEditor``
+    /// alive while using the capsule.
+    fn _wrap_file_editor_capsule<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, pyo3::types::PyCapsule>> {
+        let ptr = &self.editor as *const WrapFileEditor<'static> as *mut std::ffi::c_void;
+        // SAFETY: `ptr` borrows `self.editor`, which stays valid for as long as
+        // this PyFileEditor is alive. There is no destructor; ownership remains
+        // with this object.
+        let non_null =
+            std::ptr::NonNull::new(ptr).expect("address of a struct field is never null");
+        unsafe {
+            pyo3::types::PyCapsule::new_with_pointer(py, non_null, WRAP_FILE_EDITOR_CAPSULE_NAME)
+        }
+    }
+
     #[pyo3(signature = (base_checksum=None))]
     fn apply_textdelta(
         &mut self,
