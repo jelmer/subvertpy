@@ -70,24 +70,6 @@ impl PyEditor {
 
 #[pymethods]
 impl PyEditor {
-    /// Return a PyCapsule wrapping a borrowed pointer to the underlying
-    /// `WrapEditor`.
-    ///
-    /// This lets the ``ra`` extension module recover the real delta editor when
-    /// a subvertpy editor (e.g. from ``wc.Context.get_switch_editor``) is handed
-    /// to ``do_switch`` / ``do_update``, instead of bouncing every callback back
-    /// through Python. The capsule borrows from this object, so the caller must
-    /// keep this ``Editor`` alive while using the capsule.
-    fn _wrap_editor_capsule<'py>(
-        &self,
-        py: Python<'py>,
-    ) -> PyResult<Bound<'py, pyo3::types::PyCapsule>> {
-        let ptr = &self.editor as *const WrapEditor<'static> as *mut std::ffi::c_void;
-        let non_null =
-            std::ptr::NonNull::new(ptr).expect("address of a struct field is never null");
-        unsafe { pyo3::types::PyCapsule::new_with_pointer(py, non_null, WRAP_EDITOR_CAPSULE_NAME) }
-    }
-
     fn set_target_revision(&mut self, _py: Python, revision: Option<i64>) -> PyResult<()> {
         let revnum = revision.and_then(|r| to_revnum(r));
         self.editor
@@ -437,9 +419,6 @@ pub struct PyFileEditor {
 /// via a capsule sidesteps the fact that each cdylib gets its own distinct
 /// `FileEditor` Python type object (so PyO3 downcasting across modules fails).
 pub const WRAP_FILE_EDITOR_CAPSULE_NAME: &std::ffi::CStr = c"subvertpy._wrap_file_editor";
-
-/// PyCapsule name identifying a borrowed `*const WrapEditor<'static>`.
-pub const WRAP_EDITOR_CAPSULE_NAME: &std::ffi::CStr = c"subvertpy._wrap_editor";
 
 #[pymethods]
 impl PyFileEditor {

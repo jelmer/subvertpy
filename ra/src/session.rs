@@ -1142,52 +1142,17 @@ impl RemoteAccess {
         let rev = subvertpy_util::to_revnum_or_head(revision);
         let switch_target = subvertpy_util::to_relpath(switch_target)?;
 
-        let depth = if recurse {
-            subversion::Depth::Infinity
-        } else {
-            subversion::Depth::Files
-        };
-
-        // If the editor is itself a subvertpy editor (e.g. from
-        // wc.Context.get_switch_editor), drive its real delta editor directly
-        // through a capsule rather than bouncing every callback back through
-        // Python, which would re-enter the interpreter recursively.
-        let editor_capsule = crate::py_editor::wrap_editor_capsule(slf.py(), &switch_editor);
-
-        if let Some(editor_ref) = editor_capsule {
-            let reporter = unsafe {
-                let session_ptr =
-                    &mut slf.borrow_mut().session as *mut subversion::ra::Session<'static>;
-                let raw_reporter = (*session_ptr)
-                    .do_switch(
-                        rev,
-                        switch_target.as_str(),
-                        depth,
-                        switch_url,
-                        send_copyfrom_args,
-                        ignore_ancestry,
-                        editor_ref,
-                    )
-                    .map_err(|e| svn_err_to_py(e))?;
-                std::mem::transmute::<
-                    Box<dyn subversion::ra::Reporter + Send>,
-                    Box<dyn subversion::ra::Reporter + Send + 'static>,
-                >(raw_reporter)
-            };
-            // Keep the Python editor alive for as long as the reporter, so the
-            // capsule pointer stays valid.
-            return Ok(crate::reporter::Reporter::new_with_session_and_keepalive(
-                reporter,
-                slf.unbind().into_any(),
-                switch_editor,
-            ));
-        }
-
         let py_editor = crate::py_editor::PyEditorWrapper::new(switch_editor);
         let wrap_editor = py_editor.into_wrap_editor();
 
         let boxed_editor = Box::new(wrap_editor);
         let editor_ptr: *mut subversion::delta::WrapEditor = Box::into_raw(boxed_editor);
+
+        let depth = if recurse {
+            subversion::Depth::Infinity
+        } else {
+            subversion::Depth::Files
+        };
 
         let reporter = unsafe {
             let editor_ref = &mut *editor_ptr;
