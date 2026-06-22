@@ -584,6 +584,46 @@ impl Adm {
             .map_err(svn_err_to_py)
     }
 
+    /// Get an editor for switching this working copy to a different URL.
+    ///
+    /// Anchored on this (deprecated) access baton, which holds the lock.
+    #[pyo3(signature = (target, switch_url, use_commit_times=false, depth=3,
+        notify_func=None, diff3_cmd=None, depth_is_sticky=false,
+        allow_unver_obstructions=true))]
+    #[allow(clippy::too_many_arguments)]
+    fn get_switch_editor(
+        slf: &Bound<Self>,
+        target: &str,
+        switch_url: &str,
+        use_commit_times: bool,
+        depth: i32,
+        notify_func: Option<Py<PyAny>>,
+        diff3_cmd: Option<&str>,
+        depth_is_sticky: bool,
+        allow_unver_obstructions: bool,
+    ) -> PyResult<subvertpy_util::editor::PyEditor> {
+        let _ = notify_func;
+        let switch_url = subversion::uri::canonicalize_uri(switch_url).map_err(svn_err_to_py)?;
+        let this = slf.borrow();
+        let (editor, _target_rev) = this
+            .inner
+            .get_switch_editor(
+                target,
+                &switch_url,
+                use_commit_times,
+                crate::context::depth_from_py(depth),
+                depth_is_sticky,
+                allow_unver_obstructions,
+                diff3_cmd,
+            )
+            .map_err(svn_err_to_py)?;
+        drop(this);
+        let parent = slf.clone().into_any().unbind();
+        Ok(subvertpy_util::editor::PyEditor::new_with_parent(
+            editor, parent,
+        ))
+    }
+
     fn __enter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
     }
