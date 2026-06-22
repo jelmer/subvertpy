@@ -719,6 +719,45 @@ impl Context {
             )
             .map_err(svn_err_to_py)
     }
+
+    /// Acquire a working copy write lock.
+    ///
+    /// Required before processing a committed queue. Returns the abspath of
+    /// the lock root, which must be passed to :meth:`release_write_lock`.
+    #[pyo3(signature = (path, lock_anchor=false))]
+    fn acquire_write_lock(&mut self, path: &Bound<PyAny>, lock_anchor: bool) -> PyResult<String> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        let root = self
+            .inner
+            .acquire_write_lock(std::path::Path::new(&path_str), lock_anchor)
+            .map_err(svn_err_to_py)?;
+        Ok(root.to_string_lossy().into_owned())
+    }
+
+    /// Release a working copy write lock acquired with
+    /// :meth:`acquire_write_lock`.
+    ///
+    /// :param path: The lock root abspath returned by acquire_write_lock.
+    fn release_write_lock(&mut self, path: &Bound<PyAny>) -> PyResult<()> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        self.inner
+            .release_write_lock(std::path::Path::new(&path_str))
+            .map_err(svn_err_to_py)
+    }
+
+    /// Install a working file's current text into the pristine store.
+    ///
+    /// Needed before :meth:`queue_committed` / :meth:`process_committed_queue`
+    /// can bump a file whose commit was performed outside this working copy.
+    /// Returns the SHA-1 checksum (hex) of the installed pristine.
+    ///
+    /// :param path: Absolute path to the working file.
+    /// :param basename: Entry name of the file within its parent directory.
+    fn install_text_base(&mut self, path: &Bound<PyAny>, basename: &str) -> PyResult<String> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        subversion::wc::install_text_base(&mut self.inner, &path_str, basename)
+            .map_err(svn_err_to_py)
+    }
 }
 
 /// Bridge between a Python reporter object and the Rust Reporter trait.
