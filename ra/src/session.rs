@@ -1337,8 +1337,17 @@ impl RemoteAccess {
         Python::attach(|py| {
             let dict = PyDict::new(py);
             for (path, mergeinfo) in &result {
-                let mi_str = mergeinfo.to_string().map_err(|e| svn_err_to_py(e))?;
-                dict.set_item(path, mi_str)?;
+                let inner = PyDict::new(py);
+                for (mi_path, ranges) in mergeinfo.paths_with_ranges() {
+                    let list = pyo3::types::PyList::empty(py);
+                    for r in ranges {
+                        let tuple =
+                            (r.start.as_i64(), r.end.as_i64(), if r.inheritable { 1 } else { 0 });
+                        list.append(tuple)?;
+                    }
+                    inner.set_item(mi_path, list)?;
+                }
+                dict.set_item(path, inner)?;
             }
             Ok(Some(dict.into_any().unbind()))
         })
