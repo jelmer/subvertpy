@@ -15,6 +15,19 @@ pub struct Reporter {
     _session: Option<Py<PyAny>>,
     /// Keep the editor alive for do_diff (reporter has C pointers to it)
     _editor: Option<Box<subversion::delta::WrapEditor<'static>>>,
+    /// Keep an arbitrary Python object alive (e.g. a subvertpy editor whose
+    /// WrapEditor is borrowed by the reporter through a capsule).
+    _keepalive: Option<Py<PyAny>>,
+    /// Heap box backing a raw-reporter capsule handed out to the wc module.
+    _raw_reporter_box: Option<*mut (*const std::ffi::c_void, *mut std::ffi::c_void)>,
+}
+
+impl Drop for Reporter {
+    fn drop(&mut self) {
+        if let Some(raw) = self._raw_reporter_box.take() {
+            unsafe { drop(Box::from_raw(raw)) };
+        }
+    }
 }
 
 impl Reporter {
@@ -24,6 +37,8 @@ impl Reporter {
             finished: false,
             _session: None,
             _editor: None,
+            _keepalive: None,
+            _raw_reporter_box: None,
         }
     }
 
@@ -36,6 +51,8 @@ impl Reporter {
             finished: false,
             _session: Some(session),
             _editor: None,
+            _keepalive: None,
+            _raw_reporter_box: None,
         }
     }
 
@@ -49,12 +66,63 @@ impl Reporter {
             finished: false,
             _session: Some(session),
             _editor: Some(editor),
+            _keepalive: None,
+            _raw_reporter_box: None,
+        }
+    }
+
+    pub fn new_with_session_and_keepalive(
+        reporter: Box<dyn subversion::ra::Reporter + Send>,
+        session: Py<PyAny>,
+        keepalive: Py<PyAny>,
+    ) -> Self {
+        Self {
+            reporter: Some(reporter),
+            finished: false,
+            _session: Some(session),
+            _editor: None,
+            _keepalive: Some(keepalive),
+            _raw_reporter_box: None,
         }
     }
 }
 
+/// PyCapsule name identifying a borrowed raw SVN reporter.
+///
+/// Wraps a pointer to a heap `(svn_ra_reporter3_t*, baton)` pair so the ``wc``
+/// extension can drive a crawl directly against this reporter instead of
+/// bouncing every callback back through Python.
+pub const RAW_REPORTER_CAPSULE_NAME: &std::ffi::CStr = c"subvertpy._raw_reporter";
+
 #[pymethods]
 impl Reporter {
+    /// Return a PyCapsule with a borrowed pointer to the raw SVN reporter, or
+    /// None if this reporter is not backed by one.
+    fn _raw_reporter_capsule<'py>(
+        &mut self,
+        py: Python<'py>,
+    ) -> PyResult<Option<Bound<'py, pyo3::types::PyCapsule>>> {
+        let parts = match self.reporter.as_ref() {
+            Some(r) => r.as_raw_reporter(),
+            None => None,
+        };
+        let Some((ptr, baton)) = parts else {
+            return Ok(None);
+        };
+        // Box the pair and hand the capsule a borrowed pointer to it. The
+        // pointers borrow from `self.reporter`, which the caller must keep
+        // alive; we leak the small box (freed when the reporter is dropped via
+        // _raw_reporter_box below) to avoid Send requirements on PyCapsule::new.
+        let boxed: Box<(*const std::ffi::c_void, *mut std::ffi::c_void)> = Box::new((ptr, baton));
+        let raw = Box::into_raw(boxed);
+        self._raw_reporter_box = Some(raw);
+        let non_null = std::ptr::NonNull::new(raw as *mut std::ffi::c_void).unwrap();
+        let capsule = unsafe {
+            pyo3::types::PyCapsule::new_with_pointer(py, non_null, RAW_REPORTER_CAPSULE_NAME)?
+        };
+        Ok(Some(capsule))
+    }
+
     /// Set a path
     #[pyo3(signature = (path, revision, start_empty, lock_token=None, depth=None))]
     fn set_path(

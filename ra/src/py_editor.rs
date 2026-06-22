@@ -8,6 +8,27 @@ use pyo3::types::PyBytes;
 use subversion::delta::{DirectoryEditor, Editor, FileEditor};
 use subvertpy_util::error::py_err_to_svn;
 
+/// If `editor` is a subvertpy editor exposing a wrap-editor capsule, return a
+/// mutable reference to the underlying `WrapEditor`. Returns `None` for any
+/// other Python object.
+///
+/// The reference borrows from the live Python editor object; the caller must
+/// keep that object alive for as long as the reference is used.
+pub(crate) fn wrap_editor_capsule(
+    py: Python<'_>,
+    editor: &Py<PyAny>,
+) -> Option<&'static mut subversion::delta::WrapEditor<'static>> {
+    let bound = editor.bind(py);
+    let capsule = bound.call_method0("_wrap_editor_capsule").ok()?;
+    let capsule = capsule.cast::<pyo3::types::PyCapsule>().ok()?;
+    let name = subvertpy_util::editor::WRAP_EDITOR_CAPSULE_NAME;
+    let ptr = capsule.pointer_checked(Some(name)).ok()?;
+    // SAFETY: the capsule pointer is a `*mut WrapEditor<'static>` produced by
+    // subvertpy_util, valid while the Python editor is alive (no destructor).
+    // do_switch/do_update only read it via as_raw_parts.
+    Some(unsafe { &mut *(ptr.as_ptr() as *mut subversion::delta::WrapEditor<'static>) })
+}
+
 /// Wrapper for a Python editor object
 pub struct PyEditorWrapper {
     py_editor: Py<PyAny>,

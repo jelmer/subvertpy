@@ -3,6 +3,78 @@
 use pyo3::prelude::*;
 use subvertpy_util::error::svn_err_to_py;
 
+/// Recover a raw SVN reporter (vtable + baton) from a subvertpy reporter
+/// object via its capsule. Returns None for any other object.
+fn raw_reporter_from_py(
+    py: Python<'_>,
+    reporter: &Py<PyAny>,
+) -> PyResult<Option<(*const std::ffi::c_void, *mut std::ffi::c_void)>> {
+    let bound = reporter.bind(py);
+    let capsule = match bound.call_method0("_raw_reporter_capsule") {
+        Ok(c) => c,
+        Err(_) => return Ok(None),
+    };
+    if capsule.is_none() {
+        return Ok(None);
+    }
+    let capsule = match capsule.cast::<pyo3::types::PyCapsule>() {
+        Ok(c) => c,
+        Err(_) => return Ok(None),
+    };
+    let name = c"subvertpy._raw_reporter";
+    let ptr = capsule.pointer_checked(Some(name))?;
+    // SAFETY: the capsule points to a heap (vtable, baton) pair owned by the
+    // reporter object, valid while that object is alive.
+    let pair =
+        unsafe { *(ptr.as_ptr() as *const (*const std::ffi::c_void, *mut std::ffi::c_void)) };
+    Ok(Some(pair))
+}
+
+/// Adapter exposing a raw SVN reporter to `crawl_revisions5`. Only
+/// `as_raw_reporter` is ever called; the trait methods are unreachable here.
+struct RawReporter((*const std::ffi::c_void, *mut std::ffi::c_void));
+
+impl subversion::ra::Reporter for RawReporter {
+    fn set_path(
+        &mut self,
+        _path: &str,
+        _rev: subversion::Revnum,
+        _depth: subversion::Depth,
+        _start_empty: bool,
+        _lock_token: &str,
+    ) -> Result<(), subversion::Error<'static>> {
+        unreachable!("RawReporter is only used for as_raw_reporter")
+    }
+
+    fn delete_path(&mut self, _path: &str) -> Result<(), subversion::Error<'static>> {
+        unreachable!("RawReporter is only used for as_raw_reporter")
+    }
+
+    fn link_path(
+        &mut self,
+        _path: &str,
+        _url: &str,
+        _rev: subversion::Revnum,
+        _depth: subversion::Depth,
+        _start_empty: bool,
+        _lock_token: &str,
+    ) -> Result<(), subversion::Error<'static>> {
+        unreachable!("RawReporter is only used for as_raw_reporter")
+    }
+
+    fn finish_report(&mut self) -> Result<(), subversion::Error<'static>> {
+        unreachable!("RawReporter is only used for as_raw_reporter")
+    }
+
+    fn abort_report(&mut self) -> Result<(), subversion::Error<'static>> {
+        unreachable!("RawReporter is only used for as_raw_reporter")
+    }
+
+    fn as_raw_reporter(&self) -> Option<(*const std::ffi::c_void, *mut std::ffi::c_void)> {
+        Some(self.0)
+    }
+}
+
 pub(crate) fn depth_to_py(depth: subversion::Depth) -> i32 {
     match depth {
         subversion::Depth::Unknown => -2,
@@ -448,7 +520,7 @@ impl Context {
     #[pyo3(signature = (path, reporter, restore_files=true, depth=3, honor_depth_exclude=true, depth_compatibility_trick=false, use_commit_times=false, notify=None))]
     fn crawl_revisions(
         &mut self,
-        _py: Python,
+        py: Python,
         path: &Bound<PyAny>,
         reporter: Py<PyAny>,
         restore_files: bool,
@@ -459,11 +531,31 @@ impl Context {
         notify: Option<Py<PyAny>>,
     ) -> PyResult<()> {
         let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        let notify_fn = make_notify_closure(notify);
+
+        // If the reporter is a subvertpy do_update/do_switch reporter, drive the
+        // crawl against its raw SVN reporter directly. Bouncing each crawl
+        // callback back through Python (PyReporterBridge) re-enters the
+        // interpreter recursively and corrupts the in-progress edit.
+        if let Some(raw) = raw_reporter_from_py(py, &reporter)? {
+            let mut adapter = RawReporter(raw);
+            return subversion::wc::crawl_revisions5(
+                &mut self.inner,
+                &path_str,
+                &mut adapter,
+                restore_files,
+                depth_from_py(depth),
+                honor_depth_exclude,
+                depth_compatibility_trick,
+                use_commit_times,
+                notify_fn.as_deref(),
+            )
+            .map_err(svn_err_to_py);
+        }
 
         let py_reporter = PyReporterBridge { reporter };
         let mut wrap_reporter = subversion::ra::WrapReporter::from_rust_reporter(py_reporter);
 
-        let notify_fn = make_notify_closure(notify);
         subversion::wc::crawl_revisions5(
             &mut self.inner,
             &path_str,
