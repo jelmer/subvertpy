@@ -1,13 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-	"subr",
-	"subvertpy_util",
-	"repos",
-	"ra",
-	"client",
-	"wc",
-]
+members = ["subr", "subvertpy_util", "repos", "ra", "client", "wc"]
 
 [workspace.package]
 version = "0.12.0"
@@ -16,6 +9,6 @@ edition = "2021"
 [workspace.dependencies]
 pyo3 = { version = "0.29" }
 #subversion = { version = ">=0.0.5" }
-subversion = { version = "0.1.11" }
+subversion = { version = "0.1.12" }
 #subversion = { path = "../subversion-rs" }
 pyo3-filelike = { version = "0.5" }

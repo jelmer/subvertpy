@@ -223,9 +223,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.32"
+version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
+checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "memchr"
@@ -354,9 +354,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.45"
+version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
+checksum = "dfbc457d0c7a0759a614551b11a6409e5951f6c7537be1f1b7682b9ae9230368"
 dependencies = [
  "proc-macro2",
 ]
@@ -460,9 +460,9 @@ checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 
 [[package]]
 name = "subversion"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbfa7888c9d1313251b3ebbd42d917965125ecacb325ccca6218036fc0de09cd"
+checksum = "58dfd8f63736845c629e0b9ab9d7d9755824fcb8ff73fcc6090621c4579f6b07"
 dependencies = [
  "apr",
  "apr-sys",
@@ -477,9 +477,9 @@ dependencies = [
 
 [[package]]
 name = "subversion-sys"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c18f6949478852356b0f5bdc860ae85c560c7de5ac632d6a25060515fe1d1ae"
+checksum = "e21b271a9c9f3bd571c309cdabb2638e729fac8d479b876027a4e697b022eafb"
 dependencies = [
  "apr",
  "apr-sys",
