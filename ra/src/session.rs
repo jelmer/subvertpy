@@ -867,7 +867,14 @@ impl RemoteAccess {
         include_merged_revisions: Option<bool>,
     ) -> PyResult<()> {
         let path = subvertpy_util::to_relpath(path)?;
-        let start_rev = subvertpy_util::to_revnum_or_head(start);
+        // A negative start means "from the beginning of the file's history";
+        // svn_ra_get_file_revs2 expects revision 0 for that, not an invalid
+        // revnum (which it would treat as the youngest revision).
+        let start_rev = if start < 0 {
+            subversion::Revnum::from(0u64)
+        } else {
+            subvertpy_util::to_revnum_or_head(start)
+        };
         let end_rev = subvertpy_util::to_revnum_or_head(end);
 
         let py_handler = handler.clone();
@@ -899,11 +906,58 @@ impl RemoteAccess {
                         subversion::Error::from_message(&format!("Failed to convert args: {}", e))
                     })?;
 
-                py_handler.call1(&args).map_err(|e| {
+                let result = py_handler.call1(&args).map_err(|e| {
                     subversion::Error::from_message(&format!("Python callback error: {}", e))
                 })?;
 
-                Ok(None)
+                // The Python handler may return a txdelta window callback; if
+                // so, wire it up so the deltas for this revision are delivered.
+                if result.is_none() {
+                    return Ok(None);
+                }
+                let window_handler = result.unbind();
+                let handler: subversion::ra::TxDeltaHandler = Box::new(
+                    move |window: Option<&subversion::delta::TxDeltaWindowRef<'_>>| {
+                        Python::attach(|py| {
+                            let py_window: Py<pyo3::PyAny> = match window {
+                                None => py.None(),
+                                Some(w) => {
+                                    let ops = w.ops();
+                                    let py_ops = pyo3::types::PyList::new(
+                                        py,
+                                        ops.iter().map(|&(a, o, l)| (a, o, l)),
+                                    )
+                                    .map_err(|e| {
+                                        subversion::Error::from_message(&format!("{}", e))
+                                    })?;
+                                    let new_data = PyBytes::new(py, w.new_data());
+                                    (
+                                        w.sview_offset(),
+                                        w.sview_len(),
+                                        w.tview_len(),
+                                        w.src_ops(),
+                                        py_ops,
+                                        new_data,
+                                    )
+                                        .into_pyobject(py)
+                                        .map_err(|e| {
+                                            subversion::Error::from_message(&format!("{}", e))
+                                        })?
+                                        .into_any()
+                                        .unbind()
+                                }
+                            };
+                            window_handler.call1(py, (py_window,)).map_err(|e| {
+                                subversion::Error::from_message(&format!(
+                                    "txdelta window handler error: {}",
+                                    e
+                                ))
+                            })?;
+                            Ok(())
+                        })
+                    },
+                );
+                Ok(Some(handler))
             })
         };
 
