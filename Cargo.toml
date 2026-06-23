@@ -12,9 +12,3 @@ pyo3 = { version = "0.29" }
 subversion = { version = "0.1.12" }
 #subversion = { path = "../subversion-rs" }
 pyo3-filelike = { version = "0.5" }
-
-# Use the local subversion-rs checkout that adds Context write-lock support.
-# Drop this once those changes are released to crates.io.
-[patch.crates-io]
-subversion = { path = "../subversion-rs" }
-subversion-sys = { path = "../subversion-rs/subversion-sys" }
