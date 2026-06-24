@@ -112,12 +112,12 @@ impl PyEditor {
             .close()
             .map_err(|e| crate::error::svn_err_to_py(e));
 
-        if result.is_ok() {
-            self.closed = true;
-            // Call on_close callback if set
-            if let Some(callback) = self.on_close.take() {
-                callback();
-            }
+        // The edit is over either way: mark closed and release resources (e.g.
+        // the session busy flag) even if close itself failed, otherwise the
+        // session stays permanently busy.
+        self.closed = true;
+        if let Some(callback) = self.on_close.take() {
+            callback();
         }
 
         result
@@ -135,12 +135,9 @@ impl PyEditor {
             .abort()
             .map_err(|e| crate::error::svn_err_to_py(e));
 
-        if result.is_ok() {
-            self.closed = true;
-            // Call on_close callback if set
-            if let Some(callback) = self.on_close.take() {
-                callback();
-            }
+        self.closed = true;
+        if let Some(callback) = self.on_close.take() {
+            callback();
         }
 
         result
@@ -153,11 +150,21 @@ impl PyEditor {
     fn __exit__(
         &mut self,
         py: Python,
-        _exc_type: Bound<pyo3::PyAny>,
+        exc_type: Bound<pyo3::PyAny>,
         _exc_value: Bound<pyo3::PyAny>,
         _traceback: Bound<pyo3::PyAny>,
     ) -> PyResult<bool> {
-        self.close(py)?;
+        if self.closed {
+            return Ok(false);
+        }
+        // On a normal exit close the edit; if an exception is propagating,
+        // abort instead so the editor (and the session it holds busy) is
+        // released even though the commit did not complete.
+        if exc_type.is_none() {
+            self.close(py)?;
+        } else {
+            self.abort(py)?;
+        }
         Ok(false)
     }
 }
@@ -404,8 +411,40 @@ pub struct PyFileEditor {
     parent_active_child: Option<Rc<Cell<bool>>>,
 }
 
+/// PyCapsule name identifying a borrowed `*const WrapFileEditor<'static>`.
+///
+/// The `wc` extension module looks up a capsule with this exact name to
+/// recover the underlying file editor for the deprecated adm-based
+/// transmit_*_deltas functions. Sharing the editor across extension modules
+/// via a capsule sidesteps the fact that each cdylib gets its own distinct
+/// `FileEditor` Python type object (so PyO3 downcasting across modules fails).
+pub const WRAP_FILE_EDITOR_CAPSULE_NAME: &std::ffi::CStr = c"subvertpy._wrap_file_editor";
+
 #[pymethods]
 impl PyFileEditor {
+    /// Return a PyCapsule wrapping a borrowed pointer to the underlying
+    /// `WrapFileEditor`.
+    ///
+    /// This lets other extension modules (notably ``wc``) recover the real
+    /// delta editor and baton from the commit drive, which is required by the
+    /// deprecated adm-based ``transmit_*_deltas`` functions. The capsule
+    /// borrows from this object, so the caller must keep this ``FileEditor``
+    /// alive while using the capsule.
+    fn _wrap_file_editor_capsule<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, pyo3::types::PyCapsule>> {
+        let ptr = &self.editor as *const WrapFileEditor<'static> as *mut std::ffi::c_void;
+        // SAFETY: `ptr` borrows `self.editor`, which stays valid for as long as
+        // this PyFileEditor is alive. There is no destructor; ownership remains
+        // with this object.
+        let non_null =
+            std::ptr::NonNull::new(ptr).expect("address of a struct field is never null");
+        unsafe {
+            pyo3::types::PyCapsule::new_with_pointer(py, non_null, WRAP_FILE_EDITOR_CAPSULE_NAME)
+        }
+    }
+
     #[pyo3(signature = (base_checksum=None))]
     fn apply_textdelta(
         &mut self,

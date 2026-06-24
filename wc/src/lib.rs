@@ -11,7 +11,7 @@ mod context;
 mod lock;
 mod status;
 
-use adm::Adm;
+use adm::{Adm, Entry};
 use committed::CommittedQueue;
 use context::Context;
 use lock::Lock;
@@ -187,6 +187,7 @@ fn revision_status(
 #[pymodule]
 fn wc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Adm>()?;
+    m.add_class::<Entry>()?;
     m.add_class::<Context>()?;
     m.add_class::<CommittedQueue>()?;
     m.add_class::<Lock>()?;

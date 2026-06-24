@@ -310,6 +310,32 @@ impl Client {
         Ok(())
     }
 
+    /// Restore pristine working copy file (undo all local edits)
+    #[pyo3(signature = (paths, depth=None, recursive=true))]
+    fn revert(
+        &mut self,
+        py: Python,
+        paths: Vec<String>,
+        depth: Option<Bound<PyAny>>,
+        recursive: bool,
+    ) -> PyResult<()> {
+        let svn_depth = if let Some(d) = depth {
+            parse_depth(py, &d)?
+        } else if recursive {
+            subversion::Depth::Infinity
+        } else {
+            subversion::Depth::Empty
+        };
+        let path_refs: Vec<&str> = paths.iter().map(|s| s.as_str()).collect();
+        let options = subversion::client::RevertOptions {
+            depth: svn_depth,
+            ..Default::default()
+        };
+        self.ctx
+            .revert(&path_refs, &options)
+            .map_err(|e| subvertpy_util::error::svn_err_to_py(e))
+    }
+
     /// Commit changes to the repository
     #[pyo3(signature = (targets, recurse=true, keep_locks=true, keep_changelist=false, commit_as_operations=false, include_file_externals=false, include_dir_externals=false, revprops=None, callback=None))]
     fn commit(

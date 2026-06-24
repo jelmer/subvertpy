@@ -3,7 +3,7 @@
 use pyo3::prelude::*;
 use subvertpy_util::error::svn_err_to_py;
 
-fn depth_to_py(depth: subversion::Depth) -> i32 {
+pub(crate) fn depth_to_py(depth: subversion::Depth) -> i32 {
     match depth {
         subversion::Depth::Unknown => -2,
         subversion::Depth::Exclude => -1,
@@ -29,7 +29,7 @@ pub(crate) fn depth_from_py(depth: i32) -> subversion::Depth {
 ///
 /// The Python callback receives the SVN error as an exception object
 /// when the notification indicates an error.
-fn make_notify_closure(
+pub(crate) fn make_notify_closure(
     py_notify: Option<Py<PyAny>>,
 ) -> Option<Box<dyn Fn(&subversion::wc::Notify)>> {
     py_notify.map(|py_func| -> Box<dyn Fn(&subversion::wc::Notify)> {
@@ -578,6 +578,186 @@ impl Context {
             parent,
         ))
     }
+
+    /// Get an editor for switching the working copy to a different URL.
+    #[pyo3(signature = (
+        anchor_abspath, target_basename, switch_url, use_commit_times=false, depth=3,
+        depth_is_sticky=false, allow_unver_obstructions=true,
+        server_performs_filtering=false, diff3_cmd=None, preserved_exts=None,
+        dirents_func=None, conflict_func=None, external_func=None, notify_func=None
+    ))]
+    fn get_switch_editor(
+        slf: &Bound<Self>,
+        anchor_abspath: &Bound<PyAny>,
+        target_basename: &str,
+        switch_url: &str,
+        use_commit_times: bool,
+        depth: i32,
+        depth_is_sticky: bool,
+        allow_unver_obstructions: bool,
+        server_performs_filtering: bool,
+        diff3_cmd: Option<&str>,
+        preserved_exts: Option<Vec<String>>,
+        dirents_func: Option<Py<PyAny>>,
+        conflict_func: Option<Py<PyAny>>,
+        external_func: Option<Py<PyAny>>,
+        notify_func: Option<Py<PyAny>>,
+    ) -> PyResult<subvertpy_util::editor::PyEditor> {
+        if conflict_func.is_some() {
+            return Err(pyo3::exceptions::PyNotImplementedError::new_err(
+                "conflict_func is not currently supported",
+            ));
+        }
+        if external_func.is_some() {
+            return Err(pyo3::exceptions::PyNotImplementedError::new_err(
+                "external_func is not currently supported",
+            ));
+        }
+        if dirents_func.is_some() {
+            return Err(pyo3::exceptions::PyNotImplementedError::new_err(
+                "dirents_func is not currently supported",
+            ));
+        }
+
+        let path_str = subvertpy_util::py_to_svn_abspath(anchor_abspath)?;
+        let switch_url = subversion::uri::canonicalize_uri(switch_url).map_err(svn_err_to_py)?;
+
+        let ext_refs: Vec<&str> = preserved_exts
+            .as_ref()
+            .map(|v| v.iter().map(|s| s.as_str()).collect())
+            .unwrap_or_default();
+
+        let options = subversion::wc::SwitchEditorOptions {
+            use_commit_times,
+            depth: depth_from_py(depth),
+            depth_is_sticky,
+            allow_unver_obstructions,
+            server_performs_filtering,
+            diff3_cmd,
+            preserved_exts: ext_refs,
+            fetch_dirents_func: None,
+            conflict_func: None,
+            external_func: None,
+            cancel_func: None,
+            notify_func: make_notify_closure(notify_func),
+        };
+
+        let mut this = slf.borrow_mut();
+        let (editor, _target_rev) = this
+            .inner
+            .get_switch_editor(&path_str, target_basename, &switch_url, options)
+            .map_err(svn_err_to_py)?;
+
+        let parent = slf.clone().into_any().unbind();
+        Ok(subvertpy_util::editor::PyEditor::new_with_parent(
+            editor, parent,
+        ))
+    }
+
+    /// Queue committed items for post-commit processing against this context.
+    ///
+    /// This is the Context-level analogue of ``Adm.queue_committed``. The
+    /// queued items are later applied with :meth:`process_committed_queue`.
+    #[pyo3(signature = (path, queue, recurse=false, is_committed=true, wcprop_changes=None, remove_lock=false, remove_changelist=false, md5_digest=None, sha1_digest=None))]
+    fn queue_committed(
+        &mut self,
+        path: &Bound<PyAny>,
+        queue: &mut crate::committed::CommittedQueue,
+        recurse: bool,
+        is_committed: bool,
+        wcprop_changes: Option<&Bound<PyAny>>,
+        remove_lock: bool,
+        remove_changelist: bool,
+        md5_digest: Option<&[u8]>,
+        sha1_digest: Option<&[u8]>,
+    ) -> PyResult<()> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        let path = std::path::Path::new(&path_str);
+
+        let prop_changes = if let Some(dict) = wcprop_changes {
+            let dict: &Bound<pyo3::types::PyDict> = dict.cast()?;
+            let mut changes = Vec::with_capacity(dict.len());
+            for (key, val) in dict.iter() {
+                let name: String = key.extract()?;
+                let value: Option<Vec<u8>> = if val.is_none() {
+                    None
+                } else {
+                    Some(val.extract::<Vec<u8>>()?)
+                };
+                changes.push(subversion::wc::PropChange { name, value });
+            }
+            Some(changes)
+        } else {
+            None
+        };
+
+        let pool = apr::Pool::new();
+        let checksum = if let Some(digest) = sha1_digest {
+            Some(
+                subversion::Checksum::from_digest(subversion::ChecksumKind::SHA1, digest, &pool)
+                    .map_err(svn_err_to_py)?,
+            )
+        } else if let Some(digest) = md5_digest {
+            Some(
+                subversion::Checksum::from_digest(subversion::ChecksumKind::MD5, digest, &pool)
+                    .map_err(svn_err_to_py)?,
+            )
+        } else {
+            None
+        };
+
+        self.inner
+            .queue_committed(
+                path,
+                recurse,
+                is_committed,
+                &mut queue.inner,
+                prop_changes.as_deref(),
+                remove_lock,
+                remove_changelist,
+                checksum.as_ref(),
+            )
+            .map_err(svn_err_to_py)
+    }
+
+    /// Acquire a working copy write lock.
+    ///
+    /// Required before processing a committed queue. Returns the abspath of
+    /// the lock root, which must be passed to :meth:`release_write_lock`.
+    #[pyo3(signature = (path, lock_anchor=false))]
+    fn acquire_write_lock(&mut self, path: &Bound<PyAny>, lock_anchor: bool) -> PyResult<String> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        let root = self
+            .inner
+            .acquire_write_lock(std::path::Path::new(&path_str), lock_anchor)
+            .map_err(svn_err_to_py)?;
+        Ok(root.to_string_lossy().into_owned())
+    }
+
+    /// Release a working copy write lock acquired with
+    /// :meth:`acquire_write_lock`.
+    ///
+    /// :param path: The lock root abspath returned by acquire_write_lock.
+    fn release_write_lock(&mut self, path: &Bound<PyAny>) -> PyResult<()> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        self.inner
+            .release_write_lock(std::path::Path::new(&path_str))
+            .map_err(svn_err_to_py)
+    }
+
+    /// Install a working file's current text into the pristine store.
+    ///
+    /// Needed before :meth:`queue_committed` / :meth:`process_committed_queue`
+    /// can bump a file whose commit was performed outside this working copy.
+    /// Returns the SHA-1 checksum (hex) of the installed pristine.
+    ///
+    /// :param path: Absolute path to the working file.
+    /// :param basename: Entry name of the file within its parent directory.
+    fn install_text_base(&mut self, path: &Bound<PyAny>, basename: &str) -> PyResult<String> {
+        let path_str = subvertpy_util::py_to_svn_abspath(path)?;
+        subversion::wc::install_text_base(&mut self.inner, &path_str, basename)
+            .map_err(svn_err_to_py)
+    }
 }
 
 /// Bridge between a Python reporter object and the Rust Reporter trait.
@@ -588,8 +768,8 @@ impl Context {
 /// - link_path(path, url, revision, start_empty, lock_token, depth)
 /// - finish()
 /// - abort()
-struct PyReporterBridge {
-    reporter: Py<PyAny>,
+pub(crate) struct PyReporterBridge {
+    pub(crate) reporter: Py<PyAny>,
 }
 
 impl subversion::ra::Reporter for PyReporterBridge {
