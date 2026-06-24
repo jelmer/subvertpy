@@ -2,7 +2,6 @@
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
-use std::cell::Cell;
 use std::sync::mpsc::{self, Receiver};
 use subvertpy_util::error::svn_err_to_py;
 
@@ -85,12 +84,45 @@ fn log_entry_to_py(py: Python, log_entry: &subversion::LogEntry) -> PyResult<Py<
     Ok(tuple.unbind().into_any())
 }
 
+/// Wrapper that lets a `Session` live inside a `Send + Sync` pyclass.
+///
+/// `subversion::ra::Session` (and the APR pool it owns) is `!Send`/`!Sync` to
+/// forbid concurrent cross-thread use. PyO3 requires a non-`unsendable`
+/// pyclass to be `Send + Sync`. That requirement is satisfiable here because
+/// PyO3 only ever exposes `&RemoteAccess`/`&mut RemoteAccess` while the GIL is
+/// held, so the session is never *used* from two threads at once. The reason we
+/// need this at all is Python's cyclic garbage collector, which may run a
+/// finalizer (the drop) on a thread other than the one that created the
+/// session; `apr_pool_destroy` tolerates that when the pool is otherwise idle,
+/// which holds at finalization time.
+struct SendSession(subversion::ra::Session<'static>);
+
+// Safety: see SendSession's documentation. Access to the session is serialized
+// by the GIL (PyO3 hands out references only while it is held), so it is never
+// used concurrently; only its drop may run on a different thread, which is safe.
+unsafe impl Send for SendSession {}
+unsafe impl Sync for SendSession {}
+
+impl std::ops::Deref for SendSession {
+    type Target = subversion::ra::Session<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for SendSession {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 /// Subversion remote access session
-#[pyclass(name = "RemoteAccess", unsendable)]
+#[pyclass(name = "RemoteAccess")]
 pub struct RemoteAccess {
-    session: subversion::ra::Session<'static>,
+    session: SendSession,
     url: String,
-    busy: Cell<bool>,
+    busy: std::sync::atomic::AtomicBool,
     /// Keep the Auth object alive so the borrowed auth baton pointer remains valid
     _auth: Option<Py<PyAny>>,
 }
@@ -98,7 +130,7 @@ pub struct RemoteAccess {
 impl RemoteAccess {
     /// Check if session is busy and raise BusyException if so
     fn check_busy(&self) -> PyResult<()> {
-        if self.busy.get() {
+        if self.busy.load(std::sync::atomic::Ordering::SeqCst) {
             Err(PyErr::new::<crate::BusyException, _>("Session is busy"))
         } else {
             Ok(())
@@ -107,7 +139,7 @@ impl RemoteAccess {
 
     /// Mark session as busy (for editor operations)
     fn set_busy(&self, busy: bool) {
-        self.busy.set(busy);
+        self.busy.store(busy, std::sync::atomic::Ordering::SeqCst);
     }
 }
 
@@ -167,9 +199,9 @@ impl RemoteAccess {
         .map_err(|e| svn_err_to_py(e))?;
 
         Ok(Self {
-            session,
+            session: SendSession(session),
             url: url.to_string(),
-            busy: Cell::new(false),
+            busy: std::sync::atomic::AtomicBool::new(false),
             _auth: auth.map(|a| a.unbind().into_any()),
         })
     }
@@ -183,7 +215,7 @@ impl RemoteAccess {
     /// Whether the session is busy (e.g., an editor or reporter is active)
     #[getter]
     fn busy(&self) -> bool {
-        self.busy.get()
+        self.busy.load(std::sync::atomic::Ordering::SeqCst)
     }
 
     /// Get the repository UUID
@@ -1033,7 +1065,7 @@ impl RemoteAccess {
         let commit_callback_ref: &'static mut _ = unsafe { &mut *commit_callback_ptr };
 
         // SAFETY: `slf` is kept alive via PyEditor._parent
-        let session_ptr = &mut slf.borrow_mut().session as *mut subversion::ra::Session<'static>;
+        let session_ptr = &mut slf.borrow_mut().session.0 as *mut subversion::ra::Session<'static>;
         let editor = unsafe {
             (*session_ptr)
                 .get_commit_editor(revprop_table, commit_callback_ref, lock_tokens, keep_locks)
@@ -1092,7 +1124,7 @@ impl RemoteAccess {
             options.text_deltas = text_deltas;
 
             let session_ptr =
-                &mut slf.borrow_mut().session as *mut subversion::ra::Session<'static>;
+                &mut slf.borrow_mut().session.0 as *mut subversion::ra::Session<'static>;
             let raw_reporter = (*session_ptr)
                 .do_diff(rev, diff_target.as_str(), &mut options)
                 .map_err(|e| svn_err_to_py(e))?;
@@ -1153,7 +1185,7 @@ impl RemoteAccess {
             let editor_ref = &mut *editor_ptr;
 
             let session_ptr =
-                &mut slf.borrow_mut().session as *mut subversion::ra::Session<'static>;
+                &mut slf.borrow_mut().session.0 as *mut subversion::ra::Session<'static>;
             let raw_reporter = (*session_ptr)
                 .do_update(
                     rev,
@@ -1212,7 +1244,7 @@ impl RemoteAccess {
             let editor_ref = &mut *editor_ptr;
 
             let session_ptr =
-                &mut slf.borrow_mut().session as *mut subversion::ra::Session<'static>;
+                &mut slf.borrow_mut().session.0 as *mut subversion::ra::Session<'static>;
             let raw_reporter = (*session_ptr)
                 .do_switch(
                     rev,
@@ -1256,7 +1288,7 @@ impl RemoteAccess {
         let py_editor = crate::py_editor::PyEditorWrapper::new(editor);
         let mut wrap_editor = py_editor.into_wrap_editor();
 
-        let session_ptr = &mut slf.borrow_mut().session as *mut subversion::ra::Session<'static>;
+        let session_ptr = &mut slf.borrow_mut().session.0 as *mut subversion::ra::Session<'static>;
         unsafe {
             (*session_ptr)
                 .replay(rev, lwm, send_deltas, &mut wrap_editor)
@@ -1337,7 +1369,7 @@ impl RemoteAccess {
             })
         };
 
-        let session_ptr = &mut slf.borrow_mut().session as *mut subversion::ra::Session<'static>;
+        let session_ptr = &mut slf.borrow_mut().session.0 as *mut subversion::ra::Session<'static>;
         unsafe {
             (*session_ptr)
                 .replay_range(start_rev, end_rev, lwm, send_deltas, revstart, revfinish)
