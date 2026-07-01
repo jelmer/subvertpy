@@ -44,7 +44,7 @@ jobs:
           sudo chmod +x $gtar_path
       - name: Restore macports cache
         id: restore-macports-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: /opt/local/
           key: macports-cache-${{ matrix.config.arch }}-${{ matrix.config.os }}
@@ -98,7 +98,7 @@ jobs:
           echo "value=$(find /opt/local/var/macports/software | sha1sum | cut -c1-40)" >> $GITHUB_OUTPUT
         shell: bash
       - name: Save macports cache
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: /opt/local/
           key: macports-cache-${{ matrix.config.arch }}-${{ matrix.config.os }}-${{ steps.cache-key.outputs.value }}
