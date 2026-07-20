@@ -19,7 +19,7 @@ jobs:
       - name: Install MSYS2 shell
         uses: msys2/setup-msys2@v2
       - name: Install Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         id: python-install
         with:
           python-version: ${{ matrix.python-version }}
