@@ -5,7 +5,7 @@ sdist
 MANIFEST
 .coverage
 tags
-.testrepository
+.inquest
 .noseids
 apidocs
 *.pyc
