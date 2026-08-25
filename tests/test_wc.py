@@ -570,7 +570,6 @@ class ContextTests(SubversionTestCase):
             "testuser",
         )
 
-
     def test_context_manager(self):
         with wc.Context() as ctx:
             self.assertIsNotNone(ctx)

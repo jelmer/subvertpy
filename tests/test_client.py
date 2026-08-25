@@ -106,11 +106,11 @@ class TestClient(SubversionTestCase):
         self.client.commit(["dc"])
 
         self.client.export(self.repos_url, "peg_rev_1", peg_rev=1)
-        with open("peg_rev_1/foo.sh", "r") as foo:
+        with open("peg_rev_1/foo.sh") as foo:
             self.assertEqual("echo foo", foo.read())
 
         self.client.export(self.repos_url, "peg_rev_3", peg_rev=3)
-        with open("peg_rev_3/foo.sh", "r") as foo:
+        with open("peg_rev_3/foo.sh") as foo:
             self.assertEqual("echo bar", foo.read())
 
     def test_export_new_option(self):
@@ -649,7 +649,9 @@ class TestClient(SubversionTestCase):
         self.client.add("dc/listfile")
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
-        entries = self.client.list(self.repos_url, "HEAD", depth=0, include_externals=False)
+        entries = self.client.list(
+            self.repos_url, "HEAD", depth=0, include_externals=False
+        )
         self.assertIsInstance(entries, dict)
 
     def test_delete_with_callback(self):
@@ -753,7 +755,9 @@ class TestClient(SubversionTestCase):
         self.client.log_msg_func = lambda c: "Commit"
         self.client.commit(["dc"])
         self.build_tree({"dc/diffopt": b"hello\nworld\n"})
-        (outfile, _errfile) = self.client.diff(1, "WORKING", "dc", "dc", diffopts=["-u"])
+        (outfile, _errfile) = self.client.diff(
+            1, "WORKING", "dc", "dc", diffopts=["-u"]
+        )
         out = outfile.read()
         self.assertIn(b"world", out)
 
@@ -790,7 +794,7 @@ class TestClient(SubversionTestCase):
         # iter_log without changed paths
         entries = list(self.client.iter_log("dc/foo", start_rev="HEAD", end_rev=1))
         self.assertEqual(1, len(entries))
-        changed_paths, revision, revprops, has_children = entries[0]
+        changed_paths, revision, revprops, _has_children = entries[0]
         self.assertIsNone(changed_paths)
         self.assertEqual(1, revision)
         self.assertEqual(commit_msg_1, revprops["svn:log"])
@@ -808,7 +812,7 @@ class TestClient(SubversionTestCase):
             )
         )
         self.assertEqual(2, len(entries))
-        changed_paths, revision, revprops, has_children = entries[0]
+        changed_paths, revision, revprops, _has_children = entries[0]
         self.assertEqual(sorted(["/foo", "/bar"]), sorted(changed_paths.keys()))
         self.assertEqual(2, revision)
         self.assertEqual(commit_msg_2, revprops["svn:log"])

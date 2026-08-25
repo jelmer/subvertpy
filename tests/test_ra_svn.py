@@ -17,6 +17,7 @@
 """Tests for subvertpy.ra_svn."""
 
 from io import StringIO
+from typing import ClassVar
 
 from subvertpy.marshall import literal, marshall
 from subvertpy.ra_svn import (
@@ -168,7 +169,7 @@ class EditorTests(TestCase):
         self.sent = []
 
         class MockConn:
-            _open_ids = []
+            _open_ids: ClassVar = []
 
             def send_msg(_, data):
                 self.sent.append(data)
@@ -217,7 +218,7 @@ class DirectoryEditorTests(TestCase):
         self.sent = []
 
         class MockConn:
-            _open_ids = []
+            _open_ids: ClassVar = []
 
             def send_msg(_, data):
                 self.sent.append(data)
@@ -303,7 +304,7 @@ class FileEditorTests(TestCase):
         self.sent = []
 
         class MockConn:
-            _open_ids = []
+            _open_ids: ClassVar = []
 
             def send_msg(_, data):
                 self.sent.append(data)
