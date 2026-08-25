@@ -71,7 +71,7 @@ impl PyEditor {
 #[pymethods]
 impl PyEditor {
     fn set_target_revision(&mut self, _py: Python, revision: Option<i64>) -> PyResult<()> {
-        let revnum = revision.and_then(|r| to_revnum(r));
+        let revnum = revision.and_then(to_revnum);
         self.editor
             .set_target_revision(revnum)
             .map_err(|e| crate::error::svn_err_to_py(e))
@@ -83,7 +83,7 @@ impl PyEditor {
         _py: Python,
         base_revision: Option<i64>,
     ) -> PyResult<PyDirectoryEditor> {
-        let revnum = base_revision.and_then(|r| to_revnum(r));
+        let revnum = base_revision.and_then(to_revnum);
         let dir_editor = self
             .editor
             .open_root(revnum)
@@ -183,7 +183,7 @@ pub struct PyDirectoryEditor {
 impl PyDirectoryEditor {
     #[pyo3(signature = (path, revision=None))]
     fn delete_entry(&mut self, _py: Python, path: &str, revision: Option<i64>) -> PyResult<()> {
-        let revnum = revision.and_then(|r| to_revnum(r));
+        let revnum = revision.and_then(to_revnum);
         self.editor
             .delete_entry(path, revnum)
             .map_err(|e| crate::error::svn_err_to_py(e))
@@ -240,7 +240,7 @@ impl PyDirectoryEditor {
             ));
         }
 
-        let revnum = base_revision.and_then(|r| to_revnum(r));
+        let revnum = base_revision.and_then(to_revnum);
         let child_editor = self
             .editor
             .open_directory(path, revnum)
@@ -362,7 +362,7 @@ impl PyDirectoryEditor {
             ));
         }
 
-        let revnum = base_revision.and_then(|r| to_revnum(r));
+        let revnum = base_revision.and_then(to_revnum);
         let file_editor = self
             .editor
             .open_file(path, revnum)

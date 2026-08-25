@@ -1,4 +1,8 @@
 //! Repository Python bindings
+//!
+//! Argument counts here mirror the Subversion C API and the public
+//! Python API, so they are not condensed into structs.
+#![allow(clippy::too_many_arguments)]
 
 use pyo3::prelude::*;
 use subvertpy_util::error::svn_err_to_py;
@@ -22,7 +26,7 @@ impl Repository {
     #[new]
     fn init(py: Python, path: &str) -> PyResult<Self> {
         let py_str = pyo3::types::PyString::new(py, path);
-        let repos_path = py_to_svn_dirent(&py_str.as_any())?;
+        let repos_path = py_to_svn_dirent(py_str.as_any())?;
         let path_buf = std::path::Path::new(&repos_path);
 
         let repos = subversion::repos::Repos::open(path_buf).map_err(|e| svn_err_to_py(e))?;
@@ -54,10 +58,10 @@ impl Repository {
         end_rev: Option<i64>,
     ) -> PyResult<()> {
         let start = start_rev
-            .and_then(|r| subvertpy_util::to_revnum(r))
+            .and_then(subvertpy_util::to_revnum)
             .unwrap_or_else(|| subvertpy_util::to_revnum(0).unwrap());
         let end = end_rev
-            .and_then(|r| subvertpy_util::to_revnum(r))
+            .and_then(subvertpy_util::to_revnum)
             .unwrap_or(subversion::Revnum::invalid());
 
         let callback = |_revnum: subversion::Revnum,

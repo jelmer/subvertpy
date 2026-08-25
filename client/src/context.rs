@@ -1,7 +1,14 @@
 //! Client context implementation
+//!
+//! Argument counts here mirror the Subversion C API and the public
+//! Python API, so they are not condensed into structs.
+#![allow(clippy::too_many_arguments)]
 
 use pyo3::prelude::*;
 use std::sync::mpsc::{self, Receiver};
+
+/// Commit result as returned to Python: (revision, date, author).
+type CommitInfo = (i64, Option<String>, Option<String>);
 
 /// Parse a revision from Python - can be a string ("HEAD", "BASE", etc.) or integer
 fn parse_revision(_py: Python, rev: &Option<Bound<PyAny>>) -> PyResult<subversion::Revision> {
@@ -349,7 +356,7 @@ impl Client {
         include_dir_externals: bool,
         revprops: Option<Bound<pyo3::PyAny>>,
         callback: Option<Bound<pyo3::PyAny>>,
-    ) -> PyResult<Option<(i64, Option<String>, Option<String>)>> {
+    ) -> PyResult<Option<CommitInfo>> {
         let target_refs: Vec<&str> = targets.iter().map(|s| s.as_str()).collect();
 
         let depth = if recurse {
@@ -1257,9 +1264,7 @@ impl Client {
                     let stream_bound = self.stream.bind(py);
                     stream_bound
                         .call_method1("write", (pyo3::types::PyBytes::new(py, buf),))
-                        .map_err(|e| {
-                            std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
-                        })?;
+                        .map_err(|e| std::io::Error::other(e.to_string()))?;
                     Ok(buf.len())
                 })
             }
@@ -1267,9 +1272,9 @@ impl Client {
             fn flush(&mut self) -> std::io::Result<()> {
                 Python::attach(|py| {
                     let stream_bound = self.stream.bind(py);
-                    stream_bound.call_method0("flush").map_err(|e| {
-                        std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
-                    })?;
+                    stream_bound
+                        .call_method0("flush")
+                        .map_err(|e| std::io::Error::other(e.to_string()))?;
                     Ok(())
                 })
             }

@@ -1,7 +1,14 @@
 //! Context Python bindings
+//!
+//! Argument counts here mirror the Subversion C API and the public
+//! Python API, so they are not condensed into structs.
+#![allow(clippy::too_many_arguments)]
 
 use pyo3::prelude::*;
 use subvertpy_util::error::svn_err_to_py;
+
+/// Callback invoked for working-copy notifications.
+type NotifyFn = Box<dyn Fn(&subversion::wc::Notify)>;
 
 pub(crate) fn depth_to_py(depth: subversion::Depth) -> i32 {
     match depth {
@@ -29,10 +36,8 @@ pub(crate) fn depth_from_py(depth: i32) -> subversion::Depth {
 ///
 /// The Python callback receives the SVN error as an exception object
 /// when the notification indicates an error.
-pub(crate) fn make_notify_closure(
-    py_notify: Option<Py<PyAny>>,
-) -> Option<Box<dyn Fn(&subversion::wc::Notify)>> {
-    py_notify.map(|py_func| -> Box<dyn Fn(&subversion::wc::Notify)> {
+pub(crate) fn make_notify_closure(py_notify: Option<Py<PyAny>>) -> Option<NotifyFn> {
+    py_notify.map(|py_func| -> NotifyFn {
         Box::new(move |notify: &subversion::wc::Notify| {
             if let Some(err) = notify.err() {
                 Python::attach(|py| {
@@ -550,7 +555,7 @@ impl Context {
             conflict_func: None,
             external_func: None,
             cancel_func: None,
-            notify_func: notify_func.map(|py_func| -> Box<dyn Fn(&subversion::wc::Notify)> {
+            notify_func: notify_func.map(|py_func| -> NotifyFn {
                 Box::new(move |notify: &subversion::wc::Notify| {
                     if let Some(err) = notify.err() {
                         Python::attach(|py| {
