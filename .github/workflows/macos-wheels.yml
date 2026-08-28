@@ -2,14 +2,15 @@ name: macos-wheels
 on: [push, pull_request]
 jobs:
   macos:
-    name: subvertpy wheel build for Python ${{ matrix.python-version }}
-      on ${{ matrix.config.os }}
+    name: subvertpy abi3 wheel build on ${{ matrix.config.os }}
     runs-on: ${{ matrix.config.os }}
-    timeout-minutes: 45
+    timeout-minutes: 120
+    env:
+      PY_LIMITED_API: "3.10"
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         config:
           - os: macos-15-intel
             arch: x86_64
@@ -18,11 +19,11 @@ jobs:
     steps:
       - name: Checkout subvertpy code
         uses: actions/checkout@v7
-      - name: Install Python ${{ matrix.python-version }}
+      - name: Install Python ${{ env.PY_LIMITED_API }}
         uses: actions/setup-python@v7
         id: python-install
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PY_LIMITED_API }}
       - name: Install build and pytest Python packages
         run: sudo pip install build pytest
       # sudo is required to restore macports cache, apply same workaround from
@@ -104,7 +105,7 @@ jobs:
           key: macports-cache-${{ matrix.config.arch }}-${{ matrix.config.os }}-${{ steps.cache-key.outputs.value }}
       - name: Sets CIBW_BUILD and SDKROOT environment variable
         env:
-          pyVer: "${{matrix.python-version}}"
+          pyVer: "${{env.PY_LIMITED_API}}"
           arch: "${{matrix.config.arch}}"
         run: |
           echo "CIBW_BUILD=cp${pyVer/./}-macosx_$arch" >> $GITHUB_ENV
@@ -131,8 +132,6 @@ jobs:
           cd ../ && rm -rf subvertpy && python -m pytest tests
       - uses: actions/upload-artifact@v4
         with:
-          name: subvertpy-wheel-macos-${{ matrix.python-version }}-${{ matrix.config.arch }}
+          name: subvertpy-wheel-macos-${{ env.PY_LIMITED_API }}-${{ matrix.config.arch }}
           path: ./wheelhouse/*.whl
-    env:
-      MACOSX_DEPLOYMENT_TARGET: "11.0"
-
+      
