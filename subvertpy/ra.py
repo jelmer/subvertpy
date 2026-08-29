@@ -13,7 +13,35 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
-"""Python bindings for Subversion."""
+"""Access to remote Subversion repositories.
+
+The :func:`RemoteAccess` object represents a connection to a Subversion
+server. When the server requires credentials (basic auth over http/https,
+SSL client certificates, etc.), pass an ``auth`` keyword holding an
+:class:`Auth` object built from a list of "auth providers"::
+
+    from subvertpy import ra
+    from subvertpy.ra import Auth, RemoteAccess
+
+    auth = Auth([
+        ra.get_simple_provider(),
+        ra.get_username_provider(),
+        ra.get_ssl_client_cert_file_provider(),
+        ra.get_ssl_client_cert_pw_file_provider(),
+        ra.get_ssl_server_trust_file_provider(),
+    ])
+    # Optionally hardcode a default username/password rather than
+    # reading from ~/.subversion or prompting:
+    # auth.set_parameter(subvertpy.AUTH_PARAM_DEFAULT_USERNAME, "alice")
+    # auth.set_parameter(subvertpy.AUTH_PARAM_DEFAULT_PASSWORD, "s3cret")
+    conn = RemoteAccess("https://svn.example.com/repo", auth=auth)
+
+Providers are tried in order. The ``get_*_provider`` functions read
+cached credentials from ``~/.subversion``; the ``get_*_prompt_provider``
+variants invoke a Python callback to obtain credentials interactively.
+See ``examples/ra_auth.py`` for a fuller example, including SSL server
+trust handling.
+"""
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 
