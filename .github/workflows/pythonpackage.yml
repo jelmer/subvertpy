@@ -116,12 +116,20 @@ jobs:
       if: "matrix.os == 'windows-latest'"
     - name: Coverage test suite run (Linux)
       run: |
-        pytest -sv --cov=subvertpy tests
+        pytest -sv --cov=subvertpy tests --ignore=tests/integration
       if: "matrix.os == 'ubuntu-latest'"
     - name: Coverage test suite run
       run: |
-        pytest -sv --cov=subvertpy tests
+        pytest -sv --cov=subvertpy tests --ignore=tests/integration
       if: "matrix.os == 'macos-latest'"
+    - name: Install integration test servers (Linux)
+      run: |
+        sudo apt install -y apache2 libapache2-mod-svn
+      if: "matrix.os == 'ubuntu-latest'"
+    - name: Integration test suite run (Linux)
+      run: |
+        pytest -sv tests/integration
+      if: "matrix.os == 'ubuntu-latest'"
     - name: Copy DLLs for test run
       run: |
         Copy-Item "${{ env.VCPKG_INSTALL_DIR }}\bin\*.dll" subvertpy\
@@ -129,5 +137,5 @@ jobs:
     - name: Test suite run
       run: |
         # using coverage on windows make some tests fail so only run tests
-        pytest -sv tests
+        pytest -sv tests --ignore=tests/integration
       if: "matrix.os == 'windows-latest'"

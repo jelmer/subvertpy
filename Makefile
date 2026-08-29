@@ -24,6 +24,11 @@ install::
 check:: build-inplace
 	$(RUNTEST) $(TEST_OPTIONS) tests.test_suite
 
+# Runs the ra tests against svn:// and http://, which need svnserve and
+# Apache with mod_dav_svn respectively; tests skip if those are missing.
+check-integration:: build-inplace
+	$(RUNTEST) $(TEST_OPTIONS) tests.integration.test_suite
+
 gdb-check::
 	$(MAKE) check DEBUGGER="gdb --args"
 

@@ -60,9 +60,7 @@ class TestRemoteAccess(SubversionTestCase):
     def setUp(self):
         super().setUp()
         self.repos_url = self.make_repository("d")
-        self.ra = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()])
-        )
+        self.ra = ra.RemoteAccess(self.repos_url, auth=self.make_auth())
 
     def tearDown(self):
         del self.ra
@@ -754,7 +752,7 @@ class TestEditorOperations(SubversionTestCase):
         dc.delete("todelete")
         dc.close()
 
-        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=self.make_auth())
         self.assertEqual(NODE_NONE, r.check_path("todelete", 2))
 
     def test_open_directory(self):
@@ -768,7 +766,7 @@ class TestEditorOperations(SubversionTestCase):
         subdir.add_file("mydir/another").modify(b"more")
         dc.close()
 
-        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=self.make_auth())
         stream = BytesIO()
         r.get_file("mydir/another", stream, 2)
         stream.seek(0)
@@ -780,7 +778,7 @@ class TestEditorOperations(SubversionTestCase):
         subdir.change_prop("myprop", "myval")
         dc.close()
 
-        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=self.make_auth())
         (_dirents, _rev, props) = r.get_dir("propdir", 1)
         self.assertIn("myprop", props)
         self.assertEqual(b"myval", props["myprop"])
@@ -788,7 +786,7 @@ class TestEditorOperations(SubversionTestCase):
     def test_absent_file(self):
         # absent_file is used by editors to signal a file is not present
         # We test it via the low-level commit editor
-        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=self.make_auth())
         editor = r.get_commit_editor({"svn:log": "absent test"})
         root = editor.open_root()
         root.absent_file("ghost")
@@ -796,7 +794,7 @@ class TestEditorOperations(SubversionTestCase):
         editor.close()
 
     def test_absent_directory(self):
-        r = ra.RemoteAccess(self.repos_url, auth=ra.Auth([ra.get_username_provider()]))
+        r = ra.RemoteAccess(self.repos_url, auth=self.make_auth())
         editor = r.get_commit_editor({"svn:log": "absent dir test"})
         root = editor.open_root()
         root.absent_directory("ghostdir")
@@ -946,9 +944,7 @@ class TestRemoteAccessProperties(SubversionTestCase):
     def setUp(self):
         super().setUp()
         self.repos_url = self.make_repository("d")
-        self.ra_ctx = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()])
-        )
+        self.ra_ctx = ra.RemoteAccess(self.repos_url, auth=self.make_auth())
 
     def tearDown(self):
         del self.ra_ctx
@@ -1266,7 +1262,7 @@ class TestRemoteAccessProperties(SubversionTestCase):
 
         ra_ctx = ra.RemoteAccess(
             self.repos_url,
-            auth=ra.Auth([ra.get_username_provider()]),
+            auth=self.make_auth(),
             client_string_func=client_string_func,
         )
         self.assertIsNotNone(ra_ctx)
@@ -1276,7 +1272,7 @@ class TestRemoteAccessProperties(SubversionTestCase):
     def test_constructor_uuid(self):
         ra_ctx = ra.RemoteAccess(
             self.repos_url,
-            auth=ra.Auth([ra.get_username_provider()]),
+            auth=self.make_auth(),
             uuid=self.ra_ctx.get_uuid(),
         )
         self.assertIsNotNone(ra_ctx)
@@ -1290,7 +1286,7 @@ class TestRemoteAccessProperties(SubversionTestCase):
 
         ra_ctx = ra.RemoteAccess(
             self.repos_url,
-            auth=ra.Auth([ra.get_username_provider()]),
+            auth=self.make_auth(),
             progress_cb=progress_cb,
         )
         ra_ctx.get_latest_revnum()
@@ -1311,7 +1307,7 @@ class TestRemoteAccessProperties(SubversionTestCase):
 
         ra_ctx = ra.RemoteAccess(
             self.repos_url,
-            auth=ra.Auth([ra.get_username_provider()]),
+            auth=self.make_auth(),
             open_tmp_file_func=open_tmp_file,
         )
         self.assertIsNotNone(ra_ctx)
@@ -1324,9 +1320,7 @@ class TestRemoteAccessProperties(SubversionTestCase):
         def progress_cb(progress, total):
             progress_calls.append((progress, total))
 
-        ra_ctx = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()])
-        )
+        ra_ctx = ra.RemoteAccess(self.repos_url, auth=self.make_auth())
         ra_ctx.progress_func = progress_cb
         ra_ctx.get_latest_revnum()
         del ra_ctx
@@ -1335,9 +1329,7 @@ class TestRemoteAccessProperties(SubversionTestCase):
         from subvertpy import client
 
         config = client.get_config()
-        ra_ctx = ra.RemoteAccess(
-            self.repos_url, auth=ra.Auth([ra.get_username_provider()]), config=config
-        )
+        ra_ctx = ra.RemoteAccess(self.repos_url, auth=self.make_auth(), config=config)
         self.assertIsNotNone(ra_ctx)
         ra_ctx.get_latest_revnum()
         del ra_ctx

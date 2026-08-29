@@ -12,6 +12,12 @@
     Malformed properties now raise ``InvalidMergeinfoProperty`` rather than
     tripping an assertion. (Jelmer Vernooĳ, #22)
 
+  * Add an integration test suite that runs the ra tests against svn:// and
+    http:// as well as file://, since some bugs only show up in a specific
+    ra backend. Run it with ``make check-integration``; the tests skip when
+    svnserve or Apache with mod_dav_svn is not installed.
+    (Jelmer Vernooĳ, #19)
+
 0.12.0	2026-03-17
 
  IMPROVEMENTS
