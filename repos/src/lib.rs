@@ -30,7 +30,7 @@ fn create(
     let _ = (config, fs_config);
 
     let py_str = pyo3::types::PyString::new(py, path);
-    let repos_path = py_to_svn_dirent(&py_str.as_any())?;
+    let repos_path = py_to_svn_dirent(py_str.as_any())?;
     let path_buf = std::path::Path::new(&repos_path);
 
     let repos = subversion::repos::Repos::create(path_buf).map_err(|e| svn_err_to_py(e))?;
@@ -42,7 +42,7 @@ fn create(
 #[pyfunction]
 fn delete(py: Python, path: &str) -> PyResult<()> {
     let py_str = pyo3::types::PyString::new(py, path);
-    let repos_path = py_to_svn_dirent(&py_str.as_any())?;
+    let repos_path = py_to_svn_dirent(py_str.as_any())?;
     let path_buf = std::path::Path::new(&repos_path);
 
     subversion::repos::delete(path_buf).map_err(|e| svn_err_to_py(e))
@@ -74,9 +74,9 @@ fn hotcopy(
     incremental: bool,
 ) -> PyResult<()> {
     let py_src = pyo3::types::PyString::new(py, src_path);
-    let src = py_to_svn_dirent(&py_src.as_any())?;
+    let src = py_to_svn_dirent(py_src.as_any())?;
     let py_dest = pyo3::types::PyString::new(py, dest_path);
-    let dest = py_to_svn_dirent(&py_dest.as_any())?;
+    let dest = py_to_svn_dirent(py_dest.as_any())?;
 
     let src_path = std::path::Path::new(&src);
     let dest_path = std::path::Path::new(&dest);

@@ -1,4 +1,8 @@
 //! Remote Access Session Python bindings
+//!
+//! Argument counts here mirror the Subversion C API and the public
+//! Python API, so they are not condensed into structs.
+#![allow(clippy::too_many_arguments)]
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
@@ -343,8 +347,8 @@ impl RemoteAccess {
         let path = subvertpy_util::to_relpath(path)?;
 
         let rev = revnum
-            .and_then(|r| subvertpy_util::to_revnum(r))
-            .unwrap_or_else(|| subversion::Revnum::invalid());
+            .and_then(subvertpy_util::to_revnum)
+            .unwrap_or_else(subversion::Revnum::invalid);
 
         let mut buffer: Vec<u8> = Vec::new();
         let mut svn_stream =
@@ -1146,7 +1150,7 @@ impl RemoteAccess {
         // 2. The C pointers in reporter point to this memory
         // 3. When Reporter is dropped, the editor is dropped, cleaning up properly
         let boxed_editor_static: Box<subversion::delta::WrapEditor<'static>> =
-            unsafe { Box::from_raw(editor_ptr as *mut subversion::delta::WrapEditor<'static>) };
+            unsafe { Box::from_raw(editor_ptr) };
 
         Ok(crate::reporter::Reporter::new_with_session_and_editor(
             reporter,
@@ -1204,7 +1208,7 @@ impl RemoteAccess {
         };
 
         let boxed_editor_static: Box<subversion::delta::WrapEditor<'static>> =
-            unsafe { Box::from_raw(editor_ptr as *mut subversion::delta::WrapEditor<'static>) };
+            unsafe { Box::from_raw(editor_ptr) };
 
         Ok(crate::reporter::Reporter::new_with_session_and_editor(
             reporter,
@@ -1264,7 +1268,7 @@ impl RemoteAccess {
         };
 
         let boxed_editor_static: Box<subversion::delta::WrapEditor<'static>> =
-            unsafe { Box::from_raw(editor_ptr as *mut subversion::delta::WrapEditor<'static>) };
+            unsafe { Box::from_raw(editor_ptr) };
 
         Ok(crate::reporter::Reporter::new_with_session_and_editor(
             reporter,

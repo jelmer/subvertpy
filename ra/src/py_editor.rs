@@ -8,6 +8,13 @@ use pyo3::types::PyBytes;
 use subversion::delta::{DirectoryEditor, Editor, FileEditor};
 use subvertpy_util::error::py_err_to_svn;
 
+/// Handler invoked for each text delta window.
+type WindowHandler = Box<
+    dyn for<'b> Fn(
+        &'b mut subversion::delta::TxDeltaWindow,
+    ) -> Result<(), subversion::Error<'static>>,
+>;
+
 /// Wrapper for a Python editor object
 pub struct PyEditorWrapper {
     py_editor: Py<PyAny>,
@@ -232,14 +239,7 @@ impl FileEditor for PyFileEditorWrapper {
     fn apply_textdelta(
         &mut self,
         base_checksum: Option<&str>,
-    ) -> Result<
-        Box<
-            dyn for<'b> Fn(
-                &'b mut subversion::delta::TxDeltaWindow,
-            ) -> Result<(), subversion::Error<'static>>,
-        >,
-        subversion::Error<'static>,
-    > {
+    ) -> Result<WindowHandler, subversion::Error<'static>> {
         Python::attach(|py| {
             let handler = self
                 .py_file
@@ -247,16 +247,12 @@ impl FileEditor for PyFileEditorWrapper {
                 .map_err(|e| py_err_to_svn(e))?;
 
             if handler.is_none(py) {
-                let noop: Box<
-                    dyn for<'b> Fn(
-                        &'b mut subversion::delta::TxDeltaWindow,
-                    ) -> Result<(), subversion::Error<'static>>,
-                > = Box::new(|_window| Ok(()));
+                let noop: WindowHandler = Box::new(|_window| Ok(()));
                 return Ok(noop);
             }
 
             let handler_obj = handler.clone_ref(py);
-            let closure: Box<dyn for<'b> Fn(&'b mut subversion::delta::TxDeltaWindow) -> Result<(), subversion::Error<'static>>> =
+            let closure: WindowHandler =
                 Box::new(move |window: &mut subversion::delta::TxDeltaWindow| -> Result<(), subversion::Error<'static>> {
                 Python::attach(|py| {
                     if window.as_ptr().is_null() {
@@ -272,7 +268,7 @@ impl FileEditor for PyFileEditorWrapper {
                         ops.iter().map(|&(action, offset, length)| {
                             (action, offset, length)
                         }),
-                    ).map_err(|e| py_err_to_svn(e))?;
+                    ).map_err(py_err_to_svn)?;
                     let new_data = PyBytes::new(py, window.new_data());
                     let py_window = (
                         window.sview_offset(),

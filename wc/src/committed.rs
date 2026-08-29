@@ -1,4 +1,8 @@
 //! CommittedQueue Python bindings
+//!
+//! Argument counts here mirror the Subversion C API and the public
+//! Python API, so they are not condensed into structs.
+#![allow(clippy::too_many_arguments)]
 
 use pyo3::prelude::*;
 use subvertpy_util::error::svn_err_to_py;
