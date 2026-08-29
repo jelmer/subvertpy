@@ -1,3 +1,12 @@
+0.12.1	UNRELEASED
+
+ BUG FIXES
+
+  * Accept relative merge source paths in ``svn:mergeinfo`` properties,
+    converting them to absolute paths like ``svn_mergeinfo_parse`` does.
+    Malformed properties now raise ``InvalidMergeinfoProperty`` rather than
+    tripping an assertion. (Jelmer Vernooĳ, #22)
+
 0.12.0	2026-03-17
 
  IMPROVEMENTS

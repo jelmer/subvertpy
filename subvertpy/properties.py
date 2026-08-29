@@ -33,6 +33,10 @@ class InvalidExternalsDescription(Exception):
     _fmt = """Unable to parse externals description."""
 
 
+class InvalidMergeinfoProperty(Exception):
+    _fmt = """Unable to parse mergeinfo property."""
+
+
 def is_valid_property_name(prop):
     """Check the validity of a property name.
 
@@ -144,27 +148,53 @@ def parse_externals_description(base_url, val):
     return ret
 
 
+def canonicalize_mergeinfo_path(path):
+    """Canonicalize a merge source path.
+
+    Merge source paths are absolute from the repository root, but relative
+    paths are tolerated in the property text and converted to absolute ones.
+    This mirrors svn_fspath__canonicalize().
+
+    :param path: Merge source path
+    :return: Canonical path, starting with a slash
+    """
+    segments = [s for s in path.split("/") if s not in ("", ".")]
+    return "/" + "/".join(segments)
+
+
 def parse_mergeinfo_property(text):
     """Parse a mergeinfo property.
 
+    Relative merge source paths are converted to absolute paths. A path that
+    occurs both with and without a leading slash ends up under a single key,
+    with the ranges combined.
+
     :param text: Property contents
+    :return: Dictionary mapping paths to lists of ranges
+    :raise InvalidMergeinfoProperty: If the property can not be parsed
     """
     ret = {}
     for line in text.splitlines():
-        (path, ranges) = line.rsplit(":", 1)
-        assert path.startswith("/")
-        ret[path] = []
+        try:
+            (path, ranges) = line.rsplit(":", 1)
+        except ValueError:
+            raise InvalidMergeinfoProperty(f"missing ':' in line {line!r}") from None
+        path = canonicalize_mergeinfo_path(path)
+        parsed = ret.setdefault(path, [])
         for range in ranges.split(","):
-            if range[-1] == "*":
+            if range.endswith("*"):
                 inheritable = False
                 range = range[:-1]
             else:
                 inheritable = True
-            try:
-                (start, end) = range.split("-", 1)
-                ret[path].append((int(start), int(end), inheritable))
-            except ValueError:
-                ret[path].append((int(range), int(range), inheritable))
+            (start, sep, end) = range.partition("-")
+            if not sep:
+                end = start
+            if not start.isdigit() or not end.isdigit():
+                raise InvalidMergeinfoProperty(
+                    f"invalid revision range {range!r} for {path!r}"
+                )
+            parsed.append((int(start), int(end), inheritable))
 
     return ret
 
@@ -172,7 +202,8 @@ def parse_mergeinfo_property(text):
 def generate_mergeinfo_property(merges):
     """Generate the contents of the svn:mergeinfo property.
 
-    :param merges: dictionary mapping paths to lists of ranges
+    :param merges: dictionary mapping paths to lists of ranges; relative
+        paths are written out as absolute ones
     :return: Property contents
     """
 
@@ -188,7 +219,7 @@ def generate_mergeinfo_property(merges):
 
     text = ""
     for path, ranges in merges.items():
-        assert path.startswith("/")
+        path = canonicalize_mergeinfo_path(path)
         text += "{}:{}\n".format(path, ",".join(map(formatrange, ranges)))
     return text
 
@@ -243,14 +274,13 @@ def range_add_revnum(ranges, revnum, inheritable=True):
 def mergeinfo_includes_revision(merges, path, revnum):
     """Check if the specified mergeinfo contains a path in revnum.
 
-    :param merges: Dictionary with merges
-    :param path: Merged path
+    :param merges: Dictionary with merges, keyed by absolute path
+    :param path: Merged path; relative paths are treated as absolute
     :param revnum: Revision number
     :return: Whether the revision is included
     """
-    assert path.startswith("/")
     try:
-        ranges = merges[path]
+        ranges = merges[canonicalize_mergeinfo_path(path)]
     except KeyError:
         return False
 
@@ -260,12 +290,12 @@ def mergeinfo_includes_revision(merges, path, revnum):
 def mergeinfo_add_revision(mergeinfo, path, revnum):
     """Add a revision to a mergeinfo dictionary.
 
-    :param mergeinfo: Merginfo dictionary
-    :param path: Merged path to add
+    :param mergeinfo: Merginfo dictionary, keyed by absolute path
+    :param path: Merged path to add; relative paths are treated as absolute
     :param revnum: Merged revision to add
     :return: Updated dictionary
     """
-    assert path.startswith("/")
+    path = canonicalize_mergeinfo_path(path)
     mergeinfo[path] = range_add_revnum(mergeinfo.get(path, []), revnum)
     return mergeinfo
 
