@@ -1,3 +1,10 @@
+0.12.1	UNRELEASED
+
+ IMPROVEMENTS
+
+  * Support the context manager protocol in the ``ra_svn`` editors,
+    matching the editors in the extension modules. (Jelmer Vernooĳ, #21)
+
 0.12.0	2026-03-17
 
  IMPROVEMENTS
