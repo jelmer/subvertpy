@@ -83,6 +83,22 @@ def wait_until_listening(port, process, timeout=10.0):
     raise AssertionError(f"server did not listen on port {port} within {timeout}s")
 
 
+def missing_dependency(reason):
+    """Skip because a server is not installed, or fail if it should be.
+
+    CI installs the servers on purpose, so a skip there means the install
+    silently stopped working and the backend is no longer being tested.
+    Setting SUBVERTPY_REQUIRE_INTEGRATION turns that into a failure.
+
+    :param reason: Which dependency is missing
+    :raise AssertionError: If the dependency was required
+    :raise unittest.SkipTest: Otherwise
+    """
+    if os.environ.get("SUBVERTPY_REQUIRE_INTEGRATION"):
+        raise AssertionError(f"{reason}, but SUBVERTPY_REQUIRE_INTEGRATION is set")
+    raise unittest.SkipTest(reason)
+
+
 def stop_process_group(process, timeout=10.0):
     """Stop a server and any children it forked.
 

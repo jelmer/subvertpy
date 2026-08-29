@@ -35,6 +35,7 @@ from tests import SubversionTestCase, test_ra
 from tests.integration import (
     allocate_port,
     find_executable,
+    missing_dependency,
     stop_process_group,
     wait_until_listening,
 )
@@ -87,10 +88,10 @@ class SerfTestCase(SubversionTestCase):
             "httpd", HTTPD_DIRS
         )
         if self.httpd is None:
-            raise unittest.SkipTest("apache2/httpd not available")
+            missing_dependency("apache2/httpd not available")
         self.module_dir = find_module_dir()
         if self.module_dir is None:
-            raise unittest.SkipTest("mod_dav_svn not available")
+            missing_dependency("mod_dav_svn not available")
         # Set before super(), which already creates a repository and so
         # reaches repository_url() below.
         self.server = None

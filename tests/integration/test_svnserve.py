@@ -17,7 +17,6 @@
 
 import os
 import subprocess
-import unittest
 
 from subvertpy import ra
 from subvertpy.ra import Auth
@@ -29,6 +28,7 @@ from tests import SubversionTestCase, test_ra
 from tests.integration import (
     allocate_port,
     find_executable,
+    missing_dependency,
     stop_process_group,
     wait_until_listening,
 )
@@ -47,7 +47,7 @@ class SvnserveTestCase(SubversionTestCase):
     def setUp(self):
         self.svnserve = find_executable("svnserve", SVNSERVE_DIRS)
         if self.svnserve is None:
-            raise unittest.SkipTest("svnserve not available")
+            missing_dependency("svnserve not available")
         # Set before super(), which already creates a repository and so
         # reaches repository_url() below.
         self.server = None
