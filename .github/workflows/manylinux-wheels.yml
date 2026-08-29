@@ -2,23 +2,21 @@ name: manylinux-wheels
 on: [push, pull_request]
 jobs:
   manylinux:
-    name: subvertpy manylinux ${{ matrix.python-version }} wheel build
+    name: subvertpy manylinux abi3 wheel build
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    env:
+      PY_LIMITED_API: "3.10"
     steps:
       - name: Checkout subvertpy code
         uses: actions/checkout@v7
-      - name: Install Python ${{ matrix.python-version }}
+      - name: Install Python ${{ env.PY_LIMITED_API }}
         uses: actions/setup-python@v7
         id: python-install
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PY_LIMITED_API }}
       - name: Sets CIBW_BUILD environment variable
         env:
-          pyVer: "${{matrix.python-version}}"
+          pyVer: "${{env.PY_LIMITED_API}}"
         run: |
           echo "CIBW_BUILD=cp${pyVer/./}-manylinux_x86_64" >> $GITHUB_ENV
       - name: Build subvertpy wheel with cibuildwheel
@@ -48,6 +46,6 @@ jobs:
         working-directory: wheelhouse
       - uses: actions/upload-artifact@v4
         with:
-          name: subvertpy-wheel-manylinux-${{ matrix.python-version }}
+          name: subvertpy-wheel-manylinux-${{ env.PY_LIMITED_API }}
           path: ./wheelhouse/*.whl
 
