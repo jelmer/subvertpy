@@ -23,7 +23,6 @@ import base64
 import hashlib
 import os
 import subprocess
-import unittest
 
 from subvertpy import ra
 from subvertpy.ra import Auth
@@ -192,22 +191,8 @@ DocumentRoot {server_dir}
 """
 
 
-# ra_serf passes the delta handler from svn_file_rev_handler_t straight to
-# svn_txdelta_parse_svndiff() without checking it for NULL
-# (libsvn_ra_serf/blame.c), so a file_rev handler that returns no window
-# callback segfaults the process. svn_delta.h documents NULL/NULL as
-# allowed, and both ra_local and ra_svn check for it.
-SERF_NULL_DELTA_HANDLER_CRASH = (
-    "segfaults in ra_serf: NULL delta handler is not checked for"
-)
-
-
 class SerfRemoteAccessTests(SerfTestCase, test_ra.TestRemoteAccess):
-    def test_get_file_revs(self):
-        raise unittest.SkipTest(SERF_NULL_DELTA_HANDLER_CRASH)
-
-    def test_get_file_revs_include_merged(self):
-        raise unittest.SkipTest(SERF_NULL_DELTA_HANDLER_CRASH)
+    pass
 
 
 class SerfEditorTests(SerfTestCase, test_ra.TestEditorOperations):

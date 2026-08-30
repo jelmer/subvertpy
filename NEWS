@@ -18,6 +18,9 @@
     svnserve or Apache with mod_dav_svn is not installed.
     (Jelmer Vernooĳ, #19)
 
+  * Require subversion 0.1.13, which fixes a segfault over http:// when a
+    get_file_revs callback asks for no text delta. (Jelmer Vernooĳ)
+
 0.12.0	2026-03-17
 
  IMPROVEMENTS
