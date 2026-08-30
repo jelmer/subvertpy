@@ -69,7 +69,9 @@ url_handlers = {
 }
 
 
-def RemoteAccess(url, *args, **kwargs):
+def RemoteAccess(
+    url: str | bytes, *args: object, **kwargs: object
+) -> "_ra.RemoteAccess":
     """Connect to a remote Subversion server.
 
     :param url: URL to connect to

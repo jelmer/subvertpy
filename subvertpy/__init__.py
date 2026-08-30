@@ -17,6 +17,7 @@
 """Python bindings for Subversion."""
 
 import os
+from types import ModuleType
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 __version__ = (0, 12, 0)
@@ -117,7 +118,13 @@ if os.path.exists(_wheel_libs_dir) or os.path.exists(_wheel_dylibs_dir):
 class SubversionException(Exception):
     """A Subversion exception."""
 
-    def __init__(self, msg, num, child=None, location=None):
+    def __init__(
+        self,
+        msg: str,
+        num: int,
+        child: "SubversionException | None" = None,
+        location: tuple[str, int] | None = None,
+    ) -> None:
         self.args = (msg, num)
         self.child = child
         self.location = location
@@ -412,13 +419,14 @@ _error_code_to_class: dict[int, type[SubversionException]] = {
 }
 
 
-def _check_mtime(m):
+def _check_mtime(m: ModuleType) -> bool:
     """Check whether a C extension is out of date.
 
     :param m: Python module that is a C extension
     """
     import os
 
+    assert m.__file__ is not None
     (base, _) = os.path.splitext(m.__file__)
     c_file = f"{base}.c"
     if not os.path.exists(c_file):

@@ -37,7 +37,7 @@ class InvalidMergeinfoProperty(Exception):
     _fmt = """Unable to parse mergeinfo property."""
 
 
-def is_valid_property_name(prop):
+def is_valid_property_name(prop: str) -> bool:
     """Check the validity of a property name.
 
     :param prop: Property name
@@ -51,7 +51,7 @@ def is_valid_property_name(prop):
     return True
 
 
-def time_to_cstring(timestamp):
+def time_to_cstring(timestamp: int) -> str:
     """Determine string representation of a time.
 
     :param timestamp: Number of microseconds since the start of 1970
@@ -72,7 +72,7 @@ def time_to_cstring(timestamp):
     return f"{tm_year:04d}-{tm_mon:02d}-{tm_mday:02d}T{tm_hour:02d}:{tm_min:02d}:{tm_sec:02d}.{tm_usec:06d}Z"
 
 
-def time_from_cstring(text):
+def time_from_cstring(text: str) -> int:
     """Parse a time from a cstring.
 
     :param text: Parse text
@@ -85,7 +85,9 @@ def time_from_cstring(text):
     return int(calendar.timegm(tm)) * 1000000 + tm_usec
 
 
-def parse_externals_description(base_url, val):
+def parse_externals_description(
+    base_url: str, val: str
+) -> dict[str, tuple[int | None, str]]:
     """Parse an svn:externals property value.
 
     :param base_url: URL on which the property is set. Used for
@@ -96,10 +98,10 @@ def parse_externals_description(base_url, val):
               set to None if not applicable.
     """
 
-    def is_url(u):
+    def is_url(u: str) -> bool:
         return "://" in u
 
-    ret = {}
+    ret: dict[str, tuple[int | None, str]] = {}
     for line in val.splitlines():
         if line == "" or line[0] == "#":
             continue
@@ -148,7 +150,7 @@ def parse_externals_description(base_url, val):
     return ret
 
 
-def canonicalize_mergeinfo_path(path):
+def canonicalize_mergeinfo_path(path: str) -> str:
     """Canonicalize a merge source path.
 
     Merge source paths are absolute from the repository root, but relative
@@ -162,7 +164,9 @@ def canonicalize_mergeinfo_path(path):
     return "/" + "/".join(segments)
 
 
-def parse_mergeinfo_property(text):
+def parse_mergeinfo_property(
+    text: str,
+) -> dict[str, list[tuple[int, int, bool]]]:
     """Parse a mergeinfo property.
 
     Relative merge source paths are converted to absolute paths. A path that
@@ -173,7 +177,7 @@ def parse_mergeinfo_property(text):
     :return: Dictionary mapping paths to lists of ranges
     :raise InvalidMergeinfoProperty: If the property can not be parsed
     """
-    ret = {}
+    ret: dict[str, list[tuple[int, int, bool]]] = {}
     for line in text.splitlines():
         try:
             (path, ranges) = line.rsplit(":", 1)
@@ -199,7 +203,9 @@ def parse_mergeinfo_property(text):
     return ret
 
 
-def generate_mergeinfo_property(merges):
+def generate_mergeinfo_property(
+    merges: dict[str, list[tuple[int, int, bool]]],
+) -> str:
     """Generate the contents of the svn:mergeinfo property.
 
     :param merges: dictionary mapping paths to lists of ranges; relative
@@ -207,7 +213,7 @@ def generate_mergeinfo_property(merges):
     :return: Property contents
     """
 
-    def formatrange(range_params):
+    def formatrange(range_params: tuple[int, int, bool]) -> str:
         (start, end, inheritable) = range_params
         suffix = ""
         if not inheritable:
@@ -224,7 +230,7 @@ def generate_mergeinfo_property(merges):
     return text
 
 
-def range_includes_revnum(ranges, revnum):
+def range_includes_revnum(ranges: list[tuple[int, int, bool]], revnum: int) -> bool:
     """Check if the specified range contains the mentioned revision number.
 
     :param ranges: list of ranges
@@ -238,7 +244,11 @@ def range_includes_revnum(ranges, revnum):
     return start <= revnum <= end
 
 
-def range_add_revnum(ranges, revnum, inheritable=True):
+def range_add_revnum(
+    ranges: list[tuple[int, int, bool]],
+    revnum: int,
+    inheritable: bool = True,
+) -> list[tuple[int, int, bool]]:
     """Add revision number to a list of ranges.
 
     :param ranges: List of ranges
@@ -271,7 +281,9 @@ def range_add_revnum(ranges, revnum, inheritable=True):
     return ranges
 
 
-def mergeinfo_includes_revision(merges, path, revnum):
+def mergeinfo_includes_revision(
+    merges: dict[str, list[tuple[int, int, bool]]], path: str, revnum: int
+) -> bool:
     """Check if the specified mergeinfo contains a path in revnum.
 
     :param merges: Dictionary with merges, keyed by absolute path
@@ -287,7 +299,9 @@ def mergeinfo_includes_revision(merges, path, revnum):
     return range_includes_revnum(ranges, revnum)
 
 
-def mergeinfo_add_revision(mergeinfo, path, revnum):
+def mergeinfo_add_revision(
+    mergeinfo: dict[str, list[tuple[int, int, bool]]], path: str, revnum: int
+) -> dict[str, list[tuple[int, int, bool]]]:
     """Add a revision to a mergeinfo dictionary.
 
     :param mergeinfo: Merginfo dictionary, keyed by absolute path
@@ -326,7 +340,9 @@ PROP_REVISION_DATE = "svn:date"
 PROP_REVISION_ORIGINAL_DATE = "svn:original-date"
 
 
-def diff(current, previous):
+def diff(
+    current: dict[str, bytes], previous: dict[str, bytes]
+) -> dict[str, tuple[bytes | None, bytes]]:
     """Find the differences between two property dictionaries.
 
     :param current: Dictionary with current (new) properties
@@ -335,7 +351,7 @@ def diff(current, previous):
              each property that was changed. Value is a tuple
              with the old and the new property value.
     """
-    ret = {}
+    ret: dict[str, tuple[bytes | None, bytes]] = {}
     for key, newval in current.items():
         oldval = previous.get(key)
         if oldval != newval:

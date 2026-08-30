@@ -16,21 +16,23 @@
 
 """Marshalling for the svn_ra protocol."""
 
+from typing import Any
+
 
 class literal:
     """A protocol literal."""
 
-    def __init__(self, txt):
+    def __init__(self, txt: str) -> None:
         self.txt = txt
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.txt
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.txt
 
-    def __eq__(self, other):
-        return isinstance(self, type(other)) and self.txt == other.txt
+    def __eq__(self, other: object) -> bool:
+        return isinstance(self, type(other)) and self.txt == other.txt  # type: ignore[attr-defined]
 
 
 # 1. Syntactic structure
@@ -57,7 +59,7 @@ class NeedMoreData(MarshallError):
     """More data needed."""
 
 
-def marshall(x):
+def marshall(x: Any) -> bytes:
     """Marshall a Python data item.
 
     :param x: Data item
@@ -79,7 +81,7 @@ def marshall(x):
     raise MarshallError(f"Unable to marshall type {x}")
 
 
-def unmarshall(x):
+def unmarshall(x: bytes) -> tuple[bytes, Any]:
     """Unmarshall the next item from a buffer.
 
     :param x: Bytes to parse
@@ -94,7 +96,7 @@ def unmarshall(x):
         if x[1:2] != b" ":
             raise MarshallError("missing whitespace after list start")
         x = x[2:]
-        ret = []
+        ret: list[Any] = []
         try:
             while x[0:1] != b")":
                 (x, n) = unmarshall(x)
@@ -110,12 +112,12 @@ def unmarshall(x):
 
         return (x[2:], ret)
     elif x[0:1].isdigit():
-        num = bytearray()
+        num_buf = bytearray()
         # Check if this is a string or a number
         while x[:1].isdigit():
-            num.append(x[0])
+            num_buf.append(x[0])
             x = x[1:]
-        num = int(num)
+        num = int(num_buf)
 
         if x[0] in whitespace:
             return (x[1:], num)
@@ -128,11 +130,11 @@ def unmarshall(x):
         else:
             raise MarshallError(f"Expected whitespace or ':', got '{chr(x[0])}'")
     elif x[:1].isalpha():
-        ret = bytearray()
+        lit_buf = bytearray()
         # Parse literal
         try:
             while x[:1].isalpha() or x[:1].isdigit() or x[0:1] == b"-":
-                ret.append(x[0])
+                lit_buf.append(x[0])
                 x = x[1:]
         except IndexError:
             raise NeedMoreData("Expected literal")
@@ -143,6 +145,6 @@ def unmarshall(x):
         if x[0] not in whitespace:
             raise MarshallError(f"Expected whitespace, got '{chr(x[0])}'")
 
-        return (x[1:], literal(ret.decode("ascii")))
+        return (x[1:], literal(lit_buf.decode("ascii")))
     else:
         raise MarshallError(f"Unexpected character '{chr(x[0])}'")
