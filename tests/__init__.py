@@ -219,15 +219,7 @@ class SubversionTestCase(TestCaseInTempDir):
 
     def _init_client(self):
         self.client_ctx = client.Client()
-        self.client_ctx.auth = Auth(
-            [
-                ra.get_simple_provider(),
-                ra.get_username_provider(),
-                ra.get_ssl_client_cert_file_provider(),
-                ra.get_ssl_client_cert_pw_file_provider(),
-                ra.get_ssl_server_trust_file_provider(),
-            ]
-        )
+        self.client_ctx.auth = self.make_client_auth()
         self.client_ctx.log_msg_func = self.log_message_func
         # self.client_ctx.notify_func = lambda err: mutter("Error: %s" % err)
 
@@ -262,6 +254,39 @@ class SubversionTestCase(TestCaseInTempDir):
                     f.write("#!/bin/sh\n")
                 os.chmod(revprop_hook, os.stat(revprop_hook).st_mode | 0o111)
 
+        return self.repository_url(abspath)
+
+    def make_client_auth(self):
+        """Return an Auth for the client context.
+
+        Subclasses override this when their backend needs credentials.
+        """
+        return Auth(
+            [
+                ra.get_simple_provider(),
+                ra.get_username_provider(),
+                ra.get_ssl_client_cert_file_provider(),
+                ra.get_ssl_client_cert_pw_file_provider(),
+                ra.get_ssl_server_trust_file_provider(),
+            ]
+        )
+
+    def make_auth(self):
+        """Return an Auth suitable for connecting to test repositories.
+
+        Subclasses override this when their backend needs credentials.
+        """
+        return Auth([ra.get_username_provider()])
+
+    def repository_url(self, abspath):
+        """Return the URL to access a repository at abspath.
+
+        Subclasses override this to serve the repository over a different
+        ra backend; the default is ra_local.
+
+        :param abspath: Path of the repository on disk
+        :return: URL for the repository
+        """
         if sys.platform == "win32":
             return f"file:{pathname2url(abspath)}"
         else:
@@ -455,9 +480,7 @@ class SubversionTestCase(TestCaseInTempDir):
         :param message: Commit message
         :return: Commit editor object
         """
-        ra_ctx = RemoteAccess(
-            url.encode("utf-8"), auth=Auth([ra.get_username_provider()])
-        )
+        ra_ctx = RemoteAccess(url.encode("utf-8"), auth=self.make_auth())
         revnum = ra_ctx.get_latest_revnum()
         return TestCommitEditor(
             ra_ctx.get_commit_editor({"svn:log": message}), ra_ctx.url, revnum

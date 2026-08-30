@@ -42,10 +42,9 @@ jobs:
           client.info('https://svn.pld-linux.org/svn')"
 
           pip3 install pytest
-          cd ../ && rm -rf subvertpy && python3 -m pytest tests
+          cd ../ && rm -rf subvertpy && python3 -m pytest tests --ignore=tests/integration
         working-directory: wheelhouse
       - uses: actions/upload-artifact@v4
         with:
           name: subvertpy-wheel-manylinux-${{ env.PY_LIMITED_API }}
           path: ./wheelhouse/*.whl
-
