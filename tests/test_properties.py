@@ -208,6 +208,56 @@ class MergeInfoPropertyParserTests(TestCase):
     def test_empty(self):
         self.assertEqual({}, properties.parse_mergeinfo_property(""))
 
+    def test_relative_path(self):
+        # Relative merge source paths are legal and are converted to
+        # absolute paths, like svn_mergeinfo_parse() does.
+        self.assertEqual(
+            {"/trunk": [(1, 2, True)]},
+            properties.parse_mergeinfo_property("trunk:1-2\n"),
+        )
+
+    def test_relative_nested_path(self):
+        self.assertEqual(
+            {"/project/branches/a": [(190891, 190931, True)]},
+            properties.parse_mergeinfo_property("project/branches/a:190891-190931\n"),
+        )
+
+    def test_relative_and_absolute_merged(self):
+        # A path that appears both with and without a leading slash ends up
+        # under a single absolute key, with the ranges combined.
+        self.assertEqual(
+            {"/trunk": [(1, 2, True), (7, 7, True)]},
+            properties.parse_mergeinfo_property("/trunk:1-2\ntrunk:7\n"),
+        )
+
+    def test_path_normalised(self):
+        for text in ("//trunk:1-2\n", "trunk/:1-2\n", "./trunk:1-2\n"):
+            self.assertEqual(
+                {"/trunk": [(1, 2, True)]},
+                properties.parse_mergeinfo_property(text),
+            )
+
+    def test_path_with_colon(self):
+        self.assertEqual(
+            {"/a:b": [(1, 2, True)]},
+            properties.parse_mergeinfo_property("a:b:1-2\n"),
+        )
+
+    def test_invalid_no_colon(self):
+        self.assertRaises(
+            properties.InvalidMergeinfoProperty,
+            properties.parse_mergeinfo_property,
+            "/trunk\n",
+        )
+
+    def test_invalid_revision(self):
+        for text in ("/trunk:abc\n", "/trunk:-5\n", "/trunk:5-\n", "/trunk:1--5\n"):
+            self.assertRaises(
+                properties.InvalidMergeinfoProperty,
+                properties.parse_mergeinfo_property,
+                text,
+            )
+
 
 class MergeInfoPropertyCreatorTests(TestCase):
     def test_simple_range(self):
@@ -224,6 +274,12 @@ class MergeInfoPropertyCreatorTests(TestCase):
 
     def test_empty(self):
         self.assertEqual("", properties.generate_mergeinfo_property({}))
+
+    def test_relative_path(self):
+        self.assertEqual(
+            "/trunk:1-2\n",
+            properties.generate_mergeinfo_property({"trunk": [(1, 2, True)]}),
+        )
 
 
 class RevnumRangeTests(TestCase):
@@ -292,6 +348,13 @@ class MergeInfoIncludeTests(TestCase):
             )
         )
 
+    def test_includes_relative_path(self):
+        self.assertTrue(
+            properties.mergeinfo_includes_revision(
+                {"/trunk": [(1, 5, True)]}, "trunk", 3
+            )
+        )
+
 
 class MergeInfoAddRevisionTests(TestCase):
     def test_add_new_path(self):
@@ -313,6 +376,12 @@ class MergeInfoAddRevisionTests(TestCase):
         mergeinfo = {"/trunk": [(1, 5, True)]}
         result = properties.mergeinfo_add_revision(mergeinfo, "/trunk", 3)
         self.assertEqual({"/trunk": [(1, 5, True)]}, result)
+
+    def test_add_relative_path(self):
+        self.assertEqual(
+            {"/trunk": [(5, 5, True)]},
+            properties.mergeinfo_add_revision({}, "trunk", 5),
+        )
 
 
 class IsValidPropertyNameTests(TestCase):

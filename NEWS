@@ -5,6 +5,13 @@
   * Support the context manager protocol in the ``ra_svn`` editors,
     matching the editors in the extension modules. (Jelmer Vernooĳ, #21)
 
+ BUG FIXES
+
+  * Accept relative merge source paths in ``svn:mergeinfo`` properties,
+    converting them to absolute paths like ``svn_mergeinfo_parse`` does.
+    Malformed properties now raise ``InvalidMergeinfoProperty`` rather than
+    tripping an assertion. (Jelmer Vernooĳ, #22)
+
 0.12.0	2026-03-17
 
  IMPROVEMENTS
