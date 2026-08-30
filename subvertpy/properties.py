@@ -22,11 +22,7 @@ __docformat__ = "restructuredText"
 import bisect
 import calendar
 import time
-
-try:
-    import urlparse
-except ImportError:
-    import urllib.parse as urlparse
+import urllib.parse as urlparse
 
 
 class InvalidExternalsDescription(Exception):

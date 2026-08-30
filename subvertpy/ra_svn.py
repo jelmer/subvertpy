@@ -17,22 +17,15 @@
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 
-try:
-    from SocketServer import StreamRequestHandler, TCPServer
-except ImportError:
-    from socketserver import StreamRequestHandler, TCPServer
 import base64
 import os
 import socket
 import subprocess
+import urllib.parse as urlparse
 from collections.abc import Callable
 from errno import EPIPE
+from socketserver import StreamRequestHandler, TCPServer
 from typing import IO, Any, ClassVar, Literal
-
-try:
-    import urlparse
-except ImportError:
-    import urllib.parse as urlparse
 
 from subvertpy import (
     ERR_RA_SVN_UNKNOWN_CMD,
@@ -149,7 +142,7 @@ class SVNConnection:
 SVN_PORT = 3690
 
 
-def feed_editor(conn: "SVNConnection", editor: Any) -> None:
+def feed_editor(conn: "SVNClient", editor: Any) -> None:
     tokens = {}
     diff = {}
     txdelta_handler = {}
@@ -196,7 +189,7 @@ def feed_editor(conn: "SVNConnection", editor: Any) -> None:
                 txdelta_handler[args[0]] = tokens[args[0]].apply_textdelta(None)
             else:
                 txdelta_handler[args[0]] = tokens[args[0]].apply_textdelta(args[1][0])
-            diff[args[0]] = ""
+            diff[args[0]] = b""
         elif command == "textdelta-chunk":
             diff[args[0]] += args[1]
         elif command == "textdelta-end":
@@ -495,18 +488,17 @@ class SVNClient(SVNConnection):
         open_tmp_file_func: Callable[..., Any] | None = None,
     ) -> None:
         self.url = url
-        (type, opaque) = urlparse.splittype(url)
-        assert type in ("svn", "svn+ssh")
-        (host, _path) = urlparse.splithost(opaque)
+        parsed = urlparse.urlparse(url)
+        assert parsed.scheme in ("svn", "svn+ssh")
         self._progress_cb = progress_cb
         self._auth = auth
         self._config = config
         self._client_string_func = client_string_func
         # open_tmp_file_func is ignored, as it is not needed for svn://
-        if type == "svn":
-            (recv_func, send_func) = self._connect(host)
+        if parsed.scheme == "svn":
+            (recv_func, send_func) = self._connect(parsed.netloc)
         else:
-            (recv_func, send_func) = self._connect_ssh(host)
+            (recv_func, send_func) = self._connect_ssh(parsed.netloc)
         super().__init__(recv_func, send_func)
         (_min_version, max_version, _, self._server_capabilities) = (
             self._recv_greeting()
@@ -524,7 +516,7 @@ class SVNClient(SVNConnection):
             self.send_msg(
                 [
                     literal("ANONYMOUS"),
-                    [base64.b64encode(f"anonymous@{socket.gethostname()}")],
+                    [base64.b64encode(f"anonymous@{socket.gethostname()}".encode())],
                 ]
             )
             self.recv_msg()
@@ -556,14 +548,19 @@ class SVNClient(SVNConnection):
     _recv_ack = _unpack
 
     def _connect(
-        self, host: str
+        self, netloc: str
     ) -> tuple[Callable[..., bytes], Callable[[bytes], int]]:
-        (host, port) = urlparse.splitnport(host, SVN_PORT)
+        host, sep, port_str = netloc.rpartition(":")
+        if sep and port_str.isdigit():
+            port = int(port_str)
+        else:
+            host = netloc
+            port = SVN_PORT
         sockaddrs = socket.getaddrinfo(
             host, port, socket.AF_UNSPEC, socket.SOCK_STREAM, 0, 0
         )
         self._socket = None
-        last_err = RuntimeError(f"no addresses for {host}:{port}")
+        last_err: Exception = RuntimeError(f"no addresses for {host}:{port}")
         for family, socktype, proto, canonname, sockaddr in sockaddrs:
             try:
                 self._socket = socket.socket(family, socktype, proto)
@@ -581,14 +578,24 @@ class SVNClient(SVNConnection):
         return (self._socket.recv, self._socket.send)
 
     def _connect_ssh(
-        self, host: str
+        self, netloc: str
     ) -> tuple[Callable[..., bytes], Callable[[bytes], int]]:
-        (user, host) = urlparse.splituser(host)
-        if user is not None:
-            (user, password) = urlparse.splitpassword(user)
+        userinfo, sep, hostport = netloc.rpartition("@")
+        if not sep:
+            hostport = netloc
+            user: str | None = None
+            password: str | None = None
+        elif ":" in userinfo:
+            user, _, password = userinfo.partition(":")
         else:
+            user = userinfo
             password = None
-        (host, port) = urlparse.splitnport(host, 22)
+        host, sep, port_str = hostport.rpartition(":")
+        if sep and port_str.isdigit():
+            port: int | None = int(port_str)
+        else:
+            host = hostport
+            port = 22
         self._tunnel = get_ssh_vendor().connect_ssh(
             user, password, host, port, ["svnserve", "-t"]
         )
@@ -617,7 +624,7 @@ class SVNClient(SVNConnection):
             if msg == "done":
                 break
             ret[msg[0]] = msg[1]
-        self._unparse()
+        self._unpack()
         return ret
 
     def get_locks(self, path: str) -> Any:
@@ -658,7 +665,7 @@ class SVNClient(SVNConnection):
         end_revision: int | None,
         include_merged_revisions: bool = False,
     ) -> Any:
-        args = [path]
+        args: list[Any] = [path]
         if start_revision is None or start_revision == -1:
             args.append([])
         else:
@@ -692,7 +699,7 @@ class SVNClient(SVNConnection):
 
     @mark_busy
     def check_path(self, path: str, revision: int | None = None) -> int:
-        args = [path]
+        args: list[Any] = [path]
         if revision is None or revision == -1:
             args.append([])
         else:
@@ -725,7 +732,7 @@ class SVNClient(SVNConnection):
         want_props: bool = True,
         want_contents: bool = True,
     ) -> tuple[dict[str, Any], int, dict[str, Any]]:
-        args = [path]
+        args: list[Any] = [path]
         if revision is None or revision == -1:
             args.append([])
         else:
@@ -733,7 +740,7 @@ class SVNClient(SVNConnection):
 
         args += [want_props, want_contents]
 
-        fields = []
+        fields: list[Any] = []
         if dirent_fields & DIRENT_KIND:
             fields.append(literal("kind"))
         if dirent_fields & DIRENT_SIZE:
@@ -762,7 +769,7 @@ class SVNClient(SVNConnection):
 
     @mark_busy
     def stat(self, path: str, revision: int | None = -1) -> dict[str, Any] | None:
-        args = [path]
+        args: list[Any] = [path]
         if revision is None or revision == -1:
             args.append([revision])
         else:
@@ -785,7 +792,7 @@ class SVNClient(SVNConnection):
             args.append(value)
         self.send_msg([literal("change-rev-prop"), args])
         self._recv_ack()
-        self._unparse()
+        self._unpack()
 
     def get_commit_editor(
         self,
@@ -978,7 +985,7 @@ class SVNClient(SVNConnection):
         include_merged_revisions: bool = True,
         revprops: list[str] | None = None,
     ) -> Any:
-        args = [paths]
+        args: list[Any] = [paths]
         if start is None or start == -1:
             args.append([])
         else:
@@ -1004,12 +1011,12 @@ class SVNClient(SVNConnection):
             msg = self.recv_msg()
             if msg == "done":
                 break
-            paths = {}
+            changed: dict[str, tuple[str, Any, int]] = {}
             for p, action, cfd in msg[0]:
                 if len(cfd) == 0:
-                    paths[p] = (str(action), None, -1)
+                    changed[p] = (str(action), None, -1)
                 else:
-                    paths[p] = (str(action), cfd[0], cfd[1])
+                    changed[p] = (str(action), cfd[0], cfd[1])
 
             if len(msg) > 5:
                 has_children = msg[5]
@@ -1020,16 +1027,16 @@ class SVNClient(SVNConnection):
             else:
                 revno = msg[1]  # noqa: F841
                 # TODO(jelmer): Do something with revno
-            revprops = {}
+            msg_revprops: dict[str, bytes] = {}
             if len(msg[2]) != 0:
-                revprops[properties.PROP_REVISION_AUTHOR] = msg[2][0]
+                msg_revprops[properties.PROP_REVISION_AUTHOR] = msg[2][0]
             if len(msg[3]) != 0:
-                revprops[properties.PROP_REVISION_DATE] = msg[3][0]
+                msg_revprops[properties.PROP_REVISION_DATE] = msg[3][0]
             if len(msg[4]) != 0:
-                revprops[properties.PROP_REVISION_LOG] = msg[4][0]
+                msg_revprops[properties.PROP_REVISION_LOG] = msg[4][0]
             if len(msg) > 8:
-                revprops.update(dict(msg[8]))
-            yield paths, msg[1], revprops, has_children
+                msg_revprops.update(dict(msg[8]))
+            yield changed, msg[1], msg_revprops, has_children
 
         self._unpack()
 
@@ -1153,7 +1160,8 @@ class SVNServer(SVNConnection):
         self.send_success()
 
     def open_backend(self, url: str) -> None:
-        (_rooturl, location) = urlparse.splithost(url)
+        parsed = urlparse.urlparse(url)
+        location = parsed.path
         self.repo_backend, self.relpath = self.backend.open_repository(location)
 
     def reparent(self, parent: str) -> None:
@@ -1277,7 +1285,6 @@ class SVNServer(SVNConnection):
         pass
 
     def serve(self) -> None:
-        self.send_greeting()
         msg = self.recv_msg()
         version = msg[0]
         capabilities = msg[1]
