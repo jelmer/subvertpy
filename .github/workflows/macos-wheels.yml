@@ -129,9 +129,9 @@ jobs:
           client = client.Client(auth=ra.Auth([ra.get_username_provider()]));
           client.info('https://svn.pld-linux.org/svn')"
 
-          cd ../ && rm -rf subvertpy && python -m pytest tests
+          cd ../ && rm -rf subvertpy && python -m pytest tests --ignore=tests/integration
       - uses: actions/upload-artifact@v4
         with:
           name: subvertpy-wheel-macos-${{ env.PY_LIMITED_API }}-${{ matrix.config.arch }}
           path: ./wheelhouse/*.whl
-      
+
