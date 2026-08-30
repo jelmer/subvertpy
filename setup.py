@@ -15,7 +15,7 @@ def package_data():
         response = requests.get("https://curl.se/ca/cacert.pem")
         response.raise_for_status()
         cert.write(response.content)
-    return {"subvertpy": ["cert/cacert.pem"]}
+    return {"subvertpy": ["cert/cacert.pem", "py.typed", "*.pyi"]}
 
 
 if __name__ == "__main__":

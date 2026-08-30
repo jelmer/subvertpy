@@ -4,6 +4,8 @@ include examples/*.py
 include README.md
 include Makefile
 include subvertpy.cfg
+include subvertpy/py.typed
+include subvertpy/*.pyi
 include man/*.1
 include Cargo.toml Cargo.lock
 recursive-include subr Cargo.toml *.rs
