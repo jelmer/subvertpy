@@ -1,7 +1,7 @@
 Subvertpy
 =========
 
-Homepage: https://github.com/jelmer/subvertpy/
+Homepage: <https://github.com/jelmer/subvertpy/>
 
 Python bindings for the Subversion version control system that are aimed to be
 complete, fast and feel native to Python programmers.
@@ -18,21 +18,13 @@ much directly. Neither provide a hookable server-side.
 
 Dependencies
 ------------
-Subvertpy depends on Python 3.8, and Subversion 1.14 or later. It should
+Subvertpy depends on Python 3.10, and Subversion 1.14 or later. It should
 work on Windows as well as most POSIX-based platforms (including Linux, BSDs
 and Mac OS X).
 
-See https://subversion.apache.org/ for instructions on installing Subversion.
+See <https://subversion.apache.org/> for instructions on installing Subversion.
 
 Installation
 ------------
-Standard distutils are used - use "setup.py build" to build and "setup.install"
-to install. On most platforms, setup will find the Python and Subversion
-development libraries by itself.
-
-Development
------------
-If using GCC it might be useful to disable the deprecation warnings when
-compiling to see if there are any more serious warnings:
-
-make CFLAGS="-Wno-deprecated-declarations"
+If you're building from source, make sure you have the Rust compiler and the
+Subversion headers installed.
