@@ -1,5 +1,6 @@
-from collections.abc import Callable
-from typing import IO, Any
+from typing import IO
+
+from subvertpy._typing import PackNotifyFunc
 
 LOAD_UUID_DEFAULT: int
 LOAD_UUID_IGNORE: int
@@ -13,13 +14,19 @@ PATH_CHANGE_ADD: int
 PATH_CHANGE_DELETE: int
 PATH_CHANGE_REPLACE: int
 
+# Description of a single path change entry as returned by
+# FileSystemRoot.paths_changed. Fields correspond to
+# svn_fs_path_change2_t (change_kind, text_mod, prop_mod, node_kind,
+# copyfrom_rev, copyfrom_path).
+PathChange = dict[str, object]
+
 class Stream:
     def read(self, size: int | None = ...) -> bytes: ...
     def write(self, data: bytes) -> int: ...
     def close(self) -> None: ...
 
 class FileSystemRoot:
-    def paths_changed(self) -> dict[str, dict[str, Any]]: ...
+    def paths_changed(self) -> dict[str, PathChange]: ...
     def is_dir(self, path: str) -> bool: ...
     def is_file(self, path: str) -> bool: ...
     def file_length(self, path: str) -> int: ...
@@ -45,7 +52,7 @@ class Repository:
         start_rev: int | None = ...,
         end_rev: int | None = ...,
     ) -> None: ...
-    def pack(self, notify_func: Callable[..., Any] | None = ...) -> None: ...
+    def pack(self, notify_func: PackNotifyFunc | None = ...) -> None: ...
     def hotcopy(
         self,
         dest_path: str,
@@ -61,10 +68,12 @@ class Repository:
         uuid_action: int = ...,
     ) -> None: ...
 
+# Repository config / fs config are unused placeholders in the current
+# Rust binding; typed as opaque.
 def create(
     path: str,
-    config: Any | None = ...,
-    fs_config: Any | None = ...,
+    config: object | None = ...,
+    fs_config: object | None = ...,
 ) -> Repository: ...
 def delete(path: str) -> None: ...
 def hotcopy(

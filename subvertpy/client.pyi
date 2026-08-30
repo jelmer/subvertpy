@@ -1,6 +1,14 @@
 import builtins
-from collections.abc import Callable
-from typing import IO, Any
+from typing import IO
+
+from subvertpy._ra import Auth
+from subvertpy._typing import (
+    CommitFinalizer,
+    LogEntry,
+    LogEntryReceiver,
+    LogMsgFunc,
+    NotifyFunc,
+)
 
 class ConfigItem: ...
 
@@ -30,20 +38,20 @@ class Info:
 
 class ClientLogIterator:
     def __iter__(self) -> ClientLogIterator: ...
-    def __next__(self) -> Any: ...
+    def __next__(self) -> LogEntry: ...
 
 class Client:
-    auth: Any
-    log_msg_func: Callable[..., Any] | None
-    notify_func: Callable[..., Any] | None
-    config: Any
+    auth: Auth | None
+    log_msg_func: LogMsgFunc | None
+    notify_func: NotifyFunc | None
+    config: Config | None
 
     def __init__(
         self,
-        auth: Any | None = ...,
-        config: Any | None = ...,
-        log_msg_func: Callable[..., Any] | None = ...,
-        notify_func: Callable[..., Any] | None = ...,
+        auth: Auth | None = ...,
+        config: Config | None = ...,
+        log_msg_func: LogMsgFunc | None = ...,
+        notify_func: NotifyFunc | None = ...,
     ) -> None: ...
     def checkout(
         self,
@@ -82,7 +90,7 @@ class Client:
         force: bool = ...,
         keep_local: bool = ...,
         revprops: dict[str, str] | None = ...,
-        callback: Callable[..., Any] | None = ...,
+        callback: CommitFinalizer | None = ...,
     ) -> None: ...
     def revert(
         self,
@@ -101,11 +109,11 @@ class Client:
         no_unlock: bool = ...,
         exclude_paths: list[str] | None = ...,
         changelist: str | None = ...,
-        callback: Callable[..., Any] | None = ...,
+        callback: CommitFinalizer | None = ...,
     ) -> tuple[int, str | None, str | None]: ...
     def log(
         self,
-        callback: Callable[..., Any],
+        callback: LogEntryReceiver,
         paths: list[str] | None = ...,
         start_rev: str | int | None = ...,
         end_rev: str | int | None = ...,
@@ -132,7 +140,7 @@ class Client:
         message: str,
         revprops: dict[str, str] | None = ...,
         make_parents: bool = ...,
-        callback: Callable[..., Any] | None = ...,
+        callback: CommitFinalizer | None = ...,
     ) -> tuple[int, str | None, str | None]: ...
     def propset(
         self,
@@ -200,7 +208,7 @@ class Client:
         dest_path: str,
         src_rev: str | int | None = ...,
         revprops: dict[str, str] | None = ...,
-        callback: Callable[..., Any] | None = ...,
+        callback: CommitFinalizer | None = ...,
     ) -> tuple[int, str | None, str | None]: ...
     def list(
         self,

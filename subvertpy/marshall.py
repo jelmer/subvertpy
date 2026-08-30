@@ -16,7 +16,7 @@
 
 """Marshalling for the svn_ra protocol."""
 
-from typing import Any
+from subvertpy._typing import MarshallValue, UnmarshalledValue
 
 
 class literal:
@@ -59,7 +59,7 @@ class NeedMoreData(MarshallError):
     """More data needed."""
 
 
-def marshall(x: Any) -> bytes:
+def marshall(x: MarshallValue) -> bytes:
     """Marshall a Python data item.
 
     :param x: Data item
@@ -73,15 +73,15 @@ def marshall(x: Any) -> bytes:
         return b"( " + b"".join(map(marshall, x)) + b") "
     elif isinstance(x, literal):
         return (f"{x} ").encode("ascii")
-    elif isinstance(x, bytes):
-        return f"{len(x)}:".encode("ascii") + x + b" "
+    elif isinstance(x, (bytes, bytearray)):
+        return f"{len(x)}:".encode("ascii") + bytes(x) + b" "
     elif isinstance(x, str):
-        x = x.encode("utf-8")
-        return f"{len(x)}:".encode("ascii") + x + b" "
+        x_enc = x.encode("utf-8")
+        return f"{len(x_enc)}:".encode("ascii") + x_enc + b" "
     raise MarshallError(f"Unable to marshall type {x}")
 
 
-def unmarshall(x: bytes) -> tuple[bytes, Any]:
+def unmarshall(x: bytes) -> tuple[bytes, UnmarshalledValue]:
     """Unmarshall the next item from a buffer.
 
     :param x: Bytes to parse
@@ -96,7 +96,7 @@ def unmarshall(x: bytes) -> tuple[bytes, Any]:
         if x[1:2] != b" ":
             raise MarshallError("missing whitespace after list start")
         x = x[2:]
-        ret: list[Any] = []
+        ret: list[UnmarshalledValue] = []
         try:
             while x[0:1] != b")":
                 (x, n) = unmarshall(x)
