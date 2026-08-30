@@ -16,30 +16,29 @@ repos.create("tmprepo")
 repo_url = "file://{}".format(os.path.abspath("tmprepo"))
 conn = RemoteAccess(repo_url, auth=Auth([get_username_provider()]))
 
-# Simple commit that adds a directory
+# Simple commit that adds a directory. The editors are context managers;
+# leaving the block closes them, and an exception aborts the edit rather
+# than committing it half-finished.
 editor = conn.get_commit_editor({"svn:log": "Commit message"})
-root = editor.open_root()
-# Add a directory
-dir = root.add_directory("somedir")
-dir.close()
-# Add and edit a file
-file = root.add_file("somefile")
-# Set the svn:executable attribute
-file.change_prop("svn:executable", "*")
-# Obtain a textdelta handler and send the new file contents
-txdelta = file.apply_textdelta()
-delta.send_stream(BytesIO(b"new file contents"), txdelta)
-file.close()
-root.close()
-editor.close()
+with editor:
+    with editor.open_root() as root:
+        # Add a directory
+        with root.add_directory("somedir"):
+            pass
+        # Add and edit a file
+        with root.add_file("somefile") as file:
+            # Set the svn:executable attribute
+            file.change_prop("svn:executable", "*")
+            # Obtain a textdelta handler and send the new file contents
+            txdelta = file.apply_textdelta()
+            delta.send_stream(BytesIO(b"new file contents"), txdelta)
 
 # Rename the directory
 editor = conn.get_commit_editor({"svn:log": "Commit message"})
-root = editor.open_root()
-# Create a new directory copied from somedir:1
-dir = root.add_directory("new dir name", f"{repo_url}/somedir", 1)
-dir.close()
-# Remove the original directory
-root.delete_entry("somedir")
-root.close()
-editor.close()
+with editor:
+    with editor.open_root() as root:
+        # Create a new directory copied from somedir:1
+        with root.add_directory("new dir name", f"{repo_url}/somedir", 1):
+            pass
+        # Remove the original directory
+        root.delete_entry("somedir")

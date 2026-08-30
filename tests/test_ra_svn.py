@@ -211,6 +211,19 @@ class EditorTests(TestCase):
         self.assertEqual(literal("open-root"), self.sent[0][0])
         self.assertEqual([5], self.sent[0][1][0])
 
+    def test_context_manager_closes(self):
+        editor = Editor(self.conn)
+        with editor as e:
+            self.assertIs(editor, e)
+        self.assertEqual(literal("close-edit"), self.sent[0][0])
+
+    def test_context_manager_aborts_on_exception(self):
+        editor = Editor(self.conn)
+        with self.assertRaises(RuntimeError):
+            with editor:
+                raise RuntimeError("boom")
+        self.assertEqual(literal("abort-edit"), self.sent[0][0])
+
 
 class DirectoryEditorTests(TestCase):
     def setUp(self):
@@ -297,6 +310,17 @@ class DirectoryEditorTests(TestCase):
         self.assertEqual(literal("close-dir"), self.sent[0][0])
         self.assertEqual(initial_count - 1, self.conn._open_ids.count(self.dir_id))
 
+    def test_context_manager_closes(self):
+        with self.de as d:
+            self.assertIs(self.de, d)
+        self.assertEqual(literal("close-dir"), self.sent[0][0])
+
+    def test_context_manager_closes_on_exception(self):
+        with self.assertRaises(RuntimeError):
+            with self.de:
+                raise RuntimeError("boom")
+        self.assertEqual(literal("close-dir"), self.sent[0][0])
+
 
 class FileEditorTests(TestCase):
     def setUp(self):
@@ -362,6 +386,18 @@ class FileEditorTests(TestCase):
         self.assertEqual(literal("textdelta-chunk"), self.sent[0][0])
         # The second element should be the file_id and packed window data
         self.assertEqual(self.file_id, self.sent[0][1][0])
+
+    def test_context_manager_closes(self):
+        with self.fe as f:
+            self.assertIs(self.fe, f)
+        self.assertEqual(literal("close-file"), self.sent[0][0])
+        self.assertEqual([self.file_id, []], self.sent[0][1])
+
+    def test_context_manager_closes_on_exception(self):
+        with self.assertRaises(RuntimeError):
+            with self.fe:
+                raise RuntimeError("boom")
+        self.assertEqual(literal("close-file"), self.sent[0][0])
 
 
 class SSHSubprocessTests(TestCase):

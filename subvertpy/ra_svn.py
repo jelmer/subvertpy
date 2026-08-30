@@ -280,6 +280,18 @@ class Editor:
     def abort(self):
         self.conn.send_msg([literal("abort-edit"), []])
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Abort rather than close when an exception is propagating, so the
+        # incomplete edit is not committed.
+        if exc_type is None:
+            self.close()
+        else:
+            self.abort()
+        return False
+
 
 class DirectoryEditor:
     __slots__ = ("conn", "id")
@@ -341,6 +353,13 @@ class DirectoryEditor:
         self.conn._open_ids.pop()
         self.conn.send_msg([literal("close-dir"), [self.id]])
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
 
 class FileEditor:
     __slots__ = ("conn", "id")
@@ -388,6 +407,13 @@ class FileEditor:
         else:
             value = [value]
         self.conn.send_msg([literal("change-file-prop"), [self.id, name, value]])
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
 
 
 def mark_busy(unbound):
