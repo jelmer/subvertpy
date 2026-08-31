@@ -16,15 +16,18 @@
 
 """Server backend base classes."""
 
+from collections.abc import Callable
+from typing import Any
+
 
 class ServerBackend:
     """A server backend."""
 
-    def open_repository(self, location):
+    def open_repository(self, location: str) -> tuple["ServerRepositoryBackend", str]:
         raise NotImplementedError(self.open_repository)
 
 
-def generate_random_id():
+def generate_random_id() -> str:
     """Create a UUID for a repository."""
     import uuid
 
@@ -32,31 +35,37 @@ def generate_random_id():
 
 
 class ServerRepositoryBackend:
-    def get_uuid(self):
+    def get_uuid(self) -> str:
         raise NotImplementedError(self.get_uuid)
 
-    def get_latest_revnum(self):
+    def get_latest_revnum(self) -> int:
         raise NotImplementedError(self.get_latest_revnum)
 
     def log(
         self,
-        send_revision,
-        target_path,
-        start_rev,
-        end_rev,
-        changed_paths,
-        strict_node,
-        limit,
-    ):
+        send_revision: Callable[..., None],
+        target_path: str,
+        start_rev: int | None,
+        end_rev: int | None,
+        changed_paths: bool,
+        strict_node: bool,
+        limit: int | None,
+    ) -> None:
         raise NotImplementedError(self.log)
 
-    def update(self, editor, revnum, target_path, recurse=True):
+    def update(
+        self,
+        editor: object,
+        revnum: int | None,
+        target_path: str,
+        recurse: bool = True,
+    ) -> None:
         raise NotImplementedError(self.update)
 
-    def check_path(self, path, revnum):
+    def check_path(self, path: str, revnum: int | None) -> int:
         raise NotImplementedError(self.check_path)
 
-    def stat(self, path, revnum):
+    def stat(self, path: str, revnum: int | None) -> dict[str, Any] | None:
         """Stat a path.
 
         Should return a dictionary with the following keys: name, kind, size,
@@ -64,8 +73,10 @@ class ServerRepositoryBackend:
         """
         raise NotImplementedError(self.stat)
 
-    def rev_proplist(self, revnum):
+    def rev_proplist(self, revnum: int) -> dict[str, bytes]:
         raise NotImplementedError(self.rev_proplist)
 
-    def get_locations(self, path, peg_revnum, revnums):
+    def get_locations(
+        self, path: str, peg_revnum: int, revnums: list[int]
+    ) -> dict[int, str]:
         raise NotImplementedError(self.get_locations)

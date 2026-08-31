@@ -18,9 +18,14 @@
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 __docformat__ = "restructuredText"
 
+from collections.abc import Callable, Iterable, Iterator
 from hashlib import (
     md5,
 )
+from typing import IO
+
+TxDeltaOp = tuple[int, int, int]
+TxDeltaWindow = tuple[int, int, int, int, list[TxDeltaOp], bytes]
 
 TXDELTA_SOURCE = 0
 TXDELTA_TARGET = 1
@@ -32,7 +37,7 @@ MAX_ENCODED_INT_LEN = 10
 DELTA_WINDOW_SIZE = 102400
 
 
-def apply_txdelta_window(sbuf, window):
+def apply_txdelta_window(sbuf: bytes, window: TxDeltaWindow) -> bytearray:
     """Apply a txdelta window to a buffer.
 
     :param sbuf: Source buffer (as bytestring)
@@ -53,7 +58,9 @@ def apply_txdelta_window(sbuf, window):
     return tview
 
 
-def apply_txdelta_handler_chunks(source_chunks, target_chunks):
+def apply_txdelta_handler_chunks(
+    source_chunks: Iterable[bytes], target_chunks: list[bytes]
+) -> Callable[[TxDeltaWindow | None], None]:
     """Return a function that can be called repeatedly with txdelta windows.
 
     :param sbuf: Source buffer
@@ -61,22 +68,24 @@ def apply_txdelta_handler_chunks(source_chunks, target_chunks):
     """
     sbuf = b"".join(source_chunks)
 
-    def apply_window(window):
+    def apply_window(window: TxDeltaWindow | None) -> None:
         if window is None:
             return  # Last call
-        target_chunks.append(apply_txdelta_window(sbuf, window))
+        target_chunks.append(bytes(apply_txdelta_window(sbuf, window)))
 
     return apply_window
 
 
-def apply_txdelta_handler(sbuf, target_stream):
+def apply_txdelta_handler(
+    sbuf: bytes, target_stream: IO[bytes]
+) -> Callable[[TxDeltaWindow | None], None]:
     """Return a function that can be called repeatedly with txdelta windows.
 
     :param sbuf: Source buffer
     :param target_stream: Target stream
     """
 
-    def apply_window(window):
+    def apply_window(window: TxDeltaWindow | None) -> None:
         if window is None:
             return  # Last call
         target_stream.write(apply_txdelta_window(sbuf, window))
@@ -84,7 +93,9 @@ def apply_txdelta_handler(sbuf, target_stream):
     return apply_window
 
 
-def txdelta_apply_ops(src_ops, ops, new_data, sview):
+def txdelta_apply_ops(
+    src_ops: int, ops: list[TxDeltaOp], new_data: bytes, sview: bytes
+) -> bytearray:
     """Apply txdelta operations to a source view.
 
     :param src_ops: Source operations, ignored.
@@ -108,7 +119,11 @@ def txdelta_apply_ops(src_ops, ops, new_data, sview):
     return tview
 
 
-def send_stream(stream, handler, block_size=DELTA_WINDOW_SIZE):
+def send_stream(
+    stream: IO[bytes],
+    handler: Callable[[TxDeltaWindow | None], None],
+    block_size: int = DELTA_WINDOW_SIZE,
+) -> bytes:
     """Send txdelta windows that create stream to handler.
 
     :param stream: file-like object to read the file from
@@ -128,7 +143,7 @@ def send_stream(stream, handler, block_size=DELTA_WINDOW_SIZE):
     return hash.digest()
 
 
-def encode_length(len):
+def encode_length(len: int) -> bytearray:
     """Encode a length variable.
 
     :param len: Length to encode
@@ -159,7 +174,7 @@ def encode_length(len):
     return ret
 
 
-def decode_length(text):
+def decode_length(text: bytes) -> tuple[int, bytes]:
     """Decode a length variable.
 
     :param text: Bytestring to decode
@@ -167,7 +182,7 @@ def decode_length(text):
     """
     # Decode bytes until we're done.  */
     ret = 0
-    next = True
+    next = 1
     while next:
         ret = (ret << 7) | (text[0] & 0x7F)
         next = (text[0] >> 7) & 0x1
@@ -175,7 +190,7 @@ def decode_length(text):
     return ret, text
 
 
-def pack_svndiff_instruction(diff_params):
+def pack_svndiff_instruction(diff_params: TxDeltaOp) -> bytearray:
     """Pack a SVN diff instruction.
 
     :param diff_params: (action, offset, length)
@@ -194,7 +209,7 @@ def pack_svndiff_instruction(diff_params):
     return text
 
 
-def unpack_svndiff_instruction(text):
+def unpack_svndiff_instruction(text: bytes) -> tuple[TxDeltaOp, bytes]:
     """Unpack a SVN diff instruction.
 
     :param text: Text to parse
@@ -216,7 +231,7 @@ def unpack_svndiff_instruction(text):
 SVNDIFF0_HEADER = b"SVN\0"
 
 
-def pack_svndiff0_window(window):
+def pack_svndiff0_window(window: TxDeltaWindow) -> bytearray:
     """Pack an individual window using svndiff0.
 
     :param window: Window to pack
@@ -240,7 +255,7 @@ def pack_svndiff0_window(window):
     return ret
 
 
-def pack_svndiff0(windows):
+def pack_svndiff0(windows: Iterable[TxDeltaWindow]) -> bytes:
     """Pack a SVN diff file.
 
     :param windows: Iterator over diff windows
@@ -252,7 +267,7 @@ def pack_svndiff0(windows):
     return ret
 
 
-def unpack_svndiff0(text):
+def unpack_svndiff0(text: bytes) -> Iterator[TxDeltaWindow]:
     """Unpack a version 0 svndiff text.
 
     :param text: Text to unpack.

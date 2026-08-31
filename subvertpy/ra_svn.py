@@ -17,21 +17,15 @@
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 
-try:
-    from SocketServer import StreamRequestHandler, TCPServer
-except ImportError:
-    from socketserver import StreamRequestHandler, TCPServer
 import base64
 import os
 import socket
 import subprocess
+import urllib.parse as urlparse
+from collections.abc import Callable
 from errno import EPIPE
-from typing import Any, ClassVar
-
-try:
-    import urlparse
-except ImportError:
-    import urllib.parse as urlparse
+from socketserver import StreamRequestHandler, TCPServer
+from typing import IO, Any, ClassVar, Literal
 
 from subvertpy import (
     ERR_RA_SVN_UNKNOWN_CMD,
@@ -72,26 +66,33 @@ class SSHSubprocess:
 
     __slots__ = "proc"
 
-    def __init__(self, proc):
+    def __init__(self, proc: subprocess.Popen) -> None:
         self.proc = proc
 
-    def send(self, data):
-        return os.write(self.proc.stdin.fileno(), data)
+    def send(self, data: bytes) -> int:
+        return os.write(self.proc.stdin.fileno(), data)  # type: ignore[union-attr]
 
-    def recv(self, count):
-        return os.read(self.proc.stdout.fileno(), count)
+    def recv(self, count: int) -> bytes:
+        return os.read(self.proc.stdout.fileno(), count)  # type: ignore[union-attr]
 
-    def close(self):
-        self.proc.stdin.close()
-        self.proc.stdout.close()
+    def close(self) -> None:
+        self.proc.stdin.close()  # type: ignore[union-attr]
+        self.proc.stdout.close()  # type: ignore[union-attr]
         self.proc.wait()
 
-    def get_filelike_channels(self):
+    def get_filelike_channels(self) -> tuple[Any, Any]:
         return (self.proc.stdout, self.proc.stdin)
 
 
 class SSHVendor:
-    def connect_ssh(self, username, password, host, port, command):
+    def connect_ssh(
+        self,
+        username: str | None,
+        password: str | None,
+        host: str,
+        port: int | None,
+        command: list[str],
+    ) -> SSHSubprocess:
         args = ["ssh", "-x"]
         if port is not None:
             args.extend(["-p", str(port)])
@@ -109,35 +110,39 @@ get_ssh_vendor = SSHVendor
 
 
 class SVNConnection:
-    def __init__(self, recv_fn, send_fn):
-        self.inbuffer = ""
+    def __init__(
+        self,
+        recv_fn: Callable[..., bytes],
+        send_fn: Callable[[bytes], int],
+    ) -> None:
+        self.inbuffer: bytes = b""
         self.recv_fn = recv_fn
         self.send_fn = send_fn
 
-    def recv_msg(self):
+    def recv_msg(self) -> Any:
         while True:
             try:
                 (self.inbuffer, ret) = unmarshall(self.inbuffer)
                 return ret
             except NeedMoreData:
                 newdata = self.recv_fn(1)
-                if newdata != "":
+                if newdata != b"":
                     # self.mutter("IN: %r" % newdata)
                     self.inbuffer += newdata
 
-    def send_msg(self, data):
+    def send_msg(self, data: Any) -> None:
         marshalled_data = marshall(data)
         # self.mutter("OUT: %r" % marshalled_data)
         self.send_fn(marshalled_data)
 
-    def send_success(self, *contents):
+    def send_success(self, *contents: object) -> None:
         self.send_msg([literal("success"), list(contents)])
 
 
 SVN_PORT = 3690
 
 
-def feed_editor(conn, editor):
+def feed_editor(conn: "SVNClient", editor: Any) -> None:
     tokens = {}
     diff = {}
     txdelta_handler = {}
@@ -184,7 +189,7 @@ def feed_editor(conn, editor):
                 txdelta_handler[args[0]] = tokens[args[0]].apply_textdelta(None)
             else:
                 txdelta_handler[args[0]] = tokens[args[0]].apply_textdelta(args[1][0])
-            diff[args[0]] = ""
+            diff[args[0]] = b""
         elif command == "textdelta-chunk":
             diff[args[0]] += args[1]
         elif command == "textdelta-end":
@@ -215,12 +220,19 @@ def feed_editor(conn, editor):
 class Reporter:
     __slots__ = ("conn", "editor")
 
-    def __init__(self, conn, editor):
+    def __init__(self, conn: Any, editor: Any) -> None:
         self.conn = conn
         self.editor = editor
 
-    def set_path(self, path, rev, start_empty=False, lock_token=None, depth=None):
-        args = [path, rev, start_empty]
+    def set_path(
+        self,
+        path: str,
+        rev: int,
+        start_empty: bool = False,
+        lock_token: str | None = None,
+        depth: str | None = None,
+    ) -> None:
+        args: list[Any] = [path, rev, start_empty]
         if lock_token is not None:
             args.append([lock_token])
         else:
@@ -230,11 +242,19 @@ class Reporter:
 
         self.conn.send_msg([literal("set-path"), args])
 
-    def delete_path(self, path):
+    def delete_path(self, path: str) -> None:
         self.conn.send_msg([literal("delete-path"), [path]])
 
-    def link_path(self, path, url, rev, start_empty=False, lock_token=None, depth=None):
-        args = [path, url, rev, start_empty]
+    def link_path(
+        self,
+        path: str,
+        url: str,
+        rev: int,
+        start_empty: bool = False,
+        lock_token: str | None = None,
+        depth: str | None = None,
+    ) -> None:
+        args: list[Any] = [path, url, rev, start_empty]
         if lock_token is not None:
             args.append([lock_token])
         else:
@@ -244,13 +264,13 @@ class Reporter:
 
         self.conn.send_msg([literal("link-path"), args])
 
-    def finish(self):
+    def finish(self) -> None:
         self.conn.send_msg([literal("finish-report"), []])
         self.conn.recv_msg()
         feed_editor(self.conn, self.editor)
         self.conn.busy = False
 
-    def abort(self):
+    def abort(self) -> None:
         self.conn.send_msg([literal("abort-report"), []])
         self.conn.busy = False
 
@@ -258,32 +278,32 @@ class Reporter:
 class Editor:
     __slots__ = "conn"
 
-    def __init__(self, conn):
+    def __init__(self, conn: Any) -> None:
         self.conn = conn
 
-    def set_target_revision(self, revnum):
+    def set_target_revision(self, revnum: int) -> None:
         self.conn.send_msg([literal("target-rev"), [revnum]])
 
-    def open_root(self, base_revision=None):
+    def open_root(self, base_revision: int | None = None) -> "DirectoryEditor":
         id = generate_random_id()
         if base_revision is None:
-            baserev = []
+            baserev: list[int] = []
         else:
             baserev = [base_revision]
         self.conn.send_msg([literal("open-root"), [baserev, id]])
         self.conn._open_ids = []
         return DirectoryEditor(self.conn, id)
 
-    def close(self):
+    def close(self) -> None:
         self.conn.send_msg([literal("close-edit"), []])
 
-    def abort(self):
+    def abort(self) -> None:
         self.conn.send_msg([literal("abort-edit"), []])
 
-    def __enter__(self):
+    def __enter__(self) -> "Editor":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Literal[False]:
         # Abort rather than close when an exception is propagating, so the
         # incomplete edit is not committed.
         if exc_type is None:
@@ -296,67 +316,77 @@ class Editor:
 class DirectoryEditor:
     __slots__ = ("conn", "id")
 
-    def __init__(self, conn, id):
+    def __init__(self, conn: Any, id: str) -> None:
         self.conn = conn
         self.id = id
         self.conn._open_ids.append(id)
 
-    def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
+    def add_file(
+        self,
+        path: str,
+        copyfrom_path: str | None = None,
+        copyfrom_rev: int = -1,
+    ) -> "FileEditor":
         self._is_last_open()
         child = generate_random_id()
         if copyfrom_path is not None:
-            copyfrom_data = [copyfrom_path, copyfrom_rev]
+            copyfrom_data: list[Any] = [copyfrom_path, copyfrom_rev]
         else:
             copyfrom_data = []
         self.conn.send_msg([literal("add-file"), [path, self.id, child, copyfrom_data]])
         return FileEditor(self.conn, child)
 
-    def open_file(self, path, base_revnum):
+    def open_file(self, path: str, base_revnum: int) -> "FileEditor":
         self._is_last_open()
         child = generate_random_id()
         self.conn.send_msg([literal("open-file"), [path, self.id, child, base_revnum]])
         return FileEditor(self.conn, child)
 
-    def delete_entry(self, path, base_revnum):
+    def delete_entry(self, path: str, base_revnum: int) -> None:
         self._is_last_open()
         self.conn.send_msg([literal("delete-entry"), [path, base_revnum, self.id]])
 
-    def add_directory(self, path, copyfrom_path=None, copyfrom_rev=-1):
+    def add_directory(
+        self,
+        path: str,
+        copyfrom_path: str | None = None,
+        copyfrom_rev: int = -1,
+    ) -> "DirectoryEditor":
         self._is_last_open()
         child = generate_random_id()
         if copyfrom_path is not None:
-            copyfrom_data = [copyfrom_path, copyfrom_rev]
+            copyfrom_data: list[Any] = [copyfrom_path, copyfrom_rev]
         else:
             copyfrom_data = []
         self.conn.send_msg([literal("add-dir"), [path, self.id, child, copyfrom_data]])
         return DirectoryEditor(self.conn, child)
 
-    def open_directory(self, path, base_revnum):
+    def open_directory(self, path: str, base_revnum: int) -> "DirectoryEditor":
         self._is_last_open()
         child = generate_random_id()
         self.conn.send_msg([literal("open-dir"), [path, self.id, child, base_revnum]])
         return DirectoryEditor(self.conn, child)
 
-    def change_prop(self, name, value):
+    def change_prop(self, name: str, value: bytes | None) -> None:
         self._is_last_open()
         if value is None:
-            value = []
+            value_list: list[bytes] = []
         else:
-            value = [value]
-        self.conn.send_msg([literal("change-dir-prop"), [self.id, name, value]])
+            value_list = [value]
+        self.conn.send_msg([literal("change-dir-prop"), [self.id, name, value_list]])
 
-    def _is_last_open(self):
+    def _is_last_open(self) -> None:
         assert self.conn._open_ids[-1] == self.id
 
-    def close(self):
+    def close(self) -> None:
         self._is_last_open()
         self.conn._open_ids.pop()
         self.conn.send_msg([literal("close-dir"), [self.id]])
 
-    def __enter__(self):
+    def __enter__(self) -> "DirectoryEditor":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Literal[False]:
         self.close()
         return False
 
@@ -364,33 +394,35 @@ class DirectoryEditor:
 class FileEditor:
     __slots__ = ("conn", "id")
 
-    def __init__(self, conn, id):
+    def __init__(self, conn: Any, id: str) -> None:
         self.conn = conn
         self.id = id
         self.conn._open_ids.append(id)
 
-    def _is_last_open(self):
+    def _is_last_open(self) -> None:
         assert self.conn._open_ids[-1] == self.id
 
-    def close(self, checksum=None):
+    def close(self, checksum: str | None = None) -> None:
         self._is_last_open()
         self.conn._open_ids.pop()
         if checksum is None:
-            checksum = []
+            checksum_list: list[str] = []
         else:
-            checksum = [checksum]
-        self.conn.send_msg([literal("close-file"), [self.id, checksum]])
+            checksum_list = [checksum]
+        self.conn.send_msg([literal("close-file"), [self.id, checksum_list]])
 
-    def apply_textdelta(self, base_checksum=None):
+    def apply_textdelta(
+        self, base_checksum: str | None = None
+    ) -> Callable[[Any], None]:
         self._is_last_open()
         if base_checksum is None:
-            base_check = []
+            base_check: list[str] = []
         else:
             base_check = [base_checksum]
         self.conn.send_msg([literal("apply-textdelta"), [self.id, base_check]])
         self.conn.send_msg([literal("textdelta-chunk"), [self.id, SVNDIFF0_HEADER]])
 
-        def send_textdelta(delta):
+        def send_textdelta(delta: Any) -> None:
             if delta is None:
                 self.conn.send_msg([literal("textdelta-end"), [self.id]])
             else:
@@ -400,24 +432,24 @@ class FileEditor:
 
         return send_textdelta
 
-    def change_prop(self, name, value):
+    def change_prop(self, name: str, value: bytes | None) -> None:
         self._is_last_open()
         if value is None:
-            value = []
+            value_list: list[bytes] = []
         else:
-            value = [value]
-        self.conn.send_msg([literal("change-file-prop"), [self.id, name, value]])
+            value_list = [value]
+        self.conn.send_msg([literal("change-file-prop"), [self.id, name, value_list]])
 
-    def __enter__(self):
+    def __enter__(self) -> "FileEditor":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Literal[False]:
         self.close()
         return False
 
 
-def mark_busy(unbound):
-    def convert(self, *args, **kwargs):
+def mark_busy(unbound: Callable[..., Any]) -> Callable[..., Any]:
+    def convert(self: Any, *args: Any, **kwargs: Any) -> Any:
         self.busy = True
         try:
             ret = unbound(self, *args, **kwargs)
@@ -430,8 +462,8 @@ def mark_busy(unbound):
     return convert
 
 
-def unmarshall_dirent(d):
-    ret = {
+def unmarshall_dirent(d: list[Any]) -> dict[str, Any]:
+    ret: dict[str, Any] = {
         "name": d[0],
         "kind": d[1],
         "size": d[2],
@@ -448,26 +480,25 @@ def unmarshall_dirent(d):
 class SVNClient(SVNConnection):
     def __init__(
         self,
-        url,
-        progress_cb=None,
-        auth=None,
-        config=None,
-        client_string_func=None,
-        open_tmp_file_func=None,
-    ):
+        url: str,
+        progress_cb: Callable[..., Any] | None = None,
+        auth: Any = None,
+        config: Any = None,
+        client_string_func: Callable[..., Any] | None = None,
+        open_tmp_file_func: Callable[..., Any] | None = None,
+    ) -> None:
         self.url = url
-        (type, opaque) = urlparse.splittype(url)
-        assert type in ("svn", "svn+ssh")
-        (host, _path) = urlparse.splithost(opaque)
+        parsed = urlparse.urlparse(url)
+        assert parsed.scheme in ("svn", "svn+ssh")
         self._progress_cb = progress_cb
         self._auth = auth
         self._config = config
         self._client_string_func = client_string_func
         # open_tmp_file_func is ignored, as it is not needed for svn://
-        if type == "svn":
-            (recv_func, send_func) = self._connect(host)
+        if parsed.scheme == "svn":
+            (recv_func, send_func) = self._connect(parsed.netloc)
         else:
-            (recv_func, send_func) = self._connect_ssh(host)
+            (recv_func, send_func) = self._connect_ssh(parsed.netloc)
         super().__init__(recv_func, send_func)
         (_min_version, max_version, _, self._server_capabilities) = (
             self._recv_greeting()
@@ -485,7 +516,7 @@ class SVNClient(SVNConnection):
             self.send_msg(
                 [
                     literal("ANONYMOUS"),
-                    [base64.b64encode(f"anonymous@{socket.gethostname()}")],
+                    [base64.b64encode(f"anonymous@{socket.gethostname()}".encode())],
                 ]
             )
             self.recv_msg()
@@ -495,7 +526,7 @@ class SVNClient(SVNConnection):
         (self._uuid, self._root_url) = msg[0:2]
         self.busy = False
 
-    def _unpack(self):
+    def _unpack(self) -> Any:
         msg = self.recv_msg()
         if msg[0] == "failure":
             if isinstance(msg[1], str):
@@ -509,20 +540,27 @@ class SVNClient(SVNConnection):
         assert len(msg) == 2
         return msg[1]
 
-    def _recv_greeting(self):
+    def _recv_greeting(self) -> Any:
         greeting = self._unpack()
         assert len(greeting) == 4
         return greeting
 
     _recv_ack = _unpack
 
-    def _connect(self, host):
-        (host, port) = urlparse.splitnport(host, SVN_PORT)
+    def _connect(
+        self, netloc: str
+    ) -> tuple[Callable[..., bytes], Callable[[bytes], int]]:
+        host, sep, port_str = netloc.rpartition(":")
+        if sep and port_str.isdigit():
+            port = int(port_str)
+        else:
+            host = netloc
+            port = SVN_PORT
         sockaddrs = socket.getaddrinfo(
             host, port, socket.AF_UNSPEC, socket.SOCK_STREAM, 0, 0
         )
         self._socket = None
-        last_err = RuntimeError(f"no addresses for {host}:{port}")
+        last_err: Exception = RuntimeError(f"no addresses for {host}:{port}")
         for family, socktype, proto, canonname, sockaddr in sockaddrs:
             try:
                 self._socket = socket.socket(family, socktype, proto)
@@ -539,54 +577,95 @@ class SVNClient(SVNConnection):
         self._socket.setblocking(True)
         return (self._socket.recv, self._socket.send)
 
-    def _connect_ssh(self, host):
-        (user, host) = urlparse.splituser(host)
-        if user is not None:
-            (user, password) = urlparse.splitpassword(user)
+    def _connect_ssh(
+        self, netloc: str
+    ) -> tuple[Callable[..., bytes], Callable[[bytes], int]]:
+        userinfo, sep, hostport = netloc.rpartition("@")
+        if not sep:
+            hostport = netloc
+            user: str | None = None
+            password: str | None = None
+        elif ":" in userinfo:
+            user, _, password = userinfo.partition(":")
         else:
+            user = userinfo
             password = None
-        (host, port) = urlparse.splitnport(host, 22)
+        host, sep, port_str = hostport.rpartition(":")
+        if sep and port_str.isdigit():
+            port: int | None = int(port_str)
+        else:
+            host = hostport
+            port = 22
         self._tunnel = get_ssh_vendor().connect_ssh(
             user, password, host, port, ["svnserve", "-t"]
         )
         return (self._tunnel.recv, self._tunnel.send)
 
-    def get_file_revs(self, path, start, end, file_rev_handler):
+    def get_file_revs(
+        self,
+        path: str,
+        start: int,
+        end: int,
+        file_rev_handler: Callable[..., Any],
+    ) -> None:
         raise NotImplementedError(self.get_file_revs)
 
     @mark_busy
-    def get_locations(self, path, peg_revision, location_revisions):
+    def get_locations(
+        self, path: str, peg_revision: int, location_revisions: list[int]
+    ) -> dict[int, str]:
         self.send_msg(
             [literal("get-locations"), [path, peg_revision, location_revisions]]
         )
         self._recv_ack()
-        ret = {}
+        ret: dict[int, str] = {}
         while True:
             msg = self.recv_msg()
             if msg == "done":
                 break
             ret[msg[0]] = msg[1]
-        self._unparse()
+        self._unpack()
         return ret
 
-    def get_locks(self, path):
+    def get_locks(self, path: str) -> Any:
         self.send_msg([literal("get-lock"), [path]])
         self._recv_ack()
         return self._unpack()
 
-    def lock(self, path_revs, comment, steal_lock, lock_func):
+    def lock(
+        self,
+        path_revs: Any,
+        comment: str,
+        steal_lock: bool,
+        lock_func: Callable[..., Any],
+    ) -> None:
         raise NotImplementedError(self.lock)
 
-    def unlock(self, path_tokens, break_lock, lock_func):
+    def unlock(
+        self,
+        path_tokens: Any,
+        break_lock: bool,
+        lock_func: Callable[..., Any],
+    ) -> None:
         raise NotImplementedError(self.unlock)
 
-    def mergeinfo(self, paths, revision=-1, inherit=None, include_descendants=False):
+    def mergeinfo(
+        self,
+        paths: list[str],
+        revision: int = -1,
+        inherit: str | None = None,
+        include_descendants: bool = False,
+    ) -> Any:
         raise NotImplementedError(self.mergeinfo)
 
     def location_segments(
-        self, path, start_revision, end_revision, include_merged_revisions=False
-    ):
-        args = [path]
+        self,
+        path: str,
+        start_revision: int | None,
+        end_revision: int | None,
+        include_merged_revisions: bool = False,
+    ) -> Any:
+        args: list[Any] = [path]
         if start_revision is None or start_revision == -1:
             args.append([])
         else:
@@ -605,16 +684,22 @@ class SVNClient(SVNConnection):
             yield msg
         self._unpack()
 
-    def get_location_segments(self, path, start_revision, end_revision, rcvr):
+    def get_location_segments(
+        self,
+        path: str,
+        start_revision: int | None,
+        end_revision: int | None,
+        rcvr: Callable[..., Any],
+    ) -> None:
         for msg in self.location_segments(path, start_revision, end_revision):
             rcvr(*msg)
 
-    def has_capability(self, capability):
+    def has_capability(self, capability: str) -> bool:
         return capability in self._server_capabilities
 
     @mark_busy
-    def check_path(self, path, revision=None):
-        args = [path]
+    def check_path(self, path: str, revision: int | None = None) -> int:
+        args: list[Any] = [path]
         if revision is None or revision == -1:
             args.append([])
         else:
@@ -629,7 +714,7 @@ class SVNClient(SVNConnection):
             "none": NODE_NONE,
         }[ret]
 
-    def get_lock(self, path):
+    def get_lock(self, path: str) -> Any:
         self.send_msg([literal("get-lock"), [path]])
         self._recv_ack()
         ret = self._unpack()
@@ -640,9 +725,14 @@ class SVNClient(SVNConnection):
 
     @mark_busy
     def get_dir(
-        self, path, revision=-1, dirent_fields=0, want_props=True, want_contents=True
-    ):
-        args = [path]
+        self,
+        path: str,
+        revision: int | None = -1,
+        dirent_fields: int = 0,
+        want_props: bool = True,
+        want_contents: bool = True,
+    ) -> tuple[dict[str, Any], int, dict[str, Any]]:
+        args: list[Any] = [path]
         if revision is None or revision == -1:
             args.append([])
         else:
@@ -650,7 +740,7 @@ class SVNClient(SVNConnection):
 
         args += [want_props, want_contents]
 
-        fields = []
+        fields: list[Any] = []
         if dirent_fields & DIRENT_KIND:
             fields.append(literal("kind"))
         if dirent_fields & DIRENT_SIZE:
@@ -670,7 +760,7 @@ class SVNClient(SVNConnection):
         ret = self._unpack()
         fetch_rev = ret[0]
         props = dict(ret[1])
-        dirents = {}
+        dirents: dict[str, Any] = {}
         for d in ret[2]:
             entry = unmarshall_dirent(d)
             dirents[entry["name"]] = entry
@@ -678,8 +768,8 @@ class SVNClient(SVNConnection):
         return (dirents, fetch_rev, props)
 
     @mark_busy
-    def stat(self, path, revision=-1):
-        args = [path]
+    def stat(self, path: str, revision: int | None = -1) -> dict[str, Any] | None:
+        args: list[Any] = [path]
         if revision is None or revision == -1:
             args.append([revision])
         else:
@@ -693,21 +783,25 @@ class SVNClient(SVNConnection):
         return unmarshall_dirent(ret[0])
 
     @mark_busy
-    def get_file(self, path, stream, revision=-1):
+    def get_file(self, path: str, stream: IO[bytes], revision: int = -1) -> None:
         raise NotImplementedError(self.get_file)
 
-    def change_rev_prop(self, rev, name, value):
-        args = [rev, name]
+    def change_rev_prop(self, rev: int, name: str, value: bytes | None) -> None:
+        args: list[Any] = [rev, name]
         if value is not None:
             args.append(value)
         self.send_msg([literal("change-rev-prop"), args])
         self._recv_ack()
-        self._unparse()
+        self._unpack()
 
     def get_commit_editor(
-        self, revprops, callback=None, lock_tokens=None, keep_locks=False
-    ):
-        args = [revprops[properties.PROP_REVISION_LOG]]
+        self,
+        revprops: dict[str, bytes],
+        callback: Callable[..., Any] | None = None,
+        lock_tokens: dict[str, str] | None = None,
+        keep_locks: bool = False,
+    ) -> Any:
+        args: list[Any] = [revprops[properties.PROP_REVISION_LOG]]
         if lock_tokens is not None:
             args.append(list(lock_tokens.items()))
         else:
@@ -719,12 +813,12 @@ class SVNClient(SVNConnection):
         self._recv_ack()
         raise NotImplementedError(self.get_commit_editor)
 
-    def rev_proplist(self, revision):
+    def rev_proplist(self, revision: int) -> dict[str, bytes]:
         self.send_msg([literal("rev-proplist"), [revision]])
         self._recv_ack()
         return dict(self._unpack()[0])
 
-    def rev_prop(self, revision, name):
+    def rev_prop(self, revision: int, name: str) -> bytes | None:
         self.send_msg([literal("rev-prop"), [revision, name]])
         self._recv_ack()
         ret = self._unpack()
@@ -734,7 +828,13 @@ class SVNClient(SVNConnection):
             return ret[0]
 
     @mark_busy
-    def replay(self, revision, low_water_mark, update_editor, send_deltas=True):
+    def replay(
+        self,
+        revision: int,
+        low_water_mark: int,
+        update_editor: Any,
+        send_deltas: bool = True,
+    ) -> None:
         self.send_msg([literal("replay"), [revision, low_water_mark, send_deltas]])
         self._recv_ack()
         feed_editor(self, update_editor)
@@ -742,8 +842,13 @@ class SVNClient(SVNConnection):
 
     @mark_busy
     def replay_range(
-        self, start_revision, end_revision, low_water_mark, cbs, send_deltas=True
-    ):
+        self,
+        start_revision: int,
+        end_revision: int,
+        low_water_mark: int,
+        cbs: tuple[Callable[..., Any], Callable[..., Any]],
+        send_deltas: bool = True,
+    ) -> None:
         self.send_msg(
             [
                 literal("replay-range"),
@@ -761,14 +866,14 @@ class SVNClient(SVNConnection):
 
     def do_switch(
         self,
-        revision_to_update_to,
-        update_target,
-        recurse,
-        switch_url,
-        update_editor,
-        depth=None,
-    ):
-        args = []
+        revision_to_update_to: int | None,
+        update_target: str,
+        recurse: bool,
+        switch_url: str,
+        update_editor: Any,
+        depth: str | None = None,
+    ) -> Reporter:
+        args: list[Any] = []
         if revision_to_update_to is None or revision_to_update_to == -1:
             args.append([])
         else:
@@ -789,9 +894,14 @@ class SVNClient(SVNConnection):
             raise
 
     def do_update(
-        self, revision_to_update_to, update_target, recurse, update_editor, depth=None
-    ):
-        args = []
+        self,
+        revision_to_update_to: int | None,
+        update_target: str,
+        recurse: bool,
+        update_editor: Any,
+        depth: str | None = None,
+    ) -> Reporter:
+        args: list[Any] = []
         if revision_to_update_to is None or revision_to_update_to == -1:
             args.append([])
         else:
@@ -812,16 +922,16 @@ class SVNClient(SVNConnection):
 
     def do_diff(
         self,
-        revision_to_update,
-        diff_target,
-        versus_url,
-        diff_editor,
-        recurse=True,
-        ignore_ancestry=False,
-        text_deltas=False,
-        depth=None,
-    ):
-        args = []
+        revision_to_update: int | None,
+        diff_target: str,
+        versus_url: str,
+        diff_editor: Any,
+        recurse: bool = True,
+        ignore_ancestry: bool = False,
+        text_deltas: bool = False,
+        depth: str | None = None,
+    ) -> Reporter:
+        args: list[Any] = []
         if revision_to_update is None or revision_to_update == -1:
             args.append([])
         else:
@@ -838,44 +948,44 @@ class SVNClient(SVNConnection):
             self.busy = False
             raise
 
-    def get_repos_root(self):
+    def get_repos_root(self) -> str:
         return self._root_url
 
     @mark_busy
-    def get_latest_revnum(self):
+    def get_latest_revnum(self) -> int:
         self.send_msg([literal("get-latest-rev"), []])
         self._recv_ack()
         return self._unpack()[0]
 
     @mark_busy
-    def get_dated_rev(self, date):
+    def get_dated_rev(self, date: str) -> int:
         self.send_msg([literal("get-dated-rev"), [date]])
         self._recv_ack()
         return self._unpack()[0]
 
     @mark_busy
-    def reparent(self, url):
+    def reparent(self, url: str) -> None:
         self.send_msg([literal("reparent"), [url]])
         self._recv_ack()
         self._unpack()
         self.url = url
 
-    def get_uuid(self):
+    def get_uuid(self) -> str:
         return self._uuid
 
     @mark_busy
     def log(
         self,
-        paths,
-        start,
-        end,
-        limit=0,
-        discover_changed_paths=True,
-        strict_node_history=True,
-        include_merged_revisions=True,
-        revprops=None,
-    ):
-        args = [paths]
+        paths: list[str] | None,
+        start: int | None,
+        end: int | None,
+        limit: int = 0,
+        discover_changed_paths: bool = True,
+        strict_node_history: bool = True,
+        include_merged_revisions: bool = True,
+        revprops: list[str] | None = None,
+    ) -> Any:
+        args: list[Any] = [paths]
         if start is None or start == -1:
             args.append([])
         else:
@@ -901,12 +1011,12 @@ class SVNClient(SVNConnection):
             msg = self.recv_msg()
             if msg == "done":
                 break
-            paths = {}
+            changed: dict[str, tuple[str, Any, int]] = {}
             for p, action, cfd in msg[0]:
                 if len(cfd) == 0:
-                    paths[p] = (str(action), None, -1)
+                    changed[p] = (str(action), None, -1)
                 else:
-                    paths[p] = (str(action), cfd[0], cfd[1])
+                    changed[p] = (str(action), cfd[0], cfd[1])
 
             if len(msg) > 5:
                 has_children = msg[5]
@@ -917,20 +1027,20 @@ class SVNClient(SVNConnection):
             else:
                 revno = msg[1]  # noqa: F841
                 # TODO(jelmer): Do something with revno
-            revprops = {}
+            msg_revprops: dict[str, bytes] = {}
             if len(msg[2]) != 0:
-                revprops[properties.PROP_REVISION_AUTHOR] = msg[2][0]
+                msg_revprops[properties.PROP_REVISION_AUTHOR] = msg[2][0]
             if len(msg[3]) != 0:
-                revprops[properties.PROP_REVISION_DATE] = msg[3][0]
+                msg_revprops[properties.PROP_REVISION_DATE] = msg[3][0]
             if len(msg[4]) != 0:
-                revprops[properties.PROP_REVISION_LOG] = msg[4][0]
+                msg_revprops[properties.PROP_REVISION_LOG] = msg[4][0]
             if len(msg) > 8:
-                revprops.update(dict(msg[8]))
-            yield paths, msg[1], revprops, has_children
+                msg_revprops.update(dict(msg[8]))
+            yield changed, msg[1], msg_revprops, has_children
 
         self._unpack()
 
-    def get_log(self, callback, *args, **kwargs):
+    def get_log(self, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
         for paths, rev, props, has_children in self.log(*args, **kwargs):
             if has_children is None:
                 callback(paths, rev, props)
@@ -945,7 +1055,13 @@ MECHANISMS = ["ANONYMOUS"]
 
 
 class SVNServer(SVNConnection):
-    def __init__(self, backend, recv_fn, send_fn, logf=None):
+    def __init__(
+        self,
+        backend: Any,
+        recv_fn: Callable[..., bytes],
+        send_fn: Callable[[bytes], int],
+        logf: IO[str] | None = None,
+    ) -> None:
         self.backend = backend
         self._stop = False
         self._logf = logf
@@ -958,25 +1074,25 @@ class SVNServer(SVNConnection):
             [literal(x) for x in CAPABILITIES],
         )
 
-    def send_mechs(self):
+    def send_mechs(self) -> None:
         self.send_success([literal(x) for x in MECHANISMS], "")
 
-    def send_failure(self, *contents):
+    def send_failure(self, *contents: Any) -> None:
         self.send_msg([literal("failure"), list(contents)])
 
-    def send_ack(self):
+    def send_ack(self) -> None:
         self.send_success([], "")
 
-    def send_unknown(self, cmd):
+    def send_unknown(self, cmd: str) -> None:
         self.send_failure(
             [ERR_RA_SVN_UNKNOWN_CMD, f"Unknown command '{cmd}'", __file__, 52]
         )
 
-    def get_latest_rev(self):
+    def get_latest_rev(self) -> None:
         self.send_ack()
         self.send_success(self.repo_backend.get_latest_revnum())
 
-    def check_path(self, path, rev):
+    def check_path(self, path: str, rev: list[int]) -> None:
         if len(rev) == 0:
             revnum = None
         else:
@@ -996,18 +1112,24 @@ class SVNServer(SVNConnection):
 
     def log(
         self,
-        target_path,
-        start_rev,
-        end_rev,
-        changed_paths,
-        strict_node,
-        limit=None,
-        include_merged_revisions=False,
-        all_revprops=None,
-        revprops=None,
-    ):
-        def send_revision(revno, author, date, message, changed_paths=None):
-            changes = []
+        target_path: str,
+        start_rev: list[int],
+        end_rev: list[int],
+        changed_paths: bool,
+        strict_node: bool,
+        limit: int | None = None,
+        include_merged_revisions: bool = False,
+        all_revprops: Any = None,
+        revprops: list[str] | None = None,
+    ) -> None:
+        def send_revision(
+            revno: int,
+            author: bytes,
+            date: bytes,
+            message: bytes,
+            changed_paths: dict[str, Any] | None = None,
+        ) -> None:
+            changes: list[Any] = []
             if changed_paths is not None:
                 for p, (action, cf, cr) in changed_paths.items():
                     if cf is not None:
@@ -1037,16 +1159,17 @@ class SVNServer(SVNConnection):
         self.send_msg(literal("done"))
         self.send_success()
 
-    def open_backend(self, url):
-        (_rooturl, location) = urlparse.splithost(url)
+    def open_backend(self, url: str) -> None:
+        parsed = urlparse.urlparse(url)
+        location = parsed.path
         self.repo_backend, self.relpath = self.backend.open_repository(location)
 
-    def reparent(self, parent):
+    def reparent(self, parent: str) -> None:
         self.open_backend(parent)
         self.send_ack()
         self.send_success()
 
-    def stat(self, path, rev):
+    def stat(self, path: str, rev: list[int]) -> None:
         if len(rev) == 0:
             revnum = None
         else:
@@ -1056,7 +1179,7 @@ class SVNServer(SVNConnection):
         if dirent is None:
             self.send_success([])
         else:
-            args = [
+            args: list[Any] = [
                 dirent["name"],
                 dirent["kind"],
                 dirent["size"],
@@ -1073,17 +1196,23 @@ class SVNServer(SVNConnection):
                 args.append([])
             self.send_success([args])
 
-    def commit(self, logmsg, locks, keep_locks=False, rev_props=None):
+    def commit(
+        self,
+        logmsg: bytes,
+        locks: Any,
+        keep_locks: bool = False,
+        rev_props: Any = None,
+    ) -> None:
         self.send_failure(
             [ERR_UNSUPPORTED_FEATURE, "commit not yet supported", __file__, 42]
         )
 
-    def rev_proplist(self, revnum):
+    def rev_proplist(self, revnum: int) -> None:
         self.send_ack()
         revprops = self.repo_backend.rev_proplist(revnum)
         self.send_success(list(revprops.items()))
 
-    def rev_prop(self, revnum, name):
+    def rev_prop(self, revnum: int, name: str) -> None:
         self.send_ack()
         revprops = self.repo_backend.rev_proplist(revnum)
         if name in revprops:
@@ -1091,7 +1220,7 @@ class SVNServer(SVNConnection):
         else:
             self.send_success()
 
-    def get_locations(self, path, peg_revnum, revnums):
+    def get_locations(self, path: str, peg_revnum: int, revnums: list[int]) -> None:
         self.send_ack()
         locations = self.repo_backend.get_locations(path, peg_revnum, revnums)
         for rev, path in locations.items():
@@ -1099,7 +1228,14 @@ class SVNServer(SVNConnection):
         self.send_msg(literal("done"))
         self.send_success()
 
-    def update(self, rev, target, recurse, depth=None, send_copyfrom_param=True):
+    def update(
+        self,
+        rev: list[int],
+        target: str,
+        recurse: bool,
+        depth: str | None = None,
+        send_copyfrom_param: bool = True,
+    ) -> None:
         self.send_ack()
         while True:
             msg = self.recv_msg()
@@ -1145,11 +1281,10 @@ class SVNServer(SVNConnection):
         # FIXME: replay
     }
 
-    def send_auth_request(self):
+    def send_auth_request(self) -> None:
         pass
 
-    def serve(self):
-        self.send_greeting()
+    def serve(self) -> None:
         msg = self.recv_msg()
         version = msg[0]
         capabilities = msg[1]
@@ -1183,20 +1318,20 @@ class SVNServer(SVNConnection):
             else:
                 self.commands[cmd](self, *args)
 
-    def close(self):
+    def close(self) -> None:
         self._stop = True
 
-    def mutter(self, text):
+    def mutter(self, text: str) -> None:
         if self._logf is not None:
             self._logf.write(f"{text}\n")
 
 
 class TCPSVNRequestHandler(StreamRequestHandler):
-    def __init__(self, request, client_address, server):
+    def __init__(self, request: Any, client_address: Any, server: Any) -> None:
         self._server = server
         StreamRequestHandler.__init__(self, request, client_address, server)
 
-    def handle(self):
+    def handle(self) -> None:
         server = SVNServer(
             self._server._backend, self.rfile.read, self.wfile.write, self._server._logf
         )
@@ -1212,7 +1347,12 @@ class TCPSVNServer(TCPServer):
     allow_reuse_address = True
     serve = TCPServer.serve_forever
 
-    def __init__(self, backend, addr, logf=None):
+    def __init__(
+        self,
+        backend: Any,
+        addr: tuple[str, int],
+        logf: IO[str] | None = None,
+    ) -> None:
         self._logf = logf
         self._backend = backend
         TCPServer.__init__(self, addr, TCPSVNRequestHandler)

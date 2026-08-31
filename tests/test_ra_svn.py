@@ -160,7 +160,7 @@ class SVNConnectionTests(TestCase):
 
     def test_inbuffer_initialized(self):
         conn = SVNConnection(None, None)
-        self.assertEqual("", conn.inbuffer)
+        self.assertEqual(b"", conn.inbuffer)
 
 
 class EditorTests(TestCase):

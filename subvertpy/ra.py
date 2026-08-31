@@ -45,6 +45,8 @@ trust handling.
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 
+from typing import Any
+
 from subvertpy import (
     ERR_BAD_URL,
     SubversionException,
@@ -52,11 +54,6 @@ from subvertpy import (
     ra_svn,  # noqa: F401
 )
 from subvertpy._ra import *  # noqa: F403
-
-try:
-    from urllib2 import splittype
-except ImportError:
-    from urllib.parse import splittype
 
 url_handlers = {
     "svn": _ra.RemoteAccess,
@@ -69,7 +66,9 @@ url_handlers = {
 }
 
 
-def RemoteAccess(url, *args, **kwargs):
+def RemoteAccess(  # type: ignore[no-redef]
+    url: str | bytes, *args: Any, **kwargs: Any
+) -> _ra.RemoteAccess:
     """Connect to a remote Subversion server.
 
     :param url: URL to connect to
@@ -77,7 +76,7 @@ def RemoteAccess(url, *args, **kwargs):
     """
     if isinstance(url, bytes):
         url = url.decode("utf-8")
-    (type, _opaque) = splittype(url)
-    if type not in url_handlers:
-        raise SubversionException(f"Unknown URL type '{type}'", ERR_BAD_URL)
-    return url_handlers[type](url, *args, **kwargs)
+    scheme, _, _ = url.partition(":")
+    if scheme not in url_handlers:
+        raise SubversionException(f"Unknown URL type '{scheme}'", ERR_BAD_URL)
+    return url_handlers[scheme](url, *args, **kwargs)
