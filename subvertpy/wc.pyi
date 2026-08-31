@@ -1,5 +1,6 @@
 from collections.abc import Callable
-from typing import IO, Any
+from types import TracebackType
+from typing import IO
 
 SCHEDULE_NORMAL: int
 SCHEDULE_ADD: int
@@ -35,6 +36,11 @@ TRANSLATE_FORCE_EOL_REPAIR: int
 TRANSLATE_NO_OUTPUT_CLEANUP: int
 TRANSLATE_FORCE_COPY: int
 TRANSLATE_USE_GLOBAL_TMP: int
+
+# The Rust WC bindings invoke the notify callback only when the
+# underlying notification carries an error, passing the corresponding
+# Python exception. See wc/src/context.rs::make_notify_closure.
+WcNotifyFunc = Callable[[BaseException], object]
 
 class Status:
     node_status: int
@@ -87,10 +93,21 @@ class CommittedQueue:
         sha1_digest: bytes | None = ...,
     ) -> None: ...
 
+class UpdateEditor:
+    """Opaque editor returned by Context.get_update_editor."""
+
+    def abort(self) -> None: ...
+    def close(self) -> None: ...
+
 class Context:
     def __init__(self) -> None: ...
     def __enter__(self) -> Context: ...
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None: ...
     def close(self) -> None: ...
     def locked(self, path: str | bytes) -> tuple[bool, bool]: ...
     def check_wc(self, path: str | bytes) -> int: ...
@@ -108,13 +125,13 @@ class Context:
         self,
         path: str | bytes,
         keep_local: bool = ...,
-        notify: Callable[..., Any] | None = ...,
+        notify: WcNotifyFunc | None = ...,
     ) -> None: ...
     def copy(
         self,
         src_path: str | bytes,
         dest_path: str | bytes,
-        notify: Callable[..., Any] | None = ...,
+        notify: WcNotifyFunc | None = ...,
     ) -> None: ...
     def prop_get(self, name: str, path: str | bytes) -> bytes | None: ...
     def prop_set(
@@ -156,7 +173,7 @@ class Context:
     def add_from_disk(
         self,
         path: str | bytes,
-        notify: Callable[..., Any] | None = ...,
+        notify: WcNotifyFunc | None = ...,
     ) -> None: ...
     def process_committed_queue(
         self,
@@ -168,7 +185,7 @@ class Context:
     def crawl_revisions(
         self,
         path: str | bytes,
-        notify: Callable[..., Any] | None = ...,
+        notify: WcNotifyFunc | None = ...,
         use_commit_times: bool = ...,
     ) -> None: ...
     def get_update_editor(
@@ -179,8 +196,8 @@ class Context:
         depth_is_sticky: bool = ...,
         depth: int = ...,
         use_commit_times: bool = ...,
-        notify: Callable[..., Any] | None = ...,
-    ) -> Any: ...
+        notify: WcNotifyFunc | None = ...,
+    ) -> UpdateEditor: ...
 
 def version() -> tuple[int, int, int, str]: ...
 def api_version() -> tuple[int, int, int, str]: ...

@@ -1,5 +1,24 @@
 from collections.abc import Callable
-from typing import IO, Any
+from typing import IO
+
+from subvertpy._typing import (
+    Dirent,
+    Editor,
+    FileRevHandler,
+    Lock,
+    LogEntry,
+    LogEntryReceiver,
+    OpenTmpFileFunc,
+    ProgressFunc,
+    ReplayRevFinishCallback,
+    ReplayRevStartCallback,
+    SimplePromptCallback,
+    SimpleProviderCallback,
+    SslClientCertPromptCallback,
+    SslClientCertPwPromptCallback,
+    SslServerTrustPromptCallback,
+    UsernamePromptCallback,
+)
 
 DIRENT_KIND: int
 DIRENT_SIZE: int
@@ -33,12 +52,12 @@ class AuthProvider: ...
 
 class CredentialsIter:
     def __iter__(self) -> CredentialsIter: ...
-    def __next__(self) -> Any: ...
+    def __next__(self) -> object: ...
 
 class Auth:
     def __init__(self, providers: list[AuthProvider]) -> None: ...
-    def set_parameter(self, name: str, value: Any) -> None: ...
-    def get_parameter(self, name: str) -> Any: ...
+    def set_parameter(self, name: str, value: object) -> None: ...
+    def get_parameter(self, name: str) -> object | None: ...
     def credentials(self, cred_kind: str, realmstring: str) -> CredentialsIter: ...
 
 class Reporter:
@@ -65,20 +84,24 @@ class Reporter:
 
 class LogIterator:
     def __iter__(self) -> LogIterator: ...
-    def __next__(self) -> Any: ...
+    def __next__(self) -> LogEntry: ...
 
 class RemoteAccess:
     url: str
     busy: bool
 
+    # The Rust binding accepts (url, auth=None, **_kwargs) and silently
+    # ignores unknown kwargs for compatibility with older subvertpy
+    # callers, so this signature mirrors that.
     def __init__(
         self,
         url: str,
-        progress_cb: Callable[..., Any] | None = ...,
         auth: Auth | None = ...,
-        config: Any | None = ...,
-        client_string_func: Callable[..., Any] | None = ...,
-        open_tmp_file_func: Callable[..., Any] | None = ...,
+        progress_cb: ProgressFunc | None = ...,
+        config: object | None = ...,
+        client_string_func: Callable[[], str] | None = ...,
+        open_tmp_file_func: OpenTmpFileFunc | None = ...,
+        **kwargs: object,
     ) -> None: ...
     def get_uuid(self) -> str: ...
     def get_repos_root(self) -> str: ...
@@ -87,7 +110,7 @@ class RemoteAccess:
     def reparent(self, url: str) -> None: ...
     def has_capability(self, capability: str) -> bool: ...
     def check_path(self, path: str, revnum: int) -> int: ...
-    def stat(self, path: str, revnum: int) -> dict[str, Any] | None: ...
+    def stat(self, path: str, revnum: int) -> Dirent | None: ...
     def rev_proplist(self, revnum: int) -> dict[str, bytes]: ...
     def rev_prop(self, revnum: int, name: str) -> bytes | None: ...
     def change_rev_prop(
@@ -110,25 +133,41 @@ class RemoteAccess:
         dirent_fields: int = ...,
         want_props: bool = ...,
         want_contents: bool = ...,
-    ) -> tuple[dict[str, Any], int, dict[str, bytes]]: ...
-    def get_lock(self, path: str) -> Any | None: ...
-    def get_locks(self, path: str, depth: int | None = ...) -> dict[str, Any]: ...
+    ) -> tuple[dict[str, Dirent], int, dict[str, bytes]]: ...
+    def get_lock(self, path: str) -> Lock | None: ...
+    def get_locks(self, path: str, depth: int | None = ...) -> dict[str, Lock]: ...
     def lock(
         self,
         path_revs: dict[str, int],
         comment: str,
         steal_lock: bool,
-        lock_func: Callable[..., Any],
+        lock_func: Callable[
+            [
+                str,
+                bool,
+                tuple[str, bytes, str, str | None, str] | None,
+                BaseException | None,
+            ],
+            object,
+        ],
     ) -> None: ...
     def unlock(
         self,
         path_tokens: dict[str, bytes | str],
         break_lock: bool,
-        unlock_func: Callable[..., Any],
+        unlock_func: Callable[
+            [
+                str,
+                bool,
+                tuple[str, bytes, str, str | None, str] | None,
+                BaseException | None,
+            ],
+            object,
+        ],
     ) -> None: ...
     def get_log(
         self,
-        callback: Callable[..., Any],
+        callback: LogEntryReceiver,
         paths: list[str] | None = ...,
         start: int = ...,
         end: int = ...,
@@ -154,7 +193,7 @@ class RemoteAccess:
         revision_to_update_to: int,
         update_target: str,
         recurse: bool,
-        update_editor: Any,
+        update_editor: Editor,
         depth: int | None = ...,
     ) -> Reporter: ...
     def do_switch(
@@ -163,7 +202,7 @@ class RemoteAccess:
         update_target: str,
         recurse: bool,
         switch_url: str,
-        update_editor: Any,
+        update_editor: Editor,
         depth: int | None = ...,
     ) -> Reporter: ...
     def do_diff(
@@ -171,7 +210,7 @@ class RemoteAccess:
         revision_to_update: int,
         diff_target: str,
         versus_url: str,
-        diff_editor: Any,
+        diff_editor: Editor,
         recurse: bool = ...,
         ignore_ancestry: bool = ...,
         text_deltas: bool = ...,
@@ -181,7 +220,7 @@ class RemoteAccess:
         self,
         revision: int,
         low_water_mark: int,
-        update_editor: Any,
+        update_editor: Editor,
         send_deltas: bool = ...,
     ) -> None: ...
     def replay_range(
@@ -189,7 +228,7 @@ class RemoteAccess:
         start_revision: int,
         end_revision: int,
         low_water_mark: int,
-        cbs: tuple[Callable[..., Any], Callable[..., Any]],
+        cbs: tuple[ReplayRevStartCallback, ReplayRevFinishCallback],
         send_deltas: bool = ...,
     ) -> None: ...
     def get_locations(
@@ -203,7 +242,7 @@ class RemoteAccess:
         path: str,
         start: int,
         end: int,
-        file_rev_handler: Callable[..., Any],
+        file_rev_handler: FileRevHandler,
     ) -> None: ...
     def mergeinfo(
         self,
@@ -211,31 +250,35 @@ class RemoteAccess:
         revision: int = ...,
         inherit: int | None = ...,
         include_descendants: bool = ...,
-    ) -> Any: ...
+    ) -> dict[str, dict[str, list[tuple[int, int, bool]]]]: ...
     def get_dated_rev(self, date: int) -> int: ...
 
 def version() -> tuple[int, int, int, str]: ...
 def api_version() -> tuple[int, int, int, str]: ...
 def get_modules() -> str: ...
 def print_modules() -> bytes: ...
-def get_simple_provider() -> AuthProvider: ...
+def get_simple_provider(
+    callback: SimpleProviderCallback | None = ...,
+) -> AuthProvider: ...
 def get_username_provider() -> AuthProvider: ...
 def get_ssl_server_trust_file_provider() -> AuthProvider: ...
 def get_ssl_client_cert_file_provider() -> AuthProvider: ...
-def get_ssl_client_cert_pw_file_provider() -> AuthProvider: ...
+def get_ssl_client_cert_pw_file_provider(
+    callback: SimpleProviderCallback | None = ...,
+) -> AuthProvider: ...
 def get_platform_specific_client_providers() -> list[AuthProvider]: ...
 def get_username_prompt_provider(
-    prompt_func: Callable[..., Any], retry_limit: int = ...
+    prompt_func: UsernamePromptCallback, retry_limit: int = ...
 ) -> AuthProvider: ...
 def get_simple_prompt_provider(
-    prompt_func: Callable[..., Any], retry_limit: int = ...
+    prompt_func: SimplePromptCallback, retry_limit: int = ...
 ) -> AuthProvider: ...
 def get_ssl_server_trust_prompt_provider(
-    prompt_func: Callable[..., Any],
+    prompt_func: SslServerTrustPromptCallback,
 ) -> AuthProvider: ...
 def get_ssl_client_cert_prompt_provider(
-    prompt_func: Callable[..., Any], retry_limit: int = ...
+    prompt_func: SslClientCertPromptCallback, retry_limit: int = ...
 ) -> AuthProvider: ...
 def get_ssl_client_cert_pw_prompt_provider(
-    prompt_func: Callable[..., Any], retry_limit: int = ...
+    prompt_func: SslClientCertPwPromptCallback, retry_limit: int = ...
 ) -> AuthProvider: ...

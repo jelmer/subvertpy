@@ -16,8 +16,7 @@
 
 """Server backend base classes."""
 
-from collections.abc import Callable
-from typing import Any
+from subvertpy._typing import Dirent, Editor, SendRevisionCallback
 
 
 class ServerBackend:
@@ -43,7 +42,7 @@ class ServerRepositoryBackend:
 
     def log(
         self,
-        send_revision: Callable[..., None],
+        send_revision: SendRevisionCallback,
         target_path: str,
         start_rev: int | None,
         end_rev: int | None,
@@ -55,7 +54,7 @@ class ServerRepositoryBackend:
 
     def update(
         self,
-        editor: object,
+        editor: Editor,
         revnum: int | None,
         target_path: str,
         recurse: bool = True,
@@ -65,7 +64,7 @@ class ServerRepositoryBackend:
     def check_path(self, path: str, revnum: int | None) -> int:
         raise NotImplementedError(self.check_path)
 
-    def stat(self, path: str, revnum: int | None) -> dict[str, Any] | None:
+    def stat(self, path: str, revnum: int | None) -> Dirent | None:
         """Stat a path.
 
         Should return a dictionary with the following keys: name, kind, size,

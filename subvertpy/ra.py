@@ -45,8 +45,6 @@ trust handling.
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 
-from typing import Any
-
 from subvertpy import (
     ERR_BAD_URL,
     SubversionException,
@@ -67,7 +65,7 @@ url_handlers = {
 
 
 def RemoteAccess(  # type: ignore[no-redef]
-    url: str | bytes, *args: Any, **kwargs: Any
+    url: str | bytes, *args: object, **kwargs: object
 ) -> _ra.RemoteAccess:
     """Connect to a remote Subversion server.
 
@@ -79,4 +77,7 @@ def RemoteAccess(  # type: ignore[no-redef]
     scheme, _, _ = url.partition(":")
     if scheme not in url_handlers:
         raise SubversionException(f"Unknown URL type '{scheme}'", ERR_BAD_URL)
-    return url_handlers[scheme](url, *args, **kwargs)
+    # Kwargs are forwarded to the underlying RemoteAccess constructor,
+    # which validates them; the object-typed *args/**kwargs here can't
+    # be statically matched to the typed constructor parameters.
+    return url_handlers[scheme](url, *args, **kwargs)  # type: ignore[arg-type]
