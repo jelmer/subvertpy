@@ -39,7 +39,7 @@ jobs:
           $Python3_ROOT_DIR/bin/python -c "
           from subvertpy import client, ra, repos, subr, wc;
           client = client.Client(auth=ra.Auth([ra.get_username_provider()]));
-          client.info('https://svn.pld-linux.org/svn')"
+          client.info('https://svn.apache.org/repos/asf/')"
 
           pip3 install pytest
           cd ../ && rm -rf subvertpy && python3 -m pytest tests --ignore=tests/integration

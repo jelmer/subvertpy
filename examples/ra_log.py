@@ -3,7 +3,7 @@
 
 from subvertpy.ra import RemoteAccess
 
-conn = RemoteAccess("svn://svn.samba.org/subvertpy/trunk")
+conn = RemoteAccess("https://svn.apache.org/repos/asf/")
 
 for changed_paths, rev, revprops, has_children in conn.iter_log(
     paths=None, start=0, end=conn.get_latest_revnum(), discover_changed_paths=True
