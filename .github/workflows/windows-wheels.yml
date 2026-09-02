@@ -117,7 +117,7 @@ jobs:
           python -c "
           from subvertpy import client, ra, repos, subr, wc;
           client = client.Client(auth=ra.Auth([ra.get_username_provider()]));
-          client.info('https://svn.pld-linux.org/svn')"
+          client.info('https://svn.apache.org/repos/asf/')"
 
           pip install pytest
           cd ../ && rm -rf subvertpy && python -m pytest tests --ignore=tests/integration
