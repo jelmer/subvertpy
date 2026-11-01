@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { workspace = true }
-pyo3-filelike = "0.5"
+pyo3-filelike = { workspace = true }
 subversion = { workspace = true, features = ["ra"] }
 subvertpy-util = { path = "../subvertpy_util" }
 apr = "0.4"
