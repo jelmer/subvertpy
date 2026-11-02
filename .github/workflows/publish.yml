@@ -51,7 +51,8 @@ jobs:
         with:
           workflow: manylinux-wheels.yml
           commit: ${{ github.event.workflow_run.head_sha }}
-          pattern: subvertpy-wheel-manylinux-*
+          name: ^subvertpy-wheel-manylinux-.*$
+          name_is_regexp: true
           path: dist/
           merge_multiple: true
           allow_forks: false
@@ -60,7 +61,8 @@ jobs:
         with:
           workflow: macos-wheels.yml
           commit: ${{ github.event.workflow_run.head_sha }}
-          pattern: subvertpy-wheel-macos-*
+          name: ^subvertpy-wheel-macos-.*$
+          name_is_regexp: true
           path: dist/
           merge_multiple: true
           allow_forks: false
@@ -69,7 +71,8 @@ jobs:
         with:
           workflow: windows-wheels.yml
           commit: ${{ github.event.workflow_run.head_sha }}
-          pattern: subvertpy-wheel-windows-*
+          name: ^subvertpy-wheel-windows-.*$
+          name_is_regexp: true
           path: dist/
           merge_multiple: true
           allow_forks: false
