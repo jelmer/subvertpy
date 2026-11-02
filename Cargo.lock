@@ -95,7 +95,7 @@ dependencies = [
 
 [[package]]
 name = "client"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "pyo3",
  "subversion",
@@ -385,7 +385,7 @@ dependencies = [
 
 [[package]]
 name = "ra"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "apr",
  "pyo3",
@@ -425,7 +425,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "repos"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "apr",
  "pyo3",
@@ -520,7 +520,7 @@ dependencies = [
 
 [[package]]
 name = "subvertpy-util"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "apr",
  "pyo3",
@@ -635,7 +635,7 @@ checksum = "03c2856837ef78f57382f06b2b8563a2f512f7185d732608fd9176cb3b8edf0e"
 
 [[package]]
 name = "wc"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "apr",
  "pyo3",

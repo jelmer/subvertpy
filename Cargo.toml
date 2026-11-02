@@ -3,7 +3,7 @@ resolver = "2"
 members = ["subr", "subvertpy_util", "repos", "ra", "client", "wc"]
 
 [workspace.package]
-version = "0.12.0"
+version = "0.12.1"
 edition = "2021"
 
 [workspace.dependencies]

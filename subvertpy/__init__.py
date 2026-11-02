@@ -20,7 +20,7 @@ import os
 from types import ModuleType
 
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
-__version__ = (0, 12, 0)
+__version__ = (0, 12, 1)
 
 NODE_DIR = 2
 NODE_FILE = 1
