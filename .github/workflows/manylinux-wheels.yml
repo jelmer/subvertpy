@@ -21,9 +21,8 @@ jobs:
           echo "CIBW_BUILD=cp${pyVer/./}-manylinux_x86_64" >> $GITHUB_ENV
       - name: Build subvertpy wheel with cibuildwheel
         run: |
-          sudo apt install python3-pip
-          pip3.12 install cibuildwheel --user
-          python3.12 -m cibuildwheel --output-dir wheelhouse
+          python -m pip install cibuildwheel
+          python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_BUILD_VERBOSITY: 1
