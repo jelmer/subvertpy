@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 MarshallValue = Union[
     bool,
-    int,
+    int | None,
     str,
     bytes,
     bytearray,
