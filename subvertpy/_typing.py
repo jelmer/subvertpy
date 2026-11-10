@@ -69,15 +69,17 @@ class DirectoryEditor(Protocol):
         copyfrom_path: str | None = ...,
         copyfrom_rev: int = ...,
     ) -> FileEditor: ...
-    def open_file(self, path: str, base_revnum: int) -> FileEditor: ...
-    def delete_entry(self, path: str, base_revnum: int) -> None: ...
+    def open_file(self, path: str, base_revision: int | None = ...) -> FileEditor: ...
+    def delete_entry(self, path: str, revision: int | None = ...) -> None: ...
     def add_directory(
         self,
         path: str,
         copyfrom_path: str | None = ...,
         copyfrom_rev: int = ...,
     ) -> DirectoryEditor: ...
-    def open_directory(self, path: str, base_revnum: int) -> DirectoryEditor: ...
+    def open_directory(
+        self, path: str, base_revision: int | None = ...
+    ) -> DirectoryEditor: ...
     def change_prop(self, name: str, value: bytes | None) -> None: ...
     def absent(self, path: str) -> None: ...
     def close(self) -> None: ...
@@ -211,3 +213,36 @@ SslClientCertPromptCallback = Callable[[str, bool], tuple[str, bool]]
 
 SslClientCertPwPromptCallback = Callable[[str, bool], tuple[str, bool]]
 """(realm, may_save) -> (password, save)."""
+
+__all__ = [
+    "ClientStringFunc",
+    "CommitFinalizer",
+    "DirectoryEditor",
+    "Dirent",
+    "Editor",
+    "FileEditor",
+    "FileRevHandler",
+    "Lock",
+    "LockCallback",
+    "LogEntry",
+    "LogEntryReceiver",
+    "LogMsgFunc",
+    "LogPathChange",
+    "MarshallValue",
+    "NotifyFunc",
+    "OpenTmpFileFunc",
+    "PackNotifyFunc",
+    "ProgressFunc",
+    "ReplayRevFinishCallback",
+    "ReplayRevStartCallback",
+    "SendRevisionCallback",
+    "ServerLogPathChange",
+    "SimplePromptCallback",
+    "SimpleProviderCallback",
+    "SslClientCertPromptCallback",
+    "SslClientCertPwPromptCallback",
+    "SslServerTrustPromptCallback",
+    "TxDeltaHandler",
+    "UnmarshalledValue",
+    "UsernamePromptCallback",
+]
