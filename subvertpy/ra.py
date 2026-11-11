@@ -53,6 +53,9 @@ from subvertpy import (
 )
 from subvertpy._ra import *  # noqa: F403
 
+# allow types to be imported from public subvertpy.ra module
+from subvertpy._typing import *  # noqa: F403
+
 url_handlers = {
     "svn": _ra.RemoteAccess,
     # "svn": ra_svn.Client,
