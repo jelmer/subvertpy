@@ -169,22 +169,25 @@ class Client:
     ) -> list[tuple[str, dict[str, bytes]]]: ...
     def info(
         self,
-        paths: list[str] | str,
-        peg_rev: str | int | None = ...,
-        rev: str | int | None = ...,
+        path: list[str] | str,
+        revision: str | int | None = ...,
+        peg_revision: str | int | None = ...,
+        recurse: bool = ...,
         depth: int | None = ...,
         fetch_excluded: bool = ...,
         fetch_actual_only: bool = ...,
         include_externals: bool = ...,
-    ) -> Info | list[Info]: ...
+    ) -> dict[str, Info]: ...
     def export(
         self,
-        url: str,
-        path: str,
-        peg_rev: str | int | None = ...,
+        from_path_or_url: str,
+        to: str,
         rev: str | int | None = ...,
-        force: bool = ...,
+        peg_rev: str | int | None = ...,
+        overwrite: bool = ...,
         ignore_externals: bool = ...,
+        ignore_keywords: bool = ...,
+        recurse: bool = ...,
         native_eol: str | None = ...,
     ) -> int: ...
     def diff(

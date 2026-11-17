@@ -15,6 +15,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 """Python bindings for Subversion."""
 
+from __future__ import annotations
+
 __author__ = "Jelmer Vernooij <jelmer@jelmer.uk>"
 
 import base64
@@ -60,11 +62,11 @@ from subvertpy._typing import (
     TxDeltaHandler,
     UnmarshalledValue,
 )
-from subvertpy._typing import DirectoryEditor as _typing_DirectoryEditor
+from subvertpy._typing import DirectoryEditor as DirectoryEditorProto
 from subvertpy._typing import (
     Editor as EditorProto,
 )
-from subvertpy._typing import FileEditor as _typing_FileEditor
+from subvertpy._typing import FileEditor as FileEditorProto
 from subvertpy.delta import (
     SVNDIFF0_HEADER,
     TxDeltaWindow,
@@ -147,7 +149,7 @@ class SVNConnection:
     def recv_msg(self) -> UnmarshalledValue:
         while True:
             try:
-                (self.inbuffer, ret) = unmarshall(self.inbuffer)
+                self.inbuffer, ret = unmarshall(self.inbuffer)
                 return ret
             except NeedMoreData:
                 newdata = self.recv_fn(1)
@@ -205,12 +207,12 @@ def _as_str(value: UnmarshalledValue) -> str:
     raise MarshallError(f"Expected string-ish, got {type(value).__name__}")
 
 
-def _dir(token: object) -> "_typing_DirectoryEditor":
-    return cast("_typing_DirectoryEditor", token)
+def _dir(token: object) -> DirectoryEditorProto:
+    return cast("DirectoryEditorProto", token)
 
 
-def _file(token: object) -> "_typing_FileEditor":
-    return cast("_typing_FileEditor", token)
+def _file(token: object) -> FileEditorProto:
+    return cast("FileEditorProto", token)
 
 
 def _bytes_dict(value: UnmarshalledValue) -> dict[str, bytes]:
@@ -223,8 +225,8 @@ def _bytes_dict(value: UnmarshalledValue) -> dict[str, bytes]:
     return out
 
 
-def feed_editor(conn: "SVNClient", editor: EditorProto) -> None:
-    tokens: dict[object, _typing_DirectoryEditor | _typing_FileEditor] = {}
+def feed_editor(conn: SVNClient, editor: EditorProto) -> None:
+    tokens: dict[object, DirectoryEditorProto | FileEditorProto] = {}
     diff: dict[object, bytes] = {}
     txdelta_handler: dict[object, TxDeltaHandler] = {}
     while True:
@@ -319,7 +321,7 @@ def feed_editor(conn: "SVNClient", editor: EditorProto) -> None:
 class Reporter:
     __slots__ = ("conn", "editor")
 
-    def __init__(self, conn: "SVNClient", editor: EditorProto) -> None:
+    def __init__(self, conn: SVNClient, editor: EditorProto) -> None:
         self.conn = conn
         self.editor = editor
 
@@ -374,16 +376,16 @@ class Reporter:
         self.conn.busy = False
 
 
-class Editor:
+class Editor(EditorProto):
     __slots__ = "conn"
 
-    def __init__(self, conn: "SVNConnection") -> None:
+    def __init__(self, conn: SVNConnection) -> None:
         self.conn = conn
 
     def set_target_revision(self, revnum: int) -> None:
         self.conn.send_msg([literal("target-rev"), [revnum]])
 
-    def open_root(self, base_revision: int | None = None) -> "DirectoryEditor":
+    def open_root(self, base_revision: int | None = None) -> DirectoryEditor:
         id = generate_random_id()
         if base_revision is None:
             baserev: list[MarshallValue] = []
@@ -400,7 +402,7 @@ class Editor:
     def abort(self) -> None:
         self.conn.send_msg([literal("abort-edit"), []])
 
-    def __enter__(self) -> "Editor":
+    def __enter__(self) -> Editor:
         return self
 
     def __exit__(
@@ -418,10 +420,10 @@ class Editor:
         return False
 
 
-class DirectoryEditor:
+class DirectoryEditor(DirectoryEditorProto):
     __slots__ = ("conn", "id")
 
-    def __init__(self, conn: "SVNConnection", id: str) -> None:
+    def __init__(self, conn: SVNConnection, id: str) -> None:
         self.conn = conn
         self.id = id
         self.conn._open_ids.append(id)  # type: ignore[attr-defined]
@@ -431,7 +433,7 @@ class DirectoryEditor:
         path: str,
         copyfrom_path: str | None = None,
         copyfrom_rev: int = -1,
-    ) -> "FileEditor":
+    ) -> FileEditor:
         self._is_last_open()
         child = generate_random_id()
         copyfrom_data: list[MarshallValue] = (
@@ -440,22 +442,24 @@ class DirectoryEditor:
         self.conn.send_msg([literal("add-file"), [path, self.id, child, copyfrom_data]])
         return FileEditor(self.conn, child)
 
-    def open_file(self, path: str, base_revnum: int) -> "FileEditor":
+    def open_file(self, path: str, base_revision: int | None = None) -> FileEditor:
         self._is_last_open()
         child = generate_random_id()
-        self.conn.send_msg([literal("open-file"), [path, self.id, child, base_revnum]])
+        self.conn.send_msg(
+            [literal("open-file"), [path, self.id, child, base_revision]]
+        )
         return FileEditor(self.conn, child)
 
-    def delete_entry(self, path: str, base_revnum: int) -> None:
+    def delete_entry(self, path: str, base_revision: int | None = None) -> None:
         self._is_last_open()
-        self.conn.send_msg([literal("delete-entry"), [path, base_revnum, self.id]])
+        self.conn.send_msg([literal("delete-entry"), [path, base_revision, self.id]])
 
     def add_directory(
         self,
         path: str,
         copyfrom_path: str | None = None,
         copyfrom_rev: int = -1,
-    ) -> "DirectoryEditor":
+    ) -> DirectoryEditor:
         self._is_last_open()
         child = generate_random_id()
         copyfrom_data: list[MarshallValue] = (
@@ -464,10 +468,12 @@ class DirectoryEditor:
         self.conn.send_msg([literal("add-dir"), [path, self.id, child, copyfrom_data]])
         return DirectoryEditor(self.conn, child)
 
-    def open_directory(self, path: str, base_revnum: int) -> "DirectoryEditor":
+    def open_directory(
+        self, path: str, base_revision: int | None = None
+    ) -> DirectoryEditor:
         self._is_last_open()
         child = generate_random_id()
-        self.conn.send_msg([literal("open-dir"), [path, self.id, child, base_revnum]])
+        self.conn.send_msg([literal("open-dir"), [path, self.id, child, base_revision]])
         return DirectoryEditor(self.conn, child)
 
     def change_prop(self, name: str, value: bytes | None) -> None:
@@ -486,7 +492,7 @@ class DirectoryEditor:
         self.conn._open_ids.pop()  # type: ignore[attr-defined]
         self.conn.send_msg([literal("close-dir"), [self.id]])
 
-    def __enter__(self) -> "DirectoryEditor":
+    def __enter__(self) -> DirectoryEditor:
         return self
 
     def __exit__(
@@ -502,7 +508,7 @@ class DirectoryEditor:
 class FileEditor:
     __slots__ = ("conn", "id")
 
-    def __init__(self, conn: "SVNConnection", id: str) -> None:
+    def __init__(self, conn: SVNConnection, id: str) -> None:
         self.conn = conn
         self.id = id
         self.conn._open_ids.append(id)  # type: ignore[attr-defined]
@@ -539,7 +545,7 @@ class FileEditor:
         value_list: list[MarshallValue] = [] if value is None else [value]
         self.conn.send_msg([literal("change-file-prop"), [self.id, name, value_list]])
 
-    def __enter__(self) -> "FileEditor":
+    def __enter__(self) -> FileEditor:
         return self
 
     def __exit__(
@@ -557,7 +563,7 @@ _F = TypeVar("_F", bound=Callable[..., object])
 
 
 def mark_busy(unbound: _F) -> _F:
-    def convert(self: "SVNClient", *args: object, **kwargs: object) -> object:
+    def convert(self: SVNClient, *args: object, **kwargs: object) -> object:
         self.busy = True
         try:
             ret = unbound(self, *args, **kwargs)
@@ -604,9 +610,9 @@ class SVNClient(SVNConnection):
         self._client_string_func = client_string_func
         # open_tmp_file_func is ignored, as it is not needed for svn://
         if parsed.scheme == "svn":
-            (recv_func, send_func) = self._connect(parsed.netloc)
+            recv_func, send_func = self._connect(parsed.netloc)
         else:
-            (recv_func, send_func) = self._connect_ssh(parsed.netloc)
+            recv_func, send_func = self._connect_ssh(parsed.netloc)
         super().__init__(recv_func, send_func)
         greeting = self._recv_greeting()
         _min_version = _as_int(greeting[0])
@@ -1506,7 +1512,7 @@ class TCPSVNRequestHandler(StreamRequestHandler):
         self,
         request: object,
         client_address: object,
-        server: "TCPSVNServer",
+        server: TCPSVNServer,
     ) -> None:
         self._server = server
         StreamRequestHandler.__init__(self, request, client_address, server)  # type: ignore[arg-type]

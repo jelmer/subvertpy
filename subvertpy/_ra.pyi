@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import IO
 
 from subvertpy._typing import (
+    CommitFinalizer,
     Dirent,
     Editor,
     FileRevHandler,
@@ -252,6 +253,13 @@ class RemoteAccess:
         include_descendants: bool = ...,
     ) -> dict[str, dict[str, list[tuple[int, int, bool]]]]: ...
     def get_dated_rev(self, date: int) -> int: ...
+    def get_commit_editor(
+        self,
+        revprops: dict[str, bytes],
+        callback: CommitFinalizer | None = None,
+        lock_tokens: dict[str, str] | None = None,
+        keep_locks: bool = False,
+    ) -> Editor: ...
 
 def version() -> tuple[int, int, int, str]: ...
 def api_version() -> tuple[int, int, int, str]: ...
