@@ -1,3 +1,18 @@
+0.12.2	2026-11-17
+
+ IMPROVEMENTS
+
+  * Fix a number of type stub issues: add missing ``get_commit_editor``
+    method to ``RemoteAccess``, align parameter types and names with the
+    rust extension modules, add missing parameters to ``client.export``,
+    allow importing types from the ``subvertpy.ra`` public module, and
+    ensure ``ra_svn`` editor classes inherit from their protocols.
+    (Antoine Lambert, Jelmer Vernooĳ)
+
+ BUG FIXES
+
+  * Fix wheel artifact downloads in the publish workflow. (Jelmer Vernooĳ)
+
 0.12.1	2026-11-02
 
  IMPROVEMENTS
